@@ -10,10 +10,20 @@
     text-align: center;
     background: url('assets/background.jpg') no-repeat center center fixed;
     background-size: cover;
-    background-blend-mode: soft-light;
+    background-attachment: fixed;
     color: white;
     margin: 0;
     padding: 20px;
+    overflow-x: hidden; /* Запобігає горизонтальній прокрутці */
+}
+
+/* Фіксуємо фон для мобільних пристроїв */
+@media (max-width: 768px) {
+    body {
+        background-attachment: scroll; /* Дозволяє фону залишатися на місці */
+        background-size: cover;
+        background-position: center;
+    }
 }
 
         h1 {

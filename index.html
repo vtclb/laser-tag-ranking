@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рейтинг гравців | Лазертаг</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #f39c12;
+        }
+        table {
+            width: 80%;
+            margin: auto;
+            border-collapse: collapse;
+            background: #2c2c2c;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #444;
+            text-align: center;
+        }
+        th {
+            background: #f39c12;
+            color: black;
+        }
+        .rank-S { background: purple; }
+        .rank-A { background: red; }
+        .rank-B { background: gold; }
+        .rank-C { background: blue; }
+        .rank-D { background: green; }
+    </style>
+</head>
+<body>
+    <h1>Рейтинг гравців | Лазертаг</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Місце</th>
+                <th>Ім'я</th>
+                <th>Бали</th>
+                <th>Ранг</th>
+            </tr>
+        </thead>
+        <tbody id="ranking-table">
+            <!-- Дані будуть завантажуватись сюди -->
+        </tbody>
+    </table>
+
+    <script>
+        // Дані рейтингу (можна оновлювати через API або Google Sheets)
+        const players = [
+            { name: "Юлька", points: 68 },
+            { name: "Бот 2", points: 57 },
+            { name: "Андрій", points: 52 },
+            { name: "Влад", points: 48 },
+            { name: "Оксана", points: 46 },
+            { name: "Бот1", points: 44 },
+            { name: "V", points: 43 },
+            { name: "Танос", points: 41 },
+            { name: "Аня", points: 32 },
+            { name: "Артем", points: 28 }
+        ];
+
+        function getRank(points) {
+            if (points >= 1200) return { rank: "S-клас", class: "rank-S" };
+            if (points >= 800) return { rank: "A-клас", class: "rank-A" };
+            if (points >= 500) return { rank: "B-клас", class: "rank-B" };
+            if (points >= 200) return { rank: "C-клас", class: "rank-C" };
+            return { rank: "D-клас", class: "rank-D" };
+        }
+
+        function loadRanking() {
+            const table = document.getElementById("ranking-table");
+            players.sort((a, b) => b.points - a.points);
+            table.innerHTML = "";
+            players.forEach((player, index) => {
+                const rankInfo = getRank(player.points);
+                const row = document.createElement("tr");
+                row.classList.add(rankInfo.class);
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${player.name}</td>
+                    <td>${player.points}</td>
+                    <td>${rankInfo.rank}</td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadRanking);
+    </script>
+</body>
+</html>

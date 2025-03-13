@@ -53,58 +53,48 @@
             text-shadow: 2px 2px 10px black;
         }
 
-        /* 🔹 Таблиця */
-        .table-container {
-    max-height: 400px; /* Фіксована висота таблиці */
-    overflow-y: auto; /* Додає вертикальну прокрутку */
+       /* 🔹 Виправлення центрування таблиці */
+.table-container {
+    max-height: 400px; /* Фіксована висота */
+    overflow-y: auto; /* Прокрутка */
     border-radius: 10px;
     position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-/* Фіксуємо заголовок таблиці */
+/* 🔹 Виправлення центрування тексту */
+table {
+    margin: auto; /* Центрує таблицю */
+}
+
+/* 🔹 Фіксація заголовка таблиці */
 thead {
     position: sticky;
     top: 0;
-    background: #f39c12; /* Колір заголовка */
+    background: #f39c12;
     z-index: 10;
 }
 
-/* Покращення стилю заголовку */
-th {
-    background: #f39c12;
+/* 🔹 Покращення кнопки */
+.show-more {
+    background-color: #f39c12;
     color: black;
+    border: none;
     padding: 10px;
-    border: 1px solid #444;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: bold;
+    border-radius: 5px;
+    transition: 0.3s;
+    width: 150px;
 }
 
+.show-more:hover {
+    background-color: #d68910;
+}
 
-        .rank-icon {
-            width: 24px;
-            height: 24px;
-            vertical-align: middle;
-        }
-
-        /* 🔹 Кнопка розгортання списку */
-        .show-more {
-            background-color: #f39c12;
-            color: black;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-weight: bold;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
-
-        .show-more:hover {
-            background-color: #d68910;
-        }
-
-        /* 🔹 Приховані гравці */
-        .hidden-players {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -178,11 +168,19 @@ th {
                 .catch(error => console.error("Помилка завантаження даних:", error));
         }
 
-        function togglePlayers() {
-            document.querySelectorAll(".hidden-players").forEach(row => {
-                row.style.display = row.style.display === "none" ? "table-row" : "none";
-            });
-        }
+     function togglePlayers() {
+    const hiddenRows = document.querySelectorAll(".hidden-players");
+    const button = document.querySelector(".show-more");
+    
+    if (hiddenRows[0].style.display === "none" || hiddenRows[0].style.display === "") {
+        hiddenRows.forEach(row => row.style.display = "table-row");
+        button.textContent = "Показати Топ-10";
+    } else {
+        hiddenRows.forEach(row => row.style.display = "none");
+        button.textContent = "Показати більше";
+    }
+}
+
 
         document.addEventListener("DOMContentLoaded", loadRanking);
     </script>

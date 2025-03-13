@@ -55,27 +55,28 @@
 
         /* 🔹 Таблиця */
         .table-container {
-            max-height: 400px; /* Фіксована висота */
-            overflow-y: auto; /* Додає прокрутку вниз */
-            border-radius: 10px;
-        }
+    max-height: 400px; /* Фіксована висота таблиці */
+    overflow-y: auto; /* Додає вертикальну прокрутку */
+    border-radius: 10px;
+    position: relative;
+}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(26, 26, 26, 0.9);
-        }
+/* Фіксуємо заголовок таблиці */
+thead {
+    position: sticky;
+    top: 0;
+    background: #f39c12; /* Колір заголовка */
+    z-index: 10;
+}
 
-        th, td {
-            padding: 10px;
-            border: 1px solid #444;
-            text-align: center;
-        }
+/* Покращення стилю заголовку */
+th {
+    background: #f39c12;
+    color: black;
+    padding: 10px;
+    border: 1px solid #444;
+}
 
-        th {
-            background: #f39c12;
-            color: black;
-        }
 
         .rank-icon {
             width: 24px;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Рейтинг гравців | Лазертаг</title>
+    <title>Р РµР№С‚РёРЅРі РіСЂР°РІС†С–РІ | Р›Р°Р·РµСЂС‚Р°Рі</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -31,50 +31,49 @@
             background: #f39c12;
             color: black;
         }
-        .rank-S { background: purple; }
-        .rank-A { background: red; }
-        .rank-B { background: gold; }
-        .rank-C { background: blue; }
-        .rank-D { background: green; }
+        .rank-S { background: purple; color: white; }
+        .rank-A { background: red; color: white; }
+        .rank-B { background: gold; color: black; }
+        .rank-C { background: blue; color: white; }
+        .rank-D { background: green; color: white; }
     </style>
 </head>
 <body>
-    <h1>Рейтинг гравців | Лазертаг</h1>
+    <h1>Р РµР№С‚РёРЅРі РіСЂР°РІС†С–РІ | Р›Р°Р·РµСЂС‚Р°Рі</h1>
     <table>
         <thead>
             <tr>
-                <th>Місце</th>
-                <th>Ім'я</th>
-                <th>Бали</th>
-                <th>Ранг</th>
+                <th>РњС–СЃС†Рµ</th>
+                <th>Р†Рј'СЏ</th>
+                <th>Р‘Р°Р»Рё</th>
+                <th>Р Р°РЅРі</th>
             </tr>
         </thead>
         <tbody id="ranking-table">
-            <!-- Дані будуть завантажуватись сюди -->
+            <!-- Р”Р°РЅС– Р±СѓРґСѓС‚СЊ Р·Р°РІР°РЅС‚Р°Р¶СѓРІР°С‚РёСЃСЊ СЃСЋРґРё -->
         </tbody>
     </table>
 
     <script>
-        // Дані рейтингу (можна оновлювати через API або Google Sheets)
         const players = [
-            { name: "Юлька", points: 68 },
-            { name: "Бот 2", points: 57 },
-            { name: "Андрій", points: 52 },
-            { name: "Влад", points: 48 },
-            { name: "Оксана", points: 46 },
-            { name: "Бот1", points: 44 },
+            { name: "Р®Р»СЊРєР°", points: 68 },
+            { name: "Р‘РѕС‚ 2", points: 57 },
+            { name: "РђРЅРґСЂС–Р№", points: 52 },
+            { name: "Р’Р»Р°Рґ", points: 48 },
+            { name: "РћРєСЃР°РЅР°", points: 46 },
+            { name: "Р‘РѕС‚1", points: 44 },
             { name: "V", points: 43 },
-            { name: "Танос", points: 41 },
-            { name: "Аня", points: 32 },
-            { name: "Артем", points: 28 }
+            { name: "РўР°РЅРѕСЃ", points: 41 },
+            { name: "РђРЅСЏ", points: 32 },
+            { name: "РђСЂС‚РµРј", points: 28 }
         ];
 
         function getRank(points) {
-            if (points >= 1200) return { rank: "S-клас", class: "rank-S" };
-            if (points >= 800) return { rank: "A-клас", class: "rank-A" };
-            if (points >= 500) return { rank: "B-клас", class: "rank-B" };
-            if (points >= 200) return { rank: "C-клас", class: "rank-C" };
-            return { rank: "D-клас", class: "rank-D" };
+            if (points >= 1200) return { rank: "S-РєР»Р°СЃ", class: "rank-S" };
+            if (points >= 800) return { rank: "A-РєР»Р°СЃ", class: "rank-A" };
+            if (points >= 500) return { rank: "B-РєР»Р°СЃ", class: "rank-B" };
+            if (points >= 200) return { rank: "C-РєР»Р°СЃ", class: "rank-C" };
+            return { rank: "D-РєР»Р°СЃ", class: "rank-D" };
         }
 
         function loadRanking() {

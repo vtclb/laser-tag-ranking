@@ -5,46 +5,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Рейтинг гравців | Лазертаг</title>
     <style>
-     body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: url('assets/background.jpg') no-repeat center center;
-    background-size: cover;
-    background-attachment: fixed; /* Фіксує фон, щоб не рухався */
-    color: white;
-    margin: 0;
-    padding: 20px;
-    overflow-x: hidden;
-}
+        /* 🔹 Оформлення сторінки */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: url('assets/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
 
-/* Фіксуємо мінімальну висоту, щоб фон не стрибав */
-.container {
-    min-height: 100vh; /* Контейнер займає всю висоту екрану */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
+        /* 🔹 Навігація */
+        nav {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
 
-/* Фіксуємо фон для мобільних пристроїв */
-@media (max-width: 768px) {
-    body {
-        background-attachment: scroll; /* Дозволяє фону залишатися стабільним */
-    }
-}
+        nav a {
+            color: #f39c12;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
 
-/* Анімація для плавного відкриття списку гравців */
-.hidden-players {
-    display: none;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-}
+        nav a:hover {
+            color: #ffd700;
+        }
 
-.hidden-players.show {
-    display: table-row;
-    opacity: 1;
-}
+        /* 🔹 Основний контейнер */
+        .container {
+            max-width: 90%;
+            margin: auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+        }
 
+        h1 {
+            color: #f39c12;
+            text-shadow: 2px 2px 10px black;
+        }
+
+        /* 🔹 Таблиця */
+        .table-container {
+            max-height: 400px; /* Фіксована висота */
+            overflow-y: auto; /* Додає прокрутку вниз */
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(26, 26, 26, 0.9);
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #444;
+            text-align: center;
+        }
+
+        th {
+            background: #f39c12;
+            color: black;
+        }
+
+        .rank-icon {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+        }
+
+        /* 🔹 Кнопка розгортання списку */
+        .show-more {
+            background-color: #f39c12;
+            color: black;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        .show-more:hover {
+            background-color: #d68910;
+        }
+
+        /* 🔹 Приховані гравці */
+        .hidden-players {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -54,24 +113,28 @@
         <a href="about.html">Про клуб</a>
     </nav>
     
-    <h1>Рейтинг гравців | Лазертаг</h1>
-    <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Місце</th>
-                <th>Ім'я</th>
-                <th>Ранг</th>
-                <th>Бали</th>
-            </tr>
-        </thead>
-        <tbody id="ranking-table">
-            <!-- Дані будуть завантажуватись звідси -->
-        </tbody>
-    </table>
+    <div class="container">
+        <h1>Рейтинг гравців | Лазертаг</h1>
+        <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Місце</th>
+                        <th>Ім'я</th>
+                        <th>Ранг</th>
+                        <th>Бали</th>
+                    </tr>
+                </thead>
+                <tbody id="ranking-table">
+                    <!-- Дані будуть завантажуватись звідси -->
+                </tbody>
+            </table>
+        </div>
 
-    <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+        <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+    </div>
 
     <script>
         const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv";

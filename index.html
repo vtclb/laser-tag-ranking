@@ -50,30 +50,12 @@
             </tr>
         </thead>
         <tbody id="ranking-table">
-            <!-- Дані будуть завантажуватись сюди -->
+            <!-- Дані будуть завантажуватись звідси -->
         </tbody>
     </table>
 
     <script>
-        const players = [
-            { name: "Makasino", points: 223 },
-            { name: "Місько", points: 200 },
-            { name: "Артемон", points: 190 },
-            { name: "Рікардо", points: 150 },
-            { name: "АТБ", points: 150 },
-            { name: "Скандал", points: 148 },
-            { name: "Крутелик", points: 148 },
-            { name: "Пасатт", points: 130 },
-            { name: "Вольтиметер", points: 128 },
-            { name: "Соз", points: 110 },
-            { name: "Варвік", points: 60 },
-            { name: "Кейтлін", points: 40 },
-            { name: "Шелі", points: 30 },
-            { name: "Куміхо", points: 30 },
-            { name: "Поко", points: 30 },
-            { name: "Хенкок", points: 10 },
-            { name: "Єль прімо", points: 10 }
-        ];
+        const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv";
 
         function getRank(points) {
             if (points >= 1200) return { rank: "S-клас", class: "rank-S" };
@@ -84,21 +66,32 @@
         }
 
         function loadRanking() {
-            const table = document.getElementById("ranking-table");
-            players.sort((a, b) => b.points - a.points);
-            table.innerHTML = "";
-            players.forEach((player, index) => {
-                const rankInfo = getRank(player.points);
-                const row = document.createElement("tr");
-                row.classList.add(rankInfo.class);
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${player.name}</td>
-                    <td>${player.points}</td>
-                    <td>${rankInfo.rank}</td>
-                `;
-                table.appendChild(row);
-            });
+            fetch(sheetURL)
+                .then(response => response.text())
+                .then(csvText => {
+                    const rows = csvText.split("\n").slice(1);
+                    const players = rows.map(row => {
+                        const cols = row.split(",");
+                        return { name: cols[1], points: parseInt(cols[2]) };
+                    });
+
+                    players.sort((a, b) => b.points - a.points);
+                    const table = document.getElementById("ranking-table");
+                    table.innerHTML = "";
+                    players.forEach((player, index) => {
+                        const rankInfo = getRank(player.points);
+                        const row = document.createElement("tr");
+                        row.classList.add(rankInfo.class);
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${player.name}</td>
+                            <td>${player.points}</td>
+                            <td>${rankInfo.rank}</td>
+                        `;
+                        table.appendChild(row);
+                    });
+                })
+                .catch(error => console.error("Помилка завантаження даних:", error));
         }
 
         document.addEventListener("DOMContentLoaded", loadRanking);

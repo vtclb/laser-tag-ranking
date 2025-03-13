@@ -8,13 +8,18 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #1a1a1a;
+            background-color: #0d0d0d;
             color: white;
             margin: 0;
             padding: 20px;
         }
         h1 {
             color: #f39c12;
+        }
+        .test-season {
+            font-size: 14px;
+            color: #f39c12;
+            margin-bottom: 10px;
         }
         nav {
             background-color: #f39c12;
@@ -30,7 +35,7 @@
             width: 80%;
             margin: auto;
             border-collapse: collapse;
-            background: #2c2c2c;
+            background: #1a1a1a;
         }
         th, td {
             padding: 10px;
@@ -41,11 +46,22 @@
             background: #f39c12;
             color: black;
         }
-        .rank-S { background: purple; color: white; }
-        .rank-A { background: red; color: white; }
-        .rank-B { background: gold; color: black; }
-        .rank-C { background: blue; color: white; }
-        .rank-D { background: green; color: white; }
+        .rank-icon {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+        }
+        .hidden-players {
+            display: none;
+        }
+        .show-more {
+            background-color: #f39c12;
+            color: black;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -56,13 +72,15 @@
     </nav>
     
     <h1>Рейтинг гравців | Лазертаг</h1>
+    <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
+    
     <table>
         <thead>
             <tr>
                 <th>Місце</th>
                 <th>Ім'я</th>
-                <th>Бали</th>
                 <th>Ранг</th>
+                <th>Бали</th>
             </tr>
         </thead>
         <tbody id="ranking-table">
@@ -70,15 +88,17 @@
         </tbody>
     </table>
 
+    <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+
     <script>
         const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv";
 
         function getRank(points) {
-            if (points >= 1200) return { rank: "S-клас", class: "rank-S" };
-            if (points >= 800) return { rank: "A-клас", class: "rank-A" };
-            if (points >= 500) return { rank: "B-клас", class: "rank-B" };
-            if (points >= 200) return { rank: "C-клас", class: "rank-C" };
-            return { rank: "D-клас", class: "rank-D" };
+            if (points >= 1200) return { rank: "S-клас", class: "rank-S", icon: "🟣" };
+            if (points >= 800) return { rank: "A-клас", class: "rank-A", icon: "🔴" };
+            if (points >= 500) return { rank: "B-клас", class: "rank-B", icon: "🟡" };
+            if (points >= 200) return { rank: "C-клас", class: "rank-C", icon: "🔵" };
+            return { rank: "D-клас", class: "rank-D", icon: "🟢" };
         }
 
         function loadRanking() {
@@ -98,16 +118,23 @@
                         const rankInfo = getRank(player.points);
                         const row = document.createElement("tr");
                         row.classList.add(rankInfo.class);
+                        if (index >= 10) row.classList.add("hidden-players");
                         row.innerHTML = `
                             <td>${index + 1}</td>
-                            <td>${player.name}</td>
-                            <td>${player.points}</td>
+                            <td>${rankInfo.icon} ${player.name}</td>
                             <td>${rankInfo.rank}</td>
+                            <td>${player.points}</td>
                         `;
                         table.appendChild(row);
                     });
                 })
                 .catch(error => console.error("Помилка завантаження даних:", error));
+        }
+
+        function togglePlayers() {
+            document.querySelectorAll(".hidden-players").forEach(row => {
+                row.style.display = row.style.display === "none" ? "table-row" : "none";
+            });
         }
 
         document.addEventListener("DOMContentLoaded", loadRanking);

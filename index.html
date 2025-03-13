@@ -53,48 +53,71 @@
             text-shadow: 2px 2px 10px black;
         }
 
-       /* 🔹 Виправлення центрування таблиці */
-.table-container {
-    max-height: 400px; /* Фіксована висота */
-    overflow-y: auto; /* Прокрутка */
-    border-radius: 10px;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+        /* 🔹 Таблиця */
+        .table-container {
+            max-height: 400px; /* Фіксована висота таблиці */
+            overflow-y: auto; /* Прокрутка вниз */
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-/* 🔹 Виправлення центрування тексту */
-table {
-    margin: auto; /* Центрує таблицю */
-}
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(26, 26, 26, 0.9);
+            margin: auto;
+        }
 
-/* 🔹 Фіксація заголовка таблиці */
-thead {
-    position: sticky;
-    top: 0;
-    background: #f39c12;
-    z-index: 10;
-}
+        th, td {
+            padding: 10px;
+            border: 1px solid #444;
+            text-align: center;
+        }
 
-/* 🔹 Покращення кнопки */
-.show-more {
-    background-color: #f39c12;
-    color: black;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    margin-top: 10px;
-    font-weight: bold;
-    border-radius: 5px;
-    transition: 0.3s;
-    width: 150px;
-}
+        /* 🔹 Фіксований заголовок таблиці */
+        thead {
+            position: sticky;
+            top: 0;
+            background: #f39c12;
+            z-index: 10;
+        }
 
-.show-more:hover {
-    background-color: #d68910;
-}
+        th {
+            background: #f39c12;
+            color: black;
+        }
 
+        .rank-icon {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+        }
+
+        /* 🔹 Кнопка для розгортання списку */
+        .show-more {
+            background-color: #f39c12;
+            color: black;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: 0.3s;
+            width: 150px;
+        }
+
+        .show-more:hover {
+            background-color: #d68910;
+        }
+
+        /* 🔹 Приховані гравці */
+        .hidden-players {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -113,7 +136,7 @@ thead {
                 <thead>
                     <tr>
                         <th>Місце</th>
-                        <th>Нікнейм</th>
+                        <th>Нікнейм</th>  <!-- ✅ Замінили "Ім'я" на "Нікнейм" -->
                         <th>Ранг</th>
                         <th>Бали</th>
                     </tr>
@@ -139,49 +162,47 @@ thead {
         }
 
         function loadRanking() {
-    fetch(sheetURL)
-        .then(response => response.text())
-        .then(csvText => {
-            const rows = csvText.split("\n").slice(1);
-            const players = rows.map(row => {
-                const cols = row.split(",");
-                return { nickname: cols[0], points: parseInt(cols[2]) }; // Читаємо перший стовпець як нікнейм
-            });
+            fetch(sheetURL)
+                .then(response => response.text())
+                .then(csvText => {
+                    const rows = csvText.split("\n").slice(1);
+                    const players = rows.map(row => {
+                        const cols = row.split(",");
+                        return { nickname: cols[0], points: parseInt(cols[2]) }; // ✅ Використовуємо перший стовпець як нікнейм
+                    });
 
-            players.sort((a, b) => b.points - a.points);
-            const table = document.getElementById("ranking-table");
-            table.innerHTML = "";
-            players.forEach((player, index) => {
-                const rankInfo = getRank(player.points);
-                const row = document.createElement("tr");
-                row.classList.add(rankInfo.class);
-                if (index >= 10) row.classList.add("hidden-players");
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${rankInfo.icon} ${player.nickname}</td> <!-- Тепер відображається Нікнейм -->
-                    <td>${rankInfo.rank}</td>
-                    <td>${player.points}</td>
-                `;
-                table.appendChild(row);
-            });
-        })
-        .catch(error => console.error("Помилка завантаження даних:", error));
-}
+                    players.sort((a, b) => b.points - a.points);
+                    const table = document.getElementById("ranking-table");
+                    table.innerHTML = "";
+                    players.forEach((player, index) => {
+                        const rankInfo = getRank(player.points);
+                        const row = document.createElement("tr");
+                        row.classList.add(rankInfo.class);
+                        if (index >= 10) row.classList.add("hidden-players");
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${rankInfo.icon} ${player.nickname}</td> <!-- ✅ Відображається Нікнейм -->
+                            <td>${rankInfo.rank}</td>
+                            <td>${player.points}</td>
+                        `;
+                        table.appendChild(row);
+                    });
+                })
+                .catch(error => console.error("Помилка завантаження даних:", error));
+        }
 
-
-     function togglePlayers() {
-    const hiddenRows = document.querySelectorAll(".hidden-players");
-    const button = document.querySelector(".show-more");
-    
-    if (hiddenRows[0].style.display === "none" || hiddenRows[0].style.display === "") {
-        hiddenRows.forEach(row => row.style.display = "table-row");
-        button.textContent = "Показати Топ-10";
-    } else {
-        hiddenRows.forEach(row => row.style.display = "none");
-        button.textContent = "Показати більше";
-    }
-}
-
+        function togglePlayers() {
+            const hiddenRows = document.querySelectorAll(".hidden-players");
+            const button = document.querySelector(".show-more");
+            
+            if (hiddenRows[0].style.display === "none" || hiddenRows[0].style.display === "") {
+                hiddenRows.forEach(row => row.style.display = "table-row");
+                button.textContent = "Показати Топ-10";
+            } else {
+                hiddenRows.forEach(row => row.style.display = "none");
+                button.textContent = "Показати більше";
+            }
+        }
 
         document.addEventListener("DOMContentLoaded", loadRanking);
     </script>

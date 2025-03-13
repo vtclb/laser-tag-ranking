@@ -139,34 +139,35 @@ thead {
         }
 
         function loadRanking() {
-            fetch(sheetURL)
-                .then(response => response.text())
-                .then(csvText => {
-                    const rows = csvText.split("\n").slice(1);
-                    const players = rows.map(row => {
-                        const cols = row.split(",");
-                        return { name: cols[1], points: parseInt(cols[2]) };
-                    });
+    fetch(sheetURL)
+        .then(response => response.text())
+        .then(csvText => {
+            const rows = csvText.split("\n").slice(1);
+            const players = rows.map(row => {
+                const cols = row.split(",");
+                return { nickname: cols[0], points: parseInt(cols[2]) }; // Читаємо перший стовпець як нікнейм
+            });
 
-                    players.sort((a, b) => b.points - a.points);
-                    const table = document.getElementById("ranking-table");
-                    table.innerHTML = "";
-                    players.forEach((player, index) => {
-                        const rankInfo = getRank(player.points);
-                        const row = document.createElement("tr");
-                        row.classList.add(rankInfo.class);
-                        if (index >= 10) row.classList.add("hidden-players");
-                        row.innerHTML = `
-                            <td>${index + 1}</td>
-                            <td>${rankInfo.icon} ${player.name}</td>
-                            <td>${rankInfo.rank}</td>
-                            <td>${player.points}</td>
-                        `;
-                        table.appendChild(row);
-                    });
-                })
-                .catch(error => console.error("Помилка завантаження даних:", error));
-        }
+            players.sort((a, b) => b.points - a.points);
+            const table = document.getElementById("ranking-table");
+            table.innerHTML = "";
+            players.forEach((player, index) => {
+                const rankInfo = getRank(player.points);
+                const row = document.createElement("tr");
+                row.classList.add(rankInfo.class);
+                if (index >= 10) row.classList.add("hidden-players");
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${rankInfo.icon} ${player.nickname}</td> <!-- Тепер відображається Нікнейм -->
+                    <td>${rankInfo.rank}</td>
+                    <td>${player.points}</td>
+                `;
+                table.appendChild(row);
+            });
+        })
+        .catch(error => console.error("Помилка завантаження даних:", error));
+}
+
 
      function togglePlayers() {
     const hiddenRows = document.querySelectorAll(".hidden-players");

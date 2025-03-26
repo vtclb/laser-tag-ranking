@@ -4,29 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Недільна гра | Рейтинг</title>
+    <title>Рейтинг гравців | Недільна гра</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            text-align: center;
             background: url('assets/background.jpg') no-repeat center center fixed;
             background-size: cover;
+            color: white;
             margin: 0;
             padding: 20px;
-            color: white;
-            text-align: center;
-        }
-        .container {
-            max-width: 90%;
-            margin: auto;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 10px;
-        }
-        h1 {
-            color: #f39c12;
+            overflow-x: hidden;
         }
         nav {
-            background-color: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border-radius: 10px;
             display: flex;
@@ -37,20 +28,42 @@
             color: #f39c12;
             text-decoration: none;
             font-weight: bold;
+            transition: color 0.3s;
         }
-        .search-box {
-            margin-bottom: 15px;
+        nav a:hover {
+            color: #ffd700;
         }
-        input[type="text"] {
-            padding: 8px;
-            width: 200px;
-            border-radius: 5px;
-            border: none;
+        .container {
+            max-width: 90%;
+            margin: auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+        }
+        h1 {
+            color: #f39c12;
+            text-shadow: 2px 2px 10px black;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             background: rgba(26, 26, 26, 0.9);
+            margin: auto;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #444;
+            text-align: center;
         }
         thead {
             position: sticky;
@@ -58,14 +71,14 @@
             background: #f39c12;
             z-index: 10;
         }
-        th, td {
-            padding: 10px;
-            border: 1px solid #444;
-            text-align: center;
-        }
         th {
             background: #f39c12;
             color: black;
+        }
+        .rank-icon {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
         }
         .show-more {
             background-color: #f39c12;
@@ -76,6 +89,11 @@
             margin-top: 10px;
             font-weight: bold;
             border-radius: 5px;
+            transition: 0.3s;
+            width: 150px;
+        }
+        .show-more:hover {
+            background-color: #d68910;
         }
         .hidden-players {
             display: none;
@@ -86,10 +104,14 @@
     <nav>
         <a href="index.html">Рейтинг (Діти)</a>
         <a href="sunday.html">Недільна гра</a>
+        <a href="rules.html">Правила</a>
+        <a href="about.html">Про клуб</a>
     </nav>
+
     <div class="container">
         <h1>Рейтинг гравців | Недільна гра</h1>
-        <input type="text" id="search" class="search-box" placeholder="Пошук за нікнеймом..." onkeyup="searchPlayers()">
+        <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
+
         <div class="table-container">
             <table>
                 <thead>
@@ -100,9 +122,12 @@
                         <th>Бали</th>
                     </tr>
                 </thead>
-                <tbody id="ranking-table"></tbody>
+                <tbody id="ranking-table">
+                    <!-- Дані будуть завантажуватись звідси -->
+                </tbody>
             </table>
         </div>
+
         <button class="show-more" onclick="togglePlayers()">Показати більше</button>
     </div>
 
@@ -110,21 +135,21 @@
         const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
 
         function getRank(points) {
-            if (points >= 1200) return { rank: "S-клас", icon: "🟣" };
-            if (points >= 800) return { rank: "A-клас", icon: "🔴" };
-            if (points >= 500) return { rank: "B-клас", icon: "🟡" };
-            if (points >= 200) return { rank: "C-клас", icon: "🔵" };
-            return { rank: "D-клас", icon: "🟢" };
+            if (points >= 1200) return { rank: "S-клас", class: "rank-S", icon: "🟣" };
+            if (points >= 800) return { rank: "A-клас", class: "rank-A", icon: "🔴" };
+            if (points >= 500) return { rank: "B-клас", class: "rank-B", icon: "🟡" };
+            if (points >= 200) return { rank: "C-клас", class: "rank-C", icon: "🔵" };
+            return { rank: "D-клас", class: "rank-D", icon: "🟢" };
         }
 
         function loadRanking() {
             fetch(sheetURL)
                 .then(response => response.text())
                 .then(csvText => {
-                    const rows = csvText.split("\n").slice(1);
+                    const rows = csvText.split("\\n").slice(1);
                     const players = rows.map(row => {
-                        const cols = row.split(",");
-                        return { nickname: cols[0], points: parseInt(cols[2]) };
+                        const cols = row.split(",").map(c => c.trim());
+                        return { nickname: cols[1], points: parseInt(cols[2]) };
                     }).filter(p => p.nickname && !isNaN(p.points));
 
                     players.sort((a, b) => b.points - a.points);
@@ -142,7 +167,8 @@
                         `;
                         table.appendChild(row);
                     });
-                });
+                })
+                .catch(error => console.error("Помилка завантаження даних:", error));
         }
 
         function togglePlayers() {
@@ -153,16 +179,11 @@
             button.textContent = isHidden ? "Показати Топ-10" : "Показати більше";
         }
 
-        function searchPlayers() {
-            const input = document.getElementById("search").value.toLowerCase();
-            const rows = document.querySelectorAll("#ranking-table tr");
-            rows.forEach(row => {
-                const name = row.children[1].textContent.toLowerCase();
-                row.style.display = name.includes(input) ? "" : "none";
-            });
-        }
-
         document.addEventListener("DOMContentLoaded", loadRanking);
     </script>
 </body>
 </html>
+"""
+
+with open("/mnt/data/sunday.html", "w", encoding="utf-8") as f:
+    f.write(html_sunday_updated)

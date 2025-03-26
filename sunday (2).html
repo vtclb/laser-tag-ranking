@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Недільний рейтинг | Лазертаг</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0d0d0d;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+        }
+        nav {
+            background: #f39c12;
+            padding: 10px;
+        }
+        nav a {
+            color: black;
+            font-weight: bold;
+            margin: 0 10px;
+            text-decoration: none;
+        }
+        h1 {
+            color: #f39c12;
+        }
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: #1a1a1a;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #333;
+            text-align: center;
+        }
+        th {
+            background: #f39c12;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Рейтинг (Діти)</a>
+        <a href="sunday.html">Недільна гра</a>
+    </nav>
+
+    <h1>Недільний рейтинг</h1>
+    <p>⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Місце</th>
+                <th>Нікнейм</th>
+                <th>Бали</th>
+            </tr>
+        </thead>
+        <tbody id="ranking-table">
+            <!-- Сюди буде вставлено інформацію -->
+        </tbody>
+    </table>
+
+    <script>
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
+
+        fetch(csvUrl)
+            .then(response => response.text())
+            .then(data => {
+                const rows = data.trim().split("\n").slice(1);
+                const players = rows.map(row => {
+                    const [id, nick, score] = row.split(",");
+                    return { nick: nick.trim(), score: parseInt(score.trim()) };
+                }).filter(player => player.nick && !isNaN(player.score));
+
+                players.sort((a, b) => b.score - a.score);
+
+                const table = document.getElementById("ranking-table");
+                players.forEach((player, i) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${i + 1}</td>
+                        <td>${player.nick}</td>
+                        <td>${player.score}</td>
+                    `;
+                    table.appendChild(row);
+                });
+            })
+            .catch(err => {
+                const table = document.getElementById("ranking-table");
+                table.innerHTML = "<tr><td colspan='3'>Помилка завантаження даних</td></tr>";
+                console.error("Помилка:", err);
+            });
+    </script>
+</body>
+</html>

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -102,7 +101,7 @@
 </head>
 <body>
     <nav>
-        <a href="index.html">Рейтинг Діти</a>
+        <a href="index.html">Рейтинг (Діти)</a>
         <a href="sunday.html">Недільна гра</a>
         <a href="rules.html">Правила</a>
         <a href="about.html">Про клуб</a>
@@ -146,7 +145,7 @@
             fetch(sheetURL)
                 .then(response => response.text())
                 .then(csvText => {
-                    const rows = csvText.split("\\n").slice(1);
+                    const rows = csvText.trim().split("\\n").slice(1);
                     const players = rows.map(row => {
                         const cols = row.split(",").map(c => c.trim());
                         return { nickname: cols[1], points: parseInt(cols[2]) };
@@ -174,7 +173,7 @@
         function togglePlayers() {
             const hiddenRows = document.querySelectorAll(".hidden-players");
             const button = document.querySelector(".show-more");
-            const isHidden = hiddenRows[0]?.style.display !== "table-row";
+            const isHidden = hiddenRows.length > 0 && hiddenRows[0].style.display !== "table-row";
             hiddenRows.forEach(row => row.style.display = isHidden ? "table-row" : "none");
             button.textContent = isHidden ? "Показати Топ-10" : "Показати більше";
         }
@@ -184,5 +183,3 @@
 </body>
 </html>
 """
-
-

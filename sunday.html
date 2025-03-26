@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Недільна гра | Рейтинг</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: url('assets/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 20px;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 90%;
+            margin: auto;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        h1 {
+            color: #f39c12;
+        }
+        nav {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        nav a {
+            color: #f39c12;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .search-box {
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 200px;
+            border-radius: 5px;
+            border: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(26, 26, 26, 0.9);
+        }
+        thead {
+            position: sticky;
+            top: 0;
+            background: #f39c12;
+            z-index: 10;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #444;
+            text-align: center;
+        }
+        th {
+            background: #f39c12;
+            color: black;
+        }
+        .show-more {
+            background-color: #f39c12;
+            color: black;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        .hidden-players {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Рейтинг (Діти)</a>
+        <a href="sunday.html">Недільна гра</a>
+    </nav>
+    <div class="container">
+        <h1>Рейтинг гравців | Недільна гра</h1>
+        <input type="text" id="search" class="search-box" placeholder="Пошук за нікнеймом..." onkeyup="searchPlayers()">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Місце</th>
+                        <th>Нікнейм</th>
+                        <th>Ранг</th>
+                        <th>Бали</th>
+                    </tr>
+                </thead>
+                <tbody id="ranking-table"></tbody>
+            </table>
+        </div>
+        <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+    </div>
+
+    <script>
+        const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
+
+        function getRank(points) {
+            if (points >= 1200) return { rank: "S-клас", icon: "🟣" };
+            if (points >= 800) return { rank: "A-клас", icon: "🔴" };
+            if (points >= 500) return { rank: "B-клас", icon: "🟡" };
+            if (points >= 200) return { rank: "C-клас", icon: "🔵" };
+            return { rank: "D-клас", icon: "🟢" };
+        }
+
+        function loadRanking() {
+            fetch(sheetURL)
+                .then(response => response.text())
+                .then(csvText => {
+                    const rows = csvText.split("\n").slice(1);
+                    const players = rows.map(row => {
+                        const cols = row.split(",");
+                        return { nickname: cols[0], points: parseInt(cols[2]) };
+                    }).filter(p => p.nickname && !isNaN(p.points));
+
+                    players.sort((a, b) => b.points - a.points);
+                    const table = document.getElementById("ranking-table");
+                    table.innerHTML = "";
+                    players.forEach((player, index) => {
+                        const rankInfo = getRank(player.points);
+                        const row = document.createElement("tr");
+                        if (index >= 10) row.classList.add("hidden-players");
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${rankInfo.icon} ${player.nickname}</td>
+                            <td>${rankInfo.rank}</td>
+                            <td>${player.points}</td>
+                        `;
+                        table.appendChild(row);
+                    });
+                });
+        }
+
+        function togglePlayers() {
+            const hiddenRows = document.querySelectorAll(".hidden-players");
+            const button = document.querySelector(".show-more");
+            const isHidden = hiddenRows[0]?.style.display !== "table-row";
+            hiddenRows.forEach(row => row.style.display = isHidden ? "table-row" : "none");
+            button.textContent = isHidden ? "Показати Топ-10" : "Показати більше";
+        }
+
+        function searchPlayers() {
+            const input = document.getElementById("search").value.toLowerCase();
+            const rows = document.querySelectorAll("#ranking-table tr");
+            rows.forEach(row => {
+                const name = row.children[1].textContent.toLowerCase();
+                row.style.display = name.includes(input) ? "" : "none";
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadRanking);
+    </script>
+</body>
+</html>

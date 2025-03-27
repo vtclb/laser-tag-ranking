@@ -129,63 +129,7 @@
         <button class="show-more" onclick="togglePlayers()">Показати більше</button>
     </div>
 
-    <script>
-        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
+   <script src="scripts/script-sunday.js?v=1"></script>
 
-        function getRank(points) {
-            if (points >= 1200) return { rank: "S-ранг", icon: "🟣" };
-            if (points >= 800) return { rank: "A-ранг", icon: "🔴" };
-            if (points >= 500) return { rank: "B-ранг", icon: "🟡" };
-            if (points >= 200) return { rank: "C-ранг", icon: "🔵" };
-            return { rank: "D-ранг", icon: "🟢" };
-        }
-
-        function loadRanking() {
-            fetch(csvUrl)
-                .then(res => res.text())
-                .then(data => {
-                    const rows = data.trim().split("\n").slice(1);
-                    const players = rows.map(row => {
-                        const cols = row.split(",");
-                        return { nickname: cols[1].trim(), points: parseInt(cols[2]) };
-                    }).filter(p => p.nickname && !isNaN(p.points));
-
-                    players.sort((a, b) => b.points - a.points);
-                    const table = document.getElementById("ranking-table");
-                    table.innerHTML = "";
-                    players.forEach((player, index) => {
-                        const rank = getRank(player.points);
-                        const row = document.createElement("tr");
-                        if (index >= 10) row.classList.add("hidden-players");
-                        row.innerHTML = `
-                            <td>${index + 1}</td>
-                            <td>${rank.icon} ${player.nickname}</td>
-                            <td>${rank.rank}</td>
-                            <td>${player.points}</td>
-                        `;
-                        table.appendChild(row);
-                    });
-                });
-        }
-
-        function togglePlayers() {
-            const hidden = document.querySelectorAll(".hidden-players");
-            const btn = document.querySelector(".show-more");
-            const isHidden = hidden[0]?.style.display === "none" || hidden[0]?.style.display === "";
-            hidden.forEach(row => row.style.display = isHidden ? "table-row" : "none");
-            btn.textContent = isHidden ? "Показати Топ-10" : "Показати більше";
-        }
-
-        function filterTable() {
-            const input = document.getElementById("searchInput").value.toLowerCase();
-            const rows = document.querySelectorAll("#ranking-table tr");
-            rows.forEach(row => {
-                const nameCell = row.cells[1]?.textContent.toLowerCase();
-                row.style.display = nameCell.includes(input) ? "" : "none";
-            });
-        }
-
-        document.addEventListener("DOMContentLoaded", loadRanking);
-    </script>
 </body>
 </html>

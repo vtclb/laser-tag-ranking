@@ -131,6 +131,21 @@
     </div>
 
    <script src="scripts/script-sunday.js?v=1"></script>
+    <script>
+  // Визначаємо, яка сторінка зараз активна
+  const path = window.location.pathname;
+
+  if (path.includes("index")) {
+    document.getElementById("nav-kids").style.borderBottom = "2px solid #ffd700";
+  } else if (path.includes("sunday")) {
+    document.getElementById("nav-sunday").style.borderBottom = "2px solid #ffd700";
+  } else if (path.includes("rules")) {
+    document.getElementById("nav-rules").style.borderBottom = "2px solid #ffd700";
+  } else if (path.includes("about")) {
+    document.getElementById("nav-about").style.borderBottom = "2px solid #ffd700";
+  }
+</script>
+
 
 </body>
 </html>

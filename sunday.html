@@ -145,6 +145,22 @@
     document.getElementById("nav-about").style.borderBottom = "2px solid #ffd700";
   }
 </script>
+    <script>
+function filterTable() {
+    const input = document.getElementById("searchInput");
+    const filter = input.value.toLowerCase();
+    const rows = document.querySelectorAll("#ranking-table tr");
+
+    rows.forEach(row => {
+        const nicknameCell = row.cells[1]; // 2-а колонка — Нікнейм
+        if (nicknameCell) {
+            const text = nicknameCell.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? "" : "none";
+        }
+    });
+}
+</script>
+
 
 
 </body>

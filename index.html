@@ -1,140 +1,227 @@
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Молодша ліга | Лазертаг</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background: url('assets/background.jpg') no-repeat center center fixed;
-            background-size: cover;
-            color: white;
-            margin: 0;
-            padding: 20px;
-        }
-        nav {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 10px;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-        nav a {
-            color: #f39c12;
-            text-decoration: none;
-            font-weight: bold;
-            transition: color 0.3s;
-        }
-        nav a:hover {
-            color: #ffd700;
-        }
-        .container {
-            max-width: 90%;
-            margin: auto;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
-        }
-        h1 {
-            color: #f39c12;
-            text-shadow: 2px 2px 10px black;
-        }
-        .table-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(26, 26, 26, 0.9);
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #444;
-            text-align: center;
-        }
-        thead {
-            position: sticky;
-            top: 0;
-            background: #f39c12;
-            z-index: 10;
-        }
-        th {
-            background: #f39c12;
-            color: black;
-        }
-        .show-more {
-            background-color: #f39c12;
-            color: black;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-weight: bold;
-            border-radius: 5px;
-        }
-        .hidden-players {
-            display: none;
-        }
-        .search-box {
-            margin-top: 15px;
-        }
-        .search-box input {
-            padding: 8px;
-            border-radius: 5px;
-            border: none;
-            width: 200px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Молодша ліга | Лазертаг</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: url('assets/background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+      margin: 0;
+      padding: 20px;
+    }
+
+    nav {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    nav a {
+      color: #f39c12;
+      text-decoration: none;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    nav a:hover {
+      color: #ffd700;
+    }
+
+    .container {
+      max-width: 90%;
+      margin: auto;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+    }
+
+    h1 {
+      color: #f39c12;
+      text-shadow: 2px 2px 10px black;
+    }
+
+    .table-container {
+      max-height: 400px;
+      overflow-y: auto;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(26, 26, 26, 0.9);
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #444;
+      text-align: center;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: #f39c12;
+      z-index: 10;
+    }
+
+    th {
+      background: #f39c12;
+      color: black;
+    }
+
+    .show-more {
+      background-color: #f39c12;
+      color: black;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+      border-radius: 5px;
+    }
+
+    .hidden-players {
+      display: none;
+    }
+
+    .search-box {
+      margin-top: 15px;
+    }
+
+    .search-box input {
+      padding: 8px;
+      border-radius: 5px;
+      border: none;
+      width: 200px;
+    }
+  </style>
 </head>
 <body>
-    <nav>
+
+<nav>
   <a href="index.html" class="nav-link" id="nav-kids">Молодша Ліга</a>
   <a href="sunday.html" class="nav-link" id="nav-sunday">Старша Ліга</a>
   <a href="rules.html" class="nav-link" id="nav-rules">Правила</a>
   <a href="about.html" class="nav-link" id="nav-about">Про клуб</a>
 </nav>
 
+<div class="container">
+  <h1>Молодша ліга | Рейтинг гравців</h1>
+  <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
 
-    <div class="container">
-        <h1>Молодша ліга | Рейтинг гравців</h1>
-        <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
+  <div class="search-box">
+    <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Пошук нікнейму...">
+  </div>
 
-        <div class="search-box">
-            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Пошук нікнейму...">
-        </div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Місце</th>
+          <th>Нікнейм</th>
+          <th>Ранг</th>
+          <th>Бали</th>
+        </tr>
+      </thead>
+      <tbody id="ranking-table">
+        <!-- Дані будуть завантажені -->
+      </tbody>
+    </table>
+  </div>
 
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Місце</th>
-                        <th>Нікнейм</th>
-                        <th>Ранг</th>
-                        <th>Бали</th>
-                    </tr>
-                </thead>
-                <tbody id="ranking-table">
-                    <!-- Дані будуть завантажені -->
-                </tbody>
-            </table>
-        </div>
+  <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+</div>
 
-        <button class="show-more" onclick="togglePlayers()">Показати більше</button>
-    </div>
+<script>
+  const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv";
 
-    <script src="scripts/script-kids.js?v=1"></script>
-    <script>
-  // Визначаємо, яка сторінка зараз активна
+  let allRows = [];
+
+  function getRank(points) {
+    if (points >= 1200) return { rank: "S ранг", class: "rank-S", icon: "🟣" };
+    if (points >= 800) return { rank: "A ранг", class: "rank-A", icon: "🔴" };
+    if (points >= 500) return { rank: "B ранг", class: "rank-B", icon: "🟡" };
+    if (points >= 200) return { rank: "C ранг", class: "rank-C", icon: "🔵" };
+    return { rank: "D ранг", class: "rank-D", icon: "🟢" };
+  }
+
+  function loadRanking() {
+    fetch(sheetURL)
+      .then(response => response.text())
+      .then(csvText => {
+        const rows = csvText.trim().split("\n").slice(1);
+        const players = rows.map(row => {
+          const cols = row.split(",");
+          return { nickname: cols[1], points: parseInt(cols[2]) };
+        }).filter(player => player.nickname && !isNaN(player.points));
+
+        players.sort((a, b) => b.points - a.points);
+        const table = document.getElementById("ranking-table");
+        table.innerHTML = "";
+
+        allRows = players.map((player, index) => {
+          const rankInfo = getRank(player.points);
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${rankInfo.icon} ${player.nickname}</td>
+            <td>${rankInfo.rank}</td>
+            <td>${player.points}</td>
+          `;
+          if (index >= 10) tr.classList.add("hidden-players");
+          table.appendChild(tr);
+          return tr;
+        });
+      });
+  }
+
+  function filterTable() {
+    const input = document.getElementById("searchInput").value.toLowerCase();
+    const button = document.querySelector(".show-more");
+
+    if (input === "") {
+      allRows.forEach((row, index) => {
+        row.style.display = (index < 10) ? "table-row" : "none";
+      });
+      button.textContent = "Показати більше";
+      return;
+    }
+
+    allRows.forEach(row => {
+      const nickname = row.children[1].textContent.toLowerCase();
+      row.style.display = nickname.includes(input) ? "table-row" : "none";
+    });
+
+    button.textContent = "Показати Топ-10";
+  }
+
+  function togglePlayers() {
+    const isHidden = allRows[10] && allRows[10].style.display === "none";
+    const button = document.querySelector(".show-more");
+
+    allRows.forEach((row, index) => {
+      if (index >= 10) row.style.display = isHidden ? "table-row" : "none";
+    });
+
+    button.textContent = isHidden ? "Показати Топ-10" : "Показати більше";
+  }
+
+  document.addEventListener("DOMContentLoaded", loadRanking);
+</script>
+
+<script>
   const path = window.location.pathname;
-
   if (path.includes("index")) {
     document.getElementById("nav-kids").style.borderBottom = "2px solid #ffd700";
   } else if (path.includes("sunday")) {
@@ -145,23 +232,6 @@
     document.getElementById("nav-about").style.borderBottom = "2px solid #ffd700";
   }
 </script>
-    <script>
-function filterTable() {
-    const input = document.getElementById("searchInput");
-    const filter = input.value.toLowerCase();
-    const rows = document.querySelectorAll("#ranking-table tr");
-
-    rows.forEach(row => {
-        const nicknameCell = row.cells[1]; // 2-а колонка — Нікнейм
-        if (nicknameCell) {
-            const text = nicknameCell.textContent.toLowerCase();
-            row.style.display = text.includes(filter) ? "" : "none";
-        }
-    });
-}
-</script>
-
-
 
 </body>
 </html>

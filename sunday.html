@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -95,46 +94,120 @@
     </style>
 </head>
 <body>
-   <nav>
-  <a href="index.html" class="nav-link" id="nav-kids">Молодша Ліга</a>
-  <a href="sunday.html" class="nav-link" id="nav-sunday">Старша Ліга</a>
-  <a href="rules.html" class="nav-link" id="nav-rules">Правила</a>
-  <a href="about.html" class="nav-link" id="nav-about">Про клуб</a>
+
+<nav>
+    <a href="index.html" class="nav-link" id="nav-kids">Молодша Ліга</a>
+    <a href="sunday.html" class="nav-link" id="nav-sunday">Старша Ліга</a>
+    <a href="rules.html" class="nav-link" id="nav-rules">Правила</a>
+    <a href="about.html" class="nav-link" id="nav-about">Про клуб</a>
 </nav>
 
+<div class="container">
+    <h1>Старша ліга | Рейтинг гравців</h1>
+    <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
 
-    <div class="container">
-        <h1>Старша ліга | Рейтинг гравців</h1>
-        <p class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
-
-        <div class="search-box">
-            <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Пошук нікнейму...">
-        </div>
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Місце</th>
-                        <th>Нікнейм</th>
-                        <th>Ранг</th>
-                        <th>Бали</th>
-                    </tr>
-                </thead>
-                <tbody id="ranking-table">
-                    <!-- Дані будуть завантажені -->
-                </tbody>
-            </table>
-        </div>
-
-        <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+    <div class="search-box">
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Пошук нікнейму...">
     </div>
 
-   <script src="scripts/script-sunday.js?v=1"></script>
-    <script>
-  // Визначаємо, яка сторінка зараз активна
-  const path = window.location.pathname;
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Місце</th>
+                    <th>Нікнейм</th>
+                    <th>Ранг</th>
+                    <th>Бали</th>
+                </tr>
+            </thead>
+            <tbody id="ranking-table">
+                <!-- Дані будуть завантажені -->
+            </tbody>
+        </table>
+    </div>
 
+    <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+</div>
+
+<script>
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
+
+    let allRows = [];
+
+    function getRank(points) {
+        if (points >= 1200) return { rank: "S ранг", class: "rank-S", icon: "🟣" };
+        if (points >= 800) return { rank: "A ранг", class: "rank-A", icon: "🔴" };
+        if (points >= 500) return { rank: "B ранг", class: "rank-B", icon: "🟡" };
+        if (points >= 200) return { rank: "C ранг", class: "rank-C", icon: "🔵" };
+        return { rank: "D ранг", class: "rank-D", icon: "🟢" };
+    }
+
+    function loadRanking() {
+        fetch(sheetURL)
+            .then(response => response.text())
+            .then(csvText => {
+                const rows = csvText.trim().split("\n").slice(1);
+                const players = rows.map(row => {
+                    const cols = row.split(",");
+                    return { nickname: cols[1], points: parseInt(cols[2]) };
+                }).filter(player => player.nickname && !isNaN(player.points));
+
+                players.sort((a, b) => b.points - a.points);
+                const table = document.getElementById("ranking-table");
+                table.innerHTML = "";
+
+                allRows = players.map((player, index) => {
+                    const rankInfo = getRank(player.points);
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${rankInfo.icon} ${player.nickname}</td>
+                        <td>${rankInfo.rank}</td>
+                        <td>${player.points}</td>
+                    `;
+                    if (index >= 10) tr.classList.add("hidden-players");
+                    table.appendChild(tr);
+                    return tr;
+                });
+            });
+    }
+
+    function filterTable() {
+        const input = document.getElementById("searchInput").value.toLowerCase();
+        const button = document.querySelector(".show-more");
+
+        if (input === "") {
+            allRows.forEach((row, index) => {
+                row.style.display = (index < 10) ? "table-row" : "none";
+            });
+            button.textContent = "Показати більше";
+            return;
+        }
+
+        allRows.forEach(row => {
+            const nickname = row.children[1].textContent.toLowerCase();
+            row.style.display = nickname.includes(input) ? "table-row" : "none";
+        });
+
+        button.textContent = "Показати Топ-10";
+    }
+
+    function togglePlayers() {
+        const isHidden = allRows[10] && allRows[10].style.display === "none";
+        const button = document.querySelector(".show-more");
+
+        allRows.forEach((row, index) => {
+            if (index >= 10) row.style.display = isHidden ? "table-row" : "none";
+        });
+
+        button.textContent = isHidden ? "Показати Топ-10" : "Показати більше";
+    }
+
+    document.addEventListener("DOMContentLoaded", loadRanking);
+</script>
+
+<script>
+  const path = window.location.pathname;
   if (path.includes("index")) {
     document.getElementById("nav-kids").style.borderBottom = "2px solid #ffd700";
   } else if (path.includes("sunday")) {
@@ -145,23 +218,6 @@
     document.getElementById("nav-about").style.borderBottom = "2px solid #ffd700";
   }
 </script>
-    <script>
-function filterTable() {
-    const input = document.getElementById("searchInput");
-    const filter = input.value.toLowerCase();
-    const rows = document.querySelectorAll("#ranking-table tr");
-
-    rows.forEach(row => {
-        const nicknameCell = row.cells[1]; // 2-а колонка — Нікнейм
-        if (nicknameCell) {
-            const text = nicknameCell.textContent.toLowerCase();
-            row.style.display = text.includes(filter) ? "" : "none";
-        }
-    });
-}
-</script>
-
-
 
 </body>
 </html>

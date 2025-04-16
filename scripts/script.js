@@ -1,4 +1,3 @@
-
 let players = [];
 let selectedPlayers = [];
 let lobbyPlayers = [];
@@ -27,9 +26,9 @@ function displayPlayers() {
   const list = document.getElementById("players-list");
   list.innerHTML = "<h3>Оберіть гравців для лоббі:</h3>";
   list.innerHTML += players.map((p, i) =>
-    \`<label style="display:block; margin: 3px 0;">
-      <input type="checkbox" value="\${i}" onchange="updateLobby()"> \${p.nickname} (\${p.points} балів)
-    </label>\`
+    `<label style="display:block; margin: 3px 0;">
+      <input type="checkbox" value="${i}" onchange="updateLobby()"> ${p.nickname} (${p.points} балів)
+    </label>`
   ).join("");
 }
 
@@ -37,13 +36,13 @@ function updateLobby() {
   const checkboxes = document.querySelectorAll("#players-list input:checked");
   lobbyPlayers = Array.from(checkboxes).map(cb => players[parseInt(cb.value)]);
   const lobby = document.getElementById("lobby");
-  lobby.innerHTML = lobbyPlayers.map(p => \`\${p.nickname} (\${p.points})\`).join(", ");
+  lobby.innerHTML = lobbyPlayers.map(p => `${p.nickname} (${p.points})`).join(", ");
 }
 
 function autoBalance() {
   const teamCount = parseInt(document.getElementById("team-count").value);
   if (lobbyPlayers.length < teamCount) {
-    alert("Недостатньо гравців для "+ teamCount +" команд.");
+    alert("Недостатньо гравців для " + teamCount + " команд.");
     return;
   }
 
@@ -101,7 +100,10 @@ function displayTeams({ team1, team2 }) {
   `;
 
   const mvpSelect = document.getElementById("mvp");
-  mvpSelect.innerHTML = [...team1, ...team2].map(p => \`<option value="\${p.nickname}">\${p.nickname}</option>\`).join("");
+  mvpSelect.innerHTML = [...team1, ...team2]
+    .map(p => `<option value="${p.nickname}">${p.nickname}</option>`)
+    .join("");
+
   document.getElementById("results").style.display = "block";
 }
 
@@ -114,5 +116,8 @@ function exportResults() {
   const mvp = document.getElementById("mvp").value;
   const penaltyText = document.getElementById("penalty").value;
 
-  alert(\`Результати збережено:\nПереможець: \${winner}\nMVP: \${mvp}\nШтрафи: \${penaltyText}\`);
+  alert(`Результати збережено:
+Переможець: ${winner}
+MVP: ${mvp}
+Штрафи: ${penaltyText}`);
 }

@@ -1,11 +1,15 @@
 let players = [];
-let selectedPlayers = [];
 let lobbyPlayers = [];
+let lastTeam1 = [], lastTeam2 = [];
 
 const sheetUrls = {
   kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
   sunday: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
 };
+
+document.getElementById("loadBtn").addEventListener("click", loadPlayers);
+document.getElementById("autoBtn").addEventListener("click", autoBalance);
+document.getElementById("exportBtn").addEventListener("click", exportResults);
 
 function loadPlayers() {
   const league = document.getElementById("league").value;
@@ -17,41 +21,33 @@ function loadPlayers() {
         const cols = row.includes(",") ? row.split(",") : row.split(";");
         return { nickname: cols[1]?.trim(), points: parseInt(cols[2]) };
       }).filter(p => p.nickname && !isNaN(p.points));
-      displayPlayers();
+      renderPlayerList();
     })
-    .catch(err => alert("Помилка при завантаженні гравців: " + err));
+    .catch(err => alert("❌ Помилка: " + err));
 }
 
-function displayPlayers() {
-  const list = document.getElementById("players-list");
-  list.innerHTML = "<h3>Оберіть гравців для лоббі:</h3>";
-  list.innerHTML += players.map((p, i) =>
-    `<label style="display:block; margin: 3px 0;">
-      <input type="checkbox" value="${i}" onchange="updateLobby()"> ${p.nickname} (${p.points} балів)
-    </label>`
-  ).join("");
+function renderPlayerList() {
+  const div = document.getElementById("players-list");
+  div.innerHTML = players.map((p, i) => `
+    <label style="display:block">
+      <input type="checkbox" value="${i}" onchange="updateLobby()"> ${p.nickname} (${p.points})
+    </label>
+  `).join("");
 }
 
 function updateLobby() {
-  const checkboxes = document.querySelectorAll("#players-list input:checked");
-  lobbyPlayers = Array.from(checkboxes).map(cb => players[parseInt(cb.value)]);
-  const lobby = document.getElementById("lobby");
-  lobby.innerHTML = lobbyPlayers.map(p => `${p.nickname} (${p.points})`).join(", ");
+  const checks = document.querySelectorAll("#players-list input:checked");
+  lobbyPlayers = Array.from(checks).map(cb => players[parseInt(cb.value)]);
+  document.getElementById("lobby").innerHTML = lobbyPlayers.map(p => `${p.nickname} (${p.points})`).join(", ");
 }
 
 function autoBalance() {
-  const teamCount = parseInt(document.getElementById("team-count").value);
-  if (lobbyPlayers.length < teamCount) {
-    alert("Недостатньо гравців для " + teamCount + " команд.");
-    return;
-  }
+  if (lobbyPlayers.length < 2) return alert("Мінімум 2 гравці для балансу!");
 
-  if (teamCount === 2) {
-    const best = getBestBalanceForTwoTeams(lobbyPlayers);
-    displayTeams(best);
-  } else {
-    alert("Поки що реалізовано тільки для 2 команд.");
-  }
+  const best = getBestBalanceForTwoTeams(lobbyPlayers);
+  lastTeam1 = best.team1;
+  lastTeam2 = best.team2;
+  displayTeams(best.team1, best.team2);
 }
 
 function getBestBalanceForTwoTeams(players) {
@@ -60,95 +56,60 @@ function getBestBalanceForTwoTeams(players) {
   let bestCombos = [];
 
   for (let i = 1; i < totalCombinations - 1; i++) {
-    const team1 = [];
-    const team2 = [];
+    const t1 = [], t2 = [];
     for (let j = 0; j < players.length; j++) {
-      if (i & (1 << j)) team1.push(players[j]);
-      else team2.push(players[j]);
+      if (i & (1 << j)) t1.push(players[j]);
+      else t2.push(players[j]);
     }
-    if (Math.abs(team1.length - team2.length) > 1) continue;
-
-    const sum1 = team1.reduce((s, p) => s + p.points, 0);
-    const sum2 = team2.reduce((s, p) => s + p.points, 0);
+    if (Math.abs(t1.length - t2.length) > 1) continue;
+    const sum1 = t1.reduce((s, p) => s + p.points, 0);
+    const sum2 = t2.reduce((s, p) => s + p.points, 0);
     const diff = Math.abs(sum1 - sum2);
-
     if (diff < minDiff) {
       minDiff = diff;
-      bestCombos = [{ team1, team2 }];
+      bestCombos = [{ team1: t1, team2: t2 }];
     } else if (diff === minDiff) {
-      bestCombos.push({ team1, team2 });
+      bestCombos.push({ team1: t1, team2: t2 });
     }
   }
 
   return bestCombos[Math.floor(Math.random() * bestCombos.length)];
 }
 
-function displayTeams({ team1, team2 }) {
-  const div = document.getElementById("teams-display");
+function displayTeams(team1, team2) {
   const sum1 = team1.reduce((s, p) => s + p.points, 0);
   const sum2 = team2.reduce((s, p) => s + p.points, 0);
-
-  // Зберігаємо команди у глобальні змінні для збереження результатів
-  window.lastTeam1 = team1;
-  window.lastTeam2 = team2;
-
+  const div = document.getElementById("teams-display");
   div.innerHTML = `
     <div style="display:flex; justify-content: space-around;">
-      <div>
-        <h3>Команда 1 (∑ ${sum1})</h3>
-        <ul>${team1.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul>
-      </div>
-      <div>
-        <h3>Команда 2 (∑ ${sum2})</h3>
-        <ul>${team2.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul>
-      </div>
+      <div><h3>Команда 1 (∑ ${sum1})</h3><ul>${team1.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul></div>
+      <div><h3>Команда 2 (∑ ${sum2})</h3><ul>${team2.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul></div>
     </div>
   `;
 
-  // Заповнюємо список MVP
-  const mvpSelect = document.getElementById("mvp");
-  mvpSelect.innerHTML = [...team1, ...team2]
-    .map(p => `<option value="${p.nickname}">${p.nickname}</option>`)
-    .join("");
+  const mvp = document.getElementById("mvp");
+  mvp.innerHTML = [...team1, ...team2].map(p => `<option value="${p.nickname}">${p.nickname}</option>`).join("");
 
   document.getElementById("results").style.display = "block";
 }
 
-
-function manualAssign() {
-  alert("Функція ручного поділу команд ще в роботі.");
-}
-
 function exportResults() {
-  const winner = document.getElementById("winner").value || "Нічия";
-  const mvp = document.getElementById("mvp").value;
-  const penaltyText = document.getElementById("penalty").value;
-
   const payload = {
     league: document.getElementById("league").value,
-    team1: window.lastTeam1.map(p => p.nickname),
-    team2: window.lastTeam2.map(p => p.nickname),
-    winner: winner,
-    mvp: mvp,
-    penalties: penaltyText.split(",").map(s => s.trim())
+    team1: lastTeam1.map(p => p.nickname),
+    team2: lastTeam2.map(p => p.nickname),
+    winner: document.getElementById("winner").value,
+    mvp: document.getElementById("mvp").value,
+    penalties: document.getElementById("penalty").value
   };
 
   fetch("https://script.google.com/macros/s/AKfycbx-O8cd8NWEaZbNzV5UrpGpfnZz_qPyQ_EV3roWGLivLDCrlRM72hqGdjUCIBs_tHwZTw/exec", {
     method: "POST",
     mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contents: payload })
-  })
-  .then(() => {
+  }).then(() => {
     alert("✅ Результат збережено!");
     document.getElementById("results").style.display = "none";
-  })
-  .catch(err => alert("❌ Помилка збереження: " + err));
-}
-
-Переможець: ${winner}
-MVP: ${mvp}
-Штрафи: ${penaltyText}`);
+  }).catch(err => alert("❌ Помилка: " + err));
 }

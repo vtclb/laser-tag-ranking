@@ -88,17 +88,24 @@ function displayTeams({ team1, team2 }) {
   const sum1 = team1.reduce((s, p) => s + p.points, 0);
   const sum2 = team2.reduce((s, p) => s + p.points, 0);
 
+  // Зберігаємо команди у глобальні змінні для збереження результатів
+  window.lastTeam1 = team1;
+  window.lastTeam2 = team2;
+
   div.innerHTML = `
     <div style="display:flex; justify-content: space-around;">
-      <div><h3>Команда 1 (∑ ${sum1})</h3><ul>
-        ${team1.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}
-      </ul></div>
-      <div><h3>Команда 2 (∑ ${sum2})</h3><ul>
-        ${team2.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}
-      </ul></div>
+      <div>
+        <h3>Команда 1 (∑ ${sum1})</h3>
+        <ul>${team1.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul>
+      </div>
+      <div>
+        <h3>Команда 2 (∑ ${sum2})</h3>
+        <ul>${team2.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul>
+      </div>
     </div>
   `;
 
+  // Заповнюємо список MVP
   const mvpSelect = document.getElementById("mvp");
   mvpSelect.innerHTML = [...team1, ...team2]
     .map(p => `<option value="${p.nickname}">${p.nickname}</option>`)
@@ -106,6 +113,7 @@ function displayTeams({ team1, team2 }) {
 
   document.getElementById("results").style.display = "block";
 }
+
 
 function manualAssign() {
   alert("Функція ручного поділу команд ще в роботі.");

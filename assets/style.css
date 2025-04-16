@@ -1,0 +1,36 @@
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #0d0d0d;
+  color: #fff;
+  padding: 20px;
+  text-align: center;
+}
+.container {
+  background: rgba(0,0,0,0.8);
+  padding: 20px;
+  border-radius: 10px;
+}
+button {
+  padding: 10px 20px;
+  margin: 10px;
+  background: #f39c12;
+  color: black;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+select {
+  padding: 5px;
+  margin-left: 10px;
+}
+#players-list label {
+  display: block;
+  margin: 5px 0;
+}
+.teams {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}

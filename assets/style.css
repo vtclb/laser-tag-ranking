@@ -1,0 +1,52 @@
+
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: url('../assets/background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: white;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 90%;
+    margin: auto;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+}
+
+select, button, input {
+    margin: 5px;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+}
+
+button {
+    background-color: #f39c12;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #d68910;
+}
+
+.teams {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.team-box {
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.hidden { display: none; }

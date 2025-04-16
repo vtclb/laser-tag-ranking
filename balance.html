@@ -1,0 +1,142 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Балансер команд | Лазертаг</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #f39c12;
+        }
+        .player-input {
+            width: 300px;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        .team-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+        .team {
+            border: 1px solid #555;
+            border-radius: 10px;
+            padding: 20px;
+            width: 40%;
+            background-color: #222;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #f39c12;
+            border: none;
+            color: black;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #d35400;
+        }
+    </style>
+</head>
+<body>
+    <h1>Балансер команд</h1>
+    <p>Введіть нікнейми гравців (від 4 до 10):</p>
+    <div id="inputs">
+        <input type="text" class="player-input" placeholder="Нік 1"><br>
+        <input type="text" class="player-input" placeholder="Нік 2"><br>
+        <input type="text" class="player-input" placeholder="Нік 3"><br>
+        <input type="text" class="player-input" placeholder="Нік 4"><br>
+    </div>
+    <button onclick="addInput()">Додати ще гравця</button>
+    <button onclick="balanceTeams()">Збалансувати команди</button>
+
+    <div class="team-container">
+        <div class="team" id="teamA">
+            <h2>Команда A</h2>
+            <ul id="teamA-list"></ul>
+        </div>
+        <div class="team" id="teamB">
+            <h2>Команда B</h2>
+            <ul id="teamB-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const playerInputsContainer = document.getElementById("inputs");
+        let playerCount = 4;
+
+        function addInput() {
+            if (playerCount >= 10) return;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "player-input";
+            input.placeholder = `Нік ${playerCount + 1}`;
+            playerInputsContainer.appendChild(input);
+            playerInputsContainer.appendChild(document.createElement("br"));
+            playerCount++;
+        }
+
+        async function getPlayerScores() {
+            const response = await fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv");
+            const text = await response.text();
+            const rows = text.trim().split("\n").slice(1);
+            const scores = {};
+            rows.forEach(row => {
+                const [_, name, points] = row.split(",");
+                scores[name.trim()] = parseInt(points);
+            });
+            return scores;
+        }
+
+        async function balanceTeams() {
+            const inputs = document.querySelectorAll(".player-input");
+            const scores = await getPlayerScores();
+            const players = [];
+
+            inputs.forEach(input => {
+                const name = input.value.trim();
+                if (name && scores[name] !== undefined) {
+                    players.push({ name, score: scores[name] });
+                }
+            });
+
+            if (players.length < 4) {
+                alert("Потрібно щонайменше 4 гравці з наявними балами.");
+                return;
+            }
+
+            players.sort((a, b) => b.score - a.score);
+            const teamA = [];
+            const teamB = [];
+            let sumA = 0;
+            let sumB = 0;
+
+            players.forEach(p => {
+                if (sumA <= sumB) {
+                    teamA.push(p);
+                    sumA += p.score;
+                } else {
+                    teamB.push(p);
+                    sumB += p.score;
+                }
+            });
+
+            document.getElementById("teamA-list").innerHTML = teamA.map(p => `<li>${p.name} (${p.score})</li>`).join("");
+            document.getElementById("teamB-list").innerHTML = teamB.map(p => `<li>${p.name} (${p.score})</li>`).join("");
+        }
+    </script>
+</body>
+</html>

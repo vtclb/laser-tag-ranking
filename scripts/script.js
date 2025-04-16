@@ -1,4 +1,5 @@
-let players = [];
+""" + '''let players = [];
+let selectedPlayers = [];
 let lobbyPlayers = [];
 
 const sheetUrls = {
@@ -11,7 +12,7 @@ function loadPlayers() {
   fetch(sheetUrls[league])
     .then(res => res.text())
     .then(data => {
-      const rows = data.split("\n").slice(1);
+      const rows = data.split("\\n").slice(1);
       players = rows.map(row => {
         const cols = row.includes(",") ? row.split(",") : row.split(";");
         return { nickname: cols[1]?.trim(), points: parseInt(cols[2]) };
@@ -35,7 +36,7 @@ function updateLobby() {
   const checkboxes = document.querySelectorAll("#players-list input:checked");
   lobbyPlayers = Array.from(checkboxes).map(cb => players[parseInt(cb.value)]);
   const lobby = document.getElementById("lobby");
-  lobby.innerHTML = "<strong>У лоббі:</strong><br>" + lobbyPlayers.map(p => `${p.nickname} (${p.points})`).join(", ");
+  lobby.innerHTML = lobbyPlayers.map(p => `${p.nickname} (${p.points})`).join(", ");
 }
 
 function autoBalance() {
@@ -49,7 +50,7 @@ function autoBalance() {
     const best = getBestBalanceForTwoTeams(lobbyPlayers);
     displayTeams(best);
   } else {
-    alert("Поки реалізовано лише автобаланс на 2 команди.");
+    alert("Поки що реалізовано тільки для 2 команд.");
   }
 }
 
@@ -59,7 +60,8 @@ function getBestBalanceForTwoTeams(players) {
   let bestCombos = [];
 
   for (let i = 1; i < totalCombinations - 1; i++) {
-    const team1 = [], team2 = [];
+    const team1 = [];
+    const team2 = [];
     for (let j = 0; j < players.length; j++) {
       if (i & (1 << j)) team1.push(players[j]);
       else team2.push(players[j]);
@@ -85,17 +87,20 @@ function displayTeams({ team1, team2 }) {
   const div = document.getElementById("teams-display");
   const sum1 = team1.reduce((s, p) => s + p.points, 0);
   const sum2 = team2.reduce((s, p) => s + p.points, 0);
+
   window.lastTeam1 = team1;
   window.lastTeam2 = team2;
 
   div.innerHTML = `
     <div style="display:flex; justify-content: space-around;">
-      <div><h3>Команда 1 (∑ ${sum1})</h3><ul>
-        ${team1.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}
-      </ul></div>
-      <div><h3>Команда 2 (∑ ${sum2})</h3><ul>
-        ${team2.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}
-      </ul></div>
+      <div>
+        <h3>Команда 1 (∑ ${sum1})</h3>
+        <ul>${team1.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul>
+      </div>
+      <div>
+        <h3>Команда 2 (∑ ${sum2})</h3>
+        <ul>${team2.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul>
+      </div>
     </div>
   `;
 
@@ -105,6 +110,10 @@ function displayTeams({ team1, team2 }) {
     .join("");
 
   document.getElementById("results").style.display = "block";
+}
+
+function manualAssign() {
+  alert("Функція ручного поділу команд ще в роботі.");
 }
 
 function exportResults() {

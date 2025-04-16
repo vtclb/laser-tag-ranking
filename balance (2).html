@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Лоббі | Балансер команд</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Лоббі для гри</h1>
+    <div>
+      <label for="league">Оберіть лігу:</label>
+      <select id="league">
+        <option value="kids">Молодша ліга</option>
+        <option value="sunday">Старша ліга</option>
+      </select>
+      <button onclick="loadPlayers()">Завантажити гравців</button>
+    </div>
+
+    <div id="players-list"></div>
+    <h2>Лоббі (до 16 гравців)</h2>
+    <div id="lobby"></div>
+
+    <div>
+      <label for="team-count">Кількість команд:</label>
+      <select id="team-count">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+      <button onclick="autoBalance()">Автобаланс</button>
+      <button onclick="manualAssign()">Ручне формування</button>
+    </div>
+
+    <div id="teams-display"></div>
+    <div id="manual-assign-area"></div>
+
+    <div id="results" style="display:none;">
+      <h2>Результат гри</h2>
+      <label for="winner">Переможець:</label>
+      <select id="winner">
+        <option value="">Нічия</option>
+        <option value="team1">Команда 1</option>
+        <option value="team2">Команда 2</option>
+        <option value="team3">Команда 3</option>
+        <option value="team4">Команда 4</option>
+      </select><br>
+      <label for="mvp">MVP:</label>
+      <select id="mvp"></select><br>
+      <label for="penalty">Штраф:</label>
+      <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5"><br>
+      <button onclick="exportResults()">Зберегти</button>
+    </div>
+  </div>
+  <script src="scripts/balance-script.js"></script>
+</body>
+</html>

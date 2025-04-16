@@ -1,43 +1,52 @@
+from IPython.display import display, HTML
 
+html_code = """
 <!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Лоббі | Балансер команд</title>
+  <title>Балансер команд | Лазертаг</title>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>Лоббі для гри</h1>
-    <div>
+    <h1>Лоббі та Балансер команд</h1>
+    
+    <div class="block">
       <label for="league">Оберіть лігу:</label>
       <select id="league">
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
-      <button onclick="loadPlayers()">Завантажити гравців</button>
+      <button id="loadBtn">Завантажити гравців</button>
     </div>
 
-    <div id="players-list"></div>
-    <h2>Лоббі (до 16 гравців)</h2>
-    <div id="lobby"></div>
+    <div class="block">
+      <h2>Усі гравці</h2>
+      <div id="players-list"></div>
+    </div>
 
-    <div>
+    <div class="block">
+      <h2>Лоббі (до 16 гравців)</h2>
+      <div id="lobby"></div>
+    </div>
+
+    <div class="block">
       <label for="team-count">Кількість команд:</label>
       <select id="team-count">
         <option value="2">2</option>
         <option value="3">3</option>
         <option value="4">4</option>
       </select>
-      <button onclick="autoBalance()">Автобаланс</button>
-      <button onclick="manualAssign()">Ручне формування</button>
+      <button id="autoBalanceBtn">Автобаланс</button>
+      <button id="manualAssignBtn">Ручне формування</button>
     </div>
 
-    <div id="teams-display"></div>
-    <div id="manual-assign-area"></div>
+    <div id="teams-display" class="block"></div>
+    <div id="manual-assign-area" class="block"></div>
 
-    <div id="results" style="display:none;">
+    <div id="results" class="block hidden">
       <h2>Результат гри</h2>
       <label for="winner">Переможець:</label>
       <select id="winner">
@@ -51,9 +60,13 @@
       <select id="mvp"></select><br>
       <label for="penalty">Штраф:</label>
       <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5"><br>
-      <button onclick="exportResults()">Зберегти</button>
+      <button id="exportBtn">Зберегти</button>
     </div>
+
+    <script src="scripts/script.js"></script>
   </div>
-  <script src="scripts/script.js"></script>
 </body>
 </html>
+"""
+
+display(HTML(html_code))

@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Балансер команд | Лазертаг</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0d0d0d;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #f39c12;
+        }
+
+        .league-selector, .player-list, .lobby, .result, .teams {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255, 165, 0, 0.3);
+        }
+
+        select, button {
+            padding: 10px;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+
+        .player-list label {
+            display: block;
+            padding: 4px;
+        }
+
+        .teams {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .team {
+            width: 45%;
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .team h3 {
+            color: #f39c12;
+            text-align: center;
+        }
+
+        .result textarea {
+            width: 100%;
+            height: 100px;
+            margin-top: 10px;
+        }
+
+        .summary {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Балансер команд</h1>
+
+    <div class="league-selector">
+        <label for="league">Оберіть лігу:</label>
+        <select id="league">
+            <option value="kids">Молодша ліга</option>
+            <option value="sunday">Старша ліга</option>
+        </select>
+        <button onclick="loadPlayers()">Завантажити гравців</button>
+    </div>
+
+    <div class="player-list" id="player-list">
+        <h2>Гравці</h2>
+        <div id="playerCheckboxes"></div>
+        <button onclick="prepareLobby()">Додати у лоббі</button>
+    </div>
+
+    <div class="lobby" id="lobby">
+        <h2>Лоббі</h2>
+        <ul id="lobbyList"></ul>
+        <button onclick="balanceTeams()">Збалансувати команди</button>
+    </div>
+
+    <div class="teams" id="teams"></div>
+
+    <script src="scripts/balancer.js"></script>
+</body>
+</html>

@@ -116,7 +116,30 @@ function exportResults() {
   const mvp = document.getElementById("mvp").value;
   const penaltyText = document.getElementById("penalty").value;
 
-  alert(`Результати збережено:
+  const payload = {
+    league: document.getElementById("league").value,
+    team1: window.lastTeam1.map(p => p.nickname),
+    team2: window.lastTeam2.map(p => p.nickname),
+    winner: winner,
+    mvp: mvp,
+    penalties: penaltyText.split(",").map(s => s.trim())
+  };
+
+  fetch("https://script.google.com/macros/s/AKfycbx-O8cd8NWEaZbNzV5UrpGpfnZz_qPyQ_EV3roWGLivLDCrlRM72hqGdjUCIBs_tHwZTw/exec", {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ contents: payload })
+  })
+  .then(() => {
+    alert("✅ Результат збережено!");
+    document.getElementById("results").style.display = "none";
+  })
+  .catch(err => alert("❌ Помилка збереження: " + err));
+}
+
 Переможець: ${winner}
 MVP: ${mvp}
 Штрафи: ${penaltyText}`);

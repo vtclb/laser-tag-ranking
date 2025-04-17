@@ -102,45 +102,33 @@ function displayTeams({ team1, team2 }) {
 }
 
 function exportResults() {
-  const winner = document.getElementById("winner").value || "Нічия";
-  const mvp = document.getElementById("mvp").value;
-  const penaltyRaw = document.getElementById("penalty").value;
-  const league = document.getElementById("league").value;
-
-  const team1 = window.lastTeam1 || [];
-  const team2 = window.lastTeam2 || [];
-
-  const penalties = penaltyRaw
-    .split(",")
-    .map(p => p.trim().split(":")[0])
-    .filter(p => p);
-
-  const body = {
-    league,
-    team1: team1.map(p => p.nickname),
-    team2: team2.map(p => p.nickname),
-    winner,
-    mvp,
-    penalties
+  const testBody = {
+    league: "kids",
+    team1: ["Bogd", "Sem"],
+    team2: ["Romario", "Morti"],
+    winner: "team1",
+    mvp: "Bogd",
+    penalties: ["none"]
   };
 
-  console.log("Надсилаю POST", body);
+  console.log("⚡ Тестовий запит", testBody);
 
   fetch("https://laser-proxy.vartaclub.workers.dev", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(testBody)
   })
     .then(res => res.text())
     .then(txt => {
       alert("Результат збережено: " + txt);
     })
     .catch(err => {
-      alert("Помилка при збереженні: " + err);
+      alert("❌ Помилка: " + err);
     });
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("load-btn")?.addEventListener("click", loadPlayers);

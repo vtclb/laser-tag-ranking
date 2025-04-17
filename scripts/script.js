@@ -1,10 +1,15 @@
-let players = [];
-let lobbyPlayers = [];
+// === balance.js ===
 
+// -----------------------
+// URLи таблиць Google Sheets
+// -----------------------
 const sheetUrls = {
   kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
   sunday: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
 };
+
+let players = [];
+let lobbyPlayers = [];
 
 function loadPlayers() {
   const league = document.getElementById("league").value;
@@ -99,19 +104,48 @@ function displayTeams({ team1, team2 }) {
   document.getElementById("results").style.display = "block";
 }
 
-function manualAssign() {
-  alert("Функція ручного поділу команд ще в розробці.");
-}
-
 function exportResults() {
   const winner = document.getElementById("winner").value || "Нічия";
   const mvp = document.getElementById("mvp").value;
-  const penaltyText = document.getElementById("penalty").value;
-  alert(`Результат збережено:\nПереможець: ${winner}\nMVP: ${mvp}\nШтрафи: ${penaltyText}`);
+  const penaltyRaw = document.getElementById("penalty").value;
+  const league = document.getElementById("league").value;
+
+  const team1 = window.lastTeam1 || [];
+  const team2 = window.lastTeam2 || [];
+
+  const penalties = penaltyRaw
+    .split(",")
+    .map(p => p.trim().split(":")[0])
+    .filter(p => p);
+
+  const body = {
+    league,
+    team1: team1.map(p => p.nickname),
+    team2: team2.map(p => p.nickname),
+    winner,
+    mvp,
+    penalties
+  };
+
+  console.log("Надсилаю POST", body);
+
+  fetch("https://script.google.com/macros/s/AKfycbx-O8cd8NWEaZbNzV5UrpGpfnZz_qPyQ_EV3roWGLivLDCrlRM72hqGdjUCIBs_tHwZTw/exec", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  })
+    .then(res => res.text())
+    .then(txt => {
+      alert("Результат збережено: " + txt);
+    })
+    .catch(err => {
+      alert("Помилка при збереженні: " + err);
+    });
 }
 
-// Після завантаження сторінки — підв’язати кнопки
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("load-btn").addEventListener("click", loadPlayers);
-  document.getElementById("auto-balance").addEventListener("click", autoBalance);
+  document.getElementById("load-btn")?.addEventListener("click", loadPlayers);
+  document.getElementById("auto-balance")?.addEventListener("click", autoBalance);
 });

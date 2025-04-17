@@ -129,13 +129,14 @@ function exportResults() {
 
   console.log("Надсилаю POST", body);
 
-  fetch("https://script.google.com/macros/s/AKfycbx-O8cd8NWEaZbNzV5UrpGpfnZz_qPyQ_EV3roWGLivLDCrlRM72hqGdjUCIBs_tHwZTw/exec", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
-  })
+  fetch("https://laser-proxy.vartaclub.workers.dev", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify(body)
+})
+
     .then(res => res.text())
     .then(txt => {
       alert("Результат збережено: " + txt);

@@ -15,42 +15,44 @@
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
-      <button id="load-btn">Завантажити гравців</button>
+      <button onclick="loadPlayers()">Завантажити гравців</button>
     </div>
 
-    <div id="players-list"></div>
+    <div id="players-list" class="section"></div>
     <h2>Лоббі (до 16 гравців)</h2>
-    <div id="lobby"></div>
+    <div id="lobby" class="section"></div>
 
-    <div>
+    <div class="section">
       <label for="team-count">Кількість команд:</label>
       <select id="team-count">
         <option value="2">2</option>
         <option value="3">3</option>
         <option value="4">4</option>
       </select>
-      <button id="auto-balance">Автобаланс</button>
+      <button onclick="autoBalance()">Автобаланс</button>
       <button onclick="manualAssign()">Ручне формування</button>
     </div>
 
-    <div id="teams-display"></div>
+    <div id="teams-display" class="section"></div>
+    <div id="manual-assign-area" class="section"></div>
 
-    <div id="results" style="display:none;">
+    <div id="results" style="display:none;" class="section">
       <h2>Результат гри</h2>
       <label for="winner">Переможець:</label>
       <select id="winner">
         <option value="">Нічия</option>
         <option value="team1">Команда 1</option>
         <option value="team2">Команда 2</option>
-      </select><br>
+        <option value="team3">Команда 3</option>
+        <option value="team4">Команда 4</option>
+      </select><br><br>
       <label for="mvp">MVP:</label>
-      <select id="mvp"></select><br>
+      <select id="mvp"></select><br><br>
       <label for="penalty">Штраф:</label>
-      <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5"><br>
+      <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5"><br><br>
       <button onclick="exportResults()">Зберегти</button>
     </div>
   </div>
-
   <script src="scripts/script.js"></script>
 </body>
 </html>

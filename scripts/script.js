@@ -1,7 +1,7 @@
 // === balance.js ===
 
 // -----------------------
-// URLи таблиць Google Sheets
+// URLи таблиць Google Sheets (тільки для читання гравців)
 // -----------------------
 const sheetUrls = {
   kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
@@ -129,8 +129,7 @@ function exportResults() {
 
   console.log("Надсилаю POST", body);
 
-  fetch("https://laser-proxy.vartaclub.workers.dev", {
-
+  fetch("https://script.google.com/macros/s/AKfycbx-O8cd8NWEaZbNzV5UrpGpfnZz_qPyQ_EV3roWGLivLDCrlRM72hqGdjUCIBs_tHwZTw/exec", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

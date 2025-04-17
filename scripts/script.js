@@ -130,13 +130,12 @@ function exportResults() {
   console.log("Надсилаю POST", body);
 
   fetch("https://laser-proxy.vartaclub.workers.dev", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify(body)
-})
-
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  })
     .then(res => res.text())
     .then(txt => {
       alert("Результат збережено: " + txt);

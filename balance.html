@@ -15,7 +15,7 @@
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
-      <button onclick="loadPlayers()">Завантажити гравців</button>
+      <button id="load-btn">Завантажити гравців</button>
     </div>
 
     <div id="players-list"></div>
@@ -29,12 +29,11 @@
         <option value="3">3</option>
         <option value="4">4</option>
       </select>
-      <button onclick="autoBalance()">Автобаланс</button>
+      <button id="auto-balance">Автобаланс</button>
       <button onclick="manualAssign()">Ручне формування</button>
     </div>
 
     <div id="teams-display"></div>
-    <div id="manual-assign-area"></div>
 
     <div id="results" style="display:none;">
       <h2>Результат гри</h2>
@@ -43,8 +42,6 @@
         <option value="">Нічия</option>
         <option value="team1">Команда 1</option>
         <option value="team2">Команда 2</option>
-        <option value="team3">Команда 3</option>
-        <option value="team4">Команда 4</option>
       </select><br>
       <label for="mvp">MVP:</label>
       <select id="mvp"></select><br>
@@ -53,6 +50,7 @@
       <button onclick="exportResults()">Зберегти</button>
     </div>
   </div>
+
   <script src="scripts/script.js"></script>
 </body>
 </html>

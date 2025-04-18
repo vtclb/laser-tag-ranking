@@ -37,6 +37,16 @@
     <div id="manual-assign-area" class="section"></div>
 
     <div id="results" style="display:none;" class="section">
+       <div id="manual-assign-area" class="section" style="display:none;">
+    <h2>Ручне формування команд</h2>
+    <div id="players-list" class="drag-list"></div>
+    <div id="drop-teams" class="team-containers">
+      <div class="team" data-team="1"><h3>Команда 1</h3><ul></ul></div>
+      <div class="team" data-team="2"><h3>Команда 2</h3><ul></ul></div>
+      <div class="team" data-team="3"><h3>Команда 3</h3><ul></ul></div>
+    </div>
+    <button id="confirm-manual" onclick="displayTeams({ team1: window.lastTeams[1], team2: window.lastTeams[2], team3: window.lastTeams[3] })">Підтвердити</button>
+  </div>
       <h2>Результат гри</h2>
       <label for="winner">Переможець:</label>
       <select id="winner">

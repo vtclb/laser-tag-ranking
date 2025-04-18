@@ -107,44 +107,35 @@ function exportResults() {
   const penaltyRaw = document.getElementById("penalty").value;
   const league = document.getElementById("league").value;
 
-  const team1 = window.lastTeam1 || [];
-  const team2 = window.lastTeam2 || [];
-
+  const team1 = window.lastTeam1.map(p => p.nickname).join(", ");
+  const team2 = window.lastTeam2.map(p => p.nickname).join(", ");
   const penalties = penaltyRaw
     .split(",")
     .map(p => p.trim().split(":")[0])
-    .filter(p => p);
+    .filter(p => p)
+    .join(", ");
 
-  const data = {
-    league,
-    team1: team1.map(p => p.nickname).join(", "),
-    team2: team2.map(p => p.nickname).join(", "),
-    winner,
-    mvp,
-    penalties: penalties.join(", ")
-  };
-
+  const data = { league, team1, team2, winner, mvp, penalties };
   const formBody = Object.entries(data)
-    .map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join("&");
-
-  console.log("⏱ Відправляємо:", formBody);
 
   fetch("https://laser-proxy.vartaclub.workers.dev", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: formBody
   })
-    .then(res => res.text())
-    .then(txt => {
-      alert("Результат збережено: " + txt);
-    })
-    .catch(err => {
-      alert("❌ Помилка при збереженні: " + err);
-    });
+  .then(res => res.text())
+  .then(txt => {
+    alert("Результат збережено: " + txt);
+    if (txt === "OK") {
+      // автоматично перезавантажуємо лобі з оновленими балами
+      loadPlayers();
+    }
+  })
+  .catch(err => alert("❌ Помилка при збереженні: " + err));
 }
+
 
 // Глобалізація функцій для підтримки inline-атрибутів у HTML
 window.loadPlayers = loadPlayers;

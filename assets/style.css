@@ -1,43 +1,15 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: white;
-  margin: 0;
-  padding: 20px;
-}
-
-.container {
-  max-width: 900px;
-  margin: auto;
-  background: #222;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-button {
-  margin: 10px 5px;
-  padding: 8px 12px;
-  background: orange;
-  border: none;
-  color: black;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-input[type="text"], select {
-  padding: 6px;
-  margin-top: 5px;
-}
+/* Drag’n’Drop та layout */
 .drag-list {
   border: 1px dashed #aaa;
   padding: 10px;
   max-height: 200px;
   overflow-y: auto;
+  margin-bottom: 10px;
 }
 .team-containers {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  margin-bottom: 10px;
 }
 .team {
   flex: 1;

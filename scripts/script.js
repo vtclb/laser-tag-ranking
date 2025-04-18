@@ -135,6 +135,38 @@ function exportResults() {
   })
   .catch(err => alert("❌ Помилка при збереженні: " + err));
 }
+function enableManualDragDrop() {
+  // Робимо кожного гравця draggable
+  document.querySelectorAll("#players-list label").forEach(label => {
+    label.draggable = true;
+    label.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/plain", label.querySelector('input').value);
+    });
+  });
+
+  // Додаємо drop-зони для команд
+  document.querySelectorAll(".team").forEach(div => {
+    div.addEventListener("dragover", e => e.preventDefault());
+    div.addEventListener("drop", e => {
+      const idx = e.dataTransfer.getData("text/plain");
+      const player = players[+idx];
+      // Додаємо до списку команди
+      const ul = div.querySelector("ul");
+      ul.innerHTML += `<li>${player.nickname} (${player.points})</li>`;
+      // Зберігаємо у глобальній змінній для confirm
+      window.lastTeams = window.lastTeams || {};
+      const t = div.dataset.team;
+      window.lastTeams[t] = window.lastTeams[t] || [];
+      window.lastTeams[t].push(player);
+    });
+  });
+}
+
+// Показ області ручного формування
+function manualAssign() {
+  document.getElementById("manual-assign-area").style.display = "block";
+  enableManualDragDrop();
+}
 
 
 // Глобалізація функцій для підтримки inline-атрибутів у HTML

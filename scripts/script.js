@@ -1,8 +1,7 @@
-// === balance.js ===
-
+// Список CSV-лінків ліг
 const sheetUrls = {
-  kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
-  sunday: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
+  kids: "https://docs.google.com/spreadsheets/d/e/.../pub?gid=1648067737&single=true&output=csv",
+  sunday: "https://docs.google.com/spreadsheets/d/e/.../pub?gid=1286735969&single=true&output=csv"
 };
 
 let players = [];
@@ -19,163 +18,127 @@ function loadPlayers() {
         return { nickname: cols[1]?.trim(), points: parseInt(cols[2]) };
       }).filter(p => p.nickname && !isNaN(p.points));
       displayPlayers();
+      // Копіюємо ті ж елементи для DnD
+      document.getElementById("players-list-dnd").innerHTML = document.getElementById("players-list").innerHTML;
     })
     .catch(err => alert("Помилка при завантаженні гравців: " + err));
 }
 
 function displayPlayers() {
   const list = document.getElementById("players-list");
-  list.innerHTML = "<h3>Оберіть гравців для лоббі:</h3>";
-  list.innerHTML += players.map((p, i) =>
-    `<label style="display:block; margin: 3px 0;">
-      <input type="checkbox" value="${i}" onchange="updateLobby()"> ${p.nickname} (${p.points} балів)
-    </label>`
-  ).join("");
+  list.innerHTML = "<h3>Оберіть гравців для лоббі:</h3>" +
+    players.map((p, i) =>
+      `<label style="display:block; margin:3px 0;"><input type="checkbox" value="${i}" onchange="updateLobby()"> ${p.nickname} (${p.points})</label>`
+    ).join("");
 }
 
 function updateLobby() {
-  const checkboxes = document.querySelectorAll("#players-list input:checked");
-  lobbyPlayers = Array.from(checkboxes).map(cb => players[parseInt(cb.value)]);
-  const lobby = document.getElementById("lobby");
-  lobby.innerHTML = lobbyPlayers.map(p => `${p.nickname} (${p.points})`).join(", ");
+  lobbyPlayers = Array.from(
+    document.querySelectorAll("#players-list input:checked")
+  ).map(cb => players[+cb.value]);
+  document.getElementById("lobby").textContent = lobbyPlayers.map(p => `${p.nickname} (${p.points})`).join(", ");
 }
 
 function autoBalance() {
-  const teamCount = parseInt(document.getElementById("team-count").value);
-  if (lobbyPlayers.length < teamCount) {
-    alert("Недостатньо гравців для " + teamCount + " команд.");
-    return;
-  }
-
-  if (teamCount === 2) {
-    const best = getBestBalanceForTwoTeams(lobbyPlayers);
-    displayTeams(best);
-  } else {
-    alert("Поки що реалізовано тільки для 2 команд.");
-  }
+  const teamCount = +document.getElementById("team-count").value;
+  if (lobbyPlayers.length < teamCount) return alert(`Недостатньо гравців для ${teamCount} команд.`);
+  if (teamCount !== 2) return alert("Реалізовано тільки для 2 команд.");
+  const best = getBestBalanceForTwoTeams(lobbyPlayers);
+  displayTeams(best);
 }
 
-function getBestBalanceForTwoTeams(players) {
-  const totalCombinations = 1 << players.length;
-  let minDiff = Infinity;
-  let bestCombos = [];
-
-  for (let i = 1; i < totalCombinations - 1; i++) {
-    const team1 = [], team2 = [];
-    for (let j = 0; j < players.length; j++) {
-      (i & (1 << j)) ? team1.push(players[j]) : team2.push(players[j]);
+function getBestBalanceForTwoTeams(arr) {
+  let minDiff = Infinity, best;
+  const total = 1 << arr.length;
+  for (let mask=1; mask<total-1; mask++) {
+    const t1 = [], t2 = [];
+    for (let j=0; j<arr.length; j++) {
+      (mask & (1<<j)) ? t1.push(arr[j]) : t2.push(arr[j]);
     }
-    if (Math.abs(team1.length - team2.length) > 1) continue;
-
-    const sum1 = team1.reduce((s, p) => s + p.points, 0);
-    const sum2 = team2.reduce((s, p) => s + p.points, 0);
-    const diff = Math.abs(sum1 - sum2);
-
-    if (diff < minDiff) {
-      minDiff = diff;
-      bestCombos = [{ team1, team2 }];
-    } else if (diff === minDiff) {
-      bestCombos.push({ team1, team2 });
-    }
+    if (Math.abs(t1.length - t2.length)>1) continue;
+    const s1 = t1.reduce((s,p)=>s+p.points,0), s2 = t2.reduce((s,p)=>s+p.points,0);
+    const diff = Math.abs(s1-s2);
+    if (diff<minDiff) { minDiff=diff; best={team1:t1,team2:t2}; }
   }
-
-  return bestCombos[Math.floor(Math.random() * bestCombos.length)];
+  return best;
 }
 
-function displayTeams({ team1, team2 }) {
+function displayTeams({team1, team2}) {
   const div = document.getElementById("teams-display");
-  const sum1 = team1.reduce((s, p) => s + p.points, 0);
-  const sum2 = team2.reduce((s, p) => s + p.points, 0);
-  window.lastTeam1 = team1;
-  window.lastTeam2 = team2;
-
+  const sum1 = team1.reduce((s,p)=>s+p.points,0), sum2 = team2.reduce((s,p)=>s+p.points,0);
+  window.lastTeam1=team1; window.lastTeam2=team2;
   div.innerHTML = `
-    <div style="display:flex; justify-content: space-around;">
-      <div><h3>Команда 1 (∑ ${sum1})</h3><ul>${team1.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul></div>
-      <div><h3>Команда 2 (∑ ${sum2})</h3><ul>${team2.map(p => `<li>${p.nickname} (${p.points})</li>`).join("")}</ul></div>
+    <div style="display:flex;justify-content:space-around;">
+      <div><h3>Команда 1 (∑ ${sum1})</h3><ul>
+        ${team1.map(p=>`<li>${p.nickname} (${p.points})</li>`).join("")}
+      </ul></div>
+      <div><h3>Команда 2 (∑ ${sum2})</h3><ul>
+        ${team2.map(p=>`<li>${p.nickname} (${p.points})</li>`).join("")}
+      </ul></div>
     </div>
   `;
-
-  const mvpSelect = document.getElementById("mvp");
-  mvpSelect.innerHTML = [...team1, ...team2].map(p => `<option value="${p.nickname}">${p.nickname}</option>`).join("");
+  document.getElementById("mvp").innerHTML =
+    [...team1,...team2].map(p=>`<option>${p.nickname}</option>`).join("");
   document.getElementById("results").style.display = "block";
 }
 
+// --- Збереження та оновлення рейтингу ---
 function exportResults() {
-  const winner = document.getElementById("winner").value || "Нічия";
-  const mvp = document.getElementById("mvp").value;
-  const penaltyRaw = document.getElementById("penalty").value;
-  const league = document.getElementById("league").value;
-
-  const team1 = window.lastTeam1.map(p => p.nickname).join(", ");
-  const team2 = window.lastTeam2.map(p => p.nickname).join(", ");
-  const penalties = penaltyRaw
-    .split(",")
-    .map(p => p.trim().split(":")[0])
-    .filter(p => p)
-    .join(", ");
-
-  const data = { league, team1, team2, winner, mvp, penalties };
-  const formBody = Object.entries(data)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+  const data = {
+    league: document.getElementById("league").value,
+    team1: window.lastTeam1.map(p=>p.nickname).join(", "),
+    team2: window.lastTeam2.map(p=>p.nickname).join(", "),
+    winner: document.getElementById("winner").value||"Нічия",
+    mvp: document.getElementById("mvp").value,
+    penalties: document.getElementById("penalty").value
+      .split(",").map(p=>p.trim()).join(", ")
+  };
+  const body = Object.entries(data)
+    .map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join("&");
-
-  fetch("https://laser-proxy.vartaclub.workers.dev", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: formBody
+  fetch("https://laser-proxy.vartaclub.workers.dev",{
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body
   })
-  .then(res => res.text())
-  .then(txt => {
-    alert("Результат збережено: " + txt);
-    if (txt === "OK") {
-      // автоматично перезавантажуємо лобі з оновленими балами
-      loadPlayers();
-    }
-  })
-  .catch(err => alert("❌ Помилка при збереженні: " + err));
+  .then(r=>r.text()).then(txt=>{
+    alert(`Результат збережено: ${txt}`);
+    if(txt==="OK") loadPlayers();
+  }).catch(e=>alert("Error: "+e));
 }
+
+// --- Drag'n'Drop ручне формування ---
 function enableManualDragDrop() {
-  // Робимо кожного гравця draggable
-  document.querySelectorAll("#players-list label").forEach(label => {
-    label.draggable = true;
-    label.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("text/plain", label.querySelector('input').value);
+  document.querySelectorAll("#players-list-dnd label").forEach(lbl=>{
+    lbl.draggable=true;
+    lbl.addEventListener("dragstart",e=>{
+      e.dataTransfer.setData("text/plain",lbl.querySelector('input').value);
     });
   });
-
-  // Додаємо drop-зони для команд
-  document.querySelectorAll(".team").forEach(div => {
-    div.addEventListener("dragover", e => e.preventDefault());
-    div.addEventListener("drop", e => {
-      const idx = e.dataTransfer.getData("text/plain");
-      const player = players[+idx];
-      // Додаємо до списку команди
-      const ul = div.querySelector("ul");
-      ul.innerHTML += `<li>${player.nickname} (${player.points})</li>`;
-      // Зберігаємо у глобальній змінній для confirm
-      window.lastTeams = window.lastTeams || {};
-      const t = div.dataset.team;
-      window.lastTeams[t] = window.lastTeams[t] || [];
-      window.lastTeams[t].push(player);
+  document.querySelectorAll(".team").forEach(div=>{
+    div.addEventListener("dragover",e=>e.preventDefault());
+    div.addEventListener("drop",e=>{
+      const idx=e.dataTransfer.getData("text/plain");
+      const p=players[+idx];
+      div.querySelector("ul").innerHTML += `<li>${p.nickname} (${p.points})</li>`;
+      window.lastTeams=window.lastTeams||{}; const t=div.dataset.team;
+      (window.lastTeams[t]||(window.lastTeams[t]=[])).push(p);
     });
   });
 }
 
-// Показ області ручного формування
 function manualAssign() {
-  document.getElementById("manual-assign-area").style.display = "block";
+  document.getElementById("manual-assign-area").style.display="block";
   enableManualDragDrop();
 }
 
+function confirmManual() {
+  displayTeams({ team1: window.lastTeams[1], team2: window.lastTeams[2], team3: window.lastTeams[3] });
+}
 
-// Глобалізація функцій для підтримки inline-атрибутів у HTML
+// Глобальні експорти
 window.loadPlayers = loadPlayers;
 window.autoBalance = autoBalance;
-window.manualAssign = () => alert("Ручне формування ще в розробці.");
+window.manualAssign = manualAssign;
 window.exportResults = exportResults;
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("load-btn")?.addEventListener("click", loadPlayers);
-  document.getElementById("auto-balance")?.addEventListener("click", autoBalance);
-});
+// Автовиклик при завантаженні сторінки
+document.addEventListener("DOMContentLoaded", loadPlayers);

@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Балансер команд</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
@@ -69,19 +69,16 @@
       </div>
     </div>
     <div class="section flex">
-      <label>Переможець:
-        <select id="winner">
-          <option value="">Нічия</option>
-          <option value="team1">Команда 1</option>
-          <option value="team2">Команда 2</option>
-        </select>
-      </label>
-      <label>MVP:
-        <select id="mvp"></select>
-      </label>
-      <label>Штрафи:
-        <input id="penalty" placeholder="нік:-5, інший:-10" />
-      </label>
+      <label for="winner">Переможець:</label>
+      <select id="winner">
+        <option value="tie">Дружба</option>
+        <option value="team1">Команда 1</option>
+        <option value="team2">Команда 2</option>
+      </select>
+      <label for="mvp">MVP:</label>
+      <select id="mvp"></select>
+      <label for="penalty">Штраф:</label>
+      <input id="penalty" placeholder="нік:-5, інший:-10" />
       <button id="btn-save">Зберегти</button>
       <button id="btn-refresh">Оновити</button>
     </div>

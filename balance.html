@@ -9,59 +9,75 @@
 <body>
   <div class="container">
     <h1>Лоббі для гри</h1>
-    <div>
+
+    <!-- Вибір ліги -->
+    <div class="section">
       <label for="league">Оберіть лігу:</label>
       <select id="league">
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
-      <button onclick="loadPlayers()">Завантажити гравців</button>
+      <button onclick="loadPlayers()">Підтвердити</button>
     </div>
 
-    <div id="players-list" class="section"></div>
-    <h2>Лоббі (до 16 гравців)</h2>
-    <div id="lobby" class="section"></div>
+    <!-- Лоббі дня -->
+    <div id="lobby-area" class="section" style="display:none;">
+      <h2>Лоббі дня</h2>
+      <div id="players-list"></div>
+    </div>
 
-    <div class="section">
-      <label for="team-count">Кількість команд:</label>
-      <select id="team-count">
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
+    <!-- Управління командами -->
+    <div id="team-control" class="section" style="display:none;">
+      <label for="balance-mode">Баланс команд:</label>
+      <select id="balance-mode">
+        <option value="auto">Авто</option>
+        <option value="manual">Ручне</option>
       </select>
-      <button onclick="autoBalance()">Автобаланс</button>
-      <button onclick="manualAssign()">Ручне формування</button>
+      <label for="team-size">Формат:</label>
+      <select id="team-size">
+        <option value="all">Всі</option>
+        <option value="5">5v5</option>
+        <option value="4">4v4</option>
+        <option value="3">3v3</option>
+      </select>
+      <button onclick="runBalance()">Запустити</button>
     </div>
 
-    <div id="teams-display" class="section"></div>
-
-    <div id="results" style="display:none;" class="section">
+    <!-- Результат гри -->
+    <div id="results" class="section" style="display:none;">
       <h2>Результат гри</h2>
-      <label for="winner">Переможець:</label>
+      <label>Переможець:</label>
       <select id="winner">
         <option value="">Нічия</option>
         <option value="team1">Команда 1</option>
         <option value="team2">Команда 2</option>
-        <option value="team3">Команда 3</option>
-        <option value="team4">Команда 4</option>
-      </select><br><br>
-      <label for="mvp">MVP:</label>
-      <select id="mvp"></select><br><br>
-      <label for="penalty">Штраф:</label>
-      <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5"><br><br>
+      </select>
+      <label>MVP:</label>
+      <select id="mvp"></select>
+      <label>Штрафи:</label>
+      <input id="penalty" placeholder="нік1:-10, нік2:-5" />
       <button onclick="exportResults()">Зберегти</button>
+      <button onclick="loadPlayers()">Оновити статистику</button>
     </div>
+
+    <!-- Відображення команд після балансу -->
+    <div id="teams-display" class="section"></div>
 
     <!-- Ручне формування -->
     <div id="manual-assign-area" class="section" style="display:none;">
-      <h2>Ручне формування команд</h2>
-      <div id="players-list-dnd" class="drag-list"></div>
-      <div id="drop-teams" class="team-containers">
-        <div class="team" data-team="1"><h3>Команда 1</h3><ul></ul></div>
-        <div class="team" data-team="2"><h3>Команда 2</h3><ul></ul></div>
-        <div class="team" data-team="3"><h3>Команда 3</h3><ul></ul></div>
+      <h2>Ручне формування</h2>
+      <table id="manual-table">
+        <thead><tr><th>Гравець</th><th>Бали</th><th>Команда</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="flex gap-4">
+        <button onclick="updateManualTeams()">Оновити розподіл</button>
+        <button onclick="confirmManual()">Підтвердити команди</button>
       </div>
-      <button id="confirm-manual" onclick="confirmManual()">Підтвердити</button>
+      <div id="manual-team-sums">
+        <div>Сума команди 1: <span id="sum-team1">0</span></div>
+        <div>Сума команди 2: <span id="sum-team2">0</span></div>
+      </div>
     </div>
 
   </div>

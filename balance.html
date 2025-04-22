@@ -4,20 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Балансер команд</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .section { margin-bottom: 20px; }
-    .flex { display: flex; gap: 10px; align-items: center; }
-    .teams { display: flex; gap: 20px; }
-    .list { list-style: none; padding-left: 0; }
-    .team-box { border: 1px solid #ccc; padding: 10px; width: 45%; }
-    button { cursor: pointer; }
-  </style>
+  <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
   <h1>Балансер команд</h1>
 
-  <!-- Вибір ліги -->
+  <!-- 1. Вибір ліги та завантаження -->
   <div class="section flex">
     <label for="league">Ліга:</label>
     <select id="league">
@@ -27,34 +19,30 @@
     <button id="btn-load">Завантажити гравців</button>
   </div>
 
-  <!-- Лоббі -->
+  <!-- 2. Лоббі дня -->
   <div id="lobby-area" class="section" style="display:none;">
-    <h2>Лоббі</h2>
+    <h2>Лоббі дня</h2>
+    <div>Кількість: <span id="lobby-count">0</span></div>
+    <div>Сума балів: <span id="lobby-sum">0</span></div>
+    <div>Середній бал: <span id="lobby-avg">0</span></div>
     <ul id="lobby-list" class="list"></ul>
   </div>
 
-  <!-- Управління балансуванням -->
+  <!-- 3. Керування лоббі -->
   <div id="control-area" class="section flex" style="display:none;">
-    <div>
-      <label for="mode">Режим:</label>
-      <select id="mode">
-        <option value="auto">Авто</option>
-        <option value="manual">Ручне</option>
-      </select>
-    </div>
-    <div>
-      <label for="teamsize">Розмір команд:</label>
-      <select id="teamsize">
-        <option value="all">Всі</option>
-        <option value="5">5v5</option>
-        <option value="4">4v4</option>
-        <option value="3">3v3</option>
-      </select>
-    </div>
+    <button id="btn-add-all">Додати всіх</button>
+    <button id="btn-clear-lobby">Очистити лоббі</button>
     <button id="btn-balance">Збалансувати</button>
+    <label for="teamsize">Формат:</label>
+    <select id="teamsize">
+      <option value="all">Всі</option>
+      <option value="5">5v5</option>
+      <option value="4">4v4</option>
+      <option value="3">3v3</option>
+    </select>
   </div>
 
-  <!-- Відображення команд та результатів -->
+  <!-- 4. Показ команд -->
   <div id="teams-area" class="section" style="display:none;">
     <h2>Команди</h2>
     <div class="teams">
@@ -69,22 +57,26 @@
         <p>∑ <span id="team2-sum">0</span></p>
       </div>
     </div>
-    <div class="section flex">
-      <label for="winner">Переможець:</label>
-      <select id="winner">
-        <option value="team1">Команда 1</option>
-        <option value="team2">Команда 2</option>
-        <option value="tie">Дружба</option>
-      </select>
-      <label for="mvp">MVP:</label>
-      <select id="mvp"></select>
-      <label for="penalty">Штраф:</label>
-      <input id="penalty" placeholder="нік:-5, інший:-10" />
-      <button id="btn-save">Зберегти</button>
-      <button id="btn-refresh">Оновити</button>
-    </div>
   </div>
 
+  <!-- 5. Результати гри -->
+  <div id="result-area" class="section" style="display:none;">
+    <h2>Результат гри</h2>
+    <label for="winner">Переможець:</label>
+    <select id="winner">
+      <option value="team1">Команда 1</option>
+      <option value="team2">Команда 2</option>
+      <option value="tie">Нічия</option>
+    </select>
+    <label for="mvp">MVP:</label>
+    <select id="mvp"></select>
+    <label for="penalties">Штрафи:</label>
+    <input id="penalties" placeholder="нік1:-5, нік2:-10" />
+    <button id="btn-save">Зберегти</button>
+    <button id="btn-refresh">Оновити</button>
+  </div>
+
+  <!-- Підключення скрипта -->
   <script src="scripts/script.js"></script>
 </body>
 </html>

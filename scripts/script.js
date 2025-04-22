@@ -9,16 +9,28 @@ let lobbyPlayers = [];
 // Завантаження гравців із кеш-бастером
 function loadPlayers() {
   const league = document.getElementById('league').value;
-  fetch(sheetUrls[league] + '?t=' + Date.now())
-    .then(r => r.text())
+  const url = sheetUrls[league] + '?t=' + Date.now();
+  console.log('▶️ loadPlayers, league=', league, ' URL=', url);
+
+  fetch(url)
+    .then(r => {
+      console.log('🟢 fetch response status:', r.status);
+      return r.text();
+    })
     .then(txt => {
-      const rows = txt.split('\n').slice(1);
-      players = rows.map(r => {
-        const cols = r.split(',');
-        return { nickname: cols[1]?.trim(), points: +cols[2] || 0 };
+      console.log('📄 CSV текст:', txt);
+
+      const rows = txt.trim().split('\n').slice(1);
+      players = rows.map((row, i) => {
+        // Якщо в CSV через ; — на випадок:
+        const cols = row.includes(',') ? row.split(',') : row.split(';');
+        return { nickname: cols[1]?.trim(), points: parseInt(cols[2], 10) || 0 };
       }).filter(p => p.nickname);
+      console.log('👥 Parsed players:', players);
+
       showLobby();
-    });
+    })
+    .catch(err => console.error('❌ loadPlayers error:', err));
 }
 
 // Показ лоббі

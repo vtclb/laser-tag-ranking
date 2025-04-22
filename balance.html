@@ -21,13 +21,13 @@
     </div>
 
     <!-- Лоббі -->
-    <div id="lobby-area" class="section hidden">
+    <div id="lobby-area" class="section" style="display:none;">
       <h2>Лоббі</h2>
       <ul id="lobby-list" class="list"></ul>
     </div>
 
     <!-- Управління балансуванням -->
-    <div id="control-area" class="section hidden">
+    <div id="control-area" class="section" style="display:none;">
       <h2>Балансування</h2>
       <div class="flex">
         <div>
@@ -50,18 +50,36 @@
       </div>
     </div>
 
-    <!-- Автобаланс та результат -->
-    <div id="teams-area" class="section hidden">
+    <!-- Відображення команд -->
+    <div id="teams-area" class="section" style="display:none;">
       <h2>Команди</h2>
       <div class="teams flex">
-        <div class="team-box"><h3>Команда 1</h3><ul id="team1-list" class="list"></ul><p>∑ <span id="team1-sum">0</span></p></div>
-        <div class="team-box"><h3>Команда 2</h3><ul id="team2-list" class="list"></ul><p>∑ <span id="team2-sum">0</span></p></div>
+        <div class="team-box">
+          <h3>Команда 1</h3>
+          <ul id="team1-list" class="list"></ul>
+          <p>∑ <span id="team1-sum">0</span></p>
+        </div>
+        <div class="team-box">
+          <h3>Команда 2</h3>
+          <ul id="team2-list" class="list"></ul>
+          <p>∑ <span id="team2-sum">0</span></p>
+        </div>
       </div>
       <div id="result-area" class="section">
         <h3>Результат гри</h3>
-        <label>Переможець:<select id="winner"><option value="">Нічия</option><option value="team1">Team 1</option><option value="team2">Team 2</option></select></label>
-        <label>MVP:<select id="mvp"></select></label>
-        <label>Штраф:<input id="penalty" placeholder="нік:-5, інший:-10"></label>
+        <label>Переможець:
+          <select id="winner">
+            <option value="">Нічия</option>
+            <option value="team1">Команда 1</option>
+            <option value="team2">Команда 2</option>
+          </select>
+        </label>
+        <label>MVP:
+          <select id="mvp"></select>
+        </label>
+        <label>Штраф:
+          <input id="penalty" placeholder="нік:-5, інший:-10">
+        </label>
         <button id="btn-save">Зберегти</button>
         <button id="btn-refresh">Оновити</button>
       </div>

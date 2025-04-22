@@ -1,88 +1,89 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Балансер команд</title>
-  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .section { margin-bottom: 20px; }
+    .flex { display: flex; gap: 10px; align-items: center; }
+    .teams { display: flex; gap: 20px; }
+    .list { list-style: none; padding-left: 0; }
+    .team-box { border: 1px solid #ccc; padding: 10px; width: 45%; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Балансер команд</h1>
+  <h1>Балансер команд</h1>
 
-    <!-- Вибір ліги -->
-    <div class="section">
-      <label for="league">Ліга:</label>
-      <select id="league">
-        <option value="kids">Молодша ліга</option>
-        <option value="sunday">Старша ліга</option>
+  <!-- 1. Вибір ліги -->
+  <div class="section flex">
+    <label for="league">Ліга:</label>
+    <select id="league">
+      <option value="kids">Молодша ліга</option>
+      <option value="sunday">Старша ліга</option>
+    </select>
+    <button id="btn-load">Завантажити</button>
+  </div>
+
+  <!-- 2. Лоббі -->
+  <div id="lobby-area" class="section" style="display:none;">
+    <h2>Лоббі</h2>
+    <ul id="lobby-list" class="list"></ul>
+  </div>
+
+  <!-- 3. Управління балансуванням -->
+  <div id="control-area" class="section flex" style="display:none;">
+    <div class="flex">
+      <label for="mode">Режим:</label>
+      <select id="mode">
+        <option value="auto">Авто</option>
+        <option value="manual">Ручне</option>
       </select>
-      <button id="btn-load">Завантажити</button>
     </div>
-
-    <!-- Лоббі -->
-    <div id="lobby-area" class="section" style="display:none;">
-      <h2>Лоббі</h2>
-      <ul id="lobby-list" class="list"></ul>
+    <div class="flex">
+      <label for="teamsize">Розмір команд:</label>
+      <select id="teamsize">
+        <option value="all">Всі</option>
+        <option value="5">5v5</option>
+        <option value="4">4v4</option>
+        <option value="3">3v3</option>
+      </select>
     </div>
+    <button id="btn-balance">Збалансувати</button>
+  </div>
 
-    <!-- Управління балансуванням -->
-    <div id="control-area" class="section" style="display:none;">
-      <h2>Балансування</h2>
-      <div class="flex">
-        <div>
-          <label for="mode">Режим:</label>
-          <select id="mode">
-            <option value="auto">Авто</option>
-            <option value="manual">Ручне</option>
-          </select>
-        </div>
-        <div>
-          <label for="teamsize">Розмір команди:</label>
-          <select id="teamsize">
-            <option value="all">Всі</option>
-            <option value="5">5v5</option>
-            <option value="4">4v4</option>
-            <option value="3">3v3</option>
-          </select>
-        </div>
-        <button id="btn-balance">Збалансувати</button>
+  <!-- 4. Відображення команд та результатів -->
+  <div id="teams-area" class="section" style="display:none;">
+    <h2>Команди</h2>
+    <div class="teams">
+      <div class="team-box">
+        <h3>Команда 1</h3>
+        <ul id="team1-list" class="list"></ul>
+        <p>∑ <span id="team1-sum">0</span></p>
+      </div>
+      <div class="team-box">
+        <h3>Команда 2</h3>
+        <ul id="team2-list" class="list"></ul>
+        <p>∑ <span id="team2-sum">0</span></p>
       </div>
     </div>
-
-    <!-- Відображення команд -->
-    <div id="teams-area" class="section" style="display:none;">
-      <h2>Команди</h2>
-      <div class="teams flex">
-        <div class="team-box">
-          <h3>Команда 1</h3>
-          <ul id="team1-list" class="list"></ul>
-          <p>∑ <span id="team1-sum">0</span></p>
-        </div>
-        <div class="team-box">
-          <h3>Команда 2</h3>
-          <ul id="team2-list" class="list"></ul>
-          <p>∑ <span id="team2-sum">0</span></p>
-        </div>
-      </div>
-      <div id="result-area" class="section">
-        <h3>Результат гри</h3>
-        <label>Переможець:
-          <select id="winner">
-            <option value="">Нічия</option>
-            <option value="team1">Команда 1</option>
-            <option value="team2">Команда 2</option>
-          </select>
-        </label>
-        <label>MVP:
-          <select id="mvp"></select>
-        </label>
-        <label>Штраф:
-          <input id="penalty" placeholder="нік:-5, інший:-10">
-        </label>
-        <button id="btn-save">Зберегти</button>
-        <button id="btn-refresh">Оновити</button>
-      </div>
+    <div class="section flex">
+      <label>Переможець:
+        <select id="winner">
+          <option value="">Нічия</option>
+          <option value="team1">Команда 1</option>
+          <option value="team2">Команда 2</option>
+        </select>
+      </label>
+      <label>MVP:
+        <select id="mvp"></select>
+      </label>
+      <label>Штрафи:
+        <input id="penalty" placeholder="нік:-5, інший:-10" />
+      </label>
+      <button id="btn-save">Зберегти</button>
+      <button id="btn-refresh">Оновити</button>
     </div>
   </div>
 

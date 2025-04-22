@@ -2,10 +2,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const sheetUrls = {
     kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
     sunday: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
-};
+  };
 
   let players = [];
-  let lobby = [];
+  let lobby   = [];
 
   const btnLoad     = document.getElementById('btn-load');
   const lobbyArea   = document.getElementById('lobby-area');
@@ -32,24 +32,23 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function loadPlayers() {
     const league = document.getElementById('league').value;
-    const url = sheetUrls[league] + '&t=' + Date.now();
+    const url    = sheetUrls[league] + '&t=' + Date.now();
     fetch(url)
       .then(r => r.ok ? r.text() : Promise.reject('Status ' + r.status))
       .then(txt => {
-        players = txt.trim().split('\n').slice(1)
-          .map(line => {
-            const [ , nick, pts] = line.split(',');
-            return { nick: nick.trim(), pts: +pts || 0 };
-          });
+        players = txt.trim().split('\n').slice(1).map(line => {
+          const parts = line.split(',');
+          return { nick: parts[1].trim(), pts: parseInt(parts[2], 10) || 0 };
+        });
         renderLobby();
       })
       .catch(err => console.error('Load error:', err));
   }
 
   function renderLobby() {
-    lobbyArea.style.display = 'block';
+    lobbyArea.style.display   = 'block';
     controlArea.style.display = 'block';
-    teamsArea.style.display = 'none';
+    teamsArea.style.display   = 'none';
     lobby = [];
     lobbyList.innerHTML = players.map((p, i) =>
       `<li><label><input type="checkbox" data-idx="${i}" /> ${p.nick} (${p.pts})</label></li>`
@@ -69,14 +68,14 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function autoBalance() {
-    let subset = lobby.slice();
+    let subset = [...lobby];
     if (sizeSelect.value !== 'all') subset = subset.slice(0, sizeSelect.value * 2);
     const combos = [];
     let md = Infinity;
     const total = 1 << subset.length;
     for (let m = 1; m < total - 1; m++) {
       const t1 = [], t2 = [];
-      subset.forEach((p, i) => (m & (1 << i) ? t1.push(p) : t2.push(p)));
+      subset.forEach((p, i) => (m & (1 << i)) ? t1.push(p) : t2.push(p));
       if (Math.abs(t1.length - t2.length) > 1) continue;
       const d = Math.abs(sum(t1) - sum(t2));
       if (d < md) { md = d; combos.length = 0; combos.push({ t1, t2 }); }
@@ -105,9 +104,7 @@ window.addEventListener('DOMContentLoaded', () => {
       <option value="team2">Команда 2</option>
       <option value="tie">Дружба</option>
     `;
-    mvpSel.innerHTML = [...t1, ...t2]
-      .map(p => `<option value="${p.nick}">${p.nick}</option>`)
-      .join('');
+    mvpSel.innerHTML = [...t1, ...t2].map(p => `<option value="${p.nick}">${p.nick}</option>`).join('');
   }
 
   function exportResults() {
@@ -119,14 +116,10 @@ window.addEventListener('DOMContentLoaded', () => {
       mvp: mvpSel.value,
       penalties: penaltyInput.value
     };
-    const body = Object.entries(data)
-      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-      .join('&');
+    const body = Object.entries(data).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
 
     fetch('https://laser-proxy.vartaclub.workers.dev', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
     })
       .then(r => r.text())
       .then(t => alert('Result: ' + t));

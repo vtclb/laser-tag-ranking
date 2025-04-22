@@ -1,143 +1,186 @@
-window.addEventListener('DOMContentLoaded', ()=>{
+window.addEventListener('DOMContentLoaded', () => {
   const proxyUrl = 'https://laser-proxy.vartaclub.workers.dev';
   const makeCsvUrl = league => `${proxyUrl}?league=${league}&t=${Date.now()}`;
 
-  let players=[], selected=[], lobby=[];
-  let manualMode=false;
-  let combos=[], comboIndex=0;
-  let team1=[], team2=[];
+  let players = [], selected = [], lobby = [], team1 = [], team2 = [];
+  let combos = [], comboIndex = 0;
 
-  const
-    btnLoad   = $('#btn-load'),
-    selectA   = $('#select-area'), listS = $('#select-list'),
-    btnAddSel = $('#btn-add-selected'), btnClearSel = $('#btn-clear-selected'),
-    lobbyA    = $('#lobby-area'), listL = $('#lobby-list'),
-    cntEl     = $('#lobby-count'), sumEl = $('#lobby-sum'), avgEl = $('#lobby-avg'),
-    btnClearL = $('#btn-clear-lobby'),
-    ctrlA     = $('#control-area'),
-    btnAuto   = $('#btn-auto'), btnManual = $('#btn-manual'), sizeSel = $('#teamsize'),
-    teamsA    = $('#teams-area'), t1List = $('#team1-list'), t2List = $('#team2-list'),
-    t1Sum     = $('#team1-sum'), t2Sum = $('#team2-sum'),
-    resA      = $('#result-area'), selWin = $('#winner'), selMvp = $('#mvp'), penInp = $('#penalties'),
-    btnSave   = $('#btn-save'), btnRef = $('#btn-refresh');
-
-  function $(id){return document.getElementById(id.slice(1))}
+  // DOM elements
+  const el = id => document.getElementById(id);
+  const btnLoad       = el('btn-load');
+  const selectArea    = el('select-area');
+  const selectList    = el('select-list');
+  const btnAddSel     = el('btn-add-selected');
+  const btnClearSel   = el('btn-clear-selected');
+  const lobbyArea     = el('lobby-area');
+  const lobbyList     = el('lobby-list');
+  const cntEl         = el('lobby-count');
+  const sumEl         = el('lobby-sum');
+  const avgEl         = el('lobby-avg');
+  const btnClearL     = el('btn-clear-lobby');
+  const ctrlArea      = el('control-area');
+  const btnAuto       = el('btn-auto');
+  const btnManual     = el('btn-manual');
+  const sizeSelect    = el('teamsize');
+  const teamsArea     = el('teams-area');
+  const team1List     = el('team1-list');
+  const team2List     = el('team2-list');
+  const team1Sum      = el('team1-sum');
+  const team2Sum      = el('team2-sum');
+  const resArea       = el('result-area');
+  const winnerSel     = el('winner');
+  const mvpSel        = el('mvp');
+  const penaltiesInp  = el('penalties');
+  const btnSave       = el('btn-save');
+  const btnRefresh    = el('btn-refresh');
 
   // Load players
-  btnLoad.onclick = ()=>{
-    fetch(makeCsvUrl($('#league').value))
-      .then(r=>r.text())
-      .then(txt=>{
-        players = txt.trim().split('\n').slice(1).map(l=>{
-          const [,, nick, pts] = l.match(/^([^,]*),([^,]*),([^,]*),?(.*)$/) || [];
-          const p=parseInt(pts)||0, rank=p<200?'D':p<500?'C':p<800?'B':p<1200?'A':'S';
-          return {nick:nick.trim(),pts:p,rank};
+  btnLoad.onclick = () => {
+    fetch(makeCsvUrl(el('league').value))
+      .then(r => r.text())
+      .then(txt => {
+        players = txt.trim().split('\n').slice(1).map(line => {
+          const parts = line.split(',');
+          const nick = parts[1].trim();
+          const pts = parseInt(parts[2], 10) || 0;
+          const rank = pts < 200 ? 'D' : pts < 500 ? 'C' : pts < 800 ? 'B' : pts < 1200 ? 'A' : 'S';
+          return { nick, pts, rank };
         });
-        selected=[]; lobby=[];
+        selected = []; lobby = []; team1 = []; team2 = [];
         renderSelect();
-      });
+      })
+      .catch(e => console.error('Load error:', e));
   };
 
-  function renderSelect(){
-    selectA.style.display='block'; ctrlA.style.display='none'; teamsA.style.display='none'; resA.style.display='none';
-    listS.innerHTML = players.map((p,i)=>
-      `<li><label><input type=checkbox data-i=${i}> ${p.nick} (${p.pts})–${p.rank}</label></li>`
+  function renderSelect() {
+    selectArea.style.display = 'block';
+    ctrlArea.style.display = 'none';
+    teamsArea.style.display = 'none';
+    resArea.style.display = 'none';
+    selectList.innerHTML = players.map((p,i) =>
+      `<li><label><input type="checkbox" data-index="${i}" /> ${p.nick} (${p.pts}) – ${p.rank}</label></li>`
     ).join('');
-    listS.querySelectorAll('input').forEach(cb=>cb.onchange=e=>{
-      const p=players[e.target.dataset.i];
-      selected = e.target.checked ? [...selected,p] : selected.filter(x=>x!==p);
+    selectList.querySelectorAll('input').forEach(cb => cb.onchange = e => {
+      const p = players[+e.target.dataset.index];
+      if (e.target.checked) selected.push(p);
+      else selected = selected.filter(x => x !== p);
     });
   }
 
-  btnAddSel.onclick = ()=>{ lobby=[...lobby,...selected.filter(p=>!lobby.includes(p))]; renderLobby(); }
-  btnClearSel.onclick = ()=>{ selected=[]; listS.querySelectorAll('input').forEach(cb=>cb.checked=false); }
+  btnAddSel.onclick = () => { lobby = [...lobby, ...selected.filter(p => !lobby.includes(p))]; renderLobby(); };
+  btnClearSel.onclick = () => { selected = []; selectList.querySelectorAll('input').forEach(cb => cb.checked = false); };
 
-  function renderLobby(){
-    lobbyA.style.display='block'; ctrlA.style.display='flex'; selectA.style.display='none';
-    teamsA.style.display='none'; resA.style.display='none';
-    listL.innerHTML = lobby.map(p=>
-      `<li>${p.nick} (${p.pts})–${p.rank}</li>`
-    ).join('');
-    const total = lobby.reduce((s,p)=>s+p.pts,0);
-    cntEl.textContent=lobby.length; sumEl.textContent=total; avgEl.textContent=lobby.length?(total/lobby.length).toFixed(1):0;
-    team1=[]; team2=[]; combos=[]; comboIndex=0;
+  function renderLobby() {
+    lobbyArea.style.display = 'block';
+    ctrlArea.style.display = 'flex';
+    teamsArea.style.display = 'none';
+    resArea.style.display = 'none';
+    lobbyList.innerHTML = lobby.map((p,i) => `<li>${p.nick} (${p.pts}) – ${p.rank}</li>`).join('');
+    const total = lobby.reduce((s,p) => s + p.pts, 0);
+    cntEl.textContent = lobby.length;
+    sumEl.textContent = total;
+    avgEl.textContent = lobby.length ? (total / lobby.length).toFixed(1) : 0;
+    combos = []; comboIndex = 0;
   }
+  btnClearL.onclick = () => { lobby = []; renderLobby(); };
 
-  btnClearL.onclick = ()=>{ lobby=[]; renderLobby(); }
+  // Auto-balance with cycling combinations
+  btnAuto.onclick = () => {
+    teamsArea.style.display = 'block';
+    resArea.style.display = 'none';
+    let subset = [...lobby];
+    if (sizeSelect.value !== 'all') subset = subset.slice(0, +sizeSelect.value * 2);
 
-  // Авто-баланс з циклом
-  btnAuto.onclick = ()=>{
-    manualMode=false; teamsA.style.display='block'; resA.style.display='none';
-    let subset = [...lobby]; if(sizeSel.value!=='all') subset=subset.slice(0, +sizeSel.value*2);
-    // зібрати мінімальні розбивки
-    combos=[]; let md=Infinity; const tot=1<<subset.length;
-    for(let m=1;m<tot-1;m++){const a=[],b=[]; subset.forEach((p,i)=>(m&(1<<i)?a:b).push(p));
-      if(Math.abs(a.length-b.length)>1) continue;
-      const d=Math.abs(sum(a)-sum(b));
-      if(d<md){md=d; combos=[]; combos.push({t1:a,t2:b});}
-      else if(d===md) combos.push({t1:a,t2:b});
+    if (combos.length === 0) {
+      const tot = 1 << subset.length;
+      let md = Infinity;
+      for (let m = 1; m < tot - 1; m++) {
+        const a = [], b = [];
+        subset.forEach((p,i) => m & (1<<i) ? a.push(p) : b.push(p));
+        if (Math.abs(a.length - b.length) > 1) continue;
+        const d = Math.abs(sum(a) - sum(b));
+        if (d < md) { md = d; combos = []; combos.push({a,b}); }
+        else if (d === md) combos.push({a,b});
+      }
+      // Add swapped variant if only one combo
+      if (combos.length === 1) combos.push({a: combos[0].b, b: combos[0].a});
     }
-    // якщо одна комбінація — додати повернення
-    if(combos.length===1){const c=combos[0]; combos.push({t1:c.t2,t2:c.t1});}
-    // обрати наступну
-    const c = combos[comboIndex % combos.length]; comboIndex++;
-    displayTeams(c.t1,c.t2);
+
+    const {a, b} = combos[comboIndex % combos.length];
+    comboIndex++;
+    team1 = a; team2 = b;
+    displayTeams();
   };
 
-  // Ручне формування
-  btnManual.onclick = ()=>{
-    manualMode=true; teamsA.style.display='block'; resA.style.display='none';
-    t1List.innerHTML=''; t2List.innerHTML=''; t1Sum.textContent=0; t2Sum.textContent=0;
-    // кожен гравець в лоббі отримує кнопки для розміщення
-    listL.querySelectorAll('li').forEach((li,i)=>{
-      const p=lobby[i];
-      li.innerHTML = `${p.nick} (${p.pts})–${p.rank}`+
-        ` <button data-act="1" data-i="${i}">→1</button>`+
-        ` <button data-act="2" data-i="${i}">→2</button>`;
+  // Manual assignment
+  btnManual.onclick = () => {
+    teamsArea.style.display = 'block';
+    resArea.style.display = 'none';
+    team1 = []; team2 = [];
+    renderManual();
+  };
+
+  function renderManual() {
+    lobbyList.innerHTML = lobby.map((p,i) =>
+      `<li>${p.nick} (${p.pts}) – ${p.rank}
+         <button data-team="1" data-index="${i}">→1</button>
+         <button data-team="2" data-index="${i}">→2</button>
+       </li>`
+    ).join('');
+    lobbyList.querySelectorAll('button').forEach(btn => btn.onclick = e => {
+      const idx = +e.target.dataset.index;
+      const t = e.target.dataset.team;
+      const p = lobby[idx];
+      lobby.splice(idx,1);
+      if (t === '1') team1.push(p);
+      else team2.push(p);
+      renderManual(); renderTeams();
     });
-    listL.querySelectorAll('button').forEach(b=>b.onclick=e=>{
-      const idx=+e.target.dataset.i, act=e.target.dataset.act;
-      const p=lobby[idx];
-      // видалити з лоббі та додати в обрану команду
-      lobby= lobby.filter(x=>x!==p);
-      if(act==='1') team1.push(p); else team2.push(p);
+  }
+
+  function displayTeams() {
+    renderTeams();
+    resArea.style.display = 'block';
+  }
+
+  function renderTeams() {
+    team1List.innerHTML = team1.map((p,i) =>
+      `<li>${p.nick} (${p.pts})
+         <button class="remove-team" data-team="1" data-index="${i}">X</button>
+       </li>`
+    ).join('');
+    team2List.innerHTML = team2.map((p,i) =>
+      `<li>${p.nick} (${p.pts})
+         <button class="remove-team" data-team="2" data-index="${i}">X</button>
+       </li>`
+    ).join('');
+    team1Sum.textContent = sum(team1);
+    team2Sum.textContent = sum(team2);
+    document.querySelectorAll('.remove-team').forEach(btn => btn.onclick = e => {
+      const t = e.target.dataset.team;
+      const i = +e.target.dataset.index;
+      const p = t==='1' ? team1.splice(i,1)[0] : team2.splice(i,1)[0];
+      lobby.push(p);
       renderLobby(); renderTeams();
     });
-  };
-
-  function displayTeams(a,b){ team1=a; team2=b; renderTeams(); }
-  function renderTeams(){
-    t1List.innerHTML=team1.map(p=>`<li>${p.nick} (${p.pts})<button data-t="1" data-i="${team1.indexOf(p)}">×</button></li>`).join('');
-    t2List.innerHTML=team2.map(p=>`<li>${p.nick} (${p.pts})<button data-t="2" data-i="${team2.indexOf(p)}">×</button></li>`).join('');
-    t1Sum.textContent=sum(team1); t2Sum.textContent=sum(team2);
-    // видалити з команди
-    document.querySelectorAll('.team-box button').forEach(b=>{
-      const t=b.dataset.t, i=+b.dataset.i;
-      b.onclick=()=>{
-        const p = t==='1'?team1.splice(i,1)[0]:team2.splice(i,1)[0]; lobby.push(p);
-        renderLobby(); renderTeams();
-      };
-    });
-    // оновити MVP
-    selMvp.innerHTML=[...team1,...team2].map(p=>`<option>${p.nick}</option>`).join('');
-    resA.style.display='none';
+    mvpSel.innerHTML = [...team1, ...team2].map(p => `<option>${p.nick}</option>`).join('');
   }
 
-  // збирає і зберігає
-  btnSave.onclick = ()=>{
+  // Save results
+  btnSave.onclick = () => {
     const data = {
-      league: $('#league').value,
+      league: el('league').value,
       team1: team1.map(p=>p.nick).join(', '),
       team2: team2.map(p=>p.nick).join(', '),
-      winner: selWin.value,
-      mvp: selMvp.value,
-      penalties: penInp.value
+      winner: winnerSel.value,
+      mvp: mvpSel.value,
+      penalties: penaltiesInp.value
     };
-    const body = Object.entries(data).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
-    fetch(proxyUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body})
-      .then(r=>r.text()).then(t=>alert(t)).then(()=>btnLoad.click());
+    const body = Object.entries(data).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    fetch(proxyUrl, { method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded' }, body })
+      .then(r=>r.text()).then(t=>{ alert(t); btnLoad.click(); });
   };
-  btnRef.onclick = ()=>btnLoad.click();
+  btnRefresh.onclick = () => btnLoad.click();
 
-  function sum(arr){return arr.reduce((s,p)=>s+p.pts,0);}
+  function sum(arr){ return arr.reduce((s,p)=>s+p.pts,0); }
 });

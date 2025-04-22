@@ -11,6 +11,7 @@
     .teams { display: flex; gap: 20px; }
     .list { list-style: none; padding-left: 0; }
     .team-box { border: 1px solid #ccc; padding: 10px; width: 45%; }
+    button { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -23,7 +24,7 @@
       <option value="kids">Молодша ліга</option>
       <option value="sunday">Старша ліга</option>
     </select>
-    <button id="btn-load">Завантажити</button>
+    <button id="btn-load">Завантажити гравців</button>
   </div>
 
   <!-- Лоббі -->
@@ -34,14 +35,14 @@
 
   <!-- Управління балансуванням -->
   <div id="control-area" class="section flex" style="display:none;">
-    <div class="flex">
+    <div>
       <label for="mode">Режим:</label>
       <select id="mode">
         <option value="auto">Авто</option>
         <option value="manual">Ручне</option>
       </select>
     </div>
-    <div class="flex">
+    <div>
       <label for="teamsize">Розмір команд:</label>
       <select id="teamsize">
         <option value="all">Всі</option>
@@ -71,9 +72,9 @@
     <div class="section flex">
       <label for="winner">Переможець:</label>
       <select id="winner">
-        <option value="tie">Дружба</option>
         <option value="team1">Команда 1</option>
         <option value="team2">Команда 2</option>
+        <option value="tie">Дружба</option>
       </select>
       <label for="mvp">MVP:</label>
       <select id="mvp"></select>

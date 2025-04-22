@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Балансер команд</title>
   <style>
-    body{font-family:sans-serif;padding:20px}
-    .section{margin-bottom:20px}
-    .flex{display:flex;gap:10px;align-items:center}
-    .list{list-style:none;padding:0}
-    #lobby-area{border:2px solid #007bff;padding:10px;border-radius:6px}
-    .teams{display:flex;gap:20px;}
-    .team-box{border:1px solid #ccc;padding:10px;width:45%;position:relative}
-    .team-box button{position:absolute;top:8px;right:8px}
-    button{cursor:pointer;margin-right:5px}
+    body { font-family: sans-serif; padding: 20px; }
+    .section { margin-bottom: 20px; }
+    .flex { display: flex; gap: 10px; align-items: center; }
+    .list { list-style: none; padding: 0; }
+    #lobby-area { border: 2px solid #007bff; padding: 10px; border-radius: 6px; }
+    .teams { display: flex; gap: 20px; }
+    .team-box { border: 1px solid #ccc; padding: 10px; width: 45%; position: relative; }
+    .team-box .clear-team { position: absolute; top: 8px; right: 8px; }
+    button { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -29,15 +29,15 @@
     <button id="btn-load">Завантажити гравців</button>
   </div>
 
-  <!-- 2. Вибір гравців -->
+  <!-- 2. Список гравців для вибору -->
   <div id="select-area" class="section" style="display:none;">
-    <h2>Виберіть гравців</h2>
+    <h2>Вибір гравців</h2>
     <ul id="select-list" class="list"></ul>
     <button id="btn-add-selected">Додати у лоббі</button>
     <button id="btn-clear-selected">Очистити вибір</button>
   </div>
 
-  <!-- 3. Лоббі з рамкою -->
+  <!-- 3. Лоббі дня -->
   <div id="lobby-area" class="section" style="display:none;">
     <h2>Лоббі дня</h2>
     <div>Кількість: <span id="lobby-count">0</span></div>
@@ -47,7 +47,7 @@
     <button id="btn-clear-lobby">Очистити лоббі</button>
   </div>
 
-  <!-- 4. Режим: авто/ручне -->
+  <!-- 4. Режим формування -->
   <div id="control-area" class="section flex" style="display:none;">
     <button id="btn-auto">Авто-баланс</button>
     <button id="btn-manual">Ручне формування</button>
@@ -65,13 +65,13 @@
     <h2>Команди</h2>
     <div class="teams">
       <div class="team-box">
-        <h3>Команда 1</h3>
+        <h3>Команда 1</h3>
         <button class="clear-team" data-team="1">X</button>
         <ul id="team1-list" class="list"></ul>
         <p>∑ <span id="team1-sum">0</span></p>
       </div>
       <div class="team-box">
-        <h3>Команда 2</h3>
+        <h3>Команда 2</h3>
         <button class="clear-team" data-team="2">X</button>
         <ul id="team2-list" class="list"></ul>
         <p>∑ <span id="team2-sum">0</span></p>
@@ -84,8 +84,8 @@
     <h2>Результати</h2>
     <label>Переможець:
       <select id="winner">
-        <option value="team1">Команда 1</option>
-        <option value="team2">Команда 2</option>
+        <option value="team1">Команда 1</option>
+        <option value="team2">Команда 2</option>
         <option value="tie">Нічия</option>
       </select>
     </label>
@@ -93,7 +93,7 @@
       <select id="mvp"></select>
     </label>
     <label>Штрафи:
-      <input id="penalties" placeholder="нік1:-5, нік2:-10">
+      <input id="penalties" placeholder="нік1:-5, нік2:-10" />
     </label>
     <button id="btn-save">Зберегти</button>
     <button id="btn-refresh">Оновити лоббі</button>

@@ -5,10 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
   let players = [], selected = [], lobby = [], team1 = [], team2 = [];
   let combos = [], comboIndex = 0;
 
-  // Helper
   const el = id => document.getElementById(id);
-
-  // DOM elements
   const btnLoad = el('btn-load');
   const selectArea = el('select-area');
   const selectList = el('select-list');
@@ -36,7 +33,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const btnSave = el('btn-save');
   const btnRefresh = el('btn-refresh');
 
-  // Load players
   btnLoad.onclick = () => {
     fetch(makeCsvUrl(el('league').value))
       .then(r => r.text())
@@ -50,8 +46,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }).filter(p => p.nick);
         selected = []; lobby = []; team1 = []; team2 = [];
         renderSelect();
-      })
-      .catch(e => console.error('Load error:', e));
+      });
   };
 
   function renderSelect() {
@@ -59,7 +54,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctrlArea.style.display = 'none';
     teamsArea.style.display = 'none';
     resArea.style.display = 'none';
-    selectList.innerHTML = players.map((p,i) =>
+    selectList.innerHTML = players.map((p, i) =>
       `<li><label><input type="checkbox" data-index="${i}" /> ${p.nick} (${p.pts}) – ${p.rank}</label></li>`
     ).join('');
     selectList.querySelectorAll('input').forEach(cb => cb.onchange = e => {
@@ -76,8 +71,8 @@ window.addEventListener('DOMContentLoaded', () => {
     ctrlArea.style.display = 'flex';
     teamsArea.style.display = 'none';
     resArea.style.display = 'none';
-    lobbyList.innerHTML = lobby.map((p,i) => `<li>${p.nick} (${p.pts}) – ${p.rank}</li>`).join('');
-    const total = lobby.reduce((s,p) => s + p.pts, 0);
+    lobbyList.innerHTML = lobby.map(p => `<li>${p.nick} (${p.pts}) – ${p.rank}</li>`).join('');
+    const total = lobby.reduce((s, p) => s + p.pts, 0);
     cntEl.textContent = lobby.length;
     sumEl.textContent = total;
     avgEl.textContent = lobby.length ? (total / lobby.length).toFixed(1) : 0;
@@ -85,34 +80,29 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   btnClearL.onclick = () => { lobby = []; renderLobby(); };
 
-  // Auto-balance with new combos on each click
   btnAuto.onclick = () => {
     teamsArea.style.display = 'block';
     resArea.style.display = 'none';
     let subset = [...lobby];
     if (sizeSelect.value !== 'all') subset = subset.slice(0, +sizeSelect.value * 2);
-
-    // Recompute combos always to get fresh arrangements
     combos = [];
     let md = Infinity;
     const tot = 1 << subset.length;
     for (let m = 1; m < tot - 1; m++) {
       const a = [], b = [];
-      subset.forEach((p,i) => m & (1<<i) ? a.push(p) : b.push(p));
+      subset.forEach((p, i) => m & (1 << i) ? a.push(p) : b.push(p));
       if (Math.abs(a.length - b.length) > 1) continue;
       const d = Math.abs(sum(a) - sum(b));
-      if (d < md) { md = d; combos = [{a,b}]; }
-      else if (d === md) combos.push({a,b});
+      if (d < md) { md = d; combos = [{ a, b }]; }
+      else if (d === md) combos.push({ a, b });
     }
-    if (combos.length === 1) combos.push({a:combos[0].b, b:combos[0].a});
-
-    const {a, b} = combos[comboIndex % combos.length];
+    if (combos.length === 1) combos.push({ a: combos[0].b, b: combos[0].a });
+    const { a, b } = combos[comboIndex % combos.length];
     comboIndex++;
     team1 = a; team2 = b;
     displayTeams();
   };
 
-  // Manual assignment
   btnManual.onclick = () => {
     teamsArea.style.display = 'block';
     resArea.style.display = 'none';
@@ -121,7 +111,7 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   function renderManual() {
-    lobbyList.innerHTML = lobby.map((p,i) =>
+    lobbyList.innerHTML = lobby.map((p, i) =>
       `<li>${p.nick} (${p.pts}) – ${p.rank}
          <button data-team="1" data-index="${i}">→1</button>
          <button data-team="2" data-index="${i}">→2</button>
@@ -131,9 +121,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const idx = +e.target.dataset.index;
       const t = e.target.dataset.team;
       const p = lobby[idx];
-      lobby.splice(idx,1);
-      if (t === '1') team1.push(p);
-      else team2.push(p);
+      lobby.splice(idx, 1);
+      if (t === '1') team1.push(p); else team2.push(p);
       renderManual(); renderTeams();
     });
   }
@@ -144,13 +133,13 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderTeams() {
-    team1List.innerHTML = team1.map((p,i) =>
+    team1List.innerHTML = team1.map((p, i) =>
       `<li>${p.nick} (${p.pts})
          <button class="remove-team" data-team="1" data-index="${i}">X</button>
          <button class="swap-team" data-from="1" data-index="${i}" data-to="2">→2</button>
        </li>`
     ).join('');
-    team2List.innerHTML = team2.map((p,i) =>
+    team2List.innerHTML = team2.map((p, i) =>
       `<li>${p.nick} (${p.pts})
          <button class="remove-team" data-team="2" data-index="${i}">X</button>
          <button class="swap-team" data-from="2" data-index="${i}" data-to="1">→1</button>
@@ -158,7 +147,6 @@ window.addEventListener('DOMContentLoaded', () => {
     ).join('');
     team1Sum.textContent = sum(team1);
     team2Sum.textContent = sum(team2);
-    // Remove button
     document.querySelectorAll('.remove-team').forEach(btn => btn.onclick = e => {
       const t = e.target.dataset.team;
       const i = +e.target.dataset.index;
@@ -166,7 +154,6 @@ window.addEventListener('DOMContentLoaded', () => {
       lobby.push(p);
       renderLobby(); renderTeams();
     });
-    // Swap button
     document.querySelectorAll('.swap-team').forEach(btn => btn.onclick = e => {
       const from = e.target.dataset.from;
       const to = e.target.dataset.to;
@@ -176,8 +163,23 @@ window.addEventListener('DOMContentLoaded', () => {
       renderLobby(); renderTeams();
     });
     mvpSel.innerHTML = [...team1, ...team2].map(p => `<option>${p.nick}</option>`).join('');
-    // Always show results section in manual mode when teams exist
-    if (team1.length > 0 || team2.length > 0) {
-      resArea.style.display = 'block';
-    }
-  });
+    if (team1.length > 0 || team2.length > 0) resArea.style.display = 'block';
+  }
+
+  btnSave.onclick = () => {
+    const data = {
+      league: el('league').value,
+      team1: team1.map(p => p.nick).join(', '),
+      team2: team2.map(p => p.nick).join(', '),
+      winner: winnerSel.value,
+      mvp: mvpSel.value,
+      penalties: penaltiesInp.value
+    };
+    const body = Object.entries(data).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
+      .then(r => r.text()).then(t => { alert(t); btnLoad.click(); });
+  };
+  btnRefresh.onclick = () => btnLoad.click();
+
+  function sum(arr) { return arr.reduce((s,p) => s + p.pts, 0); }
+});

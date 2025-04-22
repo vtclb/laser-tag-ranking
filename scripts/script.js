@@ -145,13 +145,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function renderTeams() {
     team1List.innerHTML = team1.map((p,i) =>
-      `<li>${p.nick} (${p.pts}) <button class="remove-team" data-team="1" data-index="${i}">X</button></li>`
+      `<li>${p.nick} (${p.pts})
+         <button class="remove-team" data-team="1" data-index="${i}">X</button>
+         <button class="swap-team" data-from="1" data-index="${i}" data-to="2">→2</button>
+       </li>`
     ).join('');
     team2List.innerHTML = team2.map((p,i) =>
-      `<li>${p.nick} (${p.pts}) <button class="remove-team" data-team="2" data-index="${i}">X</button></li>`
+      `<li>${p.nick} (${p.pts})
+         <button class="remove-team" data-team="2" data-index="${i}">X</button>
+         <button class="swap-team" data-from="2" data-index="${i}" data-to="1">→1</button>
+       </li>`
     ).join('');
     team1Sum.textContent = sum(team1);
     team2Sum.textContent = sum(team2);
+    // Remove button
     document.querySelectorAll('.remove-team').forEach(btn => btn.onclick = e => {
       const t = e.target.dataset.team;
       const i = +e.target.dataset.index;
@@ -159,26 +166,18 @@ window.addEventListener('DOMContentLoaded', () => {
       lobby.push(p);
       renderLobby(); renderTeams();
     });
+    // Swap button
+    document.querySelectorAll('.swap-team').forEach(btn => btn.onclick = e => {
+      const from = e.target.dataset.from;
+      const to = e.target.dataset.to;
+      const i = +e.target.dataset.index;
+      const p = from === '1' ? team1.splice(i,1)[0] : team2.splice(i,1)[0];
+      if (to === '1') team1.push(p); else team2.push(p);
+      renderLobby(); renderTeams();
+    });
     mvpSel.innerHTML = [...team1, ...team2].map(p => `<option>${p.nick}</option>`).join('');
-  }
-
-  // Save results
-  btnSave.onclick = () => {
-    const data = {
-      league: el('league').value,
-      team1: team1.map(p => p.nick).join(', '),
-      team2: team2.map(p => p.nick).join(', '),
-      winner: winnerSel.value,
-      mvp: mvpSel.value,
-      penalties: penaltiesInp.value
-    };
-    const body = Object.entries(data)
-      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-      .join('&');
-    fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
-      .then(r => r.text()).then(t => { alert(t); btnLoad.click(); });
-  };
-  btnRefresh.onclick = () => btnLoad.click();
-
-  function sum(arr) { return arr.reduce((s,p) => s + p.pts, 0); }
-});
+    // Always show results section in manual mode when teams exist
+    if (team1.length > 0 || team2.length > 0) {
+      resArea.style.display = 'block';
+    }
+  });

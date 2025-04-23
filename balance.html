@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Балансер команд</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
@@ -18,6 +18,7 @@
 </head>
 <body>
   <h1>Балансер команд</h1>
+
   <div class="section flex">
     <label for="league">Ліга:</label>
     <select id="league">
@@ -26,12 +27,14 @@
     </select>
     <button id="btn-load">Завантажити гравців</button>
   </div>
+
   <div id="select-area" class="section" style="display:none;">
     <h2>Вибір гравців</h2>
     <ul id="select-list" class="list"></ul>
     <button id="btn-add-selected">Додати у лоббі</button>
     <button id="btn-clear-selected">Очистити вибір</button>
   </div>
+
   <div id="lobby-area" class="section" style="display:none;">
     <h2>Лоббі дня</h2>
     <div>Кількість: <span id="lobby-count">0</span></div>
@@ -40,6 +43,7 @@
     <ul id="lobby-list" class="list"></ul>
     <button id="btn-clear-lobby">Очистити лоббі</button>
   </div>
+
   <div id="control-area" class="section flex" style="display:none;">
     <button id="btn-auto">Авто-баланс</button>
     <button id="btn-manual">Ручне формування</button>
@@ -51,6 +55,7 @@
       <option value="3">3v3</option>
     </select>
   </div>
+
   <div id="teams-area" class="section" style="display:none;">
     <h2>Команди</h2>
     <div class="teams">
@@ -68,6 +73,7 @@
       </div>
     </div>
   </div>
+
   <div id="result-area" class="section" style="display:none;">
     <h2>Результати</h2>
     <label>Переможець:
@@ -86,6 +92,7 @@
     <button id="btn-save">Зберегти</button>
     <button id="btn-refresh">Оновити лоббі</button>
   </div>
+
   <script src="scripts/script.js"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   let players = [], selected = [], lobby = [], team1 = [], team2 = [];
   let combos = [], comboIndex = 0;
+  let manualMode = false;
 
   const el = id => document.getElementById(id);
   const btnLoad = el('btn-load');
@@ -33,20 +34,49 @@ window.addEventListener('DOMContentLoaded', () => {
   const btnSave = el('btn-save');
   const btnRefresh = el('btn-refresh');
 
-  btnLoad.onclick = () => {
-    fetch(makeCsvUrl(el('league').value))
+  // Refresh stats without clearing lobby/teams
+  function refreshStats() {
+    return fetch(makeCsvUrl(el('league').value))
       .then(r => r.text())
       .then(txt => {
-        players = txt.trim().split('\n').slice(1).map(line => {
+        const updated = txt.trim().split('
+').slice(1).map(line => {
           const parts = line.split(',');
-          const nick = parts[1]?.trim();
-          const pts = parseInt(parts[2], 10) || 0;
-          const rank = pts < 200 ? 'D' : pts < 500 ? 'C' : pts < 800 ? 'B' : pts < 1200 ? 'A' : 'S';
-          return { nick, pts, rank };
-        }).filter(p => p.nick);
-        selected = []; lobby = []; team1 = []; team2 = [];
-        renderSelect();
+          return { nick: parts[1].trim(), pts: parseInt(parts[2],10)||0 };
+        });
+        // update players and lobby/teams
+        players.forEach(p => {
+          const u = updated.find(x => x.nick === p.nick);
+          if (u) p.pts = u.pts;
+        });
+        [lobby, team1, team2].forEach(list => list.forEach(p => {
+          const u = updated.find(x => x.nick === p.nick);
+          if (u) p.pts = u.pts;
+        }));
+        // re-render
+        if (manualMode) renderTeams(); else updateLobbyList();
       });
+  }
+
+  btnLoad.onclick = () => {
+    refreshStats().then(() => {
+      // Load full new list
+      fetch(makeCsvUrl(el('league').value))
+        .then(r => r.text())
+        .then(txt => {
+          players = txt.trim().split('
+').slice(1).map(line => {
+            const parts = line.split(',');
+            const nick = parts[1].trim();
+            const pts = parseInt(parts[2], 10) || 0;
+            const rank = pts < 200 ? 'D' : pts < 500 ? 'C' : pts < 800 ? 'B' : pts < 1200 ? 'A' : 'S';
+            return { nick, pts, rank };
+          }).filter(p => p.nick);
+          selected = []; lobby = []; team1 = []; team2 = [];
+          manualMode = false;
+          renderSelect();
+        });
+    });
   };
 
   function renderSelect() {
@@ -54,7 +84,7 @@ window.addEventListener('DOMContentLoaded', () => {
     ctrlArea.style.display = 'none';
     teamsArea.style.display = 'none';
     resArea.style.display = 'none';
-    selectList.innerHTML = players.map((p, i) =>
+    selectList.innerHTML = players.map((p,i) =>
       `<li><label><input type="checkbox" data-index="${i}" /> ${p.nick} (${p.pts}) – ${p.rank}</label></li>`
     ).join('');
     selectList.querySelectorAll('input').forEach(cb => cb.onchange = e => {
@@ -63,26 +93,26 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  btnAddSel.onclick = () => { lobby = [...lobby, ...selected.filter(p => !lobby.includes(p))]; renderLobby(); };
+  btnAddSel.onclick = () => { lobby = [...lobby, ...selected.filter(p => !lobby.includes(p))]; updateLobbyList(); };
   btnClearSel.onclick = () => { selected = []; selectList.querySelectorAll('input').forEach(cb => cb.checked = false); };
 
-  function renderLobby() {
+  function updateLobbyList() {
     lobbyArea.style.display = 'block';
     ctrlArea.style.display = 'flex';
-    teamsArea.style.display = 'none';
+    teamsArea.style.display = manualMode ? 'block' : 'none';
     resArea.style.display = 'none';
-    lobbyList.innerHTML = lobby.map(p => `<li>${p.nick} (${p.pts}) – ${p.rank}</li>`).join('');
+    lobbyList.innerHTML = lobby.map((p,i) => `<li>${p.nick} (${p.pts}) – ${p.rank}</li>`).join('');
     const total = lobby.reduce((s, p) => s + p.pts, 0);
     cntEl.textContent = lobby.length;
     sumEl.textContent = total;
     avgEl.textContent = lobby.length ? (total / lobby.length).toFixed(1) : 0;
     combos = []; comboIndex = 0;
   }
-  btnClearL.onclick = () => { lobby = []; renderLobby(); };
+  btnClearL.onclick = () => { lobby = []; updateLobbyList(); };
 
   btnAuto.onclick = () => {
-    teamsArea.style.display = 'block';
-    resArea.style.display = 'none';
+    manualMode = false;
+    updateLobbyList();
     let subset = [...lobby];
     if (sizeSelect.value !== 'all') subset = subset.slice(0, +sizeSelect.value * 2);
     combos = [];
@@ -104,8 +134,8 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   btnManual.onclick = () => {
-    teamsArea.style.display = 'block';
-    resArea.style.display = 'none';
+    manualMode = true;
+    updateLobbyList();
     team1 = []; team2 = [];
     renderManual();
   };
@@ -120,14 +150,14 @@ window.addEventListener('DOMContentLoaded', () => {
     lobbyList.querySelectorAll('button').forEach(btn => btn.onclick = e => {
       const idx = +e.target.dataset.index;
       const t = e.target.dataset.team;
-      const p = lobby[idx];
-      lobby.splice(idx, 1);
+      const p = lobby.splice(idx, 1)[0];
       if (t === '1') team1.push(p); else team2.push(p);
-      renderManual(); renderTeams();
+      renderTeams();
     });
   }
 
   function displayTeams() {
+    teamsArea.style.display = 'flex';
     renderTeams();
     resArea.style.display = 'block';
   }
@@ -150,20 +180,21 @@ window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.remove-team').forEach(btn => btn.onclick = e => {
       const t = e.target.dataset.team;
       const i = +e.target.dataset.index;
-      const p = t === '1' ? team1.splice(i,1)[0] : team2.splice(i,1)[0];
+      const p = (t === '1' ? team1 : team2).splice(i, 1)[0];
       lobby.push(p);
-      renderLobby(); renderTeams();
+      manualMode ? renderTeams() : updateLobbyList();
     });
     document.querySelectorAll('.swap-team').forEach(btn => btn.onclick = e => {
       const from = e.target.dataset.from;
       const to = e.target.dataset.to;
       const i = +e.target.dataset.index;
-      const p = from === '1' ? team1.splice(i,1)[0] : team2.splice(i,1)[0];
-      if (to === '1') team1.push(p); else team2.push(p);
-      renderLobby(); renderTeams();
+      const arrFrom = from === '1' ? team1 : team2;
+      const arrTo = to === '1' ? team1 : team2;
+      const p = arrFrom.splice(i, 1)[0];
+      arrTo.push(p);
+      renderTeams();
     });
     mvpSel.innerHTML = [...team1, ...team2].map(p => `<option>${p.nick}</option>`).join('');
-    if (team1.length > 0 || team2.length > 0) resArea.style.display = 'block';
   }
 
   btnSave.onclick = () => {
@@ -177,9 +208,9 @@ window.addEventListener('DOMContentLoaded', () => {
     };
     const body = Object.entries(data).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
     fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
-      .then(r => r.text()).then(t => { alert(t); btnLoad.click(); });
+      .then(r => r.text()).then(t => { alert(t); refreshStats(); });
   };
-  btnRefresh.onclick = () => btnLoad.click();
+  btnRefresh.onclick = () => refreshStats();
 
-  function sum(arr) { return arr.reduce((s,p) => s + p.pts, 0); }
+  function sum(arr) { return arr.reduce((s, p) => s + p.pts, 0); }
 });

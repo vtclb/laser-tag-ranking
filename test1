@@ -1,0 +1,65 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marathon The Game</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1 class="logo">Marathon The Game</h1>
+      <nav>
+        <ul class="nav-list">
+          <li><a href="#home">Головна</a></li>
+          <li><a href="#features">Функції</a></li>
+          <li><a href="#contact">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section id="home" class="hero">
+    <div class="container">
+      <h2>Випробуй себе в безперервному забігу</h2>
+      <p>Тут починається твоя пригода. Бігай, тренуйся і перемагай!</p>
+      <a href="#features" class="btn-primary">Дізнатися більше</a>
+    </div>
+  </section>
+
+  <section id="features" class="features container">
+    <h2>Особливості гри</h2>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <h3>Реальний час</h3>
+        <p>Гонщикам доведеться змагатися під час реальних стрімів.</p>
+      </div>
+      <div class="feature-item">
+        <h3>Соціальні функції</h3>
+        <p>Створюй команди, запрошуйте друзів, змагайтеся разом.</p>
+      </div>
+      <div class="feature-item">
+        <h3>Онлайн-турніри</h3>
+        <p>Регулярні змагання з призами та рейтингами.</p>
+      </div>
+      <div class="feature-item">
+        <h3>Мобільна підтримка</h3>
+        <p>Грай на будь-якому пристрої — ПК чи смартфоні.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer id="contact" class="site-footer">
+    <div class="container">
+      <p>© 2025 Marathon The Game. Усі права захищені.</p>
+      <ul class="footer-nav">
+        <li><a href="#">Політика конфіденційності</a></li>
+        <li><a href="#">Умови використання</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>

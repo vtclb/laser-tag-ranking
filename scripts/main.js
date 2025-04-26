@@ -1,22 +1,26 @@
-// scripts/main.js
 import { loadPlayers } from './api.js';
 import { initLobby }   from './lobby.js';
 import { initScenario } from './scenario.js';
 
-console.log('main.js завантажено');
-
 const btnLoad  = document.getElementById('btn-load');
 const leagueSel = document.getElementById('league');
 
+(async function init() {
+  // Дозволити UI тільки після підтвердження проксі/ліг
+  leagueSel.disabled = false;
+  btnLoad.disabled   = false;
+})();
+
 btnLoad.addEventListener('click', async () => {
-  console.log('Натиснуто btn-load, ліга =', leagueSel.value);
+  btnLoad.disabled = true;
+  leagueSel.disabled = true;
   try {
     const players = await loadPlayers(leagueSel.value);
-    console.log('Отримано гравців:', players);
     initLobby(players);
-    initScenario();  // показує блок сценаріїв
-  } catch (err) {
-    console.error('Помилка loadPlayers:', err);
-    alert('Помилка завантаження гравців: ' + err.message);
+    initScenario();
+  } catch (e) {
+    alert('Не вдалося завантажити гравців:\n' + e.message);
+    btnLoad.disabled = false;
+    leagueSel.disabled = false;
   }
 });

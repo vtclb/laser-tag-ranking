@@ -1,8 +1,8 @@
-// scripts/lobby.js
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { initTeams, teams }         from './teams.js';
+import { initTeams, teams } from './teams.js';
 
-export let lobby = [];              // Ось тут ми експортуємо lobby
+export let lobby = [];
+let players = [], selected = [], manualTeamsCount = 0;
 
 const selArea     = document.getElementById('select-area');
 const selList     = document.getElementById('select-list');
@@ -17,13 +17,9 @@ const cntEl       = document.getElementById('lobby-count');
 const sumEl       = document.getElementById('lobby-sum');
 const avgEl       = document.getElementById('lobby-avg');
 
-let players = [], selected = [], manualTeamsCount = 0;
-
 export function initLobby(pList) {
-  players = pList;
-  selected = [];
-  lobby    = [];
- renderSelect(players);
+  players = pList; selected = []; lobby = []; manualTeamsCount = 0;
+  renderSelect(players);
 }
 
 function renderSelect(arr) {
@@ -31,13 +27,7 @@ function renderSelect(arr) {
   lobbyArea.classList.add('hidden');
   selList.innerHTML = arr.map((p,i) => {
     const disabled = lobby.includes(p) ? 'disabled' : '';
-    return `
-      <li>
-        <label>
-          <input type="checkbox" data-index="${i}" ${disabled}/>
-          ${p.nick} (${p.pts}) – ${p.rank}
-        </label>
-      </li>`;
+    return `<li><label><input type="checkbox" data-index="${i}" ${disabled}> ${p.nick} (${p.pts}) – ${p.rank}</label></li>`;
   }).join('');
   selList.querySelectorAll('input').forEach(cb => {
     cb.onchange = e => {
@@ -52,13 +42,11 @@ btnSortName.onclick = () => renderSelect(sortByName(players));
 btnSortPts.onclick  = () => renderSelect(sortByPtsDesc(players));
 
 btnAddSel.onclick = () => {
-  selected.forEach(p => {
-    if (!lobby.includes(p)) lobby.push(p);
-  });
+  selected.forEach(p => { if (!lobby.includes(p)) lobby.push(p); });
   selected = [];
-  renderLobby();
-  renderSelect(players);
+  setManualCount(manualTeamsCount);
 };
+
 btnClearSel.onclick = () => {
   selected = [];
   selList.querySelectorAll('input').forEach(cb => cb.checked = false);
@@ -74,7 +62,7 @@ function renderLobby() {
   lobbyArea.classList.remove('hidden');
   lobbyList.innerHTML = lobby.map((p,i) => {
     let buttons = '';
-    for (let k = 1; k <= manualTeamsCount; k++) {
+    for (let k=1; k<=manualTeamsCount; k++) {
       buttons += `<button class="assign-team" data-index="${i}" data-team="${k}">→${k}</button>`;
     }
     return `<li>${p.nick} (${p.pts}) – ${p.rank}${buttons}</li>`;

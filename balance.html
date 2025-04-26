@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Балансер команд</title>
-  <link rel="stylesheet" href="balancer.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="header">
@@ -38,6 +38,9 @@
       <h2>Лоббі дня</h2>
       <p>Гравців: <span id="lobby-count">0</span> | Сума: <span id="lobby-sum">0</span> | Середній: <span id="lobby-avg">0</span></p>
       <ul id="lobby-list" class="list"></ul>
+      <div class="actions">
+        <button id="btn-clear-lobby">Очистити лоббі</button>
+      </div>
     </section>
 
     <!-- 3. Сценарій -->
@@ -69,233 +72,14 @@
     </section>
   </main>
 
-  <script>
-  (function(){
-    const proxyUrl = 'https://laser-proxy.vartaclub.workers.dev';
-    // --- DOM ---
-    const btnLoad      = document.getElementById('btn-load');
-    const leagueSel    = document.getElementById('league');
-    const selectArea   = document.getElementById('select-area');
-    const selectList   = document.getElementById('select-list');
-    const btnSortName  = document.getElementById('btn-sort-name');
-    const btnSortPts   = document.getElementById('btn-sort-pts');
-    const btnAddSel    = document.getElementById('btn-add-selected');
-    const btnClearSel  = document.getElementById('btn-clear-selected');
-    const lobbyArea    = document.getElementById('lobby-area');
-    const lobbyList    = document.getElementById('lobby-list');
-    const lobbyCount   = document.getElementById('lobby-count');
-    const lobbySum     = document.getElementById('lobby-sum');
-    const lobbyAvg     = document.getElementById('lobby-avg');
-    const scenarioArea = document.getElementById('scenario-area');
-    const btnAuto      = document.getElementById('btn-auto');
-    const btnManual    = document.getElementById('btn-manual');
-    const teamSizeSel  = document.getElementById('teamsize');
-    const teamsArea    = document.getElementById('teams-area');
-    const arenaArea    = document.getElementById('arena-area');
-    const arenaVS      = document.getElementById('arena-vs');
-    const arenaRounds  = document.getElementById('arena-rounds');
-    const btnSaveMatch = document.getElementById('btn-save-match');
-    const btnClearArena= document.getElementById('btn-clear-arena');
-
-    // --- Дані ---
-    let players = [], selected = [], lobby = [], teams = {}, manualCount = 0;
-
-    // --- Утиліти ---
-    function sortByName(a){ return [...a].sort((x,y)=>x.nick.localeCompare(y.nick)); }
-    function sortByPts(a){ return [...a].sort((x,y)=>y.pts - x.pts); }
-
-    // --- Завантаження ---
-    async function loadPlayers(league){
-      const res = await fetch(`${proxyUrl}?league=${league}&t=${Date.now()}`);
-      const txt = await res.text();
-      return txt.trim().split('\n').slice(1).filter(l=>l).map(line=>{
-        const [,,nick,pts] = line.split(',');
-        const p = { nick: nick.trim(), pts: +pts||0 };
-        p.rank = p.pts<200?'D':p.pts<500?'C':p.pts<800?'B':p.pts<1200?'A':'S';
-        return p;
-      });
-    }
-
-    // --- Рендер Select ---
-    function renderSelect(arr){
-      selectArea.classList.remove('hidden');
-      lobbyArea.classList.add('hidden');
-      selectList.innerHTML = arr.map((p,i)=>`
-        <li>
-          <label>
-            <input type="checkbox" data-i="${i}" ${lobby.includes(p)?'disabled':''}>
-            ${p.nick} (${p.pts}) – ${p.rank}
-          </label>
-        </li>
-      `).join('');
-      selectList.querySelectorAll('input').forEach(cb=>{
-        cb.onchange = ()=>{
-          const p = arr[+cb.dataset.i];
-          if(cb.checked) selected.push(p);
-          else selected = selected.filter(x=>x!==p);
-        };
-      });
-    }
-
-    // --- Рендер Lobby ---
-    function renderLobby(){
-      selectArea.classList.add('hidden');
-      lobbyArea.classList.remove('hidden');
-      lobbyList.innerHTML = lobby.map((p,i)=>{
-        let btns='';
-        for(let k=1;k<=manualCount;k++){
-          btns += `<button class="assign" data-i="${i}" data-team="${k}">→${k}</button>`;
-        }
-        return `<li>${p.nick} (${p.pts}) – ${p.rank}${btns}</li>`;
-      }).join('');
-      const sum = lobby.reduce((s,p)=>s+p.pts,0);
-      lobbyCount.textContent = lobby.length;
-      lobbySum.textContent   = sum;
-      lobbyAvg.textContent   = lobby.length? (sum/lobby.length).toFixed(1):0;
-    }
-
-    // --- Init Lobby ---
-    function initLobby(pl){
-      players = pl; selected=[]; lobby=[]; manualCount=0;
-      renderSelect(players);
-    }
-
-    // --- Init Scenario ---
-    function initScenario(){
-      scenarioArea.classList.remove('hidden');
-    }
-
-    // --- Render Teams ---
-    function renderTeams(N, data){
-      teamsArea.classList.remove('hidden');
-      arenaArea.classList.add('hidden');
-      teamsArea.innerHTML = '';
-      teams = {};
-      for(let k=1;k<=N;k++){
-        teams[k] = data[k] ? [...data[k]] : [];
-        const sum = teams[k].reduce((s,p)=>s+p.pts,0);
-        const box = document.createElement('div');
-        box.className = `card team-box team-${k}`;
-        box.innerHTML = `
-          <label>
-            <input type="checkbox" class="team-select" data-team="${k}">
-            Команда ${k} (∑ ${sum})
-          </label>
-          <ul>${teams[k].map(p=>`<li class="rank-${p.rank}">${p.nick} (${p.pts})</li>`).join('')}</ul>
-        `;
-        teamsArea.append(box);
-      }
-    }
-
-    // --- Start Match ---
-    function startMatch(){
-      const sel = [...document.querySelectorAll('.team-select:checked')];
-      if(sel.length!==2){ alert('Виберіть 2 команди'); return; }
-      const [a,b]=sel.map(cb=>+cb.dataset.team);
-      arenaVS.textContent = `Команда ${a} ✕ Команда ${b}`;
-      arenaArea.classList.remove('hidden');
-      arenaRounds.innerHTML = '';
-      for(let i=1;i<=3;i++){
-        const d = document.createElement('div');
-        d.innerHTML = `
-          <h4>Раунд ${i}</h4>
-          <label><input type="checkbox" class="r${i}-a"> T${a}</label>
-          <label><input type="checkbox" class="r${i}-b"> T${b}</label>
-        `;
-        arenaRounds.append(d);
-      }
-      btnSaveMatch.disabled = false;
-    }
-
-    // --- Save Match ---
-    async function saveMatch(){
-      const vs = arenaVS.textContent.match(/\d+/g).map(n=>+n);
-      let wA=0,wB=0;
-      for(let i=1;i<=3;i++){
-        if(arenaRounds.querySelector(`.r${i}-a`).checked) wA++;
-        if(arenaRounds.querySelector(`.r${i}-b`).checked) wB++;
-      }
-      const winner = wA>wB?`team${vs[0]}`:wB>wA?`team${vs[1]}`:'tie';
-      const series = `${wA}-${wB}`;
-      await fetch(proxyUrl, {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({
-          league: leagueSel.value,
-          team1: teams[vs[0]].map(p=>p.nick).join(', '),
-          team2: teams[vs[1]].map(p=>p.nick).join(', '),
-          winner, mvp:'', series, penalties:''
-        })
-      });
-      alert('Збережено!');
-      clearArena();
-    }
-
-    // --- Clear Arena ---
-    function clearArena(){
-      arenaArea.classList.add('hidden');
-      arenaRounds.innerHTML='';
-      document.querySelectorAll('.team-select').forEach(cb=>cb.checked=false);
-      btnSaveMatch.disabled=true;
-    }
-
-    // --- Auto-Balance & Manual ---
-    function autoBalance(){
-      const N = +teamSizeSel.value;
-      manualCount=N;
-      const arr = N===2
-        ? (()=>{
-            const half = Math.floor(lobby.length/2);
-            const sorted = [...lobby].sort((a,b)=>b.pts-a.pts);
-            return [sorted.slice(0,half), sorted.slice(half)];
-          })()
-        : (()=>{
-            const per = Math.ceil(lobby.length/N);
-            const sorted = [...lobby].sort((a,b)=>b.pts-a.pts);
-            const out=[]; for(let i=0;i<N;i++) out.push(sorted.slice(i*per,(i+1)*per));
-            return out;
-          })();
-      const data = {}; arr.forEach((t,i)=>data[i+1]=t);
-      renderTeams(N,data);
-    }
-    function manualForm(){
-      const N = +teamSizeSel.value;
-      manualCount=N;
-      renderTeams(N,{});
-    }
-
-    // --- Assign from Lobby ---
-    function assignFromLobby(e){
-      if(!e.target.matches('.assign')) return;
-      const i = +e.target.dataset.i;
-      const t = +e.target.dataset.team;
-      const p = lobby.splice(i,1)[0];
-      teams[t].push(p);
-      renderLobby();
-      renderTeams(manualCount, teams);
-    }
-
-    // --- Events ---
-    btnLoad.onclick = async ()=>{
-      const pl = await loadPlayers(leagueSel.value);
-      initLobby(pl);
-      initScenario();
-    };
-    btnSortName.onclick = ()=>renderSelect(sortByName(players));
-    btnSortPts.onclick  = ()=>renderSelect(sortByPts(players));
-    btnAddSel.onclick   = ()=>{
-      selected.forEach(p=>{ if(!lobby.includes(p)) lobby.push(p); });
-      selected=[];
-      renderLobby();
-    };
-    btnClearSel.onclick = ()=>{ selected=[]; renderSelect(players); };
-    lobbyList.addEventListener('click', assignFromLobby);
-    btnAuto.onclick   = autoBalance;
-    btnManual.onclick = manualForm;
-    document.getElementById('btn-start-match').onclick = startMatch;
-    btnSaveMatch.onclick = saveMatch;
-    btnClearArena.onclick = clearArena;
-  })();
-  </script>
+  <!-- Модульні скрипти -->
+  <script type="module" src="scripts/api.js"></script>
+  <script type="module" src="scripts/sortUtils.js"></script>
+  <script type="module" src="scripts/balanceUtils.js"></script>
+  <script type="module" src="scripts/lobby.js"></script>
+  <script type="module" src="scripts/teams.js"></script>
+  <script type="module" src="scripts/scenario.js"></script>
+  <script type="module" src="scripts/arena.js"></script>
+  <script type="module" src="scripts/main.js"></script>
 </body>
 </html>

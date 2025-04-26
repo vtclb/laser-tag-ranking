@@ -4,95 +4,82 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Балансер команд</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .section { margin-bottom: 20px; }
-    .flex { display: flex; gap: 10px; align-items: center; }
-    .list { list-style: none; padding: 0; }
-    #lobby-area { border: 2px solid #007bff; padding: 10px; border-radius: 6px; }
-    .teams { display: flex; gap: 20px; }
-    .team-box { border: 1px solid #ccc; padding: 10px; width: 45%; position: relative; }
-    .team-box .clear-team { position: absolute; top: 8px; right: 8px; }
-    button { cursor: pointer; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Балансер команд</h1>
-
-  <div class="section flex">
-    <label for="league">Ліга:</label>
-    <select id="league">
-      <option value="kids">Молодша ліга</option>
-      <option value="sunday">Старша ліга</option>
-    </select>
-    <button id="btn-load">Завантажити гравців</button>
-  </div>
-
-  <div id="select-area" class="section" style="display:none;">
-    <h2>Вибір гравців</h2>
-    <ul id="select-list" class="list"></ul>
-    <button id="btn-add-selected">Додати у лоббі</button>
-    <button id="btn-clear-selected">Очистити вибір</button>
-  </div>
-
-  <div id="lobby-area" class="section" style="display:none;">
-    <h2>Лоббі дня</h2>
-    <div>Кількість: <span id="lobby-count">0</span></div>
-    <div>Сума балів: <span id="lobby-sum">0</span></div>
-    <div>Середній бал: <span id="lobby-avg">0</span></div>
-    <ul id="lobby-list" class="list"></ul>
-    <button id="btn-clear-lobby">Очистити лоббі</button>
-  </div>
-
-  <div id="control-area" class="section flex" style="display:none;">
-    <button id="btn-auto">Авто-баланс</button>
-    <button id="btn-manual">Ручне формування</button>
-    <label for="teamsize">Формат:</label>
-    <select id="teamsize">
-      <option value="all">Всі</option>
-      <option value="5">5v5</option>
-      <option value="4">4v4</option>
-      <option value="3">3v3</option>
-    </select>
-  </div>
-
-  <div id="teams-area" class="section" style="display:none;">
-    <h2>Команди</h2>
-    <div class="teams">
-      <div class="team-box">
-        <h3>Команда 1</h3>
-        <button class="clear-team" data-team="1">X</button>
-        <ul id="team1-list" class="list"></ul>
-        <p>∑ <span id="team1-sum">0</span></p>
-      </div>
-      <div class="team-box">
-        <h3>Команда 2</h3>
-        <button class="clear-team" data-team="2">X</button>
-        <ul id="team2-list" class="list"></ul>
-        <p>∑ <span id="team2-sum">0</span></p>
-      </div>
-    </div>
-  </div>
-
-  <div id="result-area" class="section" style="display:none;">
-    <h2>Результати</h2>
-    <label>Переможець:
-      <select id="winner">
-        <option value="team1">Команда 1</option>
-        <option value="team2">Команда 2</option>
-        <option value="tie">Нічия</option>
+  <header class="header">
+    <div class="logo">🎮 Game Balancer</div>
+    <nav class="nav">
+      <button id="btn-load">Завантажити гравців</button>
+      <select id="league">
+        <option value="kids">Молодша ліга</option>
+        <option value="sunday">Старша ліга</option>
       </select>
-    </label>
-    <label>MVP:
-      <select id="mvp"></select>
-    </label>
-    <label>Штрафи:
-      <input id="penalties" placeholder="нік1:-5, нік2:-10" />
-    </label>
-    <button id="btn-save">Зберегти</button>
-    <button id="btn-refresh">Оновити лоббі</button>
-  </div>
+    </nav>
+  </header>
 
-  <script src="scripts/script.js"></script>
+  <main class="container">
+    <!-- 1. Вибір гравців -->
+    <section id="select-area" class="card hidden">
+      <h2>Вибір гравців</h2>
+      <div class="sort-controls">
+        <button id="btn-sort-name">А–Я</button>
+        <button id="btn-sort-pts">За балами ↓</button>
+      </div>
+      <ul id="select-list" class="list"></ul>
+      <button id="btn-add-selected">Додати у лоббі</button>
+      <button id="btn-clear-selected">Очистити вибір</button>
+    </section>
+
+    <!-- 2. Лоббі -->
+    <section id="lobby-area" class="card hidden">
+      <h2>Лоббі дня</h2>
+      <p>Гравців: <span id="lobby-count">0</span> | Сума: <span id="lobby-sum">0</span> | Середній: <span id="lobby-avg">0</span></p>
+      <ul id="lobby-list" class="list"></ul>
+      <button id="btn-clear-lobby">Очистити лоббі</button>
+    </section>
+
+    <!-- 3. Сценарій -->
+    <section id="scenario-area" class="card hidden">
+      <h2>Режим гри</h2>
+      <label>Кількість команд:
+        <select id="teamsize">
+          <option value="2">2 команди</option>
+          <option value="3">3 команди</option>
+          <option value="4">4 команди</option>
+        </select>
+      </label>
+      <button id="btn-auto">Авто-баланс</button>
+      <button id="btn-manual">Ручне формування</button>
+    </section>
+
+    <!-- 4. Команди -->
+    <section id="teams-area" class="card hidden grid"></section>
+
+    <!-- 5. Вибір арени -->
+    <section id="arena-select" class="card hidden">
+      <h2>Вибір двох команд для бою</h2>
+      <div id="arena-checkboxes" class="flex gap-2"></div>
+      <button id="btn-start-match">В гру</button>
+    </section>
+
+    <!-- 6. Арена -->
+    <section id="arena-area" class="card hidden">
+      <h2>Арена: <span id="arena-vs"></span></h2>
+      <div id="arena-rounds" class="rounds-grid"></div>
+      <button id="btn-save-match">Зберегти гру</button>
+      <button id="btn-clear-arena">Геть з арени</button>
+    </section>
+  </main>
+
+  <!-- Підключення скриптів -->
+  <script type="module" src="scripts/api.js"></script>
+  <script type="module" src="scripts/sortUtils.js"></script>
+  <script type="module" src="scripts/balanceUtils.js"></script>
+  <script type="module" src="scripts/lobby.js"></script>
+  <script type="module" src="scripts/teams.js"></script>
+  <script type="module" src="scripts/scenario.js"></script>
+  <script type="module" src="scripts/arena.js"></script>
+  <script type="module" src="scripts/main.js"></script>
 </body>
 </html>

@@ -36,7 +36,7 @@ function loadRanking() {
                 `;
                 table.appendChild(row);
             });
-        })
+      })
         .catch(error => console.error("Помилка завантаження даних:", error));
 }
 

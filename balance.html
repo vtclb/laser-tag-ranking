@@ -2,9 +2,11 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Балансер команд</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style1.css">
 </head>
 <body>
   <header class="header">
@@ -36,7 +38,11 @@
     <!-- 2. Лоббі -->
     <section id="lobby-area" class="card hidden">
       <h2>Лоббі дня</h2>
-      <p>Гравців: <span id="lobby-count">0</span> | Сума: <span id="lobby-sum">0</span> | Середній: <span id="lobby-avg">0</span></p>
+      <p>
+        Гравців: <span id="lobby-count">0</span> |
+        Сума: <span id="lobby-sum">0</span> |
+        Середній: <span id="lobby-avg">0</span>
+      </p>
       <ul id="lobby-list" class="list"></ul>
       <button id="btn-clear-lobby">Очистити лоббі</button>
     </section>
@@ -77,7 +83,7 @@
     </section>
   </main>
 
-  <!-- Підключення скриптів -->
+  <!-- Підключення модулів -->
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/sortUtils.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>

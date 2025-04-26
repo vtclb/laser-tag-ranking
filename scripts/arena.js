@@ -1,60 +1,68 @@
 import { saveResult } from './api.js';
 import { teams } from './teams.js';
 
+const arenaSelect = document.getElementById('arena-select');
+const arenaChecks = document.getElementById('arena-checkboxes');
+const btnStart    = document.getElementById('btn-start-match');
 const arenaArea   = document.getElementById('arena-area');
-const arenaRounds = document.getElementById('arena-rounds');
+const arenaVS     = document.getElementById('arena-vs');
 const leagueSel   = document.getElementById('league');
 
-export function renderArena() {
+export function renderArenaSelect(teamIds) {
+  arenaSelect.classList.remove('hidden');
+  arenaArea.classList.add('hidden');
+  arenaChecks.innerHTML = teamIds.map(id =>
+    `<label><input type="checkbox" class="arena-team-checkbox" data-team="${id}">Команда ${id}</label>`
+  ).join('');
+}
+
+btnStart.onclick = () => {
+  const checked = [...arenaChecks.querySelectorAll('.arena-team-checkbox:checked')];
+  if (checked.length!==2) return alert('Виберіть дві команди');
+  const [a,b] = checked.map(cb=>+cb.dataset.team);
+  arenaSelect.classList.add('hidden');
   arenaArea.classList.remove('hidden');
-  // створюємо по 2 чекбокси для вибору 2 команд
-  const sel = document.querySelectorAll('.team-select:checked');
-  if (sel.length !== 2) {
-    arenaArea.innerHTML = '<p>Виберіть дві команди вище, щоб почати бій.</p>';
-    return;
-  }
-  const [a,b] = [...sel].map(cb=>+cb.dataset.team);
-  arenaArea.innerHTML = `
-    <h2>Арена: Команда ${a} ✕ Команда ${b}</h2>
-    <div id="arena-rounds" class="rounds-grid"></div>
-    <div class="actions">
-      <button id="btn-save-match">Зберегти гру</button>
-      <button id="btn-clear-arena">Геть з арени</button>
-    </div>
-  `;
-  const roundsDiv = document.getElementById('arena-rounds');
-  for (let r=1; r<=3; r++) {
+  arenaVS.textContent = `Команда ${a} ✕ Команда ${b}`;
+  renderRounds(a,b);
+};
+
+function renderRounds(a,b) {
+  const rounds = document.getElementById('arena-rounds');
+  rounds.innerHTML = '';
+  for (let r=1;r<=3;r++) {
     const d = document.createElement('div');
     d.innerHTML = `
       <h4>Раунд ${r}</h4>
-      <label><input type="checkbox" class="r${r}-a"> T${a}</label>
-      <label><input type="checkbox" class="r${r}-b"> T${b}</label>
+      <label><input type="checkbox" class="r${r}-a">T${a}</label>
+      <label><input type="checkbox" class="r${r}-b">T${b}</label>
     `;
-    roundsDiv.append(d);
+    rounds.append(d);
   }
-  document.getElementById('btn-save-match').onclick = async () => {
-    let winsA=0, winsB=0;
-    for (let r=1;r<=3;r++){
-      if (roundsDiv.querySelector(`.r${r}-a`).checked) winsA++;
-      if (roundsDiv.querySelector(`.r${r}-b`).checked) winsB++;
-    }
-    const series = `${winsA}-${winsB}`;
-    const winner = winsA>winsB ? `team${a}` : winsB>winsA ? `team${b}` : 'tie';
-    const data = {
-      league: leagueSel.value,
-      team1: teams[a].map(p=>p.nick).join(', '),
-      team2: teams[b].map(p=>p.nick).join(', '),
-      winner, mvp:'', series, penalties:''
-    };
-    await saveResult(data);
-    alert('Результат збережено');
-    clearArena();
+  document.getElementById('btn-save-match').onclick = saveMatch.bind(null,a,b);
+}
+
+async function saveMatch(a,b) {
+  const rounds = document.getElementById('arena-rounds');
+  let winsA=0, winsB=0;
+  for (let r=1;r<=3;r++){
+    if (rounds.querySelector(`.r${r}-a`).checked) winsA++;
+    if (rounds.querySelector(`.r${r}-b`).checked) winsB++;
+  }
+  const series = `${winsA}-${winsB}`;
+  const winner = winsA>winsB?`team${a}`:winsB>winsA?`team${b}`:'tie';
+  const data = {
+    league: leagueSel.value,
+    team1: teams[a].map(p=>p.nick).join(', '),
+    team2: teams[b].map(p=>p.nick).join(', '),
+    winner, mvp:'', series, penalties:''
   };
-  document.getElementById('btn-clear-arena').onclick = clearArena;
+  await saveResult(data);
+  alert('Результат збережено');
+  clearArena();
 }
 
 function clearArena() {
   arenaArea.classList.add('hidden');
-  arenaRounds.innerHTML = '';
-  document.querySelectorAll('.team-select').forEach(cb=>cb.checked=false);
+  arenaSelect.classList.remove('hidden');
+  arenaChecks.querySelectorAll('input').forEach(cb=>cb.checked=false);
 }

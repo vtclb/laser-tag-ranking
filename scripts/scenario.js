@@ -1,7 +1,7 @@
-// scripts/scenario.js
 import { initTeams } from './teams.js';
 import { autoBalance2, autoBalanceN } from './balanceUtils.js';
-import { lobby } from './lobby.js';
+import { lobby, enableManual } from './lobby.js';
+import { renderArenaSelect } from './arena.js';
 
 const scenArea  = document.getElementById('scenario-area');
 const btnAuto   = document.getElementById('btn-auto');
@@ -9,31 +9,34 @@ const btnManual = document.getElementById('btn-manual');
 const sizeSel   = document.getElementById('teamsize');
 
 export function initScenario() {
-  // Показати блок, де вибирають кількість команд і кнопки
   scenArea.classList.remove('hidden');
 }
 
-btnAuto.addEventListener('click', () => {
-  const N = parseInt(sizeSel.value, 10);
-  const lobbyArr = lobby;  // масив вибраних у лоббі
-
+btnAuto.onclick = () => {
+  const N = +sizeSel.value;
+  const lobbyArr = lobby;
   let teamsData = {};
+
   if (N === 2) {
     const { A: teamA, B: teamB } = autoBalance2(lobbyArr);
     teamsData = { 1: teamA, 2: teamB };
   } else {
     const arr = autoBalanceN(lobbyArr, N);
-    arr.forEach((teamArr, idx) => {
-      teamsData[idx + 1] = teamArr;
-    });
+    arr.forEach((teamArr,i)=> teamsData[i+1]=teamArr);
   }
 
-  // Ініціалізуємо відразу з розподілом
+  // Інціалізуємо команди
   initTeams(N, teamsData);
-});
+  // Показуємо селектор арени з чекбоксами
+  renderArenaSelect(Object.keys(teamsData));
+};
 
-btnManual.addEventListener('click', () => {
-  const N = parseInt(sizeSel.value, 10);
-  // Ініціюємо просто порожні команди, далі дзвінки teams.swap/remove
-  initTeams(N, {});  
-});
+btnManual.onclick = () => {
+  const N = +sizeSel.value;
+  // Створюємо пусті команди
+  initTeams(N, {});
+  // Дозволяємо розподіл з лоббі
+  enableManual(N);
+  // Показуємо селектор арени (можна самому вибрати)
+  renderArenaSelect(Array.from({length:N},(_,i)=>i+1));
+};

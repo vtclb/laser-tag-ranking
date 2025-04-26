@@ -1,13 +1,21 @@
-import { loadPlayers, saveResult } from './api.js';
-import { initLobby, lobby }      from './lobby.js';
-import { initScenario }          from './scenario.js';
-import { initArena }             from './arena.js';
+import { loadPlayers } from './api.js';
+import { initLobby }   from './lobby.js';
+import { initScenario } from './scenario.js';
 
-// 1. Завантажити гравців
-document.getElementById('btn-load').onclick = async ()=>{
-  const lg = document.getElementById('league').value;
-  const players = await loadPlayers(lg);
-  initLobby(players);
-  initScenario();
-  initArena(lg, {}); // поки пустий обʼєкт teams
-};
+console.log('main.js завантажено');
+
+const btnLoad = document.getElementById('btn-load');
+const leagueSel = document.getElementById('league');
+
+btnLoad.addEventListener('click', async () => {
+  console.log('Натиснуто btn-load, ліга =', leagueSel.value);
+  try {
+    const players = await loadPlayers(leagueSel.value);
+    console.log('Отримано гравців:', players);
+    initLobby(players);
+    initScenario();
+  } catch (err) {
+    console.error('Помилка loadPlayers:', err);
+    alert('Помилка завантаження гравців: ' + err.message);
+  }
+});

@@ -35,52 +35,48 @@
       </div>
     </section>
 
-    <!-- 2. Лоббі -->
-    <section id="lobby-area" class="card hidden">
-      <h2>Лоббі дня</h2>
-      <p>
-        Гравців: <span id="lobby-count">0</span> |
-        Сума: <span id="lobby-sum">0</span> |
-        Середній: <span id="lobby-avg">0</span>
-      </p>
-      <ul id="lobby-list" class="list"></ul>
-      <button id="btn-clear-lobby">Очистити лоббі</button>
-    </section>
+  <!-- 2. Лоббі -->
+<section id="lobby-area" class="card hidden">
+  <h2>Лоббі дня</h2>
+  <p>Гравців: <span id="lobby-count">0</span> | Сума: <span id="lobby-sum">0</span> | Середній: <span id="lobby-avg">0</span></p>
+  <ul id="lobby-list" class="list"></ul>
+  <button id="btn-clear-lobby" class="actions-btn">Очистити лоббі</button>
+</section>
 
-    <!-- 3. Сценарій -->
-    <section id="scenario-area" class="card hidden">
-      <h2>Режим гри</h2>
-      <label for="teamsize">Кількість команд:</label>
-      <select id="teamsize">
-        <option value="2">2 команди</option>
-        <option value="3">3 команди</option>
-        <option value="4">4 команди</option>
-      </select>
-      <div class="actions">
-        <button id="btn-auto">Авто-баланс</button>
-        <button id="btn-manual">Ручне формування</button>
-      </div>
-    </section>
+<!-- 3. Сценарій -->
+<section id="scenario-area" class="card hidden">
+  <h2>Режим гри</h2>
+  <label for="teamsize">Кількість команд:</label>
+  <select id="teamsize">
+    <option value="2">2 команди</option>
+    <option value="3">3 команди</option>
+    <option value="4">4 команди</option>
+  </select>
+  <div class="actions">
+    <button id="btn-auto">Авто-баланс</button>
+    <button id="btn-manual">Ручне формування</button>
+  </div>
+</section>
 
-    <!-- 4. Команди -->
-    <section id="teams-area" class="card hidden grid"></section>
+<!-- 4. Команди -->
+<section id="teams-area" class="card hidden grid"></section>
 
-    <!-- 5. Вибір арени -->
-    <section id="arena-select" class="card hidden">
-      <h2>Вибір двох команд для бою</h2>
-      <div id="arena-checkboxes" class="flex gap-2"></div>
-      <button id="btn-start-match">В гру</button>
-    </section>
+<!-- 5. Арена: вибір команд -->
+<section id="arena-select" class="card hidden">
+  <h2>Вибір команд для бою</h2>
+  <div id="arena-checkboxes" class="flex gap-2"></div>
+  <button id="btn-start-match">Почати бій</button>
+</section>
 
-    <!-- 6. Арена -->
-    <section id="arena-area" class="card hidden">
-      <h2>Арена: <span id="arena-vs"></span></h2>
-      <div id="arena-rounds" class="rounds-grid"></div>
-      <div class="actions">
-        <button id="btn-save-match">Зберегти гру</button>
-        <button id="btn-clear-arena">Геть з арени</button>
-      </div>
-    </section>
+<!-- 6. Арена: раунди -->
+<section id="arena-area" class="card hidden">
+  <h2>Арена: <span id="arena-vs"></span></h2>
+  <div id="arena-rounds" class="rounds-grid"></div>
+  <div class="actions">
+    <button id="btn-save-match">Зберегти гру</button>
+    <button id="btn-clear-arena">Скинути арену</button>
+  </div>
+</section>
   </main>
 
   <!-- Підключення модулів -->

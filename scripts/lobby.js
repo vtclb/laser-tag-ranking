@@ -23,7 +23,7 @@ export function initLobby(pList) {
   players = pList;
   selected = [];
   lobby    = [];
-  renderSelect(players);
+ renderSelect(players);
 }
 
 function renderSelect(arr) {

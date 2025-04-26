@@ -1,28 +1,33 @@
 import { initTeams } from './teams.js';
-import { balanceUtils } from './balanceUtils.js'; // імпорт autoBalance2/autoBalanceN
-const scenArea  = document.getElementById('scenario-area'),
-      btnAuto   = document.getElementById('btn-auto'),
-      btnManual = document.getElementById('btn-manual'),
-      sizeSel   = document.getElementById('teamsize');
+import { autoBalance2, autoBalanceN } from './balanceUtils.js';
+import { lobby } from './lobby.js';
 
-export function initScenario(){
+const scenArea  = document.getElementById('scenario-area');
+const btnAuto   = document.getElementById('btn-auto');
+const btnManual = document.getElementById('btn-manual');
+const sizeSel   = document.getElementById('teamsize');
+
+export function initScenario() {
   scenArea.classList.remove('hidden');
 }
 
-btnAuto.onclick = ()=>{
+btnAuto.addEventListener('click', () => {
   const N = +sizeSel.value;
-  import('./lobby.js').then(m=>{
-    const lobbyArr = m.lobby;
-    let teams = N===2
-      ? autoBalance2(lobbyArr)
-      : autoBalanceN(lobbyArr,N);
-    initTeams(N);
-    // для N=2 teams = { teamA, teamB }, для N>2 teams = array of arrays
-    // тут треба викликати initTeams і передати teams масиво
-  });
-};
+  const lobbyArr = lobby;
+  let teamsData = {};
 
-btnManual.onclick = ()=>{
-  const N=+sizeSel.value;
-  initTeams(N);
-};
+  if (N === 2) {
+    const { A: teamA, B: teamB } = autoBalance2(lobbyArr);
+    teamsData = { 1: teamA, 2: teamB };
+  } else {
+    const arr = autoBalanceN(lobbyArr, N);
+    arr.forEach((teamArr, i) => teamsData[i+1] = teamArr);
+  }
+
+  initTeams(N, teamsData);
+});
+
+btnManual.addEventListener('click', () => {
+  const N = +sizeSel.value;
+  initTeams(N); // порожні команди, далі вручну
+});

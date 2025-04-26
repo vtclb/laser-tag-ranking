@@ -27,8 +27,10 @@
         <button id="btn-sort-pts">За балами ↓</button>
       </div>
       <ul id="select-list" class="list"></ul>
-      <button id="btn-add-selected">Додати у лоббі</button>
-      <button id="btn-clear-selected">Очистити вибір</button>
+      <div class="actions">
+        <button id="btn-add-selected">Додати у лоббі</button>
+        <button id="btn-clear-selected">Очистити вибір</button>
+      </div>
     </section>
 
     <!-- 2. Лоббі -->
@@ -42,15 +44,16 @@
     <!-- 3. Сценарій -->
     <section id="scenario-area" class="card hidden">
       <h2>Режим гри</h2>
-      <label>Кількість команд:
-        <select id="teamsize">
-          <option value="2">2 команди</option>
-          <option value="3">3 команди</option>
-          <option value="4">4 команди</option>
-        </select>
-      </label>
-      <button id="btn-auto">Авто-баланс</button>
-      <button id="btn-manual">Ручне формування</button>
+      <label for="teamsize">Кількість команд:</label>
+      <select id="teamsize">
+        <option value="2">2 команди</option>
+        <option value="3">3 команди</option>
+        <option value="4">4 команди</option>
+      </select>
+      <div class="actions">
+        <button id="btn-auto">Авто-баланс</button>
+        <button id="btn-manual">Ручне формування</button>
+      </div>
     </section>
 
     <!-- 4. Команди -->
@@ -67,8 +70,10 @@
     <section id="arena-area" class="card hidden">
       <h2>Арена: <span id="arena-vs"></span></h2>
       <div id="arena-rounds" class="rounds-grid"></div>
-      <button id="btn-save-match">Зберегти гру</button>
-      <button id="btn-clear-arena">Геть з арени</button>
+      <div class="actions">
+        <button id="btn-save-match">Зберегти гру</button>
+        <button id="btn-clear-arena">Геть з арени</button>
+      </div>
     </section>
   </main>
 

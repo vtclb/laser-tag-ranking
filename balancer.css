@@ -1,76 +1,116 @@
-// scripts/teams.js
-export let teams = {};   // тепер глобально експортуємо обʼєкт
-
-const teamsArea = document.getElementById('teams-area');
-
-/**
- * Ініціалізує команди
- * @param {number} N - кількість команд
- * @param {Object} initialData - {1: [...], 2: [...], ...}
- */
-export function initTeams(N, initialData) {
-  teamsArea.classList.remove('hidden');
-  teams = {};
-  for (let k = 1; k <= N; k++) {
-    // або візьмемо з initialData, або порожній масив
-    teams[k] = (initialData[k] || []).slice();
-  }
-  renderTeams(N);
+:root {
+  --primary: #1eb980;
+  --dark: #16202a;
+  --light: #f5f8fa;
+  --accent: #e0245e;
+  --card-bg: #253341;
 }
 
-function renderTeams(N) {
-  teamsArea.innerHTML = ''; 
-  teamsArea.style.gridTemplateColumns = `repeat(${N},1fr)`;
-  
-  for (let k = 1; k <= N; k++) {
-    const box = document.createElement('div');
-    box.className = 'card';
-    box.innerHTML = `<h3>Команда ${k} (∑ ${sum(teams[k])})</h3><ul id="team${k}-list"></ul>`;
-    teamsArea.append(box);
-    const ul = box.querySelector('ul');
-    teams[k].forEach((p, idx) => appendPlayer(ul, p, k, idx));
-  }
+* { box-sizing: border-box; margin:0; padding:0; }
+body {
+  font-family: sans-serif;
+  background: var(--dark);
+  color: var(--light);
+  line-height:1.4;
+}
+a { color: var(--accent); text-decoration:none; }
+
+.header {
+  background: var(--primary);
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logo { font-size: 1.25rem; font-weight:bold; }
+.nav button, .nav select {
+  margin-left:0.5rem;
+  padding:0.5rem 0.75rem;
+  border:none;
+  border-radius:4px;
+  font-size:0.9rem;
 }
 
-function appendPlayer(ul, p, teamId, idx) {
-  const li = document.createElement('li');
-  li.innerHTML = `
-    ${p.nick} (${p.pts})
-    <button class="remove-team" data-team="${teamId}" data-index="${idx}">✕</button>
-    <button class="swap-team" data-from="${teamId}" data-index="${idx}">↔️</button>
-  `;
-  ul.append(li);
+.container {
+  max-width: 800px;
+  margin:1rem auto;
+  padding:0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap:1rem;
 }
 
-function sum(arr) {
-  return arr.reduce((s, x) => s + x.pts, 0);
+.card {
+  background: var(--card-bg);
+  padding:1rem;
+  border-radius:6px;
+  box-shadow:0 2px 4px rgba(0,0,0,0.4);
 }
 
-// Оброблюємо кліки по кнопках усередині teamsArea
-teamsArea.addEventListener('click', e => {
-  // Вилучення з команди
-  if (e.target.matches('.remove-team')) {
-    const teamId = +e.target.dataset.team;
-    const idx    = +e.target.dataset.index;
-    const p      = teams[teamId].splice(idx, 1)[0];
-    // Повертаємо гравця у лоббі
-    import('./lobby.js').then(mod => {
-      mod.lobby.push(p);
-      mod.renderLobby();
-    });
-    renderTeams(Object.keys(teams).length);
-  }
-  // Свап команди: просто тягнемо в іншу групу (наприклад, назад у лоббі в manual режимі)
-  if (e.target.matches('.swap-team')) {
-    const from = +e.target.dataset.from;
-    const idx  = +e.target.dataset.index;
-    const p    = teams[from].splice(idx,1)[0];
-    // У коді swap-team ви можете додати діалог в який teamId перемістити
-    // Або просто повернути в лоббі:
-    import('./lobby.js').then(mod => {
-      mod.lobby.push(p);
-      mod.renderLobby();
-    });
-    renderTeams(Object.keys(teams).length);
-  }
-});
+.sort-controls,
+.actions {
+  display:flex;
+  gap:0.5rem;
+  flex-wrap: wrap;
+  margin-bottom:0.5rem;
+}
+.sort-controls button,
+.actions button {
+  flex:1;
+  padding:0.5rem;
+  background: var(--accent);
+  border:none;
+  border-radius:4px;
+  color:#fff;
+  font-size:0.9rem;
+}
+.sort-controls button:hover,
+.actions button:hover {
+  background: darken(var(--accent),10%);
+}
+
+.list {
+  list-style:none;
+  max-height: 180px;
+  overflow-y:auto;
+  margin-bottom:0.5rem;
+}
+.list li {
+  display:flex;
+  justify-content: space-between;
+  padding:0.5rem 0;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  font-size:0.95rem;
+}
+
+.hidden { display:none; }
+
+/* Команди */
+.grid {
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:1rem;
+}
+@media (min-width:600px) {
+  .grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (min-width:900px) {
+  .grid { grid-template-columns: repeat(3,1fr); }
+}
+
+/* Арена */
+.flex { display:flex; align-items:center; }
+.gap-2 { gap:0.5rem; }
+.rounds-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(120px,1fr));
+  gap:0.75rem;
+  margin:0.75rem 0;
+}
+.rounds-grid div {
+  background: var(--dark);
+  padding:0.5rem;
+  border-radius:4px;
+  text-align:center;
+  font-size:0.9rem;
+}

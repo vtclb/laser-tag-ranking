@@ -10,8 +10,8 @@
   <header class="header">
     <div class="logo">🎮 Game Balancer</div>
     <nav class="nav">
-      <button id="btn-load">Завантажити гравців</button>
-      <select id="league">
+      <button id="btn-load" disabled>Завантажити гравців</button>
+      <select id="league" disabled>
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
@@ -21,51 +21,23 @@
   <main class="container">
     <!-- 1. Вибір гравців -->
     <section id="select-area" class="card hidden">
-      <h2>Вибір гравців</h2>
-      <div class="sort-controls">
-        <button id="btn-sort-name">А–Я</button>
-        <button id="btn-sort-pts">За балами ↓</button>
-      </div>
-      <ul id="select-list" class="list"></ul>
-      <div class="actions">
-        <button id="btn-add-selected">Додати у лоббі</button>
-        <button id="btn-clear-selected">Очистити вибір</button>
-      </div>
+      …
     </section>
 
     <!-- 2. Лоббі -->
     <section id="lobby-area" class="card hidden">
-      <h2>Лоббі дня</h2>
-      <p>Гравців: <span id="lobby-count">0</span> | Сума: <span id="lobby-sum">0</span> | Середній: <span id="lobby-avg">0</span></p>
-      <ul id="lobby-list" class="list"></ul>
+      …
     </section>
 
     <!-- 3. Сценарій -->
     <section id="scenario-area" class="card hidden">
-      <h2>Режим гри</h2>
-      <label for="teamsize">Кількість команд:</label>
-      <select id="teamsize">
-        <option value="2">2 команди</option>
-        <option value="3">3 команди</option>
-        <option value="4">4 команди</option>
-      </select>
-      <div class="actions">
-        <button id="btn-auto">Авто-баланс</button>
-        <button id="btn-manual">Ручне формування</button>
-      </div>
+      …
     </section>
 
     <!-- 4. Команди -->
     <section id="teams-area" class="grid hidden"></section>
 
-    <!-- 5. Вибір команд на арену -->
-    <section id="arena-select" class="card hidden">
-      <h2>Вибір команд для бою</h2>
-      <div id="arena-checkboxes" class="flex gap-2"></div>
-      <button id="btn-start-match">Почати бій</button>
-    </section>
-
-    <!-- 6. Арена -->
+    <!-- 5. Арена -->
     <section id="arena-area" class="card hidden">
       <h2>Арена: <span id="arena-vs"></span></h2>
       <div id="arena-rounds" class="rounds-grid"></div>
@@ -76,6 +48,7 @@
     </section>
   </main>
 
+  <script type="module" src="scripts/main.js"></script>
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/sortUtils.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>
@@ -83,6 +56,5 @@
   <script type="module" src="scripts/teams.js"></script>
   <script type="module" src="scripts/scenario.js"></script>
   <script type="module" src="scripts/arena.js"></script>
-  <script type="module" src="scripts/main.js"></script>
 </body>
 </html>

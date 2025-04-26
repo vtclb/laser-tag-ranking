@@ -1,7 +1,8 @@
-import { initTeams } from './teams.js';
+// scripts/scenario.js
+import { initTeams }      from './teams.js';
 import { autoBalance2, autoBalanceN } from './balanceUtils.js';
 import { initLobby, setManualCount, lobby } from './lobby.js';
-import { renderArena } from './arena.js';
+import { renderArena }    from './arena.js';
 
 const scenArea  = document.getElementById('scenario-area');
 const btnAuto   = document.getElementById('btn-auto');
@@ -16,9 +17,9 @@ btnAuto.onclick = () => {
   const N = +sizeSel.value;
   setManualCount(N);
   const arr = (N === 2)
-    ? (() => { const {A,B} = autoBalance2(lobby); return [A,B]; })()
+    ? (() => { const { A, B } = autoBalance2(lobby); return [A, B]; })()
     : autoBalanceN(lobby, N);
-  const data = arr.reduce((o,team,i)=> (o[i+1]=team, o), {});
+  const data = arr.reduce((o, team, i) => (o[i+1] = team, o), {});
   initTeams(N, data);
   renderArena();
 };
@@ -26,6 +27,6 @@ btnAuto.onclick = () => {
 btnManual.onclick = () => {
   const N = +sizeSel.value;
   setManualCount(N);
-  initTeams(N, {});       // пусті команди
-  renderArena();          // чекбокси для вибору арени
+  initTeams(N, {});  // порожні команди
+  renderArena();
 };

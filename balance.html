@@ -33,12 +33,14 @@
       </div>
     </section>
 
-    <!-- 2. Лоббі (нова таблиця) -->
+    <!-- 2. Лоббі дня -->
     <section id="lobby-area" class="card hidden">
       <h2>Лоббі дня</h2>
       <table class="table">
         <thead>
-          <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>→Команда</th></tr>
+          <tr>
+            <th>Нік</th><th>Бали</th><th>Ранг</th><th>→Команда</th>
+          </tr>
         </thead>
         <tbody id="lobby-list"></tbody>
       </table>
@@ -70,7 +72,7 @@
     <!-- 4. Команди -->
     <section id="teams-area" class="grid hidden"></section>
 
-    <!-- 5. Вибір команд на арену -->
+    <!-- 5. Вибір команд для арени -->
     <section id="arena-select" class="card hidden">
       <h2>Виберіть дві команди</h2>
       <div id="arena-checkboxes" class="flex gap-2"></div>
@@ -90,7 +92,7 @@
     </section>
   </main>
 
-  <!-- Модулі (в кінці body!) -->
+  <!-- Підключаємо модулі в кінці body -->
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/sortUtils.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>

@@ -1,4 +1,3 @@
-// scripts/arena.js
 import { saveResult } from './api.js';
 import { teams }      from './teams.js';
 
@@ -10,56 +9,45 @@ const btnSave   = document.getElementById('btn-save-match');
 const btnClear  = document.getElementById('btn-clear-arena');
 const leagueSel = document.getElementById('league');
 
-btnStart.addEventListener('click', () => {
-  // Збираємо відмічені чекбокси в заголовках команд
-  const checked = [...document.querySelectorAll('.team-select:checked')];
-  if (checked.length !== 2) {
-    alert('Виберіть дві команди для бою');
-    return;
-  }
-  const [a,b] = checked.map(cb => +cb.dataset.team);
+btnStart.onclick = ()=>{
+  const checked = [...document.querySelectorAll('.arena-team:checked')].map(cb=>+cb.dataset.team);
+  const [a,b] = checked;
   arenaVS.textContent = `Команда ${a} ✕ Команда ${b}`;
   arenaArea.classList.remove('hidden');
-
-  // Створюємо поля для відміток раундів
   arenaRounds.innerHTML = '';
-  for (let i = 1; i <= 3; i++) {
+  [a,b].forEach((id,idx)=>{
     const div = document.createElement('div');
-    div.innerHTML = `
-      <h4>Раунд ${i}</h4>
-      <label><input type="checkbox" class="r${i}-a"> T${a}</label>
-      <label><input type="checkbox" class="r${i}-b"> T${b}</label>
-    `;
+    div.innerHTML = `<h4>Команда ${id}</h4>`;
+    [1,2,3].forEach(r=>{
+      div.innerHTML += `<label><input type="checkbox" class="round-${r}-${idx===0?'a':'b'}"> Раунд ${r}</label>`;
+    });
     arenaRounds.append(div);
-  }
+  });
   btnSave.disabled = false;
-});
+};
 
-btnSave.addEventListener('click', async () => {
-  let winsA = 0, winsB = 0;
-  for (let i = 1; i <= 3; i++) {
-    if (arenaRounds.querySelector(`.r${i}-a`).checked) winsA++;
-    if (arenaRounds.querySelector(`.r${i}-b`).checked) winsB++;
-  }
-  const winner = winsA > winsB
-    ? `team${arenaVS.textContent.match(/\d+/)[0]}`
-    : winsB > winsA
-      ? `team${arenaVS.textContent.match(/\d+/g)[1]}`
-      : 'tie';
+btnSave.onclick = async ()=>{
+  const vs = arenaVS.textContent.match(/\d+/g).map(Number);
+  let winsA=0, winsB=0;
+  [1,2,3].forEach(r=>{
+    if(arenaRounds.querySelector(`.round-${r}-a`).checked) winsA++;
+    if(arenaRounds.querySelector(`.round-${r}-b`).checked) winsB++;
+  });
   const series = `${winsA}-${winsB}`;
+  const winner = winsA>winsB?`team${vs[0]}`:winsB>winsA?`team${vs[1]}`:'tie';
   await saveResult({
     league: leagueSel.value,
-    team1: teams[arenaVS.textContent.match(/\d+/g)[0]].map(p=>p.nick).join(', '),
-    team2: teams[arenaVS.textContent.match(/\d+/g)[1]].map(p=>p.nick).join(', '),
+    team1: teams[vs[0]].map(p=>p.nick).join(', '),
+    team2: teams[vs[1]].map(p=>p.nick).join(', '),
     winner, mvp:'', series, penalties:''
   });
   alert('Гру збережено');
   btnClear.click();
-});
+};
 
-btnClear.addEventListener('click', () => {
+btnClear.onclick = ()=>{
   arenaArea.classList.add('hidden');
   arenaRounds.innerHTML = '';
   btnSave.disabled = true;
-  document.querySelectorAll('.team-select').forEach(cb => cb.checked = false);
-});
+  document.querySelectorAll('.team-select, .arena-team').forEach(cb=>cb.checked=false);
+};

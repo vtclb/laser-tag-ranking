@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Балансер команд</title>
   <link rel="stylesheet" href="balancer.css">
 </head>
@@ -33,11 +33,20 @@
       </div>
     </section>
 
-    <!-- 2. Лоббі -->
+    <!-- 2. Лоббі (нова таблиця) -->
     <section id="lobby-area" class="card hidden">
       <h2>Лоббі дня</h2>
-      <p>Гравців: <span id="lobby-count">0</span> | Сума: <span id="lobby-sum">0</span> | Середній: <span id="lobby-avg">0</span></p>
-      <ul id="lobby-list" class="list"></ul>
+      <table class="table">
+        <thead>
+          <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>→Команда</th></tr>
+        </thead>
+        <tbody id="lobby-list"></tbody>
+      </table>
+      <p class="text-muted">
+        Гравців: <span id="lobby-count">0</span> |
+        Сума: <span id="lobby-sum">0</span> |
+        Середній: <span id="lobby-avg">0</span>
+      </p>
       <div class="actions">
         <button id="btn-clear-lobby">Очистити лоббі</button>
       </div>
@@ -61,7 +70,16 @@
     <!-- 4. Команди -->
     <section id="teams-area" class="grid hidden"></section>
 
-    <!-- 5. Арена -->
+    <!-- 5. Вибір команд на арену -->
+    <section id="arena-select" class="card hidden">
+      <h2>Виберіть дві команди</h2>
+      <div id="arena-checkboxes" class="flex gap-2"></div>
+      <div class="actions">
+        <button id="btn-start-match" disabled>Почати бій</button>
+      </div>
+    </section>
+
+    <!-- 6. Арена -->
     <section id="arena-area" class="card hidden">
       <h2>Арена: <span id="arena-vs"></span></h2>
       <div id="arena-rounds" class="rounds-grid"></div>
@@ -72,7 +90,7 @@
     </section>
   </main>
 
-  <!-- Модульні скрипти -->
+  <!-- Модулі (в кінці body!) -->
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/sortUtils.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>

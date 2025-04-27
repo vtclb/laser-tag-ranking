@@ -1,32 +1,23 @@
 export let teams = {};
 
-const teamsArea = document.getElementById('teams-area');
-
-/**
- * @param {number} N - кількість команд
- * @param {Object} initialData - {1:[...],2:[...],…}
- */
-export function initTeams(N, initialData) {
-  teamsArea.innerHTML = '';
+export function initTeams(n, data) {
+  const area = document.getElementById('teams-area');
+  area.innerHTML = '';
+  area.classList.remove('hidden');
   teams = {};
-  for (let k = 1; k <= N; k++) {
-    teams[k] = (initialData[k] || []).slice();
-    const sumPts = teams[k].reduce((s,p)=>s+p.pts,0);
-    const box = document.createElement('div');
-    box.className = 'card';
-    box.innerHTML = `
+  for (let i=1;i<=n;i++){
+    const arr = data[i]||[];
+    teams[i] = arr;
+    const sum = arr.reduce((s,p)=>s+p.pts,0);
+    const div = document.createElement('div');
+    div.className = `card team-box team-${i}`;
+    div.innerHTML = `
       <label>
-        <input type="checkbox" class="team-select" data-team="${k}">
-        Команда ${k} (∑ ${sumPts})
+        <input type="checkbox" class="team-select" data-team="${i}">
+        Команда ${i} (∑ ${sum})
       </label>
-      <ul id="team${k}-list"></ul>
+      <ul>${arr.map(p=>`<li class="rank-${p.rank}">${p.nick} (${p.pts})</li>`).join('')}</ul>
     `;
-    teamsArea.append(box);
-    const ul = box.querySelector('ul');
-    teams[k].forEach((p,i)=>{
-      const li = document.createElement('li');
-      li.textContent = `${p.nick} (${p.pts})`;
-      ul.append(li);
-    });
+    area.append(div);
   }
 }

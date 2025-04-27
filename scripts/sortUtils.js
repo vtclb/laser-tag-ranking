@@ -1,8 +1,6 @@
-/** Сортування А→Я */
-export function sortByName(players) {
-    return [...players].sort((a,b)=>a.nick.localeCompare(b.nick,'uk'));
+export function sortByName(arr) {
+  return [...arr].sort((a,b)=>a.nick.localeCompare(b.nick));
 }
-/** Сортування за балами ↓ */
-export function sortByPtsDesc(players) {
-  return [...players].sort((a,b)=>b.pts - a.pts);
+export function sortByPtsDesc(arr) {
+  return [...arr].sort((a,b)=>b.pts - a.pts);
 }

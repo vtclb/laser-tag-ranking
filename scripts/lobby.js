@@ -1,17 +1,21 @@
-import { initTeams } from './teams.js';
+// scripts/lobby.js
+import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
 
 export let lobby = [];
 let players = [], selected = [], manualCount = 0;
 
 export function initLobby(pl) {
-  players = pl; selected = []; lobby = []; manualCount = 0;
+  players = pl;
+  selected = [];
+  lobby    = [];
+  manualCount = 0;
+  renderLobby();             // показати порожню лоббі
   renderSelect(players);
 }
 
 function renderSelect(arr) {
   document.getElementById('select-area').classList.remove('hidden');
-  document.getElementById('lobby-area').classList.add('hidden');
   const ul = document.getElementById('select-list');
   ul.innerHTML = arr.map((p,i)=>`
     <li>
@@ -21,59 +25,73 @@ function renderSelect(arr) {
       </label>
     </li>`).join('');
   ul.querySelectorAll('input').forEach(cb=>{
-    cb.onchange = ()=>{
+    cb.onchange = () => {
       const p = arr[+cb.dataset.i];
-      cb.checked ? selected.push(p) : selected = selected.filter(x=>x!==p);
+      if (cb.checked) selected.push(p);
+      else selected = selected.filter(x=>x!==p);
     };
   });
 }
 
-document.getElementById('btn-sort-name').onclick = ()=>{
-  renderSelect(sortByName(players));
-};
-document.getElementById('btn-sort-pts').onclick = ()=>{
-  renderSelect(sortByPtsDesc(players));
-};
+document.getElementById('btn-sort-name').onclick = () => renderSelect(sortByName(players));
+document.getElementById('btn-sort-pts').onclick  = () => renderSelect(sortByPtsDesc(players));
 
-document.getElementById('btn-add-selected').onclick = ()=>{
-  selected.forEach(p=>{ if(!lobby.includes(p)) lobby.push(p); });
-  selected=[]; renderLobby(); renderSelect(players);
+document.getElementById('btn-add-selected').onclick = () => {
+  selected.forEach(p=> { if (!lobby.includes(p)) lobby.push(p); });
+  selected = [];
+  renderLobby();    // одразу оновлюємо таблицю лоббі
+  renderSelect(players);
 };
-
-document.getElementById('btn-clear-selected').onclick = ()=>{
-  selected=[]; renderSelect(players);
+document.getElementById('btn-clear-selected').onclick = () => {
+  selected = [];
+  renderSelect(players);
 };
 
 export function setManualCount(n) {
   manualCount = n;
-  if (lobby.length) renderLobby();
+  renderLobby();
 }
 
 function renderLobby() {
-  document.getElementById('select-area').classList.add('hidden');
-  document.getElementById('lobby-area').classList.remove('hidden');
+  // лоббі завжди видно
   const tbody = document.getElementById('lobby-list');
   tbody.innerHTML = lobby.map((p,i)=>`
     <tr>
-      <td>${p.nick}</td><td>${p.pts}</td><td>${p.rank}</td>
-      <td>${[...Array(manualCount)].map((_,k)=>
-        `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
-      ).join('')}</td>
+      <td>${p.nick}</td>
+      <td>${p.pts}</td>
+      <td>${p.rank}</td>
+      <td>
+        ${[...Array(manualCount)].map((_,k)=>
+          `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
+        ).join('')}
+        <button class="remove-lobby" data-i="${i}">✕</button>
+      </td>
     </tr>`).join('');
-  const sum = lobby.reduce((s,p)=>s+p.pts,0);
+  const total = lobby.reduce((s,p)=>s+p.pts,0);
   document.getElementById('lobby-count').textContent = lobby.length;
-  document.getElementById('lobby-sum').textContent   = sum;
-  document.getElementById('lobby-avg').textContent   = lobby.length? (sum/lobby.length).toFixed(1):0;
+  document.getElementById('lobby-sum').textContent   = total;
+  document.getElementById('lobby-avg').textContent   = lobby.length ? (total/lobby.length).toFixed(1) : 0;
 
-  document.getElementById('btn-clear-lobby').onclick = ()=>{
-    lobby=[]; renderLobby();
+  // очистити лоббі
+  document.getElementById('btn-clear-lobby').onclick = () => {
+    lobby = [];
+    renderLobby();
   };
 
+  // прив’язати кнопки “assign” і “remove”
   tbody.querySelectorAll('.assign').forEach(btn=>{
-    btn.onclick = ()=>{
+    btn.onclick = () => {
       const i = +btn.dataset.i, t = +btn.dataset.team;
       const p = lobby.splice(i,1)[0];
-      initTeams(manualCount, {[t]: [...(window.teams[t]||[]), p]});
+      teams[t] = [...(teams[t]||[]), p];
+      initTeams(manualCount, teams);
+      renderLobby();
+    };
+  });
+  tbody.querySelectorAll('.remove-lobby').forEach(btn=>{
+    btn.onclick = () => {
+      const i = +btn.dataset.i;
+      lobby.splice(i,1);
       renderLobby();
     };
   });

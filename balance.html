@@ -33,15 +33,11 @@
       </div>
     </section>
 
-    <!-- 2. Лоббі дня -->
-    <section id="lobby-area" class="card hidden">
+    <!-- 2. Лоббі дня — тепер видно завжди -->
+    <section id="lobby-area" class="card">
       <h2>Лоббі дня</h2>
       <table class="table">
-        <thead>
-          <tr>
-            <th>Нік</th><th>Бали</th><th>Ранг</th><th>→Команда</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>→Команда / ✕</th></tr></thead>
         <tbody id="lobby-list"></tbody>
       </table>
       <p class="text-muted">
@@ -92,7 +88,7 @@
     </section>
   </main>
 
-  <!-- Підключення модулів у кінці body -->
+  <!-- Модулі -->
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/sortUtils.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>

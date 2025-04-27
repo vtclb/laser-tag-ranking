@@ -12,12 +12,12 @@ const arenaSelect     = document.getElementById('arena-select');
 const arenaCheckboxes = document.getElementById('arena-checkboxes');
 const btnStart        = document.getElementById('btn-start-match');
 
-/** Показуємо панель сценарію */
+/** Показати блок сценарію */
 export function initScenario() {
   scenarioArea.classList.remove('hidden');
 }
 
-/** Малюємо чекбокси команд у секції вибору арени */
+/** Намалювати чекбокси команд */
 function renderArenaCheckboxes() {
   arenaCheckboxes.innerHTML = '';
   Object.keys(teams).forEach(id => {
@@ -26,38 +26,37 @@ function renderArenaCheckboxes() {
       <label>
         <input type="checkbox" class="arena-team" data-team="${id}">
         Команда ${id} (∑ ${sum})
-      </label>
-    `);
+      </label>`);
   });
-  // ставимо слухач змін
+  // слухач змін
   arenaCheckboxes.querySelectorAll('.arena-team')
     .forEach(cb => cb.addEventListener('change', updateStartButton));
 }
 
-/** Активуємо кнопку "Почати бій", коли позначено дві команди */
+/** Увімкнути кнопку, коли 2 команди відмічені */
 function updateStartButton() {
   const cnt = document.querySelectorAll('.arena-team:checked').length;
-  btnStart.disabled = (cnt !== 2);
+  btnStart.disabled = cnt !== 2;
 }
 
-// --- Автобаланс ---
+// — Автобаланс —
 btnAuto.addEventListener('click', () => {
   const n = +teamSizeSel.value;
   setManualCount(n);
   const data = (n===2)
     ? (()=>{ const {A,B}=autoBalance2(lobby); return {1:A,2:B}; })()
     : autoBalanceN(lobby,n);
-  initTeams(n, data);
+  initTeams(n,data);
   arenaSelect.classList.remove('hidden');
   renderArenaCheckboxes();
   updateStartButton();
 });
 
-// --- Ручне формування ---
+// — Ручне формування —
 btnManual.addEventListener('click', () => {
   const n = +teamSizeSel.value;
   setManualCount(n);
-  initTeams(n, {});
+  initTeams(n,{});
   arenaSelect.classList.remove('hidden');
   renderArenaCheckboxes();
   updateStartButton();

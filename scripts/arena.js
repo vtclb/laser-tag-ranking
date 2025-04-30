@@ -5,7 +5,6 @@ import { initLobby }               from './lobby.js';
 import { initScenario }            from './scenario.js';
 import { teams }                   from './teams.js';
 
-// Зачекаємо, поки DOM завантажиться
 document.addEventListener('DOMContentLoaded', () => {
   const btnStart     = document.getElementById('btn-start-match');
   const arenaArea    = document.getElementById('arena-area');
@@ -17,100 +16,101 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnClear     = document.getElementById('btn-clear-arena');
   const leagueSel    = document.getElementById('league');
 
+  // Перевіряємо наявність кнопок
   if (!btnStart || !btnSave || !btnClear) {
-    console.error('Не знайдено обовʼязкові кнопки арени');
+    console.error('Arena buttons not found');
     return;
   }
 
+  // 1) Кнопка "Почати бій"
   btnStart.addEventListener('click', () => {
-    // 1) Збір відмічених команд
-    const sel = [...document.querySelectorAll('.arena-team:checked')]
-      .map(cb => +cb.dataset.team);
-    console.log('Start clicked, selected teams:', sel);
-
+    // Збираємо вибрані команди (dataset.team має містити "1" або "2")
+    const sel = Array.from(document.querySelectorAll('.arena-team:checked'))
+      .map(cb => parseInt(cb.dataset.team, 10));
     if (sel.length !== 2) {
       return alert('Виберіть дві команди для бою');
     }
     const [a, b] = sel;
 
-    // 2) Перевіряємо, чи є такі команди
+    // Переконаємося, що ці індекси є в обʼєкті teams
     if (!teams[a] || !teams[b]) {
-      return alert(`Команди ${a} або ${b} не знайдені в обʼєкті teams`);
+      return alert(`Команди ${a} або ${b} не знайдені`);
     }
 
-    // 3) Малюємо заголовок арени
+    // Малюємо заголовок арени
     arenaVS.textContent = `Команда ${a} ✕ Команда ${b}`;
     arenaRounds.innerHTML = '';
     mvpSelect.innerHTML   = '';
     penaltyInput.value    = '';
 
-    // 4) Заповнюємо випадачку MVP
-    [...teams[a], ...teams[b]].forEach(p => {
+    // Заповнюємо список MVP
+    teams[a].forEach(p => {
+      mvpSelect.insertAdjacentHTML('beforeend',
+        `<option value="${p.nick}">${p.nick}</option>`
+      );
+    });
+    teams[b].forEach(p => {
       mvpSelect.insertAdjacentHTML('beforeend',
         `<option value="${p.nick}">${p.nick}</option>`
       );
     });
 
-    // 5) Створюємо чекбокси раундів
-    [a, b].forEach((id, idx) => {
-      const div = document.createElement('div');
-      div.innerHTML = `<h4>Команда ${id}</h4>` +
+    // Малюємо 3 раунди під кожну команду
+    [a, b].forEach((teamId, idx) => {
+      const block = document.createElement('div');
+      block.className = 'arena-round-block';
+      block.innerHTML = `<h4>Команда ${teamId}</h4>` +
         [1,2,3].map(r => `
           <label>
-            <input type="checkbox" class="round-${r}-${idx?'b':'a'}">
+            <input type="checkbox" class="round-${r}-${idx === 0 ? 'a' : 'b'}">
             Раунд ${r}
           </label>
         `).join('');
-      arenaRounds.append(div);
+      arenaRounds.append(block);
     });
 
-    // 6) Показуємо арену
     arenaArea.classList.remove('hidden');
     btnSave.disabled = false;
   });
 
+  // 2) Кнопка "Зберегти гру"
   btnSave.addEventListener('click', async () => {
     try {
-      // 1) Парсимо хто грає
+      // Хто грає (з рядка arenaVS)
       const vs = arenaVS.textContent.match(/\d+/g).map(Number);
-      console.log('Save clicked, arenaVS vs=', vs);
-      if (vs.length !== 2) throw new Error('Невірне arenaVS');
+      if (vs.length !== 2) throw new Error('Невірне форматування arenaVS');
 
-      // 2) Рахуємо wins
+      // Рахуємо виграші
       let winsA = 0, winsB = 0;
       [1,2,3].forEach(r => {
         if (arenaRounds.querySelector(`.round-${r}-a`)?.checked) winsA++;
         if (arenaRounds.querySelector(`.round-${r}-b`)?.checked) winsB++;
       });
       const series = `${winsA}-${winsB}`;
-      const winner = winsA > winsB
-        ? `team${vs[0]}`
-        : winsB > winsA
-          ? `team${vs[1]}`
-          : 'tie';
-      console.log('Calculated series, winner=', series, winner);
 
-      // 3) Формуємо data
+      // *** головне: winner лише "team1" або "team2" ***
+      const winner = winsA > winsB ? 'team1'
+                   : winsB > winsA ? 'team2'
+                   : 'tie';
+
+      // Підготовка даних для бекенду
       const data = {
         league: leagueSel.value,
-        team1: teams[vs[0]].map(p=>p.nick).join(', '),
-        team2: teams[vs[1]].map(p=>p.nick).join(', '),
+        team1: teams[vs[0]].map(p => p.nick).join(', '),
+        team2: teams[vs[1]].map(p => p.nick).join(', '),
         winner,
         mvp: mvpSelect.value,
         series,
         penalties: penaltyInput.value.trim()
       };
-      console.log('Sending data to saveResult:', data);
 
-      // 4) Відправка
+      // Відправка на сервер
       const res = await saveResult(data);
-      console.log('saveResult response:', res);
-
       if (res.trim() !== 'OK') {
         return alert('Помилка збереження: ' + res);
       }
 
-      // 5) Оновлюємо лоббі та сценарій
+      // Після успіху — оновлюємо лоббі і сценарій
       const updated = await loadPlayers(leagueSel.value);
       initLobby(updated);
       initScenario();
@@ -119,10 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
       btnClear.click();
     } catch (err) {
       console.error(err);
-      alert('Помилка в арені: ' + err.message);
+      alert('Помилка під час збереження гри:\n' + err.message);
     }
   });
 
+  // 3) Кнопка "Скинути арену"
   btnClear.addEventListener('click', () => {
     arenaArea.classList.add('hidden');
     arenaRounds.innerHTML = '';

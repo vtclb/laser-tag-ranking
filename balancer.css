@@ -46,17 +46,11 @@ button:hover{background:var(--accent-dark);}button:disabled{background:var(--tex
   /* за потреби: height: 3rem; align-items: center; display: flex; */
 }
 
-#btn-load {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-#league {
-  position: absolute;
-  right: 1rem;
-  /* по центру по вертикалі, якщо нав має фіксовану висоту: */
-  top: 50%;
-  transform: translateY(-50%);
+.header .nav {
+  display: flex;
+  justify-content: center;  /* горизонтальне центрування всього вмісту */
+  align-items: center;      /* вертикальне вирівнювання по центру */
+  gap: 1rem;                /* відстань між кнопкою і селектом */
+  padding: 0.5rem 0;        /* трохи вертикальних відступів за потреби */
 }
 

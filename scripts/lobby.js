@@ -7,7 +7,7 @@ export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 
 // Ініціалізує лоббі новим набором гравців
-export function initLobby(pl) {
+eexport function initLobby(pl) {
   players = pl;
   filtered = [...players];
   lobby = [];
@@ -33,7 +33,6 @@ function renderSelect(arr) {
     </li>
   `).join('');
 
-  // Прив'язуємо зміни
   ul.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.onchange = () => {
       const p = arr[+cb.dataset.i];
@@ -43,9 +42,8 @@ function renderSelect(arr) {
   });
 }
 
-// Після завантаження DOM — ставимо слухачі на кнопки та пошук
+// Слухачі кнопок та пошуку після завантаження сторінки
 document.addEventListener('DOMContentLoaded', () => {
-  // Пошук
   const searchInput = document.getElementById('player-search');
   if (searchInput) {
     searchInput.addEventListener('input', () => {
@@ -56,37 +54,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Сортування
   document.getElementById('btn-sort-name').onclick = () => {
     filtered = sortByName(filtered);
     renderSelect(filtered);
   };
+
   document.getElementById('btn-sort-pts').onclick = () => {
     filtered = sortByPtsDesc(filtered);
     renderSelect(filtered);
   };
 
-  // Додавання вибраних у лоббі
   document.getElementById('btn-add-selected').onclick = () => {
     selected.forEach(p => { if (!lobby.includes(p)) lobby.push(p); });
     selected = [];
     renderLobby();
     renderSelect(filtered);
   };
-  // Очищення вибору
+
   document.getElementById('btn-clear-selected').onclick = () => {
     selected = [];
     renderSelect(filtered);
   };
 });
 
-// Встановлюємо manualCount і оновлюємо лоббі
+// Встановлюємо кількість команд для ручного режиму
 export function setManualCount(n) {
   manualCount = n;
   renderLobby();
 }
 
-// Рендер самої таблиці лоббі
+// Рендер лоббі
 function renderLobby() {
   const tbody = document.getElementById('lobby-list');
   tbody.innerHTML = lobby.map((p, i) => `
@@ -103,33 +100,41 @@ function renderLobby() {
     </tr>
   `).join('');
 
-  // Оновлення статистики
   const total = lobby.reduce((s, p) => s + p.pts, 0);
   document.getElementById('lobby-count').textContent = lobby.length;
   document.getElementById('lobby-sum').textContent   = total;
   document.getElementById('lobby-avg').textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
 
-  // Кнопка очищення лоббі
-  const btnClearLobby = document.getElementById('btn-clear-lobby');
-  btnClearLobby.onclick = () => {
+  document.getElementById('btn-clear-lobby').onclick = () => {
     lobby = [];
     renderLobby();
     renderSelect(filtered);
   };
 
-  // Прив'язуємо assign
+  // Прив'язуємо assign — збереження попереднього стану інших команд
   tbody.querySelectorAll('.assign').forEach(btn => {
     btn.onclick = () => {
       const i = +btn.dataset.i;
       const teamNo = +btn.dataset.team;
       const p = lobby.splice(i, 1)[0];
-      initTeams(manualCount, { [teamNo]: [...(window.teams[teamNo] || []), p] });
+
+      // Копіюємо існуючі команди
+      const preset = {};
+      Object.keys(window.teams || {}).forEach(key => {
+        preset[key] = [...window.teams[key]];
+      });
+      // Додаємо гравця у призначену команду
+      preset[teamNo] = preset[teamNo] || [];
+      preset[teamNo].push(p);
+
+      // Ререндеримо всі команди з оновленим набором
+      initTeams(manualCount, preset);
       renderLobby();
       renderSelect(filtered);
     };
   });
 
-  // Прив'язуємо видалення з лоббі
+  // Видалити з лоббі
   tbody.querySelectorAll('.remove-lobby').forEach(btn => {
     btn.onclick = () => {
       const i = +btn.dataset.i;

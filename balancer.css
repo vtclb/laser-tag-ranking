@@ -50,7 +50,7 @@ button:hover{background:var(--accent-dark);}button:disabled{background:var(--tex
   display: flex;
   justify-content: center;  /* горизонтальне центрування всього вмісту */
   align-items: center;      /* вертикальне вирівнювання по центру */
-  gap: 1rem;                /* відстань між кнопкою і селектом */
+  gap: 4rem;                /* відстань між кнопкою і селектом */
   padding: 0.5rem 0;        /* трохи вертикальних відступів за потреби */
 }
 

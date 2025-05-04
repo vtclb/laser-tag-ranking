@@ -7,7 +7,7 @@ export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 
 // Ініціалізує лоббі новим набором гравців
-eexport function initLobby(pl) {
+export function initLobby(pl) {
   players = pl;
   filtered = [...players];
   lobby = [];
@@ -111,7 +111,7 @@ function renderLobby() {
     renderSelect(filtered);
   };
 
-  // Прив'язуємо assign — збереження попереднього стану інших команд
+  // Прив'язуємо assign — збереження стану всіх команд
   tbody.querySelectorAll('.assign').forEach(btn => {
     btn.onclick = () => {
       const i = +btn.dataset.i;
@@ -123,11 +123,11 @@ function renderLobby() {
       Object.keys(window.teams || {}).forEach(key => {
         preset[key] = [...window.teams[key]];
       });
-      // Додаємо гравця у призначену команду
+      // Додаємо гравця у потрібну команду
       preset[teamNo] = preset[teamNo] || [];
       preset[teamNo].push(p);
 
-      // Ререндеримо всі команди з оновленим набором
+      // Ререндеримо всі команди
       initTeams(manualCount, preset);
       renderLobby();
       renderSelect(filtered);

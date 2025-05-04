@@ -1,25 +1,26 @@
 // scripts/scenario.js
 
-import { teams, initTeams } from './teams.js';
+import { teams, initTeams }          from './teams.js';
 import { autoBalance2, autoBalanceN } from './balanceUtils.js';
-import { lobby, setManualCount } from './lobby.js';
+import { lobby, setManualCount }      from './lobby.js';
 
-let scenarioArea, btnAuto, btnManual, teamSizeSel, arenaSelect, arenaCheckboxes, btnStart;
+let scenarioArea, btnAuto, btnManual, teamSizeSel;
+let arenaSelect, arenaCheckboxes, btnStart;
 
 /** Показати блок сценарію */
 export function initScenario() {
-  if (scenarioArea) scenarioArea.classList.remove('hidden');
+  scenarioArea.classList.remove('hidden');
 }
 
-/** Намалювати чекбокси команд */
+/** Намалювати чекбокси команд для арени */
 function renderArenaCheckboxes() {
   arenaCheckboxes.innerHTML = '';
   Object.keys(teams).forEach(id => {
-    const sum = teams[id].reduce((s, p) => s + p.pts, 0);
+    const sum = teams[id].reduce((s,p)=>s+p.pts, 0);
     const label = document.createElement('label');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'arena-team';
+    const cb    = document.createElement('input');
+    cb.type     = 'checkbox';
+    cb.className= 'arena-team';
     cb.dataset.team = id;
     cb.addEventListener('change', updateStartButton);
     label.appendChild(cb);
@@ -28,16 +29,16 @@ function renderArenaCheckboxes() {
   });
 }
 
-/** Увімкнути кнопку, коли 2 команди відмічені */
+/** Увімкнути кнопку “Почати бій”, коли відмічено рівно 2 команди */
 function updateStartButton() {
   const cnt = document.querySelectorAll('.arena-team:checked').length;
   btnStart.disabled = cnt !== 2;
 }
 
-/** Обробник авто-балансу */
+/** Авто-баланс: N=2 чи N>2 */
 function handleAuto() {
   const n = +teamSizeSel.value;
-  setManualCount(n);
+  setManualCount(n);    // сповіщаємо lobby.js, скільки кнопок “→…” малювати
   let data;
   if (n === 2) {
     const { A, B } = autoBalance2(lobby);
@@ -45,23 +46,23 @@ function handleAuto() {
   } else {
     data = autoBalanceN(lobby, n);
   }
-  initTeams(n, data);
+  initTeams(n, data);          // малюємо команди
   arenaSelect.classList.remove('hidden');
   renderArenaCheckboxes();
   updateStartButton();
 }
 
-/** Обробник ручного формування */
+/** Ручне формування команд */
 function handleManual() {
   const n = +teamSizeSel.value;
-  setManualCount(n);
-  initTeams(n, {});
+  setManualCount(n);    // скільки кнопок “→…” робити біля кожного гравця лоббі
+  initTeams(n, {});     // створює пусті масиви teams[1]…teams[n]
   arenaSelect.classList.remove('hidden');
   renderArenaCheckboxes();
   updateStartButton();
 }
 
-// Ініціалізація слухачів після завантаження сторінки
+// Встановлюємо слухачі після завантаження DOM
 document.addEventListener('DOMContentLoaded', () => {
   scenarioArea    = document.getElementById('scenario-area');
   btnAuto         = document.getElementById('btn-auto');
@@ -72,11 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
   btnStart        = document.getElementById('btn-start-match');
 
   if (!btnAuto || !btnManual || !teamSizeSel || !arenaSelect || !arenaCheckboxes || !btnStart) {
-    console.error('scenario.js: missing required elements');
+    console.error('scenario.js: не знайдено обовʼязкові елементи');
     return;
   }
 
-  btnAuto.addEventListener('click', handleAuto);
+  btnAuto.addEventListener('click',   handleAuto);
   btnManual.addEventListener('click', handleManual);
 });
-

@@ -9,26 +9,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const leagueSel = document.getElementById('league');
   const scenArea  = document.getElementById('scenario-area');
 
-  // При кліку — підвантажити гравців, показати лоббі і сценарій
+  if (!btnLoad || !leagueSel) {
+    console.error('Не знайдено #btn-load або #league у DOM');
+    return;
+  }
+
+  // Після кліку підвантажуємо гравців
   btnLoad.addEventListener('click', async () => {
-    const league = leagueSel.value;
+    // Відключаємо кнопку на час запиту
     btnLoad.disabled = true;
     btnLoad.textContent = 'Завантаження...';
+
     try {
-      const players = await loadPlayers(league);
-      initLobby(players);          // заповнюємо лоббі
-      scenArea.classList.remove('hidden'); // показуємо блок сценарію
+      const players = await loadPlayers(leagueSel.value);
+      initLobby(players);          // Рендер лоббі
+      scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {
-      alert('Не вдалося завантажити гравців:\n' + err);
+      console.error('Помилка loadPlayers:', err);
+      alert('Не вдалося завантажити гравців:\n' + err.message);
     } finally {
       btnLoad.disabled = false;
       btnLoad.textContent = 'Завантажити гравців';
     }
   });
 
-  // При зміні ліги — можна одразу очистити попереднє лоббі
+  // При зміні ліги — очищуємо поточне лоббі та ховаємо сценарій
   leagueSel.addEventListener('change', () => {
-    initLobby([]);               // очищуємо список
+    initLobby([]);               // Порожнє лоббі
     scenArea.classList.add('hidden');
   });
 });

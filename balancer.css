@@ -40,3 +40,23 @@ body{background:var(--bg);color:var(--text);font-family:sans-serif;line-height:1
 .rounds-grid div{background:var(--bg);padding:0.5rem;border-radius:4px;text-align:center;}
 button{cursor:pointer;border:none;background:var(--accent);color:#fff;border-radius:4px;padding:0.5rem 1rem;transition:background .2s;}
 button:hover{background:var(--accent-dark);}button:disabled{background:var(--text-muted);cursor:default;}
+.header .nav {
+  position: relative;
+  width: 100%;
+  /* за потреби: height: 3rem; align-items: center; display: flex; */
+}
+
+#btn-load {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#league {
+  position: absolute;
+  right: 1rem;
+  /* по центру по вертикалі, якщо нав має фіксовану висоту: */
+  top: 50%;
+  transform: translateY(-50%);
+}
+

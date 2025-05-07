@@ -1,10 +1,12 @@
 // scripts/arena.js
 
-import { saveResult, loadPlayers } from './api.js';
-import { initLobby }               from './lobby.js';
-import { initScenario }            from './scenario.js';
-import { teams }                   from './teams.js';
+import { saveResult, loadPlayers, saveDetailedStats } from './api.js';
+import { parseGamePdf }               from './pdfParser.js';
+import { initLobby }                  from './lobby.js';
+import { initScenario }               from './scenario.js';
+import { teams }                      from './teams.js';
 
+// Чекаємо, поки DOM буде готовий
 document.addEventListener('DOMContentLoaded', () => {
   const btnStart     = document.getElementById('btn-start-match');
   const arenaArea    = document.getElementById('arena-area');
@@ -16,46 +18,70 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnClear     = document.getElementById('btn-clear-arena');
   const leagueSel    = document.getElementById('league');
 
-  // Перевіряємо наявність кнопок
+  // Нові елементи для імпорту PDF
+  const pdfInput     = document.getElementById('pdf-upload');
+  const btnParsePdf  = document.getElementById('btn-parse-pdf');
+
   if (!btnStart || !btnSave || !btnClear) {
     console.error('Arena buttons not found');
     return;
   }
 
-  // 1) Кнопка "Почати бій"
+  // Налаштовуємо кнопку імпорту PDF
+  if (pdfInput && btnParsePdf) {
+    btnParsePdf.disabled = true;
+    pdfInput.addEventListener('change', () => {
+      btnParsePdf.disabled = !pdfInput.files.length;
+    });
+    btnParsePdf.addEventListener('click', async () => {
+      const file = pdfInput.files[0];
+      if (!file) {
+        alert('Будь ласка, оберіть PDF-файл');
+        return;
+      }
+      try {
+        const stats = await parseGamePdf(file);
+        // Використовуємо matchId, збережений під час saveResult
+        const matchId = window.lastMatchId || Date.now();
+        const res = await saveDetailedStats(matchId, stats);
+        if (res.trim() === 'OK') {
+          alert('Детальна PDF-статистика імпортована!');
+        } else {
+          alert('Помилка імпорту PDF: ' + res);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Не вдалося розпарсити PDF: ' + err.message);
+      }
+    });
+  }
+
+  // 1) Почати бій
   btnStart.addEventListener('click', () => {
-    // Збираємо вибрані команди (dataset.team має містити "1" або "2")
     const sel = Array.from(document.querySelectorAll('.arena-team:checked'))
       .map(cb => parseInt(cb.dataset.team, 10));
     if (sel.length !== 2) {
-      return alert('Виберіть дві команди для бою');
+      alert('Виберіть дві команди для бою');
+      return;
     }
     const [a, b] = sel;
-
-    // Переконаємося, що ці індекси є в обʼєкті teams
     if (!teams[a] || !teams[b]) {
-      return alert(`Команди ${a} або ${b} не знайдені`);
+      alert(`Команди ${a} або ${b} не знайдені`);
+      return;
     }
 
-    // Малюємо заголовок арени
     arenaVS.textContent = `Команда ${a} ✕ Команда ${b}`;
     arenaRounds.innerHTML = '';
     mvpSelect.innerHTML   = '';
     penaltyInput.value    = '';
 
-    // Заповнюємо список MVP
-    teams[a].forEach(p => {
-      mvpSelect.insertAdjacentHTML('beforeend',
-        `<option value="${p.nick}">${p.nick}</option>`
-      );
-    });
-    teams[b].forEach(p => {
+    // Наповнюємо MVP
+    [...teams[a], ...teams[b]].forEach(p => {
       mvpSelect.insertAdjacentHTML('beforeend',
         `<option value="${p.nick}">${p.nick}</option>`
       );
     });
 
-    // Малюємо 3 раунди під кожну команду
     [a, b].forEach((teamId, idx) => {
       const block = document.createElement('div');
       block.className = 'arena-round-block';
@@ -73,27 +99,22 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSave.disabled = false;
   });
 
-  // 2) Кнопка "Зберегти гру"
+  // 2) Зберегти гру
   btnSave.addEventListener('click', async () => {
     try {
-      // Хто грає (з рядка arenaVS)
-      const vs = arenaVS.textContent.match(/\d+/g).map(Number);
+      const vs = (arenaVS.textContent.match(/\d+/g) || []).map(Number);
       if (vs.length !== 2) throw new Error('Невірне форматування arenaVS');
 
-      // Рахуємо виграші
       let winsA = 0, winsB = 0;
       [1,2,3].forEach(r => {
         if (arenaRounds.querySelector(`.round-${r}-a`)?.checked) winsA++;
         if (arenaRounds.querySelector(`.round-${r}-b`)?.checked) winsB++;
       });
       const series = `${winsA}-${winsB}`;
-
-      // *** головне: winner лише "team1" або "team2" ***
       const winner = winsA > winsB ? 'team1'
                    : winsB > winsA ? 'team2'
                    : 'tie';
 
-      // Підготовка даних для бекенду
       const data = {
         league: leagueSel.value,
         team1: teams[vs[0]].map(p => p.nick).join(', '),
@@ -104,13 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
         penalties: penaltyInput.value.trim()
       };
 
-      // Відправка на сервер
       const res = await saveResult(data);
       if (res.trim() !== 'OK') {
-        return alert('Помилка збереження: ' + res);
+        alert('Помилка збереження: ' + res);
+        return;
       }
 
-      // Після успіху — оновлюємо лоббі і сценарій
+      // Запам'ятовуємо matchId як timestamp
+      window.lastMatchId = Date.now();
+
       const updated = await loadPlayers(leagueSel.value);
       initLobby(updated);
       initScenario();
@@ -123,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 3) Кнопка "Скинути арену"
+  // 3) Скинути арену
   btnClear.addEventListener('click', () => {
     arenaArea.classList.add('hidden');
     arenaRounds.innerHTML = '';

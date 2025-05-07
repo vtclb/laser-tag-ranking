@@ -1,70 +1,72 @@
 // scripts/arena.js
 
 import { saveResult, loadPlayers, saveDetailedStats } from './api.js';
-import { parseGamePdf }               from './pdfParser.js';
-import { initLobby }                  from './lobby.js';
-import { initScenario }               from './scenario.js';
-import { teams }                      from './teams.js';
+import { parseGamePdf }                   from './pdfParser.js';
+import { initLobby }                      from './lobby.js';
+import { initScenario }                   from './scenario.js';
+import { teams }                          from './teams.js';
 
-// Чекаємо, поки DOM буде готовий
+// Дочекаємося, поки DOM завантажиться
 document.addEventListener('DOMContentLoaded', () => {
-  const btnStart     = document.getElementById('btn-start-match');
-  const arenaArea    = document.getElementById('arena-area');
-  const arenaVS      = document.getElementById('arena-vs');
-  const arenaRounds  = document.getElementById('arena-rounds');
-  const mvpSelect    = document.getElementById('mvp');
-  const penaltyInput = document.getElementById('penalty');
-  const btnSave      = document.getElementById('btn-save-match');
-  const btnClear     = document.getElementById('btn-clear-arena');
-  const leagueSel    = document.getElementById('league');
+  const btnStart    = document.getElementById('btn-start-match');
+  const arenaArea   = document.getElementById('arena-area');
+  const arenaVS     = document.getElementById('arena-vs');
+  const arenaRounds = document.getElementById('arena-rounds');
+  const mvpSelect   = document.getElementById('mvp');
+  const penaltyInput= document.getElementById('penalty');
+  const btnSave     = document.getElementById('btn-save-match');
+  const btnClear    = document.getElementById('btn-clear-arena');
+  const leagueSel   = document.getElementById('league');
+  const pdfInput    = document.getElementById('pdf-upload');
+  const btnParsePdf = document.getElementById('btn-parse-pdf');
 
-  // Нові елементи для імпорту PDF
-  const pdfInput     = document.getElementById('pdf-upload');
-  const btnParsePdf  = document.getElementById('btn-parse-pdf');
-
+  // Перевіряємо необхідні елементи
   if (!btnStart || !btnSave || !btnClear) {
-    console.error('Arena buttons not found');
+    console.error('Не знайдено основні кнопки арени');
     return;
   }
 
-  // Налаштовуємо кнопку імпорту PDF
+  // --- Імпорт PDF-статистики ---
   if (pdfInput && btnParsePdf) {
     btnParsePdf.disabled = true;
     pdfInput.addEventListener('change', () => {
-      btnParsePdf.disabled = !pdfInput.files.length;
+      btnParsePdf.disabled = pdfInput.files.length === 0;
     });
     btnParsePdf.addEventListener('click', async () => {
       const file = pdfInput.files[0];
       if (!file) {
-        alert('Будь ласка, оберіть PDF-файл');
+        alert('Оберіть PDF-файл для імпорту');
         return;
       }
       try {
         const stats = await parseGamePdf(file);
-        // Використовуємо matchId, збережений під час saveResult
-        const matchId = window.lastMatchId || Date.now();
+        const matchId = window.lastMatchId;
+        if (!matchId) {
+          alert('Спершу збережіть результат гри');
+          return;
+        }
         const res = await saveDetailedStats(matchId, stats);
         if (res.trim() === 'OK') {
-          alert('Детальна PDF-статистика імпортована!');
+          alert('Детальна статистика з PDF імпортована успішно');
         } else {
-          alert('Помилка імпорту PDF: ' + res);
+          alert('Помилка імпорту статистики: ' + res);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Помилка парсингу PDF:', err);
         alert('Не вдалося розпарсити PDF: ' + err.message);
       }
     });
   }
 
-  // 1) Почати бій
+  // --- Почати бій ---
   btnStart.addEventListener('click', () => {
-    const sel = Array.from(document.querySelectorAll('.arena-team:checked'))
+    const selected = Array.from(document.querySelectorAll('.arena-team:checked'))
       .map(cb => parseInt(cb.dataset.team, 10));
-    if (sel.length !== 2) {
+    if (selected.length !== 2) {
       alert('Виберіть дві команди для бою');
       return;
     }
-    const [a, b] = sel;
+    const [a, b] = selected;
     if (!teams[a] || !teams[b]) {
       alert(`Команди ${a} або ${b} не знайдені`);
       return;
@@ -75,35 +77,36 @@ document.addEventListener('DOMContentLoaded', () => {
     mvpSelect.innerHTML   = '';
     penaltyInput.value    = '';
 
-    // Наповнюємо MVP
-    [...teams[a], ...teams[b]].forEach(p => {
+    // Заповнюємо MVP
+    [...teams[a], ...teams[b]].forEach(player => {
       mvpSelect.insertAdjacentHTML('beforeend',
-        `<option value="${p.nick}">${p.nick}</option>`
+        `<option value="${player.nick}">${player.nick}</option>`
       );
     });
 
+    // Створюємо блоки раундів для кожної команди
     [a, b].forEach((teamId, idx) => {
-      const block = document.createElement('div');
-      block.className = 'arena-round-block';
-      block.innerHTML = `<h4>Команда ${teamId}</h4>` +
-        [1,2,3].map(r => `
+      const div = document.createElement('div');
+      div.className = 'arena-round-block';
+      div.innerHTML = `<h4>Команда ${teamId}</h4>` +
+        [1,2,3].map(round => `
           <label>
-            <input type="checkbox" class="round-${r}-${idx === 0 ? 'a' : 'b'}">
-            Раунд ${r}
+            <input type="checkbox" class="round-${round}-${idx === 0 ? 'a' : 'b'}">
+            Раунд ${round}
           </label>
         `).join('');
-      arenaRounds.append(block);
+      arenaRounds.append(div);
     });
 
     arenaArea.classList.remove('hidden');
     btnSave.disabled = false;
   });
 
-  // 2) Зберегти гру
+  // --- Зберегти гру ---
   btnSave.addEventListener('click', async () => {
     try {
       const vs = (arenaVS.textContent.match(/\d+/g) || []).map(Number);
-      if (vs.length !== 2) throw new Error('Невірне форматування arenaVS');
+      if (vs.length !== 2) throw new Error('Неправильний формат арени');
 
       let winsA = 0, winsB = 0;
       [1,2,3].forEach(r => {
@@ -131,22 +134,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Запам'ятовуємо matchId як timestamp
+      // Зберігаємо matchId для подальшого імпорту PDF
       window.lastMatchId = Date.now();
 
       const updated = await loadPlayers(leagueSel.value);
       initLobby(updated);
       initScenario();
 
-      alert('Гру збережено та рейтинги оновлено');
+      alert('Гру успішно збережено та рейтинги оновлено');
       btnClear.click();
     } catch (err) {
-      console.error(err);
-      alert('Помилка під час збереження гри:\n' + err.message);
+      console.error('Помилка під час збереження:', err);
+      alert('Не вдалося зберегти гру: ' + err.message);
     }
   });
 
-  // 3) Скинути арену
+  // --- Скинути арену ---
   btnClear.addEventListener('click', () => {
     arenaArea.classList.add('hidden');
     arenaRounds.innerHTML = '';

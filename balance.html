@@ -107,8 +107,26 @@
     </section>
   </main>
 
-  <!-- Модулі -->
-  <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+   
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+   
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  </script>
+
+ 
+  <script type="module" src="scripts/api.js"></script>
+  <script type="module" src="scripts/pdfParser.js"></script>
+  <script type="module" src="scripts/sortUtils.js"></script>
+  <script type="module" src="scripts/balanceUtils.js"></script>
+  <script type="module" src="scripts/lobby.js"></script>
+  <script type="module" src="scripts/teams.js"></script>
+  <script type="module" src="scripts/scenario.js"></script>
+  <script type="module" src="scripts/arena.js"></script>
+  <script type="module" src="scripts/main.js"></script>
+</body>
+</html>
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/sortUtils.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>

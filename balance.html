@@ -9,9 +9,9 @@
 <body>
   <header class="header">
     <div class="logo">🎮 Game Balancer</div>
-    <nav class="nav">
+    <nav class="nav" style="display:flex; align-items:center; justify-content:center; gap:1rem;">
       <button id="btn-load">Завантажити гравців</button>
-      <select id="league">
+      <select id="league" style="margin-left:auto">
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
@@ -23,13 +23,8 @@
     <section id="select-area" class="card hidden">
       <h2>Вибір гравців</h2>
       <div class="search-wrapper">
-  <input
-     type="text"
-     id="player-search"
-     placeholder="🔍 Пошук гравця..."
-     autocomplete="off"
-    >
- </div>
+        <input type="text" id="player-search" placeholder="🔍 Пошук гравця..." autocomplete="off">
+      </div>
       <div class="sort-controls">
         <button id="btn-sort-name">А–Я</button>
         <button id="btn-sort-pts">За балами ↓</button>
@@ -41,11 +36,13 @@
       </div>
     </section>
 
-    <!-- 2. Лоббі дня — тепер видно завжди -->
+    <!-- 2. Лоббі дня -->
     <section id="lobby-area" class="card">
       <h2>Лоббі дня</h2>
       <table class="table">
-        <thead><tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>→Команда / ✕</th></tr></thead>
+        <thead>
+          <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>→Команда / ✕</th></tr>
+        </thead>
         <tbody id="lobby-list"></tbody>
       </table>
       <p class="text-muted">
@@ -88,15 +85,13 @@
     <!-- 6. Арена -->
     <section id="arena-area" class="card hidden">
       <h2>Арена: <span id="arena-vs"></span></h2>
-        <!-- MVP -->
-       <label for="mvp">MVP:</label>
-       <select id="mvp"></select>
-   <div class="field">
-        </div>
-   <div class="field">
-     <label for="penalty">Штраф:</label>
-     <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5">
-   </div>
+      <label for="mvp">MVP:</label>
+      <select id="mvp"></select>
+      <div class="field"></div>
+      <div class="field">
+        <label for="penalty">Штраф:</label>
+        <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5">
+      </div>
       <div id="arena-rounds" class="rounds-grid"></div>
       <div class="actions">
         <button id="btn-save-match" disabled>Зберегти гру</button>
@@ -107,27 +102,16 @@
     </section>
   </main>
 
-   
+  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
-   
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   </script>
 
- 
+  <!-- ES-модулі -->
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/pdfParser.js"></script>
-  <script type="module" src="scripts/sortUtils.js"></script>
-  <script type="module" src="scripts/balanceUtils.js"></script>
-  <script type="module" src="scripts/lobby.js"></script>
-  <script type="module" src="scripts/teams.js"></script>
-  <script type="module" src="scripts/scenario.js"></script>
-  <script type="module" src="scripts/arena.js"></script>
-  <script type="module" src="scripts/main.js"></script>
-</body>
-</html>
-  <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/sortUtils.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>
   <script type="module" src="scripts/lobby.js"></script>

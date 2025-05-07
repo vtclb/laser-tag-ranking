@@ -53,4 +53,13 @@ button:hover{background:var(--accent-dark);}button:disabled{background:var(--tex
   gap: 4rem;                /* відстань між кнопкою і селектом */
   padding: 0.5rem 0;        /* трохи вертикальних відступів за потреби */
 }
+.arena-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.pdf-input {
+  flex-shrink: 0;
+}
+
 

@@ -1,117 +1,227 @@
-
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <title>Правила | Лазертаг</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: url('assets/background.jpg') no-repeat center center fixed;
-            background-size: cover;
-            margin: 0;
-            padding: 0;
-            color: white;
-        }
-
-        nav {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            text-align: center;
-            border-radius: 0 0 10px 10px;
-        }
-
-        nav a {
-            color: #f39c12;
-            text-decoration: none;
-            margin: 0 15px;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        nav a:hover {
-            color: #ffd700;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 30px auto;
-            background: rgba(0, 0, 0, 0.75);
-            padding: 30px;
-            border-radius: 10px;
-        }
-
-        h1, h2 {
-            color: #f39c12;
-        }
-
-        ul, ol {
-            text-align: left;
-            margin-left: 20px;
-        }
-
-        p {
-            line-height: 1.6;
-        }
-
-        .highlight {
-            background-color: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-left: 4px solid #f39c12;
-            margin-bottom: 15px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Правила | Лазертаг</title>
+  <style>
+    /* Основні стилі */
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0a0a0a url('assets/background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      color: #e0e0e0;
+    }
+    nav {
+      background: rgba(20,20,20,0.85);
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    nav a {
+      color: #ffcc00;
+      text-decoration: none;
+      margin: 0 20px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      position: relative;
+    }
+    nav a::after {
+      content: '';
+      display: block;
+      width: 0;
+      height: 3px;
+      background: #ffcc00;
+      transition: width 0.3s;
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+    }
+    nav a:hover::after {
+      width: 100%;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: rgba(30,30,30,0.9);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+    }
+    h1, h2 {
+      color: #ffcc00;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    }
+    .highlight {
+      background: rgba(255,204,0,0.1);
+      border-left: 6px solid #ffcc00;
+      padding: 15px;
+      margin: 20px 0;
+      font-size: 1.1rem;
+    }
+    ul, ol {
+      margin-left: 20px;
+      line-height: 1.6;
+    }
+    /* Бейджі для рангів */
+    .rank-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin: 15px 0;
+    }
+    .rank-item {
+      flex: 1 1 45%;
+      background: rgba(50,50,50,0.8);
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .rank-icon {
+      font-size: 2rem;
+    }
+    .rank-info {
+      flex: 1;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+    .D { background: #4caf50; }
+    .C { background: #2196f3; }
+    .B { background: #ffeb3b; color:#000; }
+    .A { background: #f44336; }
+    .S { background: #9c27b0; }
+    /* Кнопки */
+    .btn {
+      display: inline-block;
+      background: #ffcc00;
+      color: #000;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background: #e6b800;
+    }
+    /* Секція нарахування балів */
+    .points-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    .points-table th, .points-table td {
+      border: 1px solid #555;
+      padding: 12px;
+      text-align: center;
+    }
+    .points-table th {
+      background: rgba(255,204,0,0.2);
+    }
+  </style>
 </head>
 <body>
-    <nav>
-        <a href="index.html">Молодша ліга</a>
-        <a href="sunday.html">Старша ліга</a>
-        <a href="rules.html">Правила</a>
-        <a href="about.html">Про клуб</a>
-    </nav>
+  <nav>
+    <a href="index.html">Молодша ліга</a>
+    <a href="sunday.html">Старша ліга</a>
+    <a href="rules.html">Правила</a>
+    <a href="about.html">Про клуб</a>
+  </nav>
+  <div class="container">
+    <h1>Правила клубу та рейтингових ігор</h1>
+    <div class="highlight">Це тестовий сезон. Деякі правила можуть змінюватися!</div>
 
-    <div class="container">
-        <h1>Правила клубу та рейтингових ігор</h1>
+    <h2>Загальні правила поведінки</h2>
+    <ul>
+      <li>Дотримуйся вказівок інструктора.</li>
+      <li>Не використовуй нецензурну лексику та агресію.</li>
+      <li>Бережи обладнання та майно клубу.</li>
+      <li>Грай чесно — фейрплей понад усе!</li>
+      <li>Після гри поверни все обладнання.</li>
+    </ul>
 
-        <div class="highlight">
-            <strong>Це тестовий сезон. Деякі правила можуть змінюватися!</strong>
+    <h2>Нарахування балів</h2>
+    <table class="points-table">
+      <thead>
+        <tr><th>Подія</th><th>Бали</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Перемога</td><td>+20</td></tr>
+        <tr><td>MVP</td><td>+10</td></tr>
+        <tr><td>Участь&nbsp;D&nbsp;ранг</td><td>+5</td></tr>
+        <tr><td>Участь&nbsp;C&nbsp;ранг</td><td>+0</td></tr>
+        <tr><td>Участь&nbsp;B&nbsp;ранг</td><td>-4</td></tr>
+        <tr><td>Участь&nbsp;A&nbsp;ранг</td><td>-8</td></tr>
+        <tr><td>Участь&nbsp;S&nbsp;ранг</td><td>-12</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Ранги гравців</h2>
+    <div class="rank-list">
+      <div class="rank-item">
+        <div class="rank-icon">🟢</div>
+        <div class="rank-info">
+          <strong>D ранг</strong><br>
+          0–199 балів — <em>новачки</em><br>
+          <span class="badge D">Участь +5</span>
         </div>
+      </div>
 
-        <h2>Загальні правила поведінки</h2>
-        <ul>
-            <li>Дотримуйся вказівок інструктора.</li>
-            <li>Не використовуй нецензурну лексику, не проявляй агресію.</li>
-            <li>Бережи обладнання та майно клубу.</li>
-            <li>Дотримуйся правил чесної гри — фейрплей понад усе!</li>
-            <li>Після завершення гри поверни все обладнання.</li>
-        </ul>
+      <div class="rank-item">
+        <div class="rank-icon">🔵</div>
+        <div class="rank-info">
+          <strong>C ранг</strong><br>
+          200–499 балів — <em>з базовим досвідом</em><br>
+          <span class="badge C">Участь +0</span>
+        </div>
+      </div>
 
-        <h2>Рейтингові матчі</h2>
-        <p>Рейтингові ігри проходять щосереди та щонеділі, або за запитом при наявності 6+ гравців. Тривалість: 30 хвилин.</p>
+      <div class="rank-item">
+        <div class="rank-icon">🟡</div>
+        <div class="rank-info">
+          <strong>B ранг</strong><br>
+          500–799 балів — <em>досвідчені</em><br>
+          <span class="badge B">Участь -4</span>
+        </div>
+      </div>
 
-        <h2>Як нараховуються бали?</h2>
-        <ul>
-            <li><strong>+5</strong> — за участь у грі (тільки для D рангу)</li>
-            <li><strong>+20</strong> — за перемогу</li>
-            <li><strong>+10</strong> — за звання MVP</li>
-            <li><strong>-10</strong> — за поразку (A та S ранги)</li>
-        </ul>
+      <div class="rank-item">
+        <div class="rank-icon">🔴</div>
+        <div class="rank-info">
+          <strong>A ранг</strong><br>
+          800–1199 балів — <em>професіонали</em><br>
+          <span class="badge A">Участь -8</span>
+        </div>
+      </div>
 
-        <h2>Ранги гравців</h2>
-        <ul>
-            <li>🟢 <strong>D ранг:</strong> 0–199 балів — новачки, які тільки починають грати</li>
-            <li>🔵 <strong>C ранг:</strong> 200–499 балів — гравці з базовим досвідом</li>
-            <li>🟡 <strong>B ранг:</strong> 500–799 балів — досвідчені гравці</li>
-            <li>🔴 <strong>A ранг:</strong> 800–1199 балів — професіонали лазертагу</li>
-            <li>🟣 <strong>S ранг:</strong> 1200+ балів — еліта гравців</li>
-        </ul>
-
-        <h2>Прогрес та сезон</h2>
-        <p>Кожен сезон триває 3 місяці.Даний сезон тестовий, тому всі правила будуть калібруватись відносно поточної ситуації. Після завершення — нагородження ТОП гравців. Статистика обнуляється.</p>
-
-        <h2>Питання?</h2>
-        <p>Маєш пропозиції або зауваження - Звернись до інструктора або напиши нам у <a href="https://surl.li/rwopeh" target="_blank" style="color:#f39c12;">Telegram</a></p>
+      <div class="rank-item">
+        <div class="rank-icon">🟣</div>
+        <div class="rank-info">
+          <strong>S ранг</strong><br>
+          1200+ балів — <em>еліта</em><br>
+          <span class="badge S">Участь -12</span>
+        </div>
+      </div>
     </div>
+
+    <h2>Прогрес та сезон</h2>
+    <p>Кожен сезон триває 3 місяці. Після завершення — нагородження ТОП гравців та обнулення статистики.</p>
+
+    <h2>Питання?</h2>
+    <p>Є ідеї чи зауваження? <button class="btn" onclick="window.open('https://t.me/your_club_bot')">Напиши в Telegram</button></p>
+  </div>
 </body>
 </html>

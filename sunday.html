@@ -4,161 +4,150 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Старша Ліга | Лазертаг</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; margin:0; padding:0;
-               background: url('assets/backgr.jpg') no-repeat center center fixed;
-               background-size: cover; color: #fff; }
-        nav { background: rgba(0,0,0,0.7); display:flex; justify-content:center;
-              padding:10px; gap:20px; }
-        nav a { color:#f39c12; text-decoration:none; font-weight:bold; }
-        nav a.active, nav a:hover { color:#ffd700; }
-        .container { max-width:1000px; margin:20px auto; background:rgba(0,0,0,0.7);
-                     border-radius:10px; padding:20px; box-shadow:0 0 15px rgba(255,165,0,0.5); }
-        h1 { text-align:center; color:#f39c12; margin-bottom:10px; }
-        .stats-grid { display:grid; grid-template-columns:1fr; gap:20px; }
-        @media(min-width:800px) { .stats-grid{ grid-template-columns:2fr 1fr; } }
-        .table-container { position:relative; }
-        table { width:100%; border-collapse:collapse; background:rgba(26,26,26,0.9); }
-        th,td { padding:8px; border:1px solid #444; text-align:center; }
-        thead th { background:#f39c12; color:#000; position:sticky; top:0; }
-        .show-more { margin-top:10px; padding:10px 20px; background:#f39c12; color:#000;
-                     border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
-        .hidden-players { display:none; }
-        .search-box { text-align:center; margin-bottom:15px; }
-        .search-box input { width:80%; max-width:300px; padding:8px; border:none;
-                             border-radius:5px; }
-    </style>
     <!-- Papa Parse for CSV parsing -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <style>
+        body {font-family:'Segoe UI',sans-serif; margin:0; padding:0;
+               background:url('assets/backgr.jpg')no-repeat center center fixed;
+               background-size:cover; color:#fff;}
+        nav {background:rgba(0,0,0,0.7); padding:10px; display:flex;
+             justify-content:center; gap:20px; flex-wrap:wrap;}
+        nav a {color:#f39c12; text-decoration:none; font-weight:bold;}
+        nav a.active, nav a:hover {color:#ffd700; border-bottom:2px solid #ffd700;}
+        .container {max-width:960px; margin:20px auto; background:rgba(0,0,0,0.7);
+                    padding:20px; border-radius:10px;}
+        h1 {color:#f39c12; text-align:center; margin-bottom:10px;}
+        .grid {display:flex; flex-direction:column; gap:20px;}
+        @media(min-width:768px){ .grid{flex-direction:row;} }
+        .table-wrap {flex:1; overflow-x:auto;}
+        table {width:100%; border-collapse:collapse;}
+        th,td {padding:8px; border:1px solid #444; text-align:center;}
+        thead th {position:sticky; top:0; background:#f39c12; color:#000; z-index:1;}
+        .rank-S td:first-child {background:rgba(128,0,128,0.2);}  /* purple */
+        .rank-A td:first-child {background:rgba(255,0,0,0.2);}    /* red */
+        .rank-B td:first-child {background:rgba(255,215,0,0.2);}  /* gold */
+        .rank-C td:first-child {background:rgba(0,0,255,0.2);}    /* blue */
+        .rank-D td:first-child {background:rgba(0,128,0,0.2);}    /* green */
+        .btn {background:#f39c12; color:#000; border:none; padding:10px 15px;
+             border-radius:5px; cursor:pointer; font-weight:bold;}
+        .btn:hover {background:#ffd700;}
+        .search {text-align:right; margin-bottom:10px;}
+        .search input {padding:6px; border:none; border-radius:4px; width:200px;}
+    </style>
 </head>
 <body>
 <nav>
     <a href="index.html" id="nav-kids">Молодша Ліга</a>
-    <a href="sunday.html" id="nav-sunday" class="active">Старша Ліга</a>
+    <a href="sunday.html" id="nav-sunday">Старша Ліга</a>
     <a href="rules.html" id="nav-rules">Правила</a>
     <a href="about.html" id="nav-about">Про клуб</a>
 </nav>
 <div class="container">
-    <h1>Старша ліга | Рейтинг гравців</h1>
-    <p style="text-align:center; color:#ffd700;">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
-    <div class="search-box">
-        <input id="searchInput" oninput="filterTable()" placeholder="Пошук нікнейму...">
-    </div>
-    <div class="stats-grid">
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Місце</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
-                        <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>% Перемог</th><th>MVP</th>
-                    </tr>
-                </thead>
-                <tbody id="ranking-table"></tbody>
+    <h1>Старша Ліга | Рейтинг</h1>
+    <div class="search"><input id="searchInput" placeholder="Пошук..." oninput="filter()"></div>
+    <div class="grid">
+        <div class="table-wrap">
+            <table id="rankingTable">
+                <thead><tr>
+                    <th>#</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
+                    <th>Ігор</th><th>Перемог</th><th>Поразок</th>
+                    <th>WinRate %</th><th>MVP</th>
+                </tr></thead>
+                <tbody></tbody>
             </table>
-            <button class="show-more" onclick="togglePlayers()">Показати більше</button>
         </div>
-        <div class="table-container">
-            <h2 style="color:#ffd700;">Топ 3 MVP</h2>
-            <table>
+        <div style="flex:0 0 200px;">
+            <h2 style="text-align:center;">Топ 3 MVP</h2>
+            <table id="mvpTable">
                 <thead><tr><th>Нікнейм</th><th>MVP</th></tr></thead>
-                <tbody id="top-mvp-table"></tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
+    <div style="text-align:center; margin-top:10px;"><button class="btn" onclick="toggleAll()">Показати більше</button></div>
 </div>
 <script>
-    const rankingURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv';
-    const gamesURL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv'; // gid for games sheet
+const rankingURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv';
+const gamesURL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=0&single=true&output=csv';
+let players=[];
 
-    let allRows = [];
+function getRank(points){
+    if(points>=1200)return 'S'; if(points>=800)return 'A';
+    if(points>=500)return 'B'; if(points>=200)return 'C';
+    return 'D';
+}
 
-    function extractPlayers(str) {
-        if (!str) return [];
-        return str.split(',').map(p=>p.trim().split(' (')[0]).filter(Boolean);
-    }
+function loadData(){
+    Papa.parse(rankingURL,{download:true,header:true,skipEmptyLines:true,
+        complete: resR=>{
+            const rating = resR.data.map(r=>({nickname:r.Nickname,points:+r.Points}));
+            Papa.parse(gamesURL,{download:true,header:true,skipEmptyLines:true,
+                complete: resG=> process(rating,resG.data)
+            });
+        }
+    });
+}
 
-    function loadData() {
-        Papa.parse(rankingURL, { download:true, header:true, skipEmptyLines:true,
-            complete: rRes => {
-                const ranking = rRes.data.map((p,i)=>({
-                    place:i+1,
-                    nickname:p['Нікнейм']||p['Nickname'],
-                    points:+p['Бали']||+p['Points']||0
-                }));
-                Papa.parse(gamesURL, { download:true, header:true, skipEmptyLines:true,
-                    complete: gRes => {
-                        const stats = {};
-                        gRes.data.forEach(row=>{
-                            if (row['League'] !== 'sunday') return;
-                            const t1=extractPlayers(row['Team1']); const t2=extractPlayers(row['Team2']);
-                            let winTeam = row['Winner']==='team1'? t1 : row['Winner']==='team2'? t2 : (t1.includes(row['Winner'])?t1:t2);
-                            let loseTeam = winTeam===t1? t2 : t1;
-                            // init
-                            [...t1,...t2].forEach(p=>{
-                                if(!stats[p]) stats[p]={games:0,wins:0,losses:0,mvp:0};
-                                stats[p].games++;
-                            });
-                            winTeam.forEach(p=>stats[p].wins++);
-                            loseTeam.forEach(p=>stats[p].losses++);
-                            const mvp=row['MVP']; if(mvp && stats[mvp]) stats[mvp].mvp++;
-                        });
-                        renderTables(ranking, stats);
-                    }
-                });
-            }
+function process(rating,games){
+    const stats = {};
+    games.filter(g=>g.League==='sunday').forEach(g=>{
+        let t1=g.Team1.split(',').map(s=>s.trim()), t2=g.Team2.split(',').map(s=>s.trim());
+        let win = g.Winner==='team1'?t1:g.Winner==='team2'?t2:
+                  t1.includes(g.Winner)?t1:t2;
+        let lose= win===t1?t2:t1;
+        t1.concat(t2).forEach(p=>{if(!p) return;
+            if(!stats[p]) stats[p]={games:0,wins:0,losses:0,mvp:0};
+            stats[p].games++;
         });
-    }
+        win.forEach(p=>stats[p].wins++);
+        lose.forEach(p=>stats[p].losses++);
+        if(g.MVP && stats[g.MVP]) stats[g.MVP].mvp++;
+    });
+    // merge rating
+    players = rating.map(r=>({
+        ...r,
+        games:stats[r.nickname]?.games||0,
+        wins:stats[r.nickname]?.wins||0,
+        losses:stats[r.nickname]?.losses||0,
+        mvp:stats[r.nickname]?.mvp||0
+    }));
+    players.forEach(p=>p.winRate = p.games?((p.wins/p.games)*100).toFixed(2):'0.00');
+    players.sort((a,b)=>b.points-a.points);
+    render();
+}
 
-    function renderTables(ranking, stats) {
-        const table = document.getElementById('ranking-table'); table.innerHTML=''; allRows=[];
-        ranking.forEach((p,i)=>{
-            const s = stats[p.nickname]||{games:0,wins:0,losses:0,mvp:0};
-            const winRate = s.games?((s.wins/s.games)*100).toFixed(2):'0.00';
-            const tr = document.createElement('tr');
-            tr.innerHTML=`
-                <td>${p.place}</td><td>${p.nickname}</td><td>${getRank(p.points)}</td>
-                <td>${p.points}</td><td>${s.games}</td><td>${s.wins}</td>
-                <td>${s.losses}</td><td>${winRate}</td><td>${s.mvp}</td>`;
-            if(i>=10) tr.classList.add('hidden-players');
-            table.appendChild(tr); allRows.push(tr);
-        });
-        renderTopMVP(stats);
-    }
+function render(){
+    const tbody=document.querySelector('#rankingTable tbody'); tbody.innerHTML='';
+    players.forEach((p,i)=>{
+        const rank=getRank(p.points);
+        const tr=document.createElement('tr');
+        tr.classList.add('rank-'+rank);
+        tr.innerHTML=`<td>${i+1}</td><td>${p.nickname}</td><td>${rank}</td>
+            <td>${p.points}</td><td>${p.games}</td><td>${p.wins}</td>
+            <td>${p.losses}</td><td>${p.winRate}</td><td>${p.mvp}</td>`;
+        if(i>=10) tr.hidden=true;
+        tbody.appendChild(tr);
+    });
+    const mvptbody=document.querySelector('#mvpTable tbody'); mvptbody.innerHTML='';
+    players.sort((a,b)=>b.mvp-a.mvp).slice(0,3)
+           .forEach(p=> mvptbody.innerHTML+=`<tr><td>${p.nickname}</td><td>${p.mvp}</td></tr>`);
+}
 
-    function getRank(points) {
-        if(points>=1200) return 'S ранг';
-        if(points>=800) return 'A ранг';
-        if(points>=500) return 'B ранг';
-        if(points>=200) return 'C ранг';
-        return 'D ранг';
-    }
+function filter(){
+    const q=document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#rankingTable tbody tr').forEach((tr,i)=>{
+        tr.hidden = !(q?tr.cells[1].textContent.toLowerCase().includes(q): i<10);
+    });
+}
 
-    function renderTopMVP(stats) {
-        const top = Object.entries(stats).sort((a,b)=>b[1].mvp-a[1].mvp).slice(0,3);
-        const mvpTable = document.getElementById('top-mvp-table'); mvpTable.innerHTML='';
-        top.forEach(([nick,s])=>{
-            const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${nick}</td><td>${s.mvp}</td>`;
-            mvpTable.appendChild(tr);
-        });
-    }
+function toggleAll(){
+    document.querySelectorAll('#rankingTable tbody tr').forEach(tr=>tr.hidden=!tr.hidden);
+}
 
-    function filterTable() {
-        const q=document.getElementById('searchInput').value.toLowerCase();
-        allRows.forEach((r,i)=>{
-            r.style.display = (!q || r.children[1].textContent.toLowerCase().includes(q))
-                && (q || i<10) ? 'table-row':'none';
-        });
-        document.querySelector('.show-more').textContent = q?'Показати Топ-10':'Показати більше';
-    }
-
-    function togglePlayers() {
-        const show=!allRows[10]||allRows[10].classList.contains('hidden-players');
-        allRows.forEach((r,i)=>{ if(i>=10) r.style.display = show?'table-row':'none'; });
-        document.querySelector('.show-more').textContent = show?'Показати Топ-10':'Показати більше';
-    }
-
-    document.addEventListener('DOMContentLoaded', loadData);
+document.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('nav-sunday').classList.add('active');
+    loadData();
+});
 </script>
 </body>
 </html>

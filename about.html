@@ -1,119 +1,115 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Про клуб | Лазертаг</title>
-  <!-- Піксельний шрифт -->
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <!-- Pixel Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Press Start 2P', monospace;
-      background: #111 url('assets/background_marathon.png') no-repeat center/cover;
-      color: #fff;
-      cursor: url('assets/cursor.png') 4 4, auto;
-    }
-    nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; background: rgba(0,0,0,0.7); padding: .75rem; }
-    nav a { color: #f39c12; text-decoration: none; transition: .2s; }
-    nav a:hover, nav a.active { color: #ffd700; border-bottom: 2px solid #ffd700; }
-    .container { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
-    h1 { text-align: center; color: #f39c12; margin-bottom: .5rem; }
-    canvas { display: block; margin: 1rem auto; background: #000; border: 2px solid #444; }
-    .under { text-align: center; margin-bottom: 1rem; font-size: .8rem; color: #ccc; }
-    /* Simple UI below canvas */
-    .info { text-align: center; margin: 1rem 0; }
-    button { background: #f39c12; color: #000; padding: .5rem 1rem; font-family: 'Press Start 2P', monospace; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #ffd700; }
+    body { background: #111; color: #fff; font-family: 'Press Start 2P', mono; }
+    nav { background: rgba(0,0,0,0.8); display: flex; flex-wrap: wrap; justify-content: center; padding: .75rem; }
+    nav a { color: #f39c12; text-decoration: none; margin: .5rem; transition: .2s; }
+    nav a.active, nav a:hover { color: #ffd700; }
+    canvas { display: block; margin: 1rem auto; background: #000; border: 4px solid #222; }
+    .container { text-align: center; padding: 1rem; }
+    .container h1 { font-size: 1rem; color: #f39c12; margin-bottom: .5rem; }
+    .container p { font-size: .75rem; color: #ccc; }
   </style>
 </head>
 <body>
   <nav>
-    <a href="index.html">Молодша Ліга</a>
-    <a href="sunday.html">Старша Ліга</a>
+    <a href="index.html">М Ліга</a>
+    <a href="sunday.html">С Ліга</a>
     <a href="rules.html">Правила</a>
     <a href="about.html" class="active">Про клуб</a>
   </nav>
+  <canvas id="battleCanvas" width="400" height="200"></canvas>
   <div class="container">
-    <h1>Піксельна битва</h1>
-    <canvas id="battleCanvas" width="800" height="200"></canvas>
-    <div class="under">Under Construction — готуємо арени та героїв!</div>
-    <div class="info"><button onclick="location.reload()">Перезапустити бій</button></div>
+    <h1>Піксельна арена</h1>
+    <p>Поки ми готуємося – спостерігай за епічними боями!</p>
   </div>
-  <script>
-    const canvas = document.getElementById('battleCanvas');
-    const ctx = canvas.getContext('2d');
-    /* Параметри */
-    const soldierSize = 16; // пікселів
-    const speed = 2;
-    const states = [
-      'enter1','enter2','duel1','enter3','duel2','duoEnter','duoDuel','final','loop'
-    ];
-    let stateIndex = 0;
-    let frameCount = 0;
-    class Soldier {
-      constructor(x,y,color) { this.x=x; this.y=y; this.color=color; }
-      draw(){ ctx.fillStyle=this.color; ctx.fillRect(this.x,this.y,soldierSize,soldierSize); }
+<script>
+(function(){
+  const canvas = document.getElementById('battleCanvas');
+  const ctx = canvas.getContext('2d');
+  /* Параметри анімації */
+  const soldierSize = 10;
+  const laserColor = '#f00';
+  let state = 0;
+  let timer = 0;
+  let soldiers = [];
+  let lasers = [];
+
+  function PixelSoldier(x,y,dir){ this.x=x; this.y=y; this.dir=dir; this.alive=true; this.blink=0; }
+  PixelSoldier.prototype.draw = function(){
+    if(!this.alive) return;
+    if(this.blink>0){ if(Math.floor(this.blink/5)%2===0) return; this.blink--; }
+    ctx.fillStyle = '#0f0';
+    ctx.fillRect(this.x,this.y,soldierSize,soldierSize);
+  };
+  function Laser(x,y,dir){ this.x=x; this.y=y; this.dir=dir; this.alive=true; }
+  Laser.prototype.draw = function(){ if(!this.alive) return; ctx.fillStyle=laserColor; ctx.fillRect(this.x,this.y,4,2); };
+
+  function resetBattle(){ soldiers=[]; lasers=[]; timer=0; }
+  function spawnSoldier(x,y,dir){ soldiers.push(new PixelSoldier(x,y,dir)); }
+  function shoot(s){ lasers.push(new Laser(s.x+ (s.dir>0?soldierSize: -4), s.y+soldierSize/2, s.dir)); }
+
+  function update(){ ctx.clearRect(0,0,canvas.width,canvas.height);
+    timer++;
+    // State machine
+    if(state===0){ // Duel 1
+      if(timer===1){ resetBattle(); spawnSoldier(0,80,1); spawnSoldier(390,80,-1); }
+      if(timer%30===0) shoot(soldiers[0]);
+      if(timer%50===0) shoot(soldiers[1]);
+      // move
+      soldiers.forEach(s=> s.x += s.dir);
+      lasers.forEach(l=> { l.x += l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
+      // collision
+      lasers.forEach(l=> soldiers.forEach(s=>{
+        if(s.alive && l.alive && l.x>=s.x && l.x<=s.x+soldierSize && Math.abs(l.y-s.y)<soldierSize){
+          s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;
+        }
+      }));
+      if(timer>200){ state=1; timer=0; }
+    } else if(state===1){ // Third enters
+      if(timer===1){ if(soldiers[0].alive) {} spawnSoldier(200,0,1); }
+      soldiers[2].y +=2;
+      if(timer===60){ shoot(soldiers[2]); }
+      lasers.forEach(l=>{ l.x+=l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
+      lasers.forEach(l=> soldiers.forEach(s=>{
+        if(s.alive && l.alive && Math.abs(l.x-(s.x+soldierSize/2))<4 && Math.abs(l.y-s.y)<soldierSize){
+          s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;
+        }
+      }));
+      if(timer>200){ state=2; timer=0; }
+    } else if(state===2){ // Duel 2 vs 2
+      if(timer===1){ resetBattle(); spawnSoldier(0,50,1); spawnSoldier(0,130,1); spawnSoldier(390,50,-1); spawnSoldier(390,130,-1); }
+      if(timer%40===0) soldiers.slice(0,2).forEach(s=> shoot(s));
+      if(timer%45===0) soldiers.slice(2).forEach(s=> shoot(s));
+      soldiers.forEach(s=> s.x+=s.dir);
+      lasers.forEach(l=>{ l.x+=l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
+      lasers.forEach(l=> soldiers.forEach(s=>{
+        if(s.alive && l.alive && Math.abs(l.x-(s.x+soldierSize/2))<4 && Math.abs(l.y-s.y)<soldierSize){
+          s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;
+        }
+      }));
+      if(timer>300){ state=3; timer=0; }
+    } else if(state===3){ // Final 1 vs 1
+      if(timer===1){ const live = soldiers.filter(s=>s.alive); resetBattle(); spawnSoldier(live[0].x,live[0].y,live[0].dir); spawnSoldier(live[1].x,live[1].y,live[1].dir);}      
+      if(timer%30===0) shoot(soldiers[0]); if(timer%50===0) shoot(soldiers[1]);
+      soldiers.forEach(s=> s.x+=s.dir);
+      lasers.forEach(l=>{ l.x+=l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
+      lasers.forEach(l=> soldiers.forEach(s=>{
+        if(s.alive && l.alive && Math.abs(l.x-(s.x+soldierSize/2))<4 && Math.abs(l.y-s.y)<soldierSize){ s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;} }));
+      if(timer>200){ state=0; timer=0; }
     }
-    class Laser {
-      constructor(x,y,dx) { this.x=x; this.y=y; this.dx=dx; }
-      update(){ this.x+=this.dx; }
-      draw(){ ctx.fillStyle='red'; ctx.fillRect(this.x,this.y,4,2); }
-    }
-    const all = { soldiers:[], lasers:[] };
-    function resetBattle(){ all.soldiers=[]; all.lasers=[]; stateIndex=0; frameCount=0; }
-    function updateBattle(){
-      frameCount++;
-      const state = states[stateIndex];
-      // clear
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      // state machine
-      if(state==='enter1'){
-        if(frameCount%10===0 && all.soldiers.length<1) all.soldiers.push(new Soldier(-soldierSize,50,'cyan'));
-        if(all.soldiers[0]) all.soldiers[0].x+=speed;
-        if(all.soldiers[0] && all.soldiers[0].x>=100) nextState();
-      } else if(state==='enter2'){
-        if(frameCount%10===0 && all.soldiers.length<2) all.soldiers.push(new Soldier(canvas.width,120,'magenta'));
-        if(all.soldiers[1]) all.soldiers[1].x-=speed;
-        if(all.soldiers[1] && all.soldiers[1].x<=canvas.width-100) nextState();
-      } else if(state==='duel1'){
-        if(frameCount%30===0) all.lasers.push(new Laser(all.soldiers[0].x+soldierSize,50+soldierSize/2,4));
-        all.lasers.forEach(l=>l.update());
-        if(frameCount>180) nextState();
-      } else if(state==='enter3'){
-        if(frameCount%10===0 && all.soldiers.length<3) all.soldiers.push(new Soldier(-soldierSize,150,'yellow'));
-        if(all.soldiers[2]) all.soldiers[2].x+=speed;
-        if(all.soldiers[2] && all.soldiers[2].x>=200) nextState();
-      } else if(state==='duel2'){
-        if(frameCount%25===0) all.lasers.push(new Laser(all.soldiers[2].x+soldierSize,150+soldierSize/2,4));
-        all.soldiers.splice(0,1); // перший зник
-        if(frameCount>360) nextState();
-      } else if(state==='duoEnter'){
-        if(frameCount%10===0 && all.soldiers.length<5) all.soldiers.push(new Soldier(canvas.width,50,'green'));
-        if(frameCount%10===5 && all.soldiers.length<6) all.soldiers.push(new Soldier(canvas.width,150,'orange'));
-        all.soldiers.filter((s,i)=>i>2).forEach(s=>s.x-=speed);
-        if(all.soldiers[5] && all.soldiers[5].x<=canvas.width-200) nextState();
-      } else if(state==='duoDuel'){
-        if(frameCount%20===0) all.lasers.push(new Laser(all.soldiers[0].x+soldierSize,all.soldiers[0].y+soldierSize/2,4));
-        if(frameCount%30===0) all.lasers.push(new Laser(all.soldiers[5].x,all.soldiers[5].y+soldierSize/2,-4));
-        if(frameCount>600) nextState();
-      } else if(state==='final'){
-        all.soldiers = [ all.soldiers[1] ];
-        all.soldiers[0].x=canvas.width/2; all.soldiers[0].y=canvas.height/2-8;
-        nextState();
-      } else if(state==='loop'){
-        if(frameCount>700){ resetBattle(); }
-      }
-      // draw lasers
-      all.lasers = all.lasers.filter(l=>l.x>0 && l.x<canvas.width);
-      all.lasers.forEach(l=>l.draw());
-      // draw soldiers
-      all.soldiers.forEach(s=>s.draw());
-      requestAnimationFrame(updateBattle);
-    }
-    function nextState(){ stateIndex++; frameCount=0; all.lasers=[]; }
-    // start
-    resetBattle(); updateBattle();
-  </script>
+    soldiers.forEach(s=>s.draw()); lasers.forEach(l=>l.draw());
+    requestAnimationFrame(update);
+  }
+  update();
+})();
+</script>
 </body>
 </html>

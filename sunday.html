@@ -1,180 +1,115 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Старша ліга | Лазертаг</title>
-  <!-- PapaParse для CSV -->
+  <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-  <!-- Шрифти -->
+  <!-- Pixel Font (e.g., Press Start 2P) -->
+  <link href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    /* Fonts */
-    @font-face { font-family: 'Siegra'; src: url('fonts/Siegra.woff2') format('woff2'); }
-    @font-face { font-family: 'Xanmono'; src: url('fonts/Xanmono.woff2') format('woff2'); }
-    /* Reset */
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      background: #000 url('assets/background_marathon.png') center/cover no-repeat;
-      color: #ddd;
-      font-family: 'Xanmono', monospace;
-      line-height:1.5;
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      background:url('assets/background_marathon.png') no-repeat center/cover;
+      font-family:'Press Start 2P', monospace;
+      color:#00ff00;
+      overflow-x:hidden;
     }
-    nav {
-      display:flex; justify-content:center; gap:2rem;
-      background: rgba(0,0,0,0.8); padding:1rem 0;
+    nav{display:flex;justify-content:center;gap:1rem;background:rgba(0,0,0,0.8);padding:.5rem;}
+    nav a{color:#00ff00;text-decoration:none;font-size:12px;}
+    nav a:hover{color:#ff00ff;}
+    .container{max-width:1000px;margin:1rem auto;padding:0 1rem;background:rgba(0,0,0,0.6);border:2px solid #00ff00;}
+    .test-season,.summary{font-size:12px;text-align:center;padding:.5rem;color:#ff0;}
+    .search-box{text-align:center;padding:.5rem}
+    .search-box input{
+      width:200px;padding:.5rem;border:2px solid #00ff00;background:#111;color:#0f0;font-family:inherit;
     }
-    nav a {
-      color:#39ff14; text-decoration:none; font-family:'Siegra'; font-size:1.1rem;
-      transition: color .3s;
+    .top-mvp{display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;padding:1rem}
+    .mvp-card{
+      width:150px;height:80px;background:rgba(255,0,255,0.2);border:2px solid #ff00ff;
+      position:relative;overflow:hidden;
     }
-    nav a:hover { color:#fff; }
-    .container { max-width:1200px; margin:2rem auto; padding:0 1rem; }
-    .test-season { text-align:center; color:#39ff14; margin-bottom:1rem; font-style:italic; }
-    .summary { text-align:center; color:#aaa; margin-bottom:1rem; }
-    .search-box { text-align:center; margin-bottom:1.5rem; }
-    .search-box input {
-      width:100%; max-width:300px; padding:.5rem; border:2px solid #39ff14;
-      border-radius:4px; background:transparent; color:#fff;
-      font-family:'Xanmono'; font-size:1rem;
+    .mvp-card:before{
+      content:'🏆';position:absolute;top:5px;left:5px;font-size:16px;
+      animation:pulse 1s infinite alternate;
     }
-    .top-mvp {
-      display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;
-      margin-bottom:2rem;
+    .mvp-card h3{font-size:12px;color:#fff;text-align:center;margin-top:20px;}
+    .mvp-card .count{position:absolute;bottom:5px;left:5px;color:#0ff;font-size:12px;}
+    @keyframes pulse{from{opacity:1;}to{opacity:.4;}}
+    .table-container{overflow-x:auto;padding-bottom:1rem}
+    table{width:100%;border-collapse:collapse;font-size:10px;}
+    thead th{position:sticky;top:0;background:#000;color:#0f0;padding:.5rem;}
+    td,th{border:1px solid #0f0;padding:.5rem;text-align:center;}
+    tbody tr{transition:background .3s;}
+    tbody tr:nth-child(odd){background:rgba(0,255,0,0.05);}
+    tbody tr:hover{background:rgba(255,0,255,0.1);}
+    .rank-S{background:rgba(128,0,128,0.2);} /* purple */
+    .rank-A{background:rgba(255,0,0,0.2);}   /* red */
+    .rank-B{background:rgba(255,255,0,0.2);} /* yellow */
+    .rank-C{background:rgba(0,255,255,0.2);} /* cyan */
+    .rank-D{background:rgba(0,255,0,0.2);}   /* green */
+    .hidden{display:none;}
+    .show-more{display:block;margin:0 auto;padding:.5rem 1rem;color:#000;background:#0f0;border:none;cursor:pointer;font-size:12px;}
+    /* Sprite animation at top */
+    .sprite-run{
+      position:absolute;bottom:10px;left:10px;width:64px;height:64px;
+      background:url('assets/sprite_run.png') no-repeat;
+      image-rendering:pixelated;
+      animation:run-cycle .5s steps(6) infinite, move-right 10s linear infinite;
     }
-    .mvp-card {
-      background:rgba(57,255,20,0.1); border:2px solid #39ff14;
-      border-radius:8px; width:140px; padding:1rem;
-      text-align:center; position:relative;
-      overflow:hidden;
-    }
-    .mvp-card::before {
-      content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%;
-      background:radial-gradient(circle at center, rgba(57,255,20,0.3), transparent);
-      animation: pulse 3s infinite;
-    }
-    .mvp-card div, .mvp-card h3 { position:relative; z-index:1; }
-    .mvp-card h3 { font-family:'Siegra'; font-size:1.2rem; margin:.5rem 0; }
-    .mvp-card .count { font-size:1rem; font-weight:bold; color:#fff; }
-    @keyframes pulse { 0%{transform:scale(0);}50%{transform:scale(1);}100%{transform:scale(0);} }
-    .table-container { overflow-x:auto; }
-    table {
-      width:100%; border-collapse:collapse; min-width:800px;
-      font-family:'Xanmono';
-    }
-    thead th {
-      position:sticky; top:0; background:rgba(0,0,0,0.85); color:#39ff14;
-      padding:.75rem; font-family:'Siegra'; font-size:1rem;
-    }
-    th, td {
-      padding:.5rem; border-bottom:1px solid rgba(57,255,20,0.2);
-      text-align:center;
-    }
-    tbody tr { transition: background .2s; }
-    tbody tr:hover { background:rgba(57,255,20,0.1); }
-    /* Rank row highlight via left border */
-    .rank-S td { border-left:4px solid #ff00ff; }
-    .rank-A td { border-left:4px solid #ff0000; }
-    .rank-B td { border-left:4px solid #ffff00; }
-    .rank-C td { border-left:4px solid #00ffff; }
-    .rank-D td { border-left:4px solid #39ff14; }
-    .hidden { display:none; }
-    .show-more {
-      display:block; margin:2rem auto; padding:.75rem 1.5rem;
-      background:#39ff14; color:#000; border:none; border-radius:4px;
-      font-family:'Siegra'; cursor:pointer;
-    }
-    @media(max-width:600px) {
-      .mvp-card { width:45%; }
-      table { min-width:600px; }
-    }
+    @keyframes run-cycle{from{background-position:0 0;}to{background-position:-384px 0;}}
+    @keyframes move-right{from{transform:translateX(0);}to{transform:translateX(90vw);} }
+    @media(max-width:600px){nav a{font-size:8px;}table{font-size:8px;} .mvp-card{width:120px;height:60px;}}
   </style>
 </head>
 <body>
+  <div class="sprite-run"></div>
   <nav>
     <a href="index.html">Молодша Ліга</a>
-    <a href="sunday.html" style="border-bottom:2px solid #39ff14">Старша Ліга</a>
+    <a href="sunday.html" style="border-bottom:2px solid #0f0">Старша Ліга</a>
     <a href="rules.html">Правила</a>
     <a href="about.html">Про клуб</a>
   </nav>
-
   <div class="container">
-    <div class="test-season">⚠️ Тестовий сезон. Дані можуть змінюватись.</div>
+    <div class="test-season">⚠️ Тестовий сезон</div>
     <div class="summary" id="summary"></div>
-    <div class="search-box">
-      <input type="text" id="search" placeholder="Пошук нікнейму…" />
-    </div>
+    <div class="search-box"><input id="search" placeholder="Пошук…"/></div>
     <div class="top-mvp" id="top-mvp"></div>
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Місце</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
-            <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>% Win</th><th>MVP</th>
-          </tr>
-        </thead>
-        <tbody id="ranking"></tbody>
-      </table>
-    </div>
-    <button class="show-more" id="toggle">Показати більше</button>
+    <div class="table-container"><table><thead><tr>
+        <th>Місце</th><th>Нік</th><th>Ранг</th><th>Бали</th>
+        <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>%</th><th>MVP</th>
+      </tr></thead><tbody id="ranking"></tbody></table></div>
+    <button id="toggle" class="show-more">Показати більше</button>
   </div>
-
   <script>
   (function(){
-    const rankingURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
-    const gamesURL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
-    const alias = {"Zavodchanyn":"Romario","Mariko":"Gidora","Timabuilding":"Бойбуд"};
-
+    const rankingURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
+    const gamesURL  ="https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
+    const alias={Zavodchanyn:'Romario',Mariko:'Gidora',Timabuilding:'Бойбуд'};
     async function loadData(){
-      const [rText,gText] = await Promise.all([
-        fetch(rankingURL).then(r=>r.text()),
-        fetch(gamesURL).then(r=>r.text())
-      ]);
-      const rank = Papa.parse(rText,{header:true,skipEmptyLines:true}).data;
-      const games= Papa.parse(gText,{header:true,skipEmptyLines:true}).data;
-
-      // Stats since 22.04.2025 06:14:07
-      const stats = {};
-      const sunday = games.filter(g=>g.League==='sunday' && new Date(g.Timestamp) >= new Date('2025-04-22T06:14:07'));
-      sunday.forEach(g=>{
-        let t1=g.Team1.split(',').map(n=>alias[n.trim()]||n.trim());
-        let t2=g.Team2.split(',').map(n=>alias[n.trim()]||n.trim());
-        const winTeam = (g.Winner==='team1'?t1:(g.Winner==='team2'?t2:[]));
-        t1.concat(t2).forEach(n=>{ stats[n]=stats[n]||{games:0,wins:0,mvp:0}; stats[n].games++; });
-        winTeam.forEach(n=>stats[n].wins++);
-        const m = alias[g.MVP]||g.MVP; if(stats[m]) stats[m].mvp++;
-      });
-      // Summary
-      const totalGames = sunday.length;
-      const dates = sunday.map(g=>new Date(g.Timestamp)).filter(d=>!isNaN(d));
-      const minD = dates.length?new Date(Math.min(...dates)):null;
-      const maxD = dates.length?new Date(Math.max(...dates)):null;
-      document.getElementById('summary').textContent =
-        `Ігор: ${totalGames} | Період: ${formatDate(minD)} — ${formatDate(maxD)}`;
-
-      // Players
-      const players = rank.map(r=>{
-        const nick=alias[r.Nickname]||r.Nickname;
-        return {
-          nickname:nick,
-          points:+r.Points||0,
-          games:stats[nick]?.games||0,
-          wins: stats[nick]?.wins||0,
-          losses:(stats[nick]?.games||0)-(stats[nick]?.wins||0),
-          mvp: stats[nick]?.mvp||0
-        };
-      }).sort((a,b)=>b.points-a.points);
-
-      renderTopMVP(players);
-      renderTable(players);
-      initSearch(); initToggle();
+      const [r,g]=await Promise.all([fetch(rankingURL).then(r=>r.text()),fetch(gamesURL).then(r=>r.text())]);
+      const rank=Papa.parse(r,{header:true,skipEmptyLines:true}).data;
+      const games=Papa.parse(g,{header:true,skipEmptyLines:true}).data.filter(x=>x.League==='sunday');
+      const stats={};
+      games.forEach(gm=>{
+        let t1=gm.Team1.split(',').map(n=>alias[n.trim()]||n.trim()),t2=gm.Team2.split(',').map(n=>alias[n.trim()]||n.trim());
+        const win=gm.Winner==='team1'?t1:gm.Winner==='team2'?t2:[],lose=win===t1?t2:t1;
+        t1.concat(t2).forEach(n=>{stats[n]=stats[n]||{games:0,wins:0,mvp:0};stats[n].games++;});
+        win.forEach(n=>stats[n].wins++);let m=alias[gm.MVP]||gm.MVP;if(stats[m])stats[m].mvp++;});
+      const total=games.length;const dates=games.map(n=>new Date(n.Timestamp)).filter(d=>!isNaN(d));
+      const minD=dates.reduce((a,b)=>a<b?a:b),maxD=dates.reduce((a,b)=>a>b?a:b);
+      document.getElementById('summary').textContent=`Ігор: ${total}, період ${format(minD)}–${format(maxD)}`;
+      const players=rank.map(r=>{const nick=alias[r.Nickname]||r.Nickname;const p={nickname:nick,points:+r.Points||0,games:stats[nick]?.games||0,wins:stats[nick]?.wins||0,mvp:stats[nick]?.mvp||0};p.losses=p.games-p.wins; p.winRate=p.games?((p.wins/p.games*100).toFixed(1)):'-';return p;}).sort((a,b)=>b.points-a.points);
+      renderTop(players);renderTable(players);initSearch();initToggle();
     }
-    function formatDate(d){ if(!d) return '-'; const dd=('0'+d.getDate()).slice(-2); const mm=('0'+(d.getMonth()+1)).slice(-2); return `${dd}.${mm}`; }
-    function renderTopMVP(pl){ const top=pl.slice(0,3), el=document.getElementById('top-mvp'); el.innerHTML=''; top.forEach(p=>{ const c=document.createElement('div'); c.className='mvp-card'; c.innerHTML= `<div style="font-size:2.5rem; color:#39ff14;">🔥</div><h3>${p.nickname}</h3><div class="count">${p.mvp||'-'} MVP</div>`; el.appendChild(c);} ); }
-    function getRankClass(points){ if(points>=1200) return 'rank-S'; if(points>=800) return 'rank-A'; if(points>=500) return 'rank-B'; if(points>=200) return 'rank-C'; return 'rank-D'; }
-    function renderTable(pl){ const tb=document.getElementById('ranking'); tb.innerHTML=''; pl.forEach((p,i)=>{ const tr=document.createElement('tr'); const cls=getRankClass(p.points); tr.className=cls + (i>=10?' hidden':''); tr.innerHTML=`<td>${i+1}</td><td>${p.nickname}</td><td>${cls.split('-')[1]}</td><td>${p.points}</td><td>${p.games||'-'}</td><td>${p.wins||'-'}</td><td>${p.losses||'-'}</td><td>${p.games?((p.wins/p.games*100).toFixed(2)+'%'):'-'}</td><td>${p.mvp||'-'}</td>`; tb.appendChild(tr);} ); }
-    function initSearch(){ const inp=document.getElementById('search'); inp.addEventListener('input',e=>{ const q=e.target.value.toLowerCase(); document.querySelectorAll('#ranking tr').forEach((tr,i)=>tr.style.display = tr.textContent.toLowerCase().includes(q)?'':'none'); }); }
-    function initToggle(){ const btn=document.getElementById('toggle'); btn.addEventListener('click',()=>{ const show=btn.textContent.includes('Топ-10'); document.querySelectorAll('#ranking tr').forEach((tr,i)=>{ if(i>=10) tr.style.display = show?'':'none'; }); btn.textContent = show?'Показати більше':'Показати Топ-10'; }); }
-    document.addEventListener('DOMContentLoaded', loadData);
+    function format(d){if(!d)return'-';return('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2);}    
+    function renderTop(pl){const top=pl.slice(0,3),c=document.getElementById('top-mvp');c.innerHTML='';top.forEach(p=>{const d=document.createElement('div');d.className='mvp-card';d.innerHTML=`<h3>${p.nickname}</h3><div class='count'>${p.mvp} MVP</div>`;c.appendChild(d);});}
+    function getRankClass(pt){return pt>=1200?'rank-S':pt>=800?'rank-A':pt>=500?'rank-B':pt>=200?'rank-C':'rank-D';}
+    function renderTable(pl){const tb=document.getElementById('ranking');tb.innerHTML='';pl.forEach((p,i)=>{const tr=document.createElement('tr');tr.className=getRankClass(p.points)+(i>=10?' hidden':'');tr.innerHTML=`<td>${i+1}</td><td>${p.nickname}</td><td>${getRankClass(p.points).split('-')[1]}</td><td>${p.points}</td><td>${p.games||'-'}</td><td>${p.wins||'-'}</td><td>${p.losses||'-'}</td><td>${p.winRate!='-'?p.winRate+'%':'-'}</td><td>${p.mvp||'-'}</td>`;tb.appendChild(tr);});}
+    function initSearch(){document.getElementById('search').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#ranking tr').forEach((tr,i)=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none';});});}
+    function initToggle(){const btn=document.getElementById('toggle');btn.addEventListener('click',()=>{const show=btn.textContent.includes('Топ-10');document.querySelectorAll('#ranking tr').forEach((tr,i)=>{if(i>=10)tr.style.display=show?'':'none';});btn.textContent=show?'Показати більше':'Показати Топ-10';});}
+    document.addEventListener('DOMContentLoaded',loadData);
   })();
   </script>
 </body>

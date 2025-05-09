@@ -5,179 +5,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Старша Ліга | Лазертаг</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin:0; padding:0;
+        body { font-family: 'Segoe UI', sans-serif; margin:0; padding:0;
                background: url('assets/backgr.jpg') no-repeat center center fixed;
                background-size: cover; color: #fff; }
-        nav { background: rgba(0,0,0,0.7); padding:10px; display:flex; justify-content:center; gap:20px; }
+        nav { background: rgba(0,0,0,0.7); display:flex; justify-content:center;
+              padding:10px; gap:20px; }
         nav a { color:#f39c12; text-decoration:none; font-weight:bold; }
         nav a.active, nav a:hover { color:#ffd700; }
-        .container { max-width: 95%; margin: 20px auto; background: rgba(0,0,0,0.6);
-                     padding:20px; border-radius:12px; box-shadow:0 0 20px rgba(255,165,0,0.5); }
-        h1 { font-size:2em; color:#f39c12; text-shadow:2px 2px 8px #000; }
-        .flex { display:flex; flex-wrap:wrap; gap:20px; }
-        .table-wrapper { flex:2 1 600px; max-height:500px; overflow:auto; }
-        table { width:100%; border-collapse:collapse; }
-        th, td { padding:8px; border:1px solid #444; text-align:center; }
-        thead { position:sticky; top:0; background:#f39c12; color:#000; }
-        .mvp-wrapper { flex:1 1 200px; background:rgba(0,0,0,0.8); padding:10px; border-radius:8px;
-                       max-height:500px; overflow:auto; }
-        .mvp-wrapper h2 { margin-top:0; color:#f39c12; }
-        .search { margin:10px 0; }
-        .search input { padding:8px; border:none; border-radius:5px; width:200px; }
-        .btn { background:#f39c12; color:#000; border:none; padding:10px 16px; cursor:pointer;
-               border-radius:5px; font-weight:bold; }
-        .hidden { display:none; }
-        @media(max-width:768px) { .flex { flex-direction:column; } }
+        .container { max-width:1000px; margin:20px auto; background:rgba(0,0,0,0.7);
+                     border-radius:10px; padding:20px; box-shadow:0 0 15px rgba(255,165,0,0.5); }
+        h1 { text-align:center; color:#f39c12; margin-bottom:10px; }
+        .stats-grid { display:grid; grid-template-columns:1fr; gap:20px; }
+        @media(min-width:800px) { .stats-grid{ grid-template-columns:2fr 1fr; } }
+        .table-container { position:relative; }
+        table { width:100%; border-collapse:collapse; background:rgba(26,26,26,0.9); }
+        th,td { padding:8px; border:1px solid #444; text-align:center; }
+        thead th { background:#f39c12; color:#000; position:sticky; top:0; }
+        .show-more { margin-top:10px; padding:10px 20px; background:#f39c12; color:#000;
+                     border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
+        .hidden-players { display:none; }
+        .search-box { text-align:center; margin-bottom:15px; }
+        .search-box input { width:80%; max-width:300px; padding:8px; border:none;
+                             border-radius:5px; }
     </style>
-    <!-- Papa Parse CDN -->
+    <!-- Papa Parse for CSV parsing -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 </head>
 <body>
 <nav>
-  <a href="index.html">Молодша Ліга</a>
-  <a href="sunday.html" class="active">Старша Ліга</a>
-  <a href="rules.html">Правила</a>
-  <a href="about.html">Про клуб</a>
+    <a href="index.html" id="nav-kids">Молодша Ліга</a>
+    <a href="sunday.html" id="nav-sunday" class="active">Старша Ліга</a>
+    <a href="rules.html" id="nav-rules">Правила</a>
+    <a href="about.html" id="nav-about">Про клуб</a>
 </nav>
 <div class="container">
-  <h1>Старша Ліга | Рейтинг гравців</h1>
-  <p>⚠️ Тестовий сезон. Дані оновлюються автоматично.</p>
-
-  <div class="search">
-    <input id="search" type="text" placeholder="Пошук нікнейму..." oninput="filterRows()">
-  </div>
-
-  <div class="flex">
-    <!-- Main Ranking -->
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Місце</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
-            <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>WinRate (%)</th><th>MVP</th>
-          </tr>
-        </thead>
-        <tbody id="main-table"></tbody>
-      </table>
-      <button class="btn" id="toggle-btn" onclick="toggleMore()">Показати більше</button>
+    <h1>Старша ліга | Рейтинг гравців</h1>
+    <p style="text-align:center; color:#ffd700;">⚠️ Це тестовий сезон. Дані можуть змінюватись.</p>
+    <div class="search-box">
+        <input id="searchInput" oninput="filterTable()" placeholder="Пошук нікнейму...">
     </div>
-    <!-- Top MVP -->
-    <div class="mvp-wrapper">
-      <h2>Топ 3 MVP</h2>
-      <table>
-        <thead><tr><th>Нікнейм</th><th>MVP</th></tr></thead>
-        <tbody id="mvp-table"></tbody>
-      </table>
+    <div class="stats-grid">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Місце</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
+                        <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>% Перемог</th><th>MVP</th>
+                    </tr>
+                </thead>
+                <tbody id="ranking-table"></tbody>
+            </table>
+            <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+        </div>
+        <div class="table-container">
+            <h2 style="color:#ffd700;">Топ 3 MVP</h2>
+            <table>
+                <thead><tr><th>Нікнейм</th><th>MVP</th></tr></thead>
+                <tbody id="top-mvp-table"></tbody>
+            </table>
+        </div>
     </div>
-  </div>
 </div>
 <script>
-// URLs: publish 'sunday' sheet and 'games' sheet separately to CSV
-const rankingURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
-const gamesURL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pubhtml?gid=249347260&single=true";
-let allRows = [];
+    const rankingURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv';
+    const gamesURL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv'; // gid for games sheet
 
-// Utility: assign rank icon based on points
-function getRank(p) {
-  if (p>=1200) return {rank:'S',icon:'🟣'};
-  if (p>=800)  return {rank:'A',icon:'🔴'};
-  if (p>=500)  return {rank:'B',icon:'🟡'};
-  if (p>=200)  return {rank:'C',icon:'🔵'};
-  return              {rank:'D',icon:'🟢'};
-}
+    let allRows = [];
 
-// Load and merge data
-function loadData(){
-  let rankData;
-  Papa.parse(rankingURL, {
-    download:true, header:true, complete: (r1)=>{
-      rankData = r1.data;
-      Papa.parse(gamesURL, {
-        download:true, header:true, complete: (r2)=>{
-          const games = r2.data;
-          const stats = {};
-          // aggregate only sunday league
-          games.forEach(g=>{
-            if (g.League!=='sunday') return;
-            const t1 = g.Team1.split(',').map(s=>s.trim().split(' (')[0]);
-            const t2 = g.Team2.split(',').map(s=>s.trim().split(' (')[0]);
-            let win=[], lose=[];
-            if (g.Winner==='team1') win=t1, lose=t2;
-            else if (g.Winner==='team2') win=t2, lose=t1;
-            else if (t1.includes(g.Winner)) win=t1, lose=t2;
-            else if (t2.includes(g.Winner)) win=t2, lose=t1;
-            t1.concat(t2).forEach(p=>{
-              if (!p) return;
-              if (!stats[p]) stats[p]={games:0,wins:0,losses:0,mvp:0};
-              stats[p].games++;
-            });
-            win.forEach(p=>stats[p].wins++);
-            lose.forEach(p=>stats[p].losses++);
-            if (g.MVP && stats[g.MVP]) stats[g.MVP].mvp++;
-          });
-          // merge aliases
-          const aliases={'Mariko':'Gidora','Zavodchanyn':'Romario','Timabuilding':'Бойбуд'};
-          Object.entries(aliases).forEach(([old,newn])=>{
-            if(stats[old]){
-              stats[newn]=stats[newn]||{games:0,wins:0,losses:0,mvp:0};
-              ['games','wins','losses','mvp'].forEach(k=>stats[newn][k]+=stats[old][k]);
-              delete stats[old];
-            }
-          });
-          // combine ranking & stats
-          const players = rankData.map(p=>({
-            nickname:p.Нікнейм, points:+p.Бали || 0,
-            games:stats[p.Нікнейм]?.games||0,
-            wins: stats[p.Нікнейм]?.wins||0,
-            losses:stats[p.Нікнейм]?.losses||0,
-            mvp:   stats[p.Нікнейм]?.mvp||0
-          }));
-          renderTables(players);
-        }
-      });
+    function extractPlayers(str) {
+        if (!str) return [];
+        return str.split(',').map(p=>p.trim().split(' (')[0]).filter(Boolean);
     }
-  });
-}
 
-// Render main and MVP tables
-function renderTables(players){
-  // main
-  players.sort((a,b)=>b.points-a.points);
-  const mt= document.getElementById('main-table'); mt.innerHTML=''; allRows=[];
-  players.forEach((p,i)=>{
-    const {rank,icon}=getRank(p.points);
-    const row=document.createElement('tr');
-    row.innerHTML=`<td>${i+1}</td><td>${icon} ${p.nickname}</td>
-      <td>${rank}</td><td>${p.points}</td>
-      <td>${p.games}</td><td>${p.wins}</td>
-      <td>${p.losses}</td><td>${p.games?((p.wins/p.games)*100).toFixed(2):'0.00'}</td>
-      <td>${p.mvp}</td>`;
-    if(i>=10) row.classList.add('hidden');
-    mt.appendChild(row);
-    allRows.push(row);
-  });
-  // MVP top3
-  const mv= document.getElementById('mvp-table'); mv.innerHTML='';
-  players.sort((a,b)=>b.mvp-a.mvp).slice(0,3)
-    .forEach(p=>{ mv.innerHTML+=`<tr><td>${p.nickname}</td><td>${p.mvp}</td></tr>`; });
-}
+    function loadData() {
+        Papa.parse(rankingURL, { download:true, header:true, skipEmptyLines:true,
+            complete: rRes => {
+                const ranking = rRes.data.map((p,i)=>({
+                    place:i+1,
+                    nickname:p['Нікнейм']||p['Nickname'],
+                    points:+p['Бали']||+p['Points']||0
+                }));
+                Papa.parse(gamesURL, { download:true, header:true, skipEmptyLines:true,
+                    complete: gRes => {
+                        const stats = {};
+                        gRes.data.forEach(row=>{
+                            if (row['League'] !== 'sunday') return;
+                            const t1=extractPlayers(row['Team1']); const t2=extractPlayers(row['Team2']);
+                            let winTeam = row['Winner']==='team1'? t1 : row['Winner']==='team2'? t2 : (t1.includes(row['Winner'])?t1:t2);
+                            let loseTeam = winTeam===t1? t2 : t1;
+                            // init
+                            [...t1,...t2].forEach(p=>{
+                                if(!stats[p]) stats[p]={games:0,wins:0,losses:0,mvp:0};
+                                stats[p].games++;
+                            });
+                            winTeam.forEach(p=>stats[p].wins++);
+                            loseTeam.forEach(p=>stats[p].losses++);
+                            const mvp=row['MVP']; if(mvp && stats[mvp]) stats[mvp].mvp++;
+                        });
+                        renderTables(ranking, stats);
+                    }
+                });
+            }
+        });
+    }
 
-// Search and toggle
-function filterRows(){
-  const q=document.getElementById('search').value.toLowerCase();
-  allRows.forEach((r,i)=>{
-    r.style.display = q? r.children[1].textContent.toLowerCase().includes(q)?'table-row':'none' : i<10?'table-row':'none';
-  });
-  document.getElementById('toggle-btn').textContent = q?'Показати Топ-10':'Показати більше';
-}
-function toggleMore(){
-  const btn=document.getElementById('toggle-btn');
-  const showAll = btn.textContent==='Показати більше';
-  allRows.forEach((r,i)=>{ if(i>=10) r.style.display= showAll?'table-row':'none'; });
-  btn.textContent= showAll?'Показати Топ-10':'Показати більше';
-}
+    function renderTables(ranking, stats) {
+        const table = document.getElementById('ranking-table'); table.innerHTML=''; allRows=[];
+        ranking.forEach((p,i)=>{
+            const s = stats[p.nickname]||{games:0,wins:0,losses:0,mvp:0};
+            const winRate = s.games?((s.wins/s.games)*100).toFixed(2):'0.00';
+            const tr = document.createElement('tr');
+            tr.innerHTML=`
+                <td>${p.place}</td><td>${p.nickname}</td><td>${getRank(p.points)}</td>
+                <td>${p.points}</td><td>${s.games}</td><td>${s.wins}</td>
+                <td>${s.losses}</td><td>${winRate}</td><td>${s.mvp}</td>`;
+            if(i>=10) tr.classList.add('hidden-players');
+            table.appendChild(tr); allRows.push(tr);
+        });
+        renderTopMVP(stats);
+    }
 
-document.addEventListener('DOMContentLoaded', loadData);
+    function getRank(points) {
+        if(points>=1200) return 'S ранг';
+        if(points>=800) return 'A ранг';
+        if(points>=500) return 'B ранг';
+        if(points>=200) return 'C ранг';
+        return 'D ранг';
+    }
+
+    function renderTopMVP(stats) {
+        const top = Object.entries(stats).sort((a,b)=>b[1].mvp-a[1].mvp).slice(0,3);
+        const mvpTable = document.getElementById('top-mvp-table'); mvpTable.innerHTML='';
+        top.forEach(([nick,s])=>{
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td>${nick}</td><td>${s.mvp}</td>`;
+            mvpTable.appendChild(tr);
+        });
+    }
+
+    function filterTable() {
+        const q=document.getElementById('searchInput').value.toLowerCase();
+        allRows.forEach((r,i)=>{
+            r.style.display = (!q || r.children[1].textContent.toLowerCase().includes(q))
+                && (q || i<10) ? 'table-row':'none';
+        });
+        document.querySelector('.show-more').textContent = q?'Показати Топ-10':'Показати більше';
+    }
+
+    function togglePlayers() {
+        const show=!allRows[10]||allRows[10].classList.contains('hidden-players');
+        allRows.forEach((r,i)=>{ if(i>=10) r.style.display = show?'table-row':'none'; });
+        document.querySelector('.show-more').textContent = show?'Показати Топ-10':'Показати більше';
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
 </script>
 </body>
 </html>

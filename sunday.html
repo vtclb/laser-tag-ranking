@@ -1,114 +1,149 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Старша ліга | Лазертаг</title>
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-  <!-- Pixel Font (e.g., Press Start 2P) -->
-  <link href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <!-- Pixel Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      background:url('assets/background_marathon.png') no-repeat center/cover;
-      font-family:'Press Start 2P', monospace;
-      color:#00ff00;
-      overflow-x:hidden;
+    * {box-sizing:border-box;margin:0;padding:0}
+    body {
+      background: #1e1e2f;
+      color: #e0e0e0;
+      font-family: 'Press Start 2P', cursive;
+      overflow-x: hidden;
     }
-    nav{display:flex;justify-content:center;gap:1rem;background:rgba(0,0,0,0.8);padding:.5rem;}
-    nav a{color:#00ff00;text-decoration:none;font-size:12px;}
-    nav a:hover{color:#ff00ff;}
-    .container{max-width:1000px;margin:1rem auto;padding:0 1rem;background:rgba(0,0,0,0.6);border:2px solid #00ff00;}
-    .test-season,.summary{font-size:12px;text-align:center;padding:.5rem;color:#ff0;}
-    .search-box{text-align:center;padding:.5rem}
-    .search-box input{
-      width:200px;padding:.5rem;border:2px solid #00ff00;background:#111;color:#0f0;font-family:inherit;
+    canvas#gameCanvas {
+      display: block;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 200px;
+      z-index: 1;
     }
-    .top-mvp{display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;padding:1rem}
-    .mvp-card{
-      width:150px;height:80px;background:rgba(255,0,255,0.2);border:2px solid #ff00ff;
-      position:relative;overflow:hidden;
+    .container {
+      position: relative;
+      padding-top: 220px;
+      max-width: 1000px; margin: auto;
     }
-    .mvp-card:before{
-      content:'🏆';position:absolute;top:5px;left:5px;font-size:16px;
-      animation:pulse 1s infinite alternate;
+    nav { display:flex; justify-content:center; gap:20px; margin-bottom:20px; }
+    nav a {
+      color:#8fbcd4; text-decoration:none; font-size:14px;
+      padding:5px 10px; border-radius:4px;
+      transition:background .3s;
     }
-    .mvp-card h3{font-size:12px;color:#fff;text-align:center;margin-top:20px;}
-    .mvp-card .count{position:absolute;bottom:5px;left:5px;color:#0ff;font-size:12px;}
-    @keyframes pulse{from{opacity:1;}to{opacity:.4;}}
-    .table-container{overflow-x:auto;padding-bottom:1rem}
-    table{width:100%;border-collapse:collapse;font-size:10px;}
-    thead th{position:sticky;top:0;background:#000;color:#0f0;padding:.5rem;}
-    td,th{border:1px solid #0f0;padding:.5rem;text-align:center;}
-    tbody tr{transition:background .3s;}
-    tbody tr:nth-child(odd){background:rgba(0,255,0,0.05);}
-    tbody tr:hover{background:rgba(255,0,255,0.1);}
-    .rank-S{background:rgba(128,0,128,0.2);} /* purple */
-    .rank-A{background:rgba(255,0,0,0.2);}   /* red */
-    .rank-B{background:rgba(255,255,0,0.2);} /* yellow */
-    .rank-C{background:rgba(0,255,255,0.2);} /* cyan */
-    .rank-D{background:rgba(0,255,0,0.2);}   /* green */
-    .hidden{display:none;}
-    .show-more{display:block;margin:0 auto;padding:.5rem 1rem;color:#000;background:#0f0;border:none;cursor:pointer;font-size:12px;}
-    /* Sprite animation at top */
-    .sprite-run{
-      position:absolute;bottom:10px;left:10px;width:64px;height:64px;
-      background:url('assets/sprite_run.png') no-repeat;
-      image-rendering:pixelated;
-      animation:run-cycle .5s steps(6) infinite, move-right 10s linear infinite;
+    nav a.active, nav a:hover { background: rgba(143,188,212,0.2); }
+    .test-season { text-align:center; margin-bottom:10px; color:#ffb86c; }
+    .summary { text-align:center; margin-bottom:20px; font-size:12px; color:#a0a0a0; }
+    .search-box { text-align:center; margin-bottom:10px; }
+    .search-box input {
+      font-family:monospace; width:80%; max-width:300px;
+      padding:8px; border:none; border-radius:4px;
+      background:#2e2e3f; color:#e0e0e0;
     }
-    @keyframes run-cycle{from{background-position:0 0;}to{background-position:-384px 0;}}
-    @keyframes move-right{from{transform:translateX(0);}to{transform:translateX(90vw);} }
-    @media(max-width:600px){nav a{font-size:8px;}table{font-size:8px;} .mvp-card{width:120px;height:60px;}}
+    .top-mvp { display:flex; justify-content:center; gap:20px; margin-bottom:20px; }
+    .mvp-card {
+      background:rgba(255,215,0,0.1); border:1px solid #ffd700;
+      padding:10px; width:150px; text-align:center;
+      position: relative; overflow:hidden;
+    }
+    .mvp-card h3 { margin:10px 0; font-size:14px; }
+    .mvp-card .count { font-size:16px; color:#ffd700; }
+    .mvp-card::after {
+      content:''; position:absolute; top:0; left:0;
+      width:100%; height:100%; background:rgba(255,215,0,0.2);
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% {opacity:0}
+      50% {opacity:0.3}
+    }
+    .table-container { overflow-x:auto; }
+    table {
+      width:100%; border-collapse:collapse; font-size:12px;
+      background:#2e2e3f; border:1px solid #444;
+      position: relative; z-index:2;
+    }
+    thead th {
+      position:sticky; top:0; background:#44475a; color:#f8f8f2;
+      padding:10px;
+    }
+    tbody tr { transition:background .3s; }
+    tbody tr:nth-child(odd) { background:rgba(255,255,255,0.05); }
+    tbody tr:hover { background:rgba(255,255,255,0.1); }
+    td, th { padding:8px; text-align:center; }
+    .hidden { display:none; }
+    .show-more {
+      display:block; margin:20px auto; padding:10px 20px;
+      background:#6272a4; color:#f8f8f2; border:none; border-radius:4px;
+      cursor:pointer; font-size:12px;
+    }
+    /* Rank highlight bars */
+    .rank-S td:first-child { border-left:4px solid #ff79c6; }
+    .rank-A td:first-child { border-left:4px solid #ff5555; }
+    .rank-B td:first-child { border-left:4px solid #f1fa8c; }
+    .rank-C td:first-child { border-left:4px solid #8be9fd; }
+    .rank-D td:first-child { border-left:4px solid #50fa7b; }
+    @media(max-width:600px){ .search-box input{width:95%;} }
   </style>
 </head>
 <body>
-  <div class="sprite-run"></div>
-  <nav>
-    <a href="index.html">Молодша Ліга</a>
-    <a href="sunday.html" style="border-bottom:2px solid #0f0">Старша Ліга</a>
-    <a href="rules.html">Правила</a>
-    <a href="about.html">Про клуб</a>
-  </nav>
+  <canvas id="gameCanvas"></canvas>
   <div class="container">
-    <div class="test-season">⚠️ Тестовий сезон</div>
+    <nav>
+      <a href="index.html">Молодша Ліга</a>
+      <a href="sunday.html" class="active">Старша Ліга</a>
+      <a href="rules.html">Правила</a>
+      <a href="about.html">Про клуб</a>
+    </nav>
+    <div class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</div>
     <div class="summary" id="summary"></div>
-    <div class="search-box"><input id="search" placeholder="Пошук…"/></div>
+    <div class="search-box"><input id="search" placeholder="Пошук ніку…"></div>
     <div class="top-mvp" id="top-mvp"></div>
-    <div class="table-container"><table><thead><tr>
-        <th>Місце</th><th>Нік</th><th>Ранг</th><th>Бали</th>
-        <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>%</th><th>MVP</th>
-      </tr></thead><tbody id="ranking"></tbody></table></div>
-    <button id="toggle" class="show-more">Показати більше</button>
+    <div class="table-container">
+      <table><thead><tr>
+        <th>Місце</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
+        <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>%Win</th><th>MVP</th>
+      </tr></thead><tbody id="ranking"></tbody></table>
+    </div>
+    <button class="show-more" id="toggle">Показати більше</button>
   </div>
   <script>
   (function(){
     const rankingURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
     const gamesURL  ="https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
-    const alias={Zavodchanyn:'Romario',Mariko:'Gidora',Timabuilding:'Бойбуд'};
+    const alias={"Zavodchanyn":"Romario","Mariko":"Gidora","Timabuilding":"Бойбуд"};
+    let allRows=[];
     async function loadData(){
-      const [r,g]=await Promise.all([fetch(rankingURL).then(r=>r.text()),fetch(gamesURL).then(r=>r.text())]);
-      const rank=Papa.parse(r,{header:true,skipEmptyLines:true}).data;
-      const games=Papa.parse(g,{header:true,skipEmptyLines:true}).data.filter(x=>x.League==='sunday');
+      const [rText,gText]=await Promise.all([fetch(rankingURL).then(r=>r.text()),fetch(gamesURL).then(r=>r.text())]);
+      const rank=Papa.parse(rText,{header:true,skipEmptyLines:true}).data;
+      const games=Papa.parse(gText,{header:true,skipEmptyLines:true}).data;
       const stats={};
-      games.forEach(gm=>{
-        let t1=gm.Team1.split(',').map(n=>alias[n.trim()]||n.trim()),t2=gm.Team2.split(',').map(n=>alias[n.trim()]||n.trim());
-        const win=gm.Winner==='team1'?t1:gm.Winner==='team2'?t2:[],lose=win===t1?t2:t1;
+      const sunday=games.filter(g=>g.League==='sunday');
+      sunday.forEach(g=>{
+        let t1=g.Team1.split(',').map(n=>alias[n.trim()]||n.trim()),
+            t2=g.Team2.split(',').map(n=>alias[n.trim()]||n.trim());
+        const winKey=g.Winner, winTeam=winKey==='team1'?t1:winKey==='team2'?t2:[], loseTeam=winTeam===t1?t2:t1;
         t1.concat(t2).forEach(n=>{stats[n]=stats[n]||{games:0,wins:0,mvp:0};stats[n].games++;});
-        win.forEach(n=>stats[n].wins++);let m=alias[gm.MVP]||gm.MVP;if(stats[m])stats[m].mvp++;});
-      const total=games.length;const dates=games.map(n=>new Date(n.Timestamp)).filter(d=>!isNaN(d));
-      const minD=dates.reduce((a,b)=>a<b?a:b),maxD=dates.reduce((a,b)=>a>b?a:b);
-      document.getElementById('summary').textContent=`Ігор: ${total}, період ${format(minD)}–${format(maxD)}`;
-      const players=rank.map(r=>{const nick=alias[r.Nickname]||r.Nickname;const p={nickname:nick,points:+r.Points||0,games:stats[nick]?.games||0,wins:stats[nick]?.wins||0,mvp:stats[nick]?.mvp||0};p.losses=p.games-p.wins; p.winRate=p.games?((p.wins/p.games*100).toFixed(1)):'-';return p;}).sort((a,b)=>b.points-a.points);
-      renderTop(players);renderTable(players);initSearch();initToggle();
-    }
-    function format(d){if(!d)return'-';return('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2);}    
-    function renderTop(pl){const top=pl.slice(0,3),c=document.getElementById('top-mvp');c.innerHTML='';top.forEach(p=>{const d=document.createElement('div');d.className='mvp-card';d.innerHTML=`<h3>${p.nickname}</h3><div class='count'>${p.mvp} MVP</div>`;c.appendChild(d);});}
-    function getRankClass(pt){return pt>=1200?'rank-S':pt>=800?'rank-A':pt>=500?'rank-B':pt>=200?'rank-C':'rank-D';}
-    function renderTable(pl){const tb=document.getElementById('ranking');tb.innerHTML='';pl.forEach((p,i)=>{const tr=document.createElement('tr');tr.className=getRankClass(p.points)+(i>=10?' hidden':'');tr.innerHTML=`<td>${i+1}</td><td>${p.nickname}</td><td>${getRankClass(p.points).split('-')[1]}</td><td>${p.points}</td><td>${p.games||'-'}</td><td>${p.wins||'-'}</td><td>${p.losses||'-'}</td><td>${p.winRate!='-'?p.winRate+'%':'-'}</td><td>${p.mvp||'-'}</td>`;tb.appendChild(tr);});}
-    function initSearch(){document.getElementById('search').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#ranking tr').forEach((tr,i)=>{tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none';});});}
-    function initToggle(){const btn=document.getElementById('toggle');btn.addEventListener('click',()=>{const show=btn.textContent.includes('Топ-10');document.querySelectorAll('#ranking tr').forEach((tr,i)=>{if(i>=10)tr.style.display=show?'':'none';});btn.textContent=show?'Показати більше':'Показати Топ-10';});}
+        winTeam.forEach(n=>stats[n].wins++);
+        const m=alias[g.MVP]||g.MVP; if(stats[m]) stats[m].mvp++;
+      });
+      document.getElementById('summary').textContent=
+        `Всього ігор: ${sunday.length}. Період: ${formatDate(sunday[0].Timestamp)} – ${formatDate(sunday[sunday.length-1].Timestamp)}`;
+      const players=rank.map(r=>{
+        const nick=alias[r.Nickname]||r.Nickname;
+        const p={nickname:nick,points:+r.Points||0,games:stats[nick]?.games||0,wins:stats[nick]?.wins||0,mvp:stats[nick]?.mvp||0};
+        p.losses=p.games-p.wins; p.winRate=p.games?((p.wins/p.games*100).toFixed(2)):'-'; return p;
+      }).sort((a,b)=>b.points-a.points);
+      renderTopMVP(players); renderTable(players); initSearch(); initToggle(); }
+    function formatDate(s){ const d=new Date(s);return isNaN(d)?'-':('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2); }
+    function renderTopMVP(pl){const top=pl.slice(0,3),el=document.getElementById('top-mvp');el.innerHTML='';top.forEach(p=>{const c=document.createElement('div');c.className='mvp-card';c.innerHTML=`<div style="font-size:1.5rem;color:#ff79c6;">❤</div><h3>${p.nickname}</h3><div class="count">${p.mvp||'-'} MVP</div>`;el.appendChild(c);});}
+    function getRankClass(pts){if(pts>=1200)return 'rank-S';if(pts>=800)return 'rank-A';if(pts>=500)return 'rank-B';if(pts>=200)return 'rank-C';return 'rank-D';}
+    function renderTable(pl){const tb=document.getElementById('ranking');tb.innerHTML='';allRows=[];pl.forEach((p,i)=>{const tr=document.createElement('tr'),cls=getRankClass(p.points);tr.className=cls; if(i>=10)tr.classList.add('hidden');tr.innerHTML=`<td>${i+1}</td><td>${p.nickname}</td><td>${cls.split('-')[1]}</td><td>${p.points}</td><td>${p.games||'-'}</td><td>${p.wins||'-'}</td><td>${p.losses||'-'}</td><td>${p.winRate!=='-'?p.winRate+'%':'-'}</td><td>${p.mvp||'-'}</td>`;tb.appendChild(tr);allRows.push(tr);});}
+    function initSearch(){document.getElementById('search').addEventListener('input',e=>{const q=e.target.value.toLowerCase();allRows.forEach(tr=>tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none');});}
+    function initToggle(){const btn=document.getElementById('toggle');btn.addEventListener('click',()=>{const show=btn.textContent.includes('Топ-10');allRows.forEach((tr,i)=>{if(i>=10)tr.style.display=show?'':'none'});btn.textContent=show?'Показати більше':'Показати Топ-10';});}
     document.addEventListener('DOMContentLoaded',loadData);
   })();
   </script>

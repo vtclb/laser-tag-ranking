@@ -1,79 +1,116 @@
-<!-- about.html - Сторінка про клуб -->
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Про клуб | Лазертаг</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #1a1a1a;
-            color: white;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            color: #f39c12;
-        }
-        nav {
-            background-color: #f39c12;
-            padding: 10px;
-        }
-        nav a {
-            color: black;
-            text-decoration: none;
-            margin: 0 15px;
-            font-weight: bold;
-        }
-        .container {
-            width: 80%;
-            margin: auto;
-            text-align: left;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Про клуб | Лазертаг</title>
+  <!-- Pixel Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #111 url('assets/background_marathon.png') no-repeat center/cover;
+      font-family: 'Press Start 2P', monospace;
+      color: #fff;
+      cursor: url('assets/cursor.png') 4 4, auto;
+    }
+    nav {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem;
+      background: rgba(0,0,0,0.8); padding: .75rem;
+    }
+    nav a {
+      color: #f39c12; text-decoration: none;
+      padding: .5rem 1rem;
+      border: 2px solid transparent;
+      transition: .2s;
+    }
+    nav a:hover, nav a.active {
+      border-color: #ffd700;
+      color: #ffd700;
+    }
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: rgba(0,0,0,0.7);
+      padding: 2rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.5rem; color: #f39c12;
+      text-shadow: 0 0 8px #f39c12;
+      margin-bottom: 1rem;
+    }
+    p {
+      margin-bottom: 1rem;
+    }
+    .under-construction {
+      display: inline-block;
+      padding: 1rem;
+      background: #222;
+      border: 2px dashed #f39c12;
+      border-radius: 8px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0.5; }
+    }
+    canvas#pixelScene {
+      display: block;
+      margin: 2rem auto;
+      background: transparent;
+    }
+    .footer {
+      margin-top: 2rem;
+      font-size: .75rem;
+      color: #aaa;
+    }
+  </style>
 </head>
 <body>
-   <nav>
-  <a href="index.html" class="nav-link" id="nav-kids">Молодша Ліга</a>
-  <a href="sunday.html" class="nav-link" id="nav-sunday">Старша Ліга</a>
-  <a href="rules.html" class="nav-link" id="nav-rules">Правила</a>
-  <a href="about.html" class="nav-link" id="nav-about">Про клуб</a>
-</nav>
-
-    
+  <nav>
+    <a href="index.html" id="nav-kids">Молодша Ліга</a>
+    <a href="sunday.html" id="nav-sunday">Старша Ліга</a>
+    <a href="rules.html" id="nav-rules">Правила</a>
+    <a href="about.html" class="active" id="nav-about">Про клуб</a>
+  </nav>
+  <div class="container">
     <h1>Про наш клуб</h1>
-    <div class="container">
-        <p>Наш лазертаг-клуб є місцем, де гравці можуть насолоджуватися динамічними боями, тренувати свої навички та змагатися за звання найкращого гравця.</p>
-        
-        <h2>Що ми пропонуємо?</h2>
-        <ul>
-            <li>Регулярні рейтингові ігри</li>
-            <li>Турніри для школярів та дорослих</li>
-            <li>Навчання тактики та командної гри</li>
-            <li>Можливість організовувати власні заходи</li>
-        </ul>
-        
-        <h2>Контакти</h2>
-        <p>📍 Локація: м. Івано-Франківськ<br>
-           📞 Телефон: +380XX-XXX-XXXX<br>
-           📧 Email: info@lasertagclub.ua</p>
-    </div>
-    <script>
-  // Визначаємо, яка сторінка зараз активна
-  const path = window.location.pathname;
+    <p class="under-construction">Сторінка в розробці!</p>
+    <p>Поки ми готуємо новий контент, насолоджуйтесь нашою піксельною сценою нижче.</p>
+    <canvas id="pixelScene" width="600" height="200"></canvas>
+    <div class="footer">Скоро тут з’явиться більше інформації та сюрпризів! 🚀</div>
+  </div>
+  <script>
+    // Highlight active nav
+    const path = window.location.pathname;
+    if (path.includes('kids')) document.getElementById('nav-kids').classList.add('active');
+    if (path.includes('sunday')) document.getElementById('nav-sunday').classList.add('active');
+    if (path.includes('rules')) document.getElementById('nav-rules').classList.add('active');
+    if (path.includes('about')) document.getElementById('nav-about').classList.add('active');
 
-  if (path.includes("index")) {
-    document.getElementById("nav-kids").style.borderBottom = "2px solid #ffd700";
-  } else if (path.includes("sunday")) {
-    document.getElementById("nav-sunday").style.borderBottom = "2px solid #ffd700";
-  } else if (path.includes("rules")) {
-    document.getElementById("nav-rules").style.borderBottom = "2px solid #ffd700";
-  } else if (path.includes("about")) {
-    document.getElementById("nav-about").style.borderBottom = "2px solid #ffd700";
-  }
-</script>
-
+    // Simple Pixel Scene Animation
+    const canvas = document.getElementById('pixelScene');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.src = 'assets/pixel_robot.png'; //  sprite with 4 frames horizontally
+    const frameCount = 4;
+    const frameWidth = 64;
+    const frameHeight = 64;
+    let frame = 0;
+    let x = 0;
+    function animate() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // Draw two robots
+      ctx.drawImage(img, frame * frameWidth, 0, frameWidth, frameHeight, x, 50, frameWidth, frameHeight);
+      ctx.drawImage(img, frame * frameWidth, 0, frameWidth, frameHeight, canvas.width - x - frameWidth, 100, frameWidth, frameHeight);
+      // Next frame and position
+      frame = (frame + 1) % frameCount;
+      x = (x + 2) % (canvas.width - frameWidth);
+      requestAnimationFrame(animate);
+    }
+    img.onload = () => animate();
+  </script>
 </body>
 </html>

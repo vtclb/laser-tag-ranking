@@ -1,152 +1,244 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Старша Ліга | Лазертаг</title>
-  <!-- Papa Parse для CSV -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Старша ліга | Лазертаг</title>
+  <!-- PapaParse для CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
-    /* Reset */
-    * { box-sizing: border-box; margin:0; padding:0; }
-    body { font-family:'Segoe UI',sans-serif; background:#1a1a1a; color:#fff; }
-    nav { background:rgba(0,0,0,0.8); padding:10px; display:flex; justify-content:center; gap:20px; position:sticky; top:0; z-index:100; }
-    nav a { color:#f39c12; text-decoration:none; font-weight:600; }
-    nav a.active, nav a:hover { color:#ffd700; border-bottom:2px solid #ffd700; }
-    .container { max-width:1200px; margin:20px auto; padding:0 10px; }
-    .test-season { text-align:center; margin:10px 0; color:#e74c3c; }
-    .search-box { text-align:center; margin:15px 0; }
-    .search-box input { width:100%; max-width:300px; padding:8px; border-radius:4px; border:none; }
-    .top3 { display:flex; justify-content:center; gap:20px; margin:20px 0; flex-wrap:wrap; }
-    .mvp-card { background:rgba(243,156,18,0.2); padding:15px; border-radius:8px; width:200px; text-align:center; }
-    .mvp-card h3 { margin:10px 0 5px; font-size:1.2rem; }
-    .mvp-card .count { font-size:2rem; color:#f1c40f; }
-    .table-container { overflow-x:auto; }
-    table { width:100%; border-collapse:collapse; margin-bottom:20px; }
-    th, td { padding:10px; border:1px solid #333; text-align:center; }
-    thead { background:#f39c12; color:#000; position:sticky; top:0; z-index:50; }
-    tbody tr:nth-child(even) { background:rgba(255,255,255,0.05); }
-    tbody tr:hover { background:rgba(243,156,18,0.2); }
-    .hidden { display:none; }
+    * { box-sizing:border-box; margin:0; padding:0 }
+    body {
+      font-family:'Segoe UI',sans-serif;
+      background:#111 url('assets/backgr.jpg') no-repeat center/cover;
+      color:#fff; line-height:1.4;
+    }
+    nav {
+      display:flex; justify-content:center; gap:1rem;
+      background:rgba(0,0,0,0.7); padding:.75rem;
+    }
+    nav a {
+      color:#f39c12; text-decoration:none; font-weight:600;
+      transition: .2s;
+    }
+    nav a:hover { color:#ffd700 }
+    .container { max-width:1200px; margin:1rem auto; padding:0 1rem }
+    .test-season {
+      text-align:center; margin:1rem 0; color:#f39c12;
+    }
+    .search-box { text-align:center; margin-bottom:1rem; }
+    .search-box input {
+      padding:.5rem; width:100%; max-width:300px;
+      border-radius:5px; border:none;
+    }
+    .top-mvp {
+      display:flex; justify-content:center; gap:1rem;
+      flex-wrap:wrap; margin-bottom:1.5rem;
+    }
+    .mvp-card {
+      background:rgba(243,156,18,0.1); border:2px solid #f39c12;
+      border-radius:8px; padding:1rem 1.5rem;
+      width:120px; text-align:center;
+      box-shadow:0 0 10px rgba(243,156,18,.5);
+    }
+    .mvp-card h3 { margin:.5rem 0; font-size:1.1rem; }
+    .table-container {
+      overflow-x:auto; margin-bottom:1rem;
+    }
+    table {
+      width:100%; border-collapse:collapse;
+      min-width:800px;
+    }
+    thead th {
+      position:sticky; top:0; background:#f39c12; color:#000;
+      padding:.75rem;
+    }
+    td, th {
+      padding:.5rem; border:1px solid #444; text-align:center;
+    }
+    tbody tr:nth-child(odd) { background:rgba(255,255,255,0.05) }
+    tbody tr:hover { background:rgba(255,255,255,0.1) }
+    .show-more {
+      display:block; margin:0 auto; padding:.5rem 1rem;
+      background:#f39c12; color:#000; border:none;
+      border-radius:5px; cursor:pointer; font-weight:600;
+    }
+    @media(max-width:600px){
+      .mvp-card { width:45%; }
+      table { min-width:600px; }
+    }
   </style>
 </head>
 <body>
-<nav>
-  <a href="index.html">Молодша Ліга</a>
-  <a href="sunday.html" class="active">Старша Ліга</a>
-  <a href="rules.html">Правила</a>
-  <a href="about.html">Про клуб</a>
-</nav>
-<div class="container">
-  <p class="test-season">⚠️ Тестовий сезон. Дані можуть оновлюватися.</p>
-  <div class="search-box">
-    <input type="text" id="searchInput" placeholder="Пошук нікнейму..." />
+  <nav>
+    <a href="index.html">Молодша Ліга</a>
+    <a href="sunday.html" style="border-bottom:2px solid #ffd700">Старша Ліга</a>
+    <a href="rules.html">Правила</a>
+    <a href="about.html">Про клуб</a>
+  </nav>
+
+  <div class="container">
+    <div class="test-season">⚠️ Це тестовий сезон. Дані можуть змінюватись.</div>
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Пошук нікнейму…">
+    </div>
+    <div class="top-mvp" id="top-mvp">
+      <!-- Top-3 MVP картки -->
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Місце</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
+            <th>Ігор</th><th>Перемог</th><th>Поразок</th>
+            <th>% Win</th><th>MVP</th>
+          </tr>
+        </thead>
+        <tbody id="ranking">
+          <!-- Rows -->
+        </tbody>
+      </table>
+    </div>
+    <button class="show-more" id="toggle">Показати більше</button>
   </div>
-  <div id="top3" class="top3"></div>
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>Місце</th>
-          <th>Нікнейм</th>
-          <th>Ранг</th>
-          <th>Бали</th>
-          <th>Ігор</th>
-          <th>Перемог</th>
-          <th>Поразок</th>
-          <th>WinRate (%)</th>
-          <th>MVP</th>
-        </tr>
-      </thead>
-      <tbody id="ranking"></tbody>
-    </table>
-  </div>
-</div>
-<script>
-const rankingURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=1286735969&single=true&output=csv';
-const gamesURL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=249347260&single=true&output=csv';
 
-// Алиаси нікнеймів
-const aliases = { 'Zavodchanyn':'Romario', 'Mariko':'Gidora', 'Timabuilding':'Бойбуд' };
+  <script>
+  (function(){
+    const rankingURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
+    const gamesURL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
 
-async function loadData() {
-  const [rankTxt, gamesTxt] = await Promise.all([
-    fetch(rankingURL).then(r=>r.text()),
-    fetch(gamesURL).then(r=>r.text())
-  ]);
-  const ranking = Papa.parse(rankTxt, {header:true, skipEmptyLines:true}).data
-    .map(r=>({ Nickname:r.Nickname, Points:+r.Points }));
-  const games = Papa.parse(gamesTxt, {header:true, skipEmptyLines:true}).data;
+    // Аліаси
+    const aliasMap = {
+      "Zavodchanyn":"Romario",
+      "Mariko":"Gidora",
+      "Timabuilding":"Бойбуд"
+    };
 
-  // Злиття aliases
-  ranking.forEach(p=>{ if(aliases[p.Nickname]) p.Nickname=aliases[p.Nickname]; });
+    async function loadData(){
+      const [rText,gText] = await Promise.all([
+        fetch(rankingURL).then(r=>r.text()),
+        fetch(gamesURL).then(r=>r.text())
+      ]);
+      const ranking = Papa.parse(rText,{header:true,skipEmptyLines:true}).data;
+      const games   = Papa.parse(gText  ,{header:true,skipEmptyLines:true}).data;
 
-  // Ігри тільки Sunday
-  const sunday = games.filter(g=>g.League==='sunday');
-  const stats = {};
-  sunday.forEach(g=>{
-    let t1=g.Team1.split(',').map(s=>s.trim()),
-        t2=g.Team2.split(',').map(s=>s.trim());
-    // Переможна команда
-    const winT = (g.Winner==='team1'?t1:g.Winner==='team2'?t2:[]);
-    const loseT= winT===t1?t2:t1;
-    // Рахуємо
-    [...t1,...t2].forEach(n=>{ n=aliases[n]||n; stats[n]=stats[n]||{games:0,wins:0,losses:0,mvp:0}; stats[n].games++; });
-    winT.forEach(n=>{n=aliases[n]||n; stats[n].wins++;});
-    loseT.forEach(n=>{n=aliases[n]||n; stats[n].losses++;});
-    const m=g.MVP; if(m){ const n=aliases[m]||m; stats[n].mvp=(stats[n].mvp||0)+1; }
-  });
+      // Статистика по Sunday лізі
+      const stats = {};
+      games.filter(g=>g.League==='sunday').forEach(g=>{
+        // Команди
+        let t1 = g.Team1.split(',').map(s=>s.trim()),
+            t2 = g.Team2.split(',').map(s=>s.trim());
+        // Об’єднання аліасів
+        t1 = t1.map(n=>aliasMap[n]||n);
+        t2 = t2.map(n=>aliasMap[n]||n);
+        // Визначити переможців
+        const winKey = g.Winner;
+        const winTeam = winKey==='team1'?t1: winKey==='team2'?t2:[];
+        const loseTeam = winTeam===t1?t2:t1;
+        // Лічильники
+        t1.concat(t2).forEach(n=>{
+          stats[n] = stats[n]||{games:0,wins:0,mvp:0};
+          stats[n].games++;
+        });
+        winTeam.forEach(n=>stats[n].wins++);
+        // MVP
+        let m = aliasMap[g.MVP]||g.MVP;
+        if(stats[m]) stats[m].mvp++;
+      });
 
-  // Зливаємо з рейтингом
-  const players = ranking.map((p,i)=>{
-    const s = stats[p.Nickname]||{games:0,wins:0,losses:0,mvp:0};
-    const losses = s.losses || (s.games - s.wins);
-    return { ...p, games:s.games, wins:s.wins, losses, winRate:s.games?((s.wins/s.games*100).toFixed(2)): '0.00', mvp:s.mvp };
-  });
-  renderTop3(players);
-  renderRanking(players);
-  document.getElementById('searchInput').addEventListener('input',()=>filterData(players));
-}
+      // Формуємо масив гравців
+      const players = ranking.map((r,i)=>{
+        let nick = aliasMap[r.Nickname]||r.Nickname;
+        const p = {
+          nickname:nick,
+          points:+r.Points,
+          games: stats[nick]?.games||0,
+          wins:  stats[nick]?.wins||0,
+          losses: (stats[nick]?.games||0) - (stats[nick]?.wins||0),
+          mvp:   stats[nick]?.mvp||0
+        };
+        p.winRate = p.games>0? ((p.wins/p.games*100).toFixed(2)) : '-';
+        return p;
+      });
 
-function renderTop3(arr) {
-  const top = [...arr].sort((a,b)=>b.mvp-a.mvp).slice(0,3);
-  const el = document.getElementById('top3'); el.innerHTML='';
-  top.forEach(p=>{
-    const div=document.createElement('div'); div.className='mvp-card';
-    div.innerHTML=`<h3>${p.Nickname}</h3><div class='count'>🏆 ${p.mvp}</div><div>MVP</div>`;
-    el.appendChild(div);
-  });
-}
+      // Сортування
+      players.sort((a,b)=>b.points - a.points);
 
-function renderRanking(arr) {
-  const sorted = [...arr].sort((a,b)=>b.Points-a.Points);
-  const tbody = document.getElementById('ranking'); tbody.innerHTML='';
-  sorted.forEach((p,i)=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>${i+1}</td>
-      <td>${p.Nickname}</td>
-      <td>${p.Points}</td>
-      <td>${p.games||'-'}</td>
-      <td>${p.wins||'-'}</td>
-      <td>${p.losses||'-'}</td>
-      <td>${p.winRate||'-'}</td>
-      <td>${p.mvp||'-'}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
+      renderTopMVP(players);
+      renderTable(players);
+      initSearch();
+      initToggle();
+    }
 
-function filterData(arr) {
-  const q=document.getElementById('searchInput').value.toLowerCase();
-  const rows=document.querySelectorAll('#ranking tr');
-  rows.forEach((r,i)=>{
-    const name=r.cells[1].textContent.toLowerCase();
-    r.style.display = name.includes(q)?'':'none';
-  });
-}
+    function renderTopMVP(players){
+      const top = players.slice(0,3);
+      const container = document.getElementById('top-mvp');
+      container.innerHTML = '';
+      top.forEach(p=>{
+        const div = document.createElement('div');
+        div.className='mvp-card';
+        div.innerHTML=`
+          <div style="font-size:2rem">🏆</div>
+          <h3>${p.nickname}</h3>
+          <div style="font-weight:600">${p.mvp} MVP</div>
+        `;
+        container.appendChild(div);
+      });
+    }
 
-document.addEventListener('DOMContentLoaded', loadData);
-</script>
+    function renderTable(players){
+      const tbody = document.getElementById('ranking');
+      tbody.innerHTML = '';
+      players.forEach((p,i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML=`
+          <td>${i+1}</td>
+          <td>${p.nickname}</td>
+          <td>${getRankIcon(p.points)}</td>
+          <td>${p.points}</td>
+          <td>${p.games||'-'}</td>
+          <td>${p.wins||'-'}</td>
+          <td>${p.losses||'-'}</td>
+          <td>${p.winRate}</td>
+          <td>${p.mvp||'-'}</td>
+        `;
+        if(i>=10) tr.classList.add('hidden');
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getRankIcon(points){
+      if(points>=1200) return '🟣 S';
+      if(points>=800)  return '🔴 A';
+      if(points>=500)  return '🟡 B';
+      if(points>=200)  return '🔵 C';
+      return '🟢 D';
+    }
+
+    function initSearch(){
+      const inp = document.getElementById('search');
+      inp.addEventListener('input',()=>{
+        const q = inp.value.toLowerCase();
+        document.querySelectorAll('#ranking tr').forEach(tr=>{
+          const name = tr.children[1].textContent.toLowerCase();
+          tr.style.display = name.includes(q)?'':'none';
+        });
+      });
+    }
+
+    function initToggle(){
+      const btn = document.getElementById('toggle');
+      btn.addEventListener('click',()=>{
+        const hidden = btn.textContent.includes('Топ-10');
+        document.querySelectorAll('#ranking tr').forEach((tr,i)=>{
+          if(i>=10) tr.style.display = hidden?'':'none';
+        });
+        btn.textContent = hidden?'Показати більше':'Показати Топ-10';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+  })();
+  </script>
 </body>
 </html>

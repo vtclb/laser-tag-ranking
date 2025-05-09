@@ -4,113 +4,116 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Про клуб | Лазертаг</title>
-  <!-- Pixel Font -->
+  <!-- Піксельний шрифт -->
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #111 url('assets/background_marathon.png') no-repeat center/cover;
       font-family: 'Press Start 2P', monospace;
+      background: #111 url('assets/background_marathon.png') no-repeat center/cover;
       color: #fff;
       cursor: url('assets/cursor.png') 4 4, auto;
     }
-    nav {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem;
-      background: rgba(0,0,0,0.8); padding: .75rem;
-    }
-    nav a {
-      color: #f39c12; text-decoration: none;
-      padding: .5rem 1rem;
-      border: 2px solid transparent;
-      transition: .2s;
-    }
-    nav a:hover, nav a.active {
-      border-color: #ffd700;
-      color: #ffd700;
-    }
-    .container {
-      max-width: 800px;
-      margin: 2rem auto;
-      background: rgba(0,0,0,0.7);
-      padding: 2rem;
-      border-radius: 8px;
-      text-align: center;
-    }
-    h1 {
-      font-size: 1.5rem; color: #f39c12;
-      text-shadow: 0 0 8px #f39c12;
-      margin-bottom: 1rem;
-    }
-    p {
-      margin-bottom: 1rem;
-    }
-    .under-construction {
-      display: inline-block;
-      padding: 1rem;
-      background: #222;
-      border: 2px dashed #f39c12;
-      border-radius: 8px;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0%, 50%, 100% { opacity: 1; }
-      25%, 75% { opacity: 0.5; }
-    }
-    canvas#pixelScene {
-      display: block;
-      margin: 2rem auto;
-      background: transparent;
-    }
-    .footer {
-      margin-top: 2rem;
-      font-size: .75rem;
-      color: #aaa;
-    }
+    nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; background: rgba(0,0,0,0.7); padding: .75rem; }
+    nav a { color: #f39c12; text-decoration: none; transition: .2s; }
+    nav a:hover, nav a.active { color: #ffd700; border-bottom: 2px solid #ffd700; }
+    .container { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
+    h1 { text-align: center; color: #f39c12; margin-bottom: .5rem; }
+    canvas { display: block; margin: 1rem auto; background: #000; border: 2px solid #444; }
+    .under { text-align: center; margin-bottom: 1rem; font-size: .8rem; color: #ccc; }
+    /* Simple UI below canvas */
+    .info { text-align: center; margin: 1rem 0; }
+    button { background: #f39c12; color: #000; padding: .5rem 1rem; font-family: 'Press Start 2P', monospace; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #ffd700; }
   </style>
 </head>
 <body>
   <nav>
-    <a href="index.html" id="nav-kids">Молодша Ліга</a>
-    <a href="sunday.html" id="nav-sunday">Старша Ліга</a>
-    <a href="rules.html" id="nav-rules">Правила</a>
-    <a href="about.html" class="active" id="nav-about">Про клуб</a>
+    <a href="index.html">Молодша Ліга</a>
+    <a href="sunday.html">Старша Ліга</a>
+    <a href="rules.html">Правила</a>
+    <a href="about.html" class="active">Про клуб</a>
   </nav>
   <div class="container">
-    <h1>Про наш клуб</h1>
-    <p class="under-construction">Сторінка в розробці!</p>
-    <p>Поки ми готуємо новий контент, насолоджуйтесь нашою піксельною сценою нижче.</p>
-    <canvas id="pixelScene" width="600" height="200"></canvas>
-    <div class="footer">Скоро тут з’явиться більше інформації та сюрпризів! 🚀</div>
+    <h1>Піксельна битва</h1>
+    <canvas id="battleCanvas" width="800" height="200"></canvas>
+    <div class="under">Under Construction — готуємо арени та героїв!</div>
+    <div class="info"><button onclick="location.reload()">Перезапустити бій</button></div>
   </div>
   <script>
-    // Highlight active nav
-    const path = window.location.pathname;
-    if (path.includes('kids')) document.getElementById('nav-kids').classList.add('active');
-    if (path.includes('sunday')) document.getElementById('nav-sunday').classList.add('active');
-    if (path.includes('rules')) document.getElementById('nav-rules').classList.add('active');
-    if (path.includes('about')) document.getElementById('nav-about').classList.add('active');
-
-    // Simple Pixel Scene Animation
-    const canvas = document.getElementById('pixelScene');
+    const canvas = document.getElementById('battleCanvas');
     const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.src = 'assets/pixel_robot.png'; //  sprite with 4 frames horizontally
-    const frameCount = 4;
-    const frameWidth = 64;
-    const frameHeight = 64;
-    let frame = 0;
-    let x = 0;
-    function animate() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      // Draw two robots
-      ctx.drawImage(img, frame * frameWidth, 0, frameWidth, frameHeight, x, 50, frameWidth, frameHeight);
-      ctx.drawImage(img, frame * frameWidth, 0, frameWidth, frameHeight, canvas.width - x - frameWidth, 100, frameWidth, frameHeight);
-      // Next frame and position
-      frame = (frame + 1) % frameCount;
-      x = (x + 2) % (canvas.width - frameWidth);
-      requestAnimationFrame(animate);
+    /* Параметри */
+    const soldierSize = 16; // пікселів
+    const speed = 2;
+    const states = [
+      'enter1','enter2','duel1','enter3','duel2','duoEnter','duoDuel','final','loop'
+    ];
+    let stateIndex = 0;
+    let frameCount = 0;
+    class Soldier {
+      constructor(x,y,color) { this.x=x; this.y=y; this.color=color; }
+      draw(){ ctx.fillStyle=this.color; ctx.fillRect(this.x,this.y,soldierSize,soldierSize); }
     }
-    img.onload = () => animate();
+    class Laser {
+      constructor(x,y,dx) { this.x=x; this.y=y; this.dx=dx; }
+      update(){ this.x+=this.dx; }
+      draw(){ ctx.fillStyle='red'; ctx.fillRect(this.x,this.y,4,2); }
+    }
+    const all = { soldiers:[], lasers:[] };
+    function resetBattle(){ all.soldiers=[]; all.lasers=[]; stateIndex=0; frameCount=0; }
+    function updateBattle(){
+      frameCount++;
+      const state = states[stateIndex];
+      // clear
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // state machine
+      if(state==='enter1'){
+        if(frameCount%10===0 && all.soldiers.length<1) all.soldiers.push(new Soldier(-soldierSize,50,'cyan'));
+        if(all.soldiers[0]) all.soldiers[0].x+=speed;
+        if(all.soldiers[0] && all.soldiers[0].x>=100) nextState();
+      } else if(state==='enter2'){
+        if(frameCount%10===0 && all.soldiers.length<2) all.soldiers.push(new Soldier(canvas.width,120,'magenta'));
+        if(all.soldiers[1]) all.soldiers[1].x-=speed;
+        if(all.soldiers[1] && all.soldiers[1].x<=canvas.width-100) nextState();
+      } else if(state==='duel1'){
+        if(frameCount%30===0) all.lasers.push(new Laser(all.soldiers[0].x+soldierSize,50+soldierSize/2,4));
+        all.lasers.forEach(l=>l.update());
+        if(frameCount>180) nextState();
+      } else if(state==='enter3'){
+        if(frameCount%10===0 && all.soldiers.length<3) all.soldiers.push(new Soldier(-soldierSize,150,'yellow'));
+        if(all.soldiers[2]) all.soldiers[2].x+=speed;
+        if(all.soldiers[2] && all.soldiers[2].x>=200) nextState();
+      } else if(state==='duel2'){
+        if(frameCount%25===0) all.lasers.push(new Laser(all.soldiers[2].x+soldierSize,150+soldierSize/2,4));
+        all.soldiers.splice(0,1); // перший зник
+        if(frameCount>360) nextState();
+      } else if(state==='duoEnter'){
+        if(frameCount%10===0 && all.soldiers.length<5) all.soldiers.push(new Soldier(canvas.width,50,'green'));
+        if(frameCount%10===5 && all.soldiers.length<6) all.soldiers.push(new Soldier(canvas.width,150,'orange'));
+        all.soldiers.filter((s,i)=>i>2).forEach(s=>s.x-=speed);
+        if(all.soldiers[5] && all.soldiers[5].x<=canvas.width-200) nextState();
+      } else if(state==='duoDuel'){
+        if(frameCount%20===0) all.lasers.push(new Laser(all.soldiers[0].x+soldierSize,all.soldiers[0].y+soldierSize/2,4));
+        if(frameCount%30===0) all.lasers.push(new Laser(all.soldiers[5].x,all.soldiers[5].y+soldierSize/2,-4));
+        if(frameCount>600) nextState();
+      } else if(state==='final'){
+        all.soldiers = [ all.soldiers[1] ];
+        all.soldiers[0].x=canvas.width/2; all.soldiers[0].y=canvas.height/2-8;
+        nextState();
+      } else if(state==='loop'){
+        if(frameCount>700){ resetBattle(); }
+      }
+      // draw lasers
+      all.lasers = all.lasers.filter(l=>l.x>0 && l.x<canvas.width);
+      all.lasers.forEach(l=>l.draw());
+      // draw soldiers
+      all.soldiers.forEach(s=>s.draw());
+      requestAnimationFrame(updateBattle);
+    }
+    function nextState(){ stateIndex++; frameCount=0; all.lasers=[]; }
+    // start
+    resetBattle(); updateBattle();
   </script>
 </body>
 </html>

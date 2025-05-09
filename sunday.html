@@ -43,11 +43,18 @@
             color: #f39c12;
             text-shadow: 2px 2px 10px black;
         }
+        .stats-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        @media(min-width: 1024px) {
+            .stats-grid { flex-direction: row; }
+        }
         .table-container {
             max-height: 400px;
             overflow-y: auto;
             border-radius: 10px;
-            margin-top: 20px;
         }
         table {
             width: 100%;
@@ -59,15 +66,12 @@
             border: 1px solid #444;
             text-align: center;
         }
-        thead {
+        thead th {
             position: sticky;
             top: 0;
             background: #f39c12;
-            z-index: 10;
-        }
-        th {
-            background: #f39c12;
             color: black;
+            z-index: 1;
         }
         .show-more {
             background-color: #f39c12;
@@ -79,12 +83,8 @@
             font-weight: bold;
             border-radius: 5px;
         }
-        .hidden-players {
-            display: none;
-        }
-        .search-box {
-            margin-top: 15px;
-        }
+        .hidden-players { display: none; }
+        .search-box { margin-top: 15px; }
         .search-box input {
             padding: 8px;
             border-radius: 5px;
@@ -96,10 +96,10 @@
 <body>
 
 <nav>
-    <a href="index.html" class="nav-link" id="nav-kids">Молодша Ліга</a>
-    <a href="sunday.html" class="nav-link" id="nav-sunday">Старша Ліга</a>
-    <a href="rules.html" class="nav-link" id="nav-rules">Правила</a>
-    <a href="about.html" class="nav-link" id="nav-about">Про клуб</a>
+    <a href="index.html" id="nav-kids">Молодша Ліга</a>
+    <a href="sunday.html" id="nav-sunday">Старша Ліга</a>
+    <a href="rules.html" id="nav-rules">Правила</a>
+    <a href="about.html" id="nav-about">Про клуб</a>
 </nav>
 
 <div class="container">
@@ -110,97 +110,119 @@
         <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Пошук нікнейму...">
     </div>
 
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Місце</th>
-                    <th>Нікнейм</th>
-                    <th>Ранг</th>
-                    <th>Бали</th>
-                </tr>
-            </thead>
-            <tbody id="ranking-table">
-                <!-- Дані будуть завантажені -->
-            </tbody>
-        </table>
+    <div class="stats-grid">
+        <!-- Main Ranking Table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Місце</th>
+                        <th>Нікнейм</th>
+                        <th>Ранг</th>
+                        <th>Бали</th>
+                        <th>Ігор</th>
+                        <th>Перемог</th>
+                        <th>Поразок</th>
+                        <th>WinRate (%)</th>
+                        <th>MVP</th>
+                    </tr>
+                </thead>
+                <tbody id="ranking-table"></tbody>
+            </table>
+            <button class="show-more" onclick="togglePlayers()">Показати більше</button>
+        </div>
+        <!-- Top 3 MVP Section -->
+        <div class="table-container">
+            <h2>Топ 3 MVP</h2>
+            <table>
+                <thead>
+                    <tr><th>Нікнейм</th><th>MVP</th></tr>
+                </thead>
+                <tbody id="top-mvp-table"></tbody>
+            </table>
+        </div>
     </div>
-
-    <button class="show-more" onclick="togglePlayers()">Показати більше</button>
 </div>
 
 <script>
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
-
     let allRows = [];
 
     function getRank(points) {
-        if (points >= 1200) return { rank: "S ранг", class: "rank-S", icon: "🟣" };
-        if (points >= 800) return { rank: "A ранг", class: "rank-A", icon: "🔴" };
-        if (points >= 500) return { rank: "B ранг", class: "rank-B", icon: "🟡" };
-        if (points >= 200) return { rank: "C ранг", class: "rank-C", icon: "🔵" };
-        return { rank: "D ранг", class: "rank-D", icon: "🟢" };
+        if (points >= 1200) return { rank: "S ранг", icon: "🟣" };
+        if (points >= 800)  return { rank: "A ранг", icon: "🔴" };
+        if (points >= 500)  return { rank: "B ранг", icon: "🟡" };
+        if (points >= 200)  return { rank: "C ранг", icon: "🔵" };
+        return { rank: "D ранг", icon: "🟢" };
     }
 
     function loadRanking() {
         fetch(sheetURL)
-            .then(response => response.text())
-            .then(csvText => {
-                const rows = csvText.trim().split("\n").slice(1);
-                const players = rows.map(row => {
-                    const cols = row.split(",");
-                    return { nickname: cols[1], points: parseInt(cols[2]) };
-                }).filter(player => player.nickname && !isNaN(player.points));
+            .then(res => res.text())
+            .then(csv => {
+                const lines = csv.trim().split("\n");
+                const data = lines.slice(1).map(l => l.split(","));
+                const players = data.map(cols => ({
+                    nickname: cols[1],
+                    points: +cols[2],
+                    games: +cols[3],
+                    wins: +cols[4],
+                    losses: +cols[5],
+                    mvp: +cols[6]
+                })).filter(p => p.nickname && !isNaN(p.points));
 
-                players.sort((a, b) => b.points - a.points);
+                // Main table sorted by points
+                players.sort((a,b) => b.points - a.points);
                 const table = document.getElementById("ranking-table");
                 table.innerHTML = "";
-
-                allRows = players.map((player, index) => {
-                    const rankInfo = getRank(player.points);
+                allRows = [];
+                players.forEach((p,i) => {
+                    const {rank, icon} = getRank(p.points);
                     const tr = document.createElement("tr");
                     tr.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td>${rankInfo.icon} ${player.nickname}</td>
-                        <td>${rankInfo.rank}</td>
-                        <td>${player.points}</td>
+                        <td>${i+1}</td>
+                        <td>${icon} ${p.nickname}</td>
+                        <td>${rank}</td>
+                        <td>${p.points}</td>
+                        <td>${p.games}</td>
+                        <td>${p.wins}</td>
+                        <td>${p.losses}</td>
+                        <td>${((p.wins/p.games)*100).toFixed(2)}</td>
+                        <td>${p.mvp}</td>
                     `;
-                    if (index >= 10) tr.classList.add("hidden-players");
+                    if (i >= 10) tr.classList.add("hidden-players");
                     table.appendChild(tr);
-                    return tr;
+                    allRows.push(tr);
                 });
+
+                // Top 3 MVP table
+                const mvpTable = document.getElementById("top-mvp-table");
+                mvpTable.innerHTML = "";
+                players.sort((a,b) => b.mvp - a.mvp).slice(0,3)
+                    .forEach(p => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `<td>${p.nickname}</td><td>${p.mvp}</td>`;
+                        mvpTable.appendChild(tr);
+                    });
             });
     }
 
     function filterTable() {
-        const input = document.getElementById("searchInput").value.toLowerCase();
-        const button = document.querySelector(".show-more");
-
-        if (input === "") {
-            allRows.forEach((row, index) => {
-                row.style.display = (index < 10) ? "table-row" : "none";
-            });
-            button.textContent = "Показати більше";
-            return;
+        const q = document.getElementById("searchInput").value.toLowerCase();
+        const btn = document.querySelector(".show-more");
+        if (!q) {
+            allRows.forEach((r,i) => r.style.display = i<10?"table-row":"none");
+            btn.textContent = "Показати більше";
+        } else {
+            allRows.forEach(r => r.style.display = r.children[1].textContent.toLowerCase().includes(q)?"table-row":"none");
+            btn.textContent = "Показати Топ-10";
         }
-
-        allRows.forEach(row => {
-            const nickname = row.children[1].textContent.toLowerCase();
-            row.style.display = nickname.includes(input) ? "table-row" : "none";
-        });
-
-        button.textContent = "Показати Топ-10";
     }
 
     function togglePlayers() {
-        const isHidden = allRows[10] && allRows[10].style.display === "none";
-        const button = document.querySelector(".show-more");
-
-        allRows.forEach((row, index) => {
-            if (index >= 10) row.style.display = isHidden ? "table-row" : "none";
-        });
-
-        button.textContent = isHidden ? "Показати Топ-10" : "Показати більше";
+        const show = allRows[10] && allRows[10].style.display === "none";
+        allRows.forEach((r,i) => { if(i>=10) r.style.display = show?"table-row":"none"; });
+        document.querySelector(".show-more").textContent = show?"Показати Топ-10":"Показати більше";
     }
 
     document.addEventListener("DOMContentLoaded", loadRanking);
@@ -208,15 +230,10 @@
 
 <script>
   const path = window.location.pathname;
-  if (path.includes("index")) {
-    document.getElementById("nav-kids").style.borderBottom = "2px solid #ffd700";
-  } else if (path.includes("sunday")) {
-    document.getElementById("nav-sunday").style.borderBottom = "2px solid #ffd700";
-  } else if (path.includes("rules")) {
-    document.getElementById("nav-rules").style.borderBottom = "2px solid #ffd700";
-  } else if (path.includes("about")) {
-    document.getElementById("nav-about").style.borderBottom = "2px solid #ffd700";
-  }
+  if (path.includes("index"))    document.getElementById("nav-kids").style.borderBottom = "2px solid #ffd700";
+  else if (path.includes("sunday"))document.getElementById("nav-sunday").style.borderBottom = "2px solid #ffd700";
+  else if (path.includes("rules"))  document.getElementById("nav-rules").style.borderBottom = "2px solid #ffd700";
+  else if (path.includes("about"))  document.getElementById("nav-about").style.borderBottom = "2px solid #ffd700";
 </script>
 
 </body>

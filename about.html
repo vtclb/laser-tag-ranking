@@ -8,14 +8,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #111; color: #fff; font-family: 'Press Start 2P', mono; }
-    nav { background: rgba(0,0,0,0.8); display: flex; flex-wrap: wrap; justify-content: center; padding: .75rem; }
-    nav a { color: #f39c12; text-decoration: none; margin: .5rem; transition: .2s; }
+    body {
+      background: #111; color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      text-align: center;
+    }
+    nav { background: rgba(0,0,0,0.8);
+      display: flex; flex-wrap: wrap; justify-content: center;
+      padding: .75rem;
+    }
+    nav a { color: #f39c12; text-decoration: none; margin: .5rem;
+      transition: .2s;
+    }
     nav a.active, nav a:hover { color: #ffd700; }
-    canvas { display: block; margin: 1rem auto; background: #000; border: 4px solid #222; }
-    .container { text-align: center; padding: 1rem; }
+    #battleCanvas { display: block; margin: 1rem auto; background: #000;
+      border: 4px solid #222;
+    }
+    .container { padding: 1rem; }
     .container h1 { font-size: 1rem; color: #f39c12; margin-bottom: .5rem; }
-    .container p { font-size: .75rem; color: #ccc; }
+    .container p { font-size: .75rem; color: #ccc; margin-bottom: 1rem; }
+    .btn { display: inline-block; margin-top: .5rem; padding: .5rem 1rem;
+      background: #222; color: #f39c12; border: 2px solid #f39c12;
+      border-radius: 4px; cursor: pointer; font-size: .75rem;
+      font-family: 'Press Start 2P', monospace;
+    }
+    .btn:hover { box-shadow: 0 0 8px #f39c12; }
+    #scoreboard { margin-top: 1rem; font-size: .75rem; color: #ddd; }
   </style>
 </head>
 <body>
@@ -25,90 +43,133 @@
     <a href="rules.html">Правила</a>
     <a href="about.html" class="active">Про клуб</a>
   </nav>
-  <canvas id="battleCanvas" width="400" height="200"></canvas>
+  <canvas id="battleCanvas" width="400" height="240"></canvas>
   <div class="container">
     <h1>Піксельна арена</h1>
-    <p>Поки ми готуємося – спостерігай за епічними боями!</p>
+    <p>Три проти трьох: переможе та виживе!</p>
+    <button id="resetBtn" class="btn">Новий бій</button>
+    <div id="scoreboard">Команда A: 0 | Команда B: 0</div>
   </div>
 <script>
 (function(){
   const canvas = document.getElementById('battleCanvas');
   const ctx = canvas.getContext('2d');
-  /* Параметри анімації */
-  const soldierSize = 10;
-  const laserColor = '#f00';
-  let state = 0;
-  let timer = 0;
-  let soldiers = [];
-  let lasers = [];
-
-  function PixelSoldier(x,y,dir){ this.x=x; this.y=y; this.dir=dir; this.alive=true; this.blink=0; }
-  PixelSoldier.prototype.draw = function(){
-    if(!this.alive) return;
-    if(this.blink>0){ if(Math.floor(this.blink/5)%2===0) return; this.blink--; }
-    ctx.fillStyle = '#0f0';
-    ctx.fillRect(this.x,this.y,soldierSize,soldierSize);
-  };
-  function Laser(x,y,dir){ this.x=x; this.y=y; this.dir=dir; this.alive=true; }
-  Laser.prototype.draw = function(){ if(!this.alive) return; ctx.fillStyle=laserColor; ctx.fillRect(this.x,this.y,4,2); };
-
-  function resetBattle(){ soldiers=[]; lasers=[]; timer=0; }
-  function spawnSoldier(x,y,dir){ soldiers.push(new PixelSoldier(x,y,dir)); }
-  function shoot(s){ lasers.push(new Laser(s.x+ (s.dir>0?soldierSize: -4), s.y+soldierSize/2, s.dir)); }
-
-  function update(){ ctx.clearRect(0,0,canvas.width,canvas.height);
-    timer++;
-    // State machine
-    if(state===0){ // Duel 1
-      if(timer===1){ resetBattle(); spawnSoldier(0,80,1); spawnSoldier(390,80,-1); }
-      if(timer%30===0) shoot(soldiers[0]);
-      if(timer%50===0) shoot(soldiers[1]);
-      // move
-      soldiers.forEach(s=> s.x += s.dir);
-      lasers.forEach(l=> { l.x += l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
-      // collision
-      lasers.forEach(l=> soldiers.forEach(s=>{
-        if(s.alive && l.alive && l.x>=s.x && l.x<=s.x+soldierSize && Math.abs(l.y-s.y)<soldierSize){
-          s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;
-        }
-      }));
-      if(timer>200){ state=1; timer=0; }
-    } else if(state===1){ // Third enters
-      if(timer===1){ if(soldiers[0].alive) {} spawnSoldier(200,0,1); }
-      soldiers[2].y +=2;
-      if(timer===60){ shoot(soldiers[2]); }
-      lasers.forEach(l=>{ l.x+=l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
-      lasers.forEach(l=> soldiers.forEach(s=>{
-        if(s.alive && l.alive && Math.abs(l.x-(s.x+soldierSize/2))<4 && Math.abs(l.y-s.y)<soldierSize){
-          s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;
-        }
-      }));
-      if(timer>200){ state=2; timer=0; }
-    } else if(state===2){ // Duel 2 vs 2
-      if(timer===1){ resetBattle(); spawnSoldier(0,50,1); spawnSoldier(0,130,1); spawnSoldier(390,50,-1); spawnSoldier(390,130,-1); }
-      if(timer%40===0) soldiers.slice(0,2).forEach(s=> shoot(s));
-      if(timer%45===0) soldiers.slice(2).forEach(s=> shoot(s));
-      soldiers.forEach(s=> s.x+=s.dir);
-      lasers.forEach(l=>{ l.x+=l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
-      lasers.forEach(l=> soldiers.forEach(s=>{
-        if(s.alive && l.alive && Math.abs(l.x-(s.x+soldierSize/2))<4 && Math.abs(l.y-s.y)<soldierSize){
-          s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;
-        }
-      }));
-      if(timer>300){ state=3; timer=0; }
-    } else if(state===3){ // Final 1 vs 1
-      if(timer===1){ const live = soldiers.filter(s=>s.alive); resetBattle(); spawnSoldier(live[0].x,live[0].y,live[0].dir); spawnSoldier(live[1].x,live[1].y,live[1].dir);}      
-      if(timer%30===0) shoot(soldiers[0]); if(timer%50===0) shoot(soldiers[1]);
-      soldiers.forEach(s=> s.x+=s.dir);
-      lasers.forEach(l=>{ l.x+=l.dir*4; if(l.x<0||l.x>400) l.alive=false; });
-      lasers.forEach(l=> soldiers.forEach(s=>{
-        if(s.alive && l.alive && Math.abs(l.x-(s.x+soldierSize/2))<4 && Math.abs(l.y-s.y)<soldierSize){ s.blink=20; setTimeout(()=>{ s.alive=false; },400); l.alive=false;} }));
-      if(timer>200){ state=0; timer=0; }
-    }
-    soldiers.forEach(s=>s.draw()); lasers.forEach(l=>l.draw());
-    requestAnimationFrame(update);
+  const W = canvas.width, H = canvas.height;
+  const size = 16, speed = 1, laserSpeed = 2;
+  let soldiers = [], lasers = [], buildings = [];
+  let gameActive = false;
+  
+  function initBuildings(){ buildings = [];
+    const bSize = 48;
+    const centers = [
+      [(W-bSize)/2,(H-bSize)/2],
+      [20,(H-bSize)/2], [(W-bSize-20),(H-bSize)/2],
+      [(W-bSize)/2,20], [(W-bSize)/2,(H-bSize-20)],
+      [20,20], [W-bSize-20,H-bSize-20]
+    ];
+    centers.forEach((c,i)=>{
+      const [bx,by] = c;
+      let ent = [];
+      // two entrances
+      if(i===0 || i===3||i===4) ent.push({x:bx+bSize/3,y:by,w:bSize/3,h:4},{x:bx+bSize/3,y:by+bSize-4,w:bSize/3,h:4});
+      if(i===1||i===2||i===5||i===6) ent.push({x:bx,y:by+bSize/3,w:4,h:bSize/3},{x:bx+bSize-4,y:by+bSize/3,w:4,h:bSize/3});
+      buildings.push({x:bx,y:by,w:bSize,h:bSize,entrances:ent});
+    });
   }
-  update();
+  class Soldier{
+    constructor(x,y,team){
+      this.x = x; this.y = y;
+      this.team = team; this.hp = 1; this.blink=0;
+      this.color = team==='A'? '#f44' : '#48f';
+    }
+    update(){ if(!gameActive||this.hp<=0) return;
+      // find nearest enemy
+      const enemies = soldiers.filter(s=>s.team!==this.team && s.hp>0);
+      if(enemies.length){
+        const tgt = enemies.reduce((a,b)=> distance(this,b)<distance(this,a)?b:a);
+        let vx = tgt.x - this.x, vy = tgt.y - this.y;
+        const mag = Math.hypot(vx,vy)||1;
+        this.dx = vx/mag*speed; this.dy = vy/mag*speed;
+      } else { this.dx=0; this.dy=0; }
+      // move
+      let nx=this.x+this.dx, ny=this.y+this.dy;
+      // bounds
+      if(nx<0||nx+size>W) nx=this.x;
+      if(ny<0||ny+size>H) ny=this.y;
+      // building collision
+      buildings.forEach(b=>{
+        if(nx+size> b.x&&nx< b.x+b.w && ny+size> b.y&&ny< b.y+b.h){
+          let inEnt=false;
+          b.entrances.forEach(e=>{ if(nx+size>e.x&&nx<e.x+e.w&&ny+size>e.y&&ny<e.y+e.h) inEnt=true; });
+          if(!inEnt){ nx=this.x; ny=this.y; }
+        }
+      });
+      this.x=nx; this.y=ny;
+      if(this.blink>0) this.blink--;
+      // shoot
+      if(Math.random()<0.01) fire(this);
+    }
+    draw(){ if(this.hp<=0) return;
+      if(this.blink>0 && Math.floor(this.blink/5)%2===0) return;
+      ctx.fillStyle=this.color;
+      ctx.fillRect(this.x,this.y,size/2,size/2);
+      ctx.fillRect(this.x+size/4,this.y+size/2,size/2,size/2);
+      ctx.fillRect(this.x,this.y+size*0.75,size/3,size/3);
+      ctx.fillRect(this.x+size*2/3,this.y+size*0.75,size/3,size/3);
+      ctx.fillRect(this.x-size/4,this.y+size/2,size/4,size/3);
+      ctx.fillRect(this.x+size,this.y+size/2,size/4,size/3);
+    }
+  }
+  class Laser{
+    constructor(x,y,dx,dy){ this.x=x;this.y=y;this.dx=dx;this.dy=dy;this.alive=true; }
+    update(){ if(!this.alive) return;
+      this.x+=this.dx; this.y+=this.dy;
+      if(this.x<0||this.x>W||this.y<0||this.y>H) this.alive=false;
+      buildings.forEach(b=>{
+        if(this.x>b.x&&this.x<b.x+b.w&&this.y>b.y&&this.y<b.y+b.h){
+          let inEnt=false;
+          b.entrances.forEach(e=>{ if(this.x>e.x&&this.x<e.x+e.w&&this.y>e.y&&this.y<e.y+e.h) inEnt=true; });
+          if(!inEnt){ this.alive=false; ctx.fillStyle='#f00'; ctx.fillRect(this.x-2,this.y-2,6,6); }
+        }
+      });
+    }
+    draw(){ if(!this.alive) return; ctx.fillStyle='#f00'; ctx.fillRect(this.x,this.y,4,2); }
+  }
+  function fire(s){ const angle=Math.random()*Math.PI*2;
+    lasers.push(new Laser(s.x+size/2,s.y+size/2,Math.cos(angle)*laserSpeed,Math.sin(angle)*laserSpeed));
+  }
+  function distance(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+  function drawBuildings(){ ctx.fillStyle='#222'; ctx.fillRect(0,0,W,H);
+    buildings.forEach(b=>{
+      ctx.fillStyle='#555'; ctx.fillRect(b.x,b.y,b.w,4); ctx.fillRect(b.x,b.y+b.h-4,b.w,4);
+      ctx.fillRect(b.x,b.y,4,b.h); ctx.fillRect(b.x+b.w-4,b.y,4,b.h);
+      ctx.fillStyle='#333'; ctx.fillRect(b.x+4,b.y+4,b.w-8,b.h-8);
+      b.entrances.forEach(e=>{ ctx.clearRect(e.x,e.y,e.w,e.h); });
+    });
+  }
+  function spawnBattlers(){ soldiers=[]; lasers=[];
+    // team A left, team B right, 3 each
+    for(let i=0;i<3;i++) soldiers.push(new Soldier(20,50+i*60,'A'));
+    for(let j=0;j<3;j++) soldiers.push(new Soldier(W-20-size,50+j*60,'B'));
+    gameActive=true;
+  }
+  function update(){ if(!gameActive) return;
+    ctx.clearRect(0,0,W,H); drawBuildings();
+    soldiers.forEach(s=>s.update()); lasers.forEach(l=>l.update());
+    // laser hit
+    lasers.forEach(l=>{ soldiers.forEach(s=>{
+      if(s.hp>0&&l.alive&&l.x>s.x&&l.x<s.x+size&&l.y>s.y&&l.y<s.y+size){ s.blink=20; s.hp=0; l.alive=false; }
+    });});
+    soldiers.forEach(s=>s.draw()); lasers.forEach(l=>l.draw());
+    // check teams
+    const aAlive=soldiers.filter(s=>s.team==='A'&&s.hp>0).length;
+    const bAlive=soldiers.filter(s=>s.team==='B'&&s.hp>0).length;
+    document.getElementById('scoreboard').textContent = `Команда A: ${aAlive} | Команда B: ${bAlive}`;
+    if(aAlive===0||bAlive===0){ gameActive=false; document.getElementById('scoreboard').textContent += aAlive? ' — Перемога A':' — Перемога B'; }
+    if(gameActive) requestAnimationFrame(update);
+  }
+  document.getElementById('resetBtn').onclick = function(){ initBuildings(); spawnBattlers(); update(); };
+  initBuildings(); spawnBattlers(); update();
 })();
 </script>
 </body>

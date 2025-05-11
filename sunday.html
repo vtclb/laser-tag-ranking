@@ -9,7 +9,7 @@
   <!-- PapaParse для CSV -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
-    /* Базові стилі та скидання */
+    /* Базові стилі */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Press Start 2P', monospace;
@@ -19,24 +19,17 @@
     }
     /* Навігація */
     nav {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1rem;
-      background: rgba(0,0,0,0.7);
-      padding: 0.75rem;
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem;
+      background: rgba(0,0,0,0.7); padding: 0.75rem;
     }
     nav a {
-      color: #f39c12;
-      text-decoration: none;
-      font-size: 0.75rem;
+      color: #f39c12; text-decoration: none; font-size: 0.75rem;
+      padding: 0.25rem 0.5rem; border-radius: 3px;
       transition: color 0.2s, background 0.2s;
-      padding: 0.25rem 0.5rem;
-      border-radius: 3px;
     }
-    nav a.active, nav a:hover {
-      color: #000;
-      background: #ffd700;
+    nav a.active,
+    nav a:hover {
+      color: #000; background: #ffd700;
     }
     /* Контейнер */
     .container { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
@@ -46,25 +39,17 @@
     /* Пошук */
     .search-box { text-align: center; margin-bottom: 1rem; }
     .search-box input {
-      padding: 0.5rem;
-      width: 100%; max-width: 300px;
-      border: 2px solid #555;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      border-radius: 4px;
-      font-size: 0.75rem;
+      padding: 0.5rem; width: 100%; max-width: 300px;
+      border: 2px solid #555; background: rgba(0,0,0,0.5);
+      color: #fff; border-radius: 4px; font-size: 0.75rem;
     }
     /* Top MVP */
     .top-mvp { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
     .mvp-card {
       background: rgba(243,156,18,0.2);
-      border: 2px solid #f39c12;
-      border-radius: 6px;
-      padding: 1rem;
-      min-width: 140px;
-      text-align: center;
-      font-family: 'Press Start 2P', monospace;
-      color: #fff;
+      border: 2px solid #f39c12; border-radius: 6px;
+      padding: 1rem; min-width: 140px; text-align: center;
+      font-family: 'Press Start 2P', monospace; color: #fff;
     }
     .mvp-card h3 { margin: 0.5rem 0; font-size: 0.8rem; }
     .mvp-card .stats { font-size: 0.7rem; margin-top: 0.25rem; color: #ccc; }
@@ -72,34 +57,18 @@
     .table-container { overflow-x: auto; margin-bottom: 1rem; }
     table { width: 100%; border-collapse: collapse; min-width: 800px; font-size: 0.75rem; }
     thead th {
-      position: sticky; top: 0;
-      background: #222;
-      color: #f39c12;
-      padding: 0.75rem;
-      border-bottom: 2px solid #555;
-      z-index: 1;
+      position: sticky; top: 0; background: #222; color: #f39c12;
+      padding: 0.75rem; border-bottom: 2px solid #555; z-index: 1;
     }
-    th, td {
-      padding: 0.5rem;
-      border: 1px solid #444;
-      text-align: center;
-    }
+    th, td { padding: 0.5rem; border: 1px solid #444; text-align: center; }
     tbody tr:nth-child(odd) { background: rgba(255,255,255,0.05); }
     tbody tr:hover { background: rgba(255,255,255,0.1); }
     /* Кнопка */
     .show-more {
-      display: block;
-      margin: 1rem auto;
-      padding: 0.75rem 1.5rem;
-      background: #222;
-      color: #f39c12;
-      border: 2px solid #f39c12;
-      border-radius: 4px;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      cursor: url('assets/cursor.png') 4 4, auto;
-      transition: transform 0.2s;
+      display: block; margin: 1rem auto; padding: 0.75rem 1.5rem;
+      background: #222; color: #f39c12; border: 2px solid #f39c12; border-radius: 4px;
+      font-family: 'Press Start 2P', monospace; font-size: 0.75rem; text-transform: uppercase;
+      cursor: url('assets/cursor.png') 4 4, auto; transition: transform 0.2s;
     }
     .show-more:hover { transform: scale(1.05); }
     /* Ранги */
@@ -187,7 +156,7 @@
         const dates = sundayGames.map(g => new Date(g.Timestamp)).filter(d => !isNaN(d));
         const minD = dates.length ? dates.reduce((a, b) => a < b ? a : b) : null;
         const maxD = dates.length ? dates.reduce((a, b) => a > b ? a : b) : null;
-        document.getElementById('summary').textContent = `Ігор: ${totalGames}. Період: ${formatD(minD)} – ${formatD(maxD)}`;
+        document.getElementById('summary').textContent = `Ігор: ${totalGames}. Період: ${formatD(minD)}–${formatD(maxD)}`;
 
         const players = rank.map(r => {
           const nick = alias[r.Nickname] || r.Nickname;
@@ -246,7 +215,7 @@
         list.forEach((p, i) => {
           const tr = document.createElement('tr');
           const cls = getRankClass(p.points);
-          tr.className = cls + (i >= 10 ? ' hidden' : '');
+          tr.className = i >= 10 ? cls + ' hidden' : cls;
           tr.innerHTML = `
             <td>${i + 1}</td>
             <td class="nick-${cls.split('-')[1]}">${p.nickname}</td>
@@ -265,7 +234,7 @@
       function initSearch() {
         document.getElementById('search').addEventListener('input', e => {
           const q = e.target.value.toLowerCase();
-          document.querySelectorAll('#ranking tr').forEach((tr, i) => {
+          document.querySelectorAll('#ranking tr').forEach(tr => {
             tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
           });
         });
@@ -274,11 +243,19 @@
       function initToggle() {
         const btn = document.getElementById('toggle');
         btn.addEventListener('click', () => {
-          const expand = btn.textContent === 'Всі гравці';
-          document.querySelectorAll('#ranking tr').forEach((tr, i) => {
-            tr.style.display = (i < 10 || expand) ? '' : 'none';
-          });
-          btn.textContent = expand ? 'Топ-10' : 'Всі гравці';
+          const rows = Array.from(document.querySelectorAll('#ranking tr'));
+          const isCollapsed = rows.some((_, idx) => idx >= 10 && rows[idx].classList.contains('hidden'));
+          if (isCollapsed) {
+            rows.forEach((tr, idx) => {
+              if (idx >= 10) tr.classList.remove('hidden');
+            });
+            btn.textContent = 'Топ-10';
+          } else {
+            rows.forEach((tr, idx) => {
+              if (idx >= 10) tr.classList.add('hidden');
+            });
+            btn.textContent = 'Всі гравці';
+          }
         });
       }
 

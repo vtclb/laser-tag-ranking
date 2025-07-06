@@ -34,7 +34,7 @@
       color: #000;
       background: #ffd700;
     }
-    .container { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
+    .container { max-width: 1400px; margin: 1rem auto; padding: 0 1rem; }
     .filters { display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center; margin-bottom:1rem; }
     select, input[type=date], .filters button {
       padding:0.5rem; font-size:1rem; border:2px solid #555;
@@ -48,6 +48,16 @@
     tbody tr:nth-child(odd){ background:rgba(255,255,255,0.05); }
     .up   { color:lime; }
     .down { color:red; }
+    .team-label {
+      display:inline-block;
+      background:rgba(0,0,0,0.6);
+      padding:0.25rem 0.5rem;
+      border-radius:4px;
+    }
+    .vs {
+      color:#ffd700;
+      font-size:1.1rem;
+    }
     @media (max-width: 600px) {
       nav { font-size:0.75rem; }
       table { font-size:0.75rem; }

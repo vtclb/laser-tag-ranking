@@ -95,8 +95,15 @@
       const t2 = g.Team2.split(',').map(s=>normName(s.trim()));
       const winner = g.Winner;
       const mvp = normName(g.MVP);
-      const s1 = parseInt(g.Score1,10);
-      const s2 = parseInt(g.Score2,10);
+      let s1 = parseInt(g.Score1,10);
+      let s2 = parseInt(g.Score2,10);
+      if(isNaN(s1) || isNaN(s2)){
+        const m=(g.Series||g.series||'').match(/(\d+)\D+(\d+)/);
+        if(m){
+          s1=parseInt(m[1],10);
+          s2=parseInt(m[2],10);
+        }
+      }
 
       const team1Pts=[];
       const team2Pts=[];

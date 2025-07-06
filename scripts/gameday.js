@@ -78,6 +78,8 @@
 
       const team1Pts=[];
       const team2Pts=[];
+      const t1sum = t1.reduce((s,n)=>s+(players[n]?.pts||0),0);
+      const t2sum = t2.reduce((s,n)=>s+(players[n]?.pts||0),0);
       t1.forEach(n=>{
         players[n] = players[n]||{pts:0,delta:0};
         let d = partPoints(getRankLetter(players[n].pts));
@@ -97,6 +99,8 @@
       matchRows.push({
         team1: team1Pts.join(', '),
         team2: team2Pts.join(', '),
+        t1sum,
+        t2sum,
         score: (!isNaN(s1)&&!isNaN(s2))?`${s1}:${s2}`:'-',
         mvp
       });
@@ -118,7 +122,10 @@
     matchesTb.innerHTML='';
     matchRows.forEach(m=>{
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${m.team1}</td><td>${m.score}</td><td>${m.team2}</td><td>${m.mvp}</td>`;
+      tr.innerHTML=`<td class="team-label">🛡️ ${m.team1} [${m.t1sum}]</td>`+
+        `<td><span class="vs">⚔️ ${m.score} ⚔️</span></td>`+
+        `<td class="team-label">🚀 ${m.team2} [${m.t2sum}]</td>`+
+        `<td>${m.mvp}</td>`;
       matchesTb.appendChild(tr);
     });
   }

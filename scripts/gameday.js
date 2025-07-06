@@ -86,7 +86,8 @@
         if(winner==='team1') d+=20;
         if(mvp===n) d+=10;
         players[n].delta += d;
-        team1Pts.push(n+' ('+(d>0?'+':'')+d+')');
+        const span=`<span class="nick-${getRankLetter(players[n].pts)}">${n}</span>`;
+        team1Pts.push(span+' ('+(d>0?'+':'')+d+')');
       });
       t2.forEach(n=>{
         players[n] = players[n]||{pts:0,delta:0};
@@ -94,7 +95,8 @@
         if(winner==='team2') d+=20;
         if(mvp===n) d+=10;
         players[n].delta += d;
-        team2Pts.push(n+' ('+(d>0?'+':'')+d+')');
+        const span=`<span class="nick-${getRankLetter(players[n].pts)}">${n}</span>`;
+        team2Pts.push(span+' ('+(d>0?'+':'')+d+')');
       });
       matchRows.push({
         team1: team1Pts.join(', '),
@@ -102,7 +104,7 @@
         t1sum,
         t2sum,
         score: (!isNaN(s1)&&!isNaN(s2))?`${s1}:${s2}`:'-',
-        mvp
+        mvp: `<span class="nick-${getRankLetter(players[mvp]?.pts||0)}">${mvp}</span>`
       });
     });
 
@@ -115,7 +117,8 @@
       const tr=document.createElement('tr');
       const cls=p.delta>=0?'up':'down';
       const arrow=p.delta>0?'▲':p.delta<0?'▼':'';
-      tr.innerHTML=`<td>${p.nick}</td><td>${p.pts}</td><td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
+      const nClass='nick-'+getRankLetter(p.pts);
+      tr.innerHTML=`<td class="${nClass}">${p.nick}</td><td>${p.pts}</td><td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
       playersTb.appendChild(tr);
     });
 

@@ -30,7 +30,21 @@
       transition: color 0.2s, background 0.2s;
       border-radius: 3px;
     }
+    nav #fullscreen {
+      color: #f39c12;
+      background: none;
+      border: none;
+      font: inherit;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      transition: color 0.2s, background 0.2s;
+      border-radius: 3px;
+    }
     nav a.active, nav a:hover {
+      color: #000;
+      background: #ffd700;
+    }
+    nav #fullscreen:hover {
       color: #000;
       background: #ffd700;
     }
@@ -77,6 +91,7 @@
     <a href="gameday.html" class="active">Ігровий день</a>
     <a href="rules.html">Правила</a>
     <a href="about.html">Про клуб</a>
+    <button id="fullscreen">⛶</button>
   </nav>
   <div class="container">
     <div class="filters">

@@ -17,11 +17,21 @@
   const loadBtn   = document.getElementById('loadBtn');
   const playersTb = document.getElementById('players');
   const matchesTb = document.getElementById('matches');
+  const fullscreenBtn = document.getElementById('fullscreen');
 
   leagueSel.addEventListener('change', loadData);
   dateInput.addEventListener('change', loadData);
   if(loadBtn) loadBtn.addEventListener('click', loadData);
   document.addEventListener('DOMContentLoaded', loadData);
+  if(fullscreenBtn){
+    fullscreenBtn.addEventListener('click', () => {
+      if(!document.fullscreenElement){
+        document.documentElement.requestFullscreen();
+      }else{
+        document.exitFullscreen();
+      }
+    });
+  }
 
   function normName(n){ return alias[n] || n; }
 

@@ -36,10 +36,15 @@
     return {S:-15,A:-10,B:-5,C:0,D:5}[rank] || 0;
   }
 
-  function parseDate(ts){
+  function parseDate(ts) {
+    if (!ts) return '';
+    const m = ts.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})/);
+    if (m) {
+      const [_, d, mon, y] = m;
+      return `${y}-${mon.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    }
     const d = new Date(ts);
-    if(isNaN(d)) return '';
-    return d.toISOString().slice(0,10);
+    return isNaN(d) ? '' : d.toISOString().slice(0,10);
   }
 
   async function loadData(){

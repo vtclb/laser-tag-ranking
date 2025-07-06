@@ -92,10 +92,31 @@
     .nick-C { color: cyan; }
     .nick-D { color: lime; }
     .team-label {
+      position:relative;
       display:inline-block;
       background:rgba(0,0,0,0.6);
-      padding:0.25rem 0.5rem;
+      padding:0.25rem 1.5rem 0.25rem 0.5rem;
       border-radius:4px;
+    }
+    .team-total {
+      position:absolute;
+      right:0.25rem;
+      top:50%;
+      transform:translateY(-50%);
+      background:rgba(255,255,255,0.15);
+      padding:0 0.25rem;
+      border-radius:3px;
+    }
+    .team-win {
+      border:2px solid lime;
+      box-shadow:0 0 6px lime;
+    }
+    .team-loss {
+      border:2px solid red;
+      box-shadow:0 0 6px red;
+    }
+    .vp {
+      color:#ffd700;
     }
     .vs {
       color:#ffd700;
@@ -131,7 +152,7 @@
       <h2>Поточні гравці</h2>
       <div class="table-container">
         <table>
-          <thead><tr><th>Позиція (попередня)</th><th>Нік</th><th>Бали</th><th>Зміна</th></tr></thead>
+          <thead><tr><th>Позиція (попередня)</th><th>Нік</th><th>Бали</th><th>Перемоги</th><th>Ігор</th><th>Зміна</th></tr></thead>
           <tbody id="players"></tbody>
         </table>
       </div>

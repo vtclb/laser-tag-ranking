@@ -14,11 +14,13 @@
 
   const leagueSel = document.getElementById('league');
   const dateInput = document.getElementById('date');
+  const loadBtn   = document.getElementById('loadBtn');
   const playersTb = document.getElementById('players');
   const matchesTb = document.getElementById('matches');
 
   leagueSel.addEventListener('change', loadData);
   dateInput.addEventListener('change', loadData);
+  if(loadBtn) loadBtn.addEventListener('click', loadData);
   document.addEventListener('DOMContentLoaded', loadData);
 
   function normName(n){ return alias[n] || n; }

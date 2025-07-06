@@ -36,9 +36,11 @@
     }
     .container { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
     .filters { display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center; margin-bottom:1rem; }
-    select, input[type=date] {
+    select, input[type=date], .filters button {
       padding:0.5rem; font-size:1rem; border:2px solid #555;
       background:rgba(0,0,0,0.5); color:#fff; border-radius:4px;
+      font-family: 'Press Start 2P', monospace;
+      cursor:pointer;
     }
     table { width:100%; border-collapse:collapse; margin-bottom:1rem; font-size:0.9rem; }
     th, td { border:1px solid #444; padding:0.5rem; text-align:center; }
@@ -49,7 +51,7 @@
     @media (max-width: 600px) {
       nav { font-size:0.75rem; }
       table { font-size:0.75rem; }
-      select, input[type=date] { font-size:0.75rem; }
+      select, input[type=date], .filters button { font-size:0.75rem; }
     }
   </style>
 </head>
@@ -68,6 +70,7 @@
         <option value="sunday">Старша ліга</option>
       </select>
       <input type="date" id="date" />
+      <button id="loadBtn">Завантажити</button>
     </div>
     <section>
       <h2>Поточні гравці</h2>

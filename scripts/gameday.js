@@ -108,9 +108,21 @@
       });
     });
 
-    const list = Object.keys(players).filter(n=>players[n].delta!==0)
-      .map(n=>({nick:n,pts:players[n].pts,delta:players[n].delta}))
-      .sort((a,b)=>b.pts-a.pts);
+    const arr = Object.keys(players).map(n=>({
+      nick: n,
+      pts: players[n].pts,
+      delta: players[n].delta,
+      prevPts: players[n].pts - players[n].delta
+    }));
+
+    // sort by previous points to calculate prior ranking
+    arr.slice().sort((a,b)=>b.prevPts - a.prevPts)
+      .forEach((p,i)=>{ p.prevRank = i+1; });
+
+    // sort by current points for display
+    const list = arr.filter(p=>p.delta!==0)
+      .sort((a,b)=>b.pts - a.pts)
+      .map((p,i)=>{ p.currRank = i+1; return p; });
 
     playersTb.innerHTML='';
     list.forEach(p=>{
@@ -118,7 +130,11 @@
       const cls=p.delta>=0?'up':'down';
       const arrow=p.delta>0?'▲':p.delta<0?'▼':'';
       const nClass='nick-'+getRankLetter(p.pts);
-      tr.innerHTML=`<td class="${nClass}">${p.nick}</td><td>${p.pts}</td><td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
+      tr.innerHTML=
+        `<td>${p.currRank} (${p.prevRank})</td>`+
+        `<td class="${nClass}">${p.nick}</td>`+
+        `<td>${p.pts}</td>`+
+        `<td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
       playersTb.appendChild(tr);
     });
 

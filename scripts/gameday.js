@@ -23,6 +23,9 @@
   dateInput.addEventListener('change', loadData);
   if(loadBtn) loadBtn.addEventListener('click', loadData);
   document.addEventListener('DOMContentLoaded', loadData);
+  window.addEventListener('storage', e => {
+    if(e.key === 'gamedayRefresh') loadData();
+  });
   if(fullscreenBtn){
     fullscreenBtn.addEventListener('click', () => {
       if(!document.fullscreenElement){
@@ -57,6 +60,15 @@
     return isNaN(d) ? '' : d.toISOString().slice(0,10);
   }
 
+  function vpIcons(n){
+    return '★'.repeat(n);
+  }
+
+  function formatScore(a,b){
+    if(isNaN(a) || isNaN(b)) return '-';
+    return `${vpIcons(a)} - ${vpIcons(b)}`;
+  }
+
   async function loadData(){
     if(!dateInput.value) return; // require date
     const rURL = rankingURLs[leagueSel.value];
@@ -71,7 +83,7 @@
     ranking.forEach(r=>{
       const name = normName(r.Nickname?.trim());
       if(!name) return;
-      players[name] = {pts:+r.Points||0, delta:0};
+      players[name] = {pts:+r.Points||0, delta:0, wins:0, games:0};
     });
 
     const filtered = games.filter(g=>g.League===leagueSel.value)
@@ -91,7 +103,9 @@
       const t1sum = t1.reduce((s,n)=>s+(players[n]?.pts||0),0);
       const t2sum = t2.reduce((s,n)=>s+(players[n]?.pts||0),0);
       t1.forEach(n=>{
-        players[n] = players[n]||{pts:0,delta:0};
+        players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
+        players[n].games++;
+        if(winner==='team1') players[n].wins++;
         let d = partPoints(getRankLetter(players[n].pts));
         if(winner==='team1') d+=20;
         if(mvp===n) d+=10;
@@ -100,7 +114,9 @@
         team1Pts.push(span+' ('+(d>0?'+':'')+d+')');
       });
       t2.forEach(n=>{
-        players[n] = players[n]||{pts:0,delta:0};
+        players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
+        players[n].games++;
+        if(winner==='team2') players[n].wins++;
         let d = partPoints(getRankLetter(players[n].pts));
         if(winner==='team2') d+=20;
         if(mvp===n) d+=10;
@@ -113,7 +129,9 @@
         team2: team2Pts.join(', '),
         t1sum,
         t2sum,
-        score: (!isNaN(s1)&&!isNaN(s2))?`${s1}:${s2}`:'-',
+        score1: s1,
+        score2: s2,
+        winner,
         mvp: `<span class="nick-${getRankLetter(players[mvp]?.pts||0)}">${mvp}</span>`
       });
     });
@@ -122,6 +140,8 @@
       nick: n,
       pts: players[n].pts,
       delta: players[n].delta,
+      wins: players[n].wins,
+      games: players[n].games,
       prevPts: players[n].pts - players[n].delta
     }));
 
@@ -129,10 +149,12 @@
     arr.slice().sort((a,b)=>b.prevPts - a.prevPts)
       .forEach((p,i)=>{ p.prevRank = i+1; });
 
-    // sort by current points for display
+    // sort by current points for global ranking
+    arr.slice().sort((a,b)=>b.pts - a.pts)
+      .forEach((p,i)=>{ p.currRank = i+1; });
+
     const list = arr.filter(p=>p.delta!==0)
-      .sort((a,b)=>b.pts - a.pts)
-      .map((p,i)=>{ p.currRank = i+1; return p; });
+      .sort((a,b)=>a.currRank - b.currRank);
 
     playersTb.innerHTML='';
     list.forEach(p=>{
@@ -144,6 +166,8 @@
         `<td>${p.currRank} (${p.prevRank})</td>`+
         `<td class="${nClass}">${p.nick}</td>`+
         `<td>${p.pts}</td>`+
+        `<td>${p.wins}</td>`+
+        `<td>${p.games}</td>`+
         `<td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
       playersTb.appendChild(tr);
     });
@@ -151,9 +175,12 @@
     matchesTb.innerHTML='';
     matchRows.forEach(m=>{
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td class="team-label">🛡️ ${m.team1} [${m.t1sum}]</td>`+
-        `<td><span class="vs">⚔️ ${m.score} ⚔️</span></td>`+
-        `<td class="team-label">🚀 ${m.team2} [${m.t2sum}]</td>`+
+      const cls1=m.winner==='team1'?'team-win':m.winner==='team2'?'team-loss':'';
+      const cls2=m.winner==='team2'?'team-win':m.winner==='team1'?'team-loss':'';
+      const score=formatScore(m.score1,m.score2);
+      tr.innerHTML=`<td class="team-label ${cls1}">🛡️ ${m.team1}<span class="team-total">[${m.t1sum}]</span></td>`+
+        `<td><span class="vs">${score}</span></td>`+
+        `<td class="team-label ${cls2}">🚀 ${m.team2}<span class="team-total">[${m.t2sum}]</span></td>`+
         `<td>${m.mvp}</td>`;
       matchesTb.appendChild(tr);
     });

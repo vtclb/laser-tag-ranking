@@ -102,16 +102,32 @@
       });
     });
 
-    const list = Object.keys(players).filter(n=>players[n].delta!==0)
-      .map(n=>({nick:n,pts:players[n].pts,delta:players[n].delta}))
-      .sort((a,b)=>b.pts-a.pts);
+    const all = Object.keys(players).map(n=>({
+      nick:n,
+      pts:players[n].pts + players[n].delta,
+      delta:players[n].delta
+    }));
+
+    const sortedNew = [...all].sort((a,b)=>b.pts-a.pts);
+    const sortedOld = [...all].sort((a,b)=>(b.pts - b.delta)-(a.pts - a.delta));
+
+    const posMap = {}; sortedNew.forEach((p,i)=>{posMap[p.nick]=i+1;});
+    const prevMap = {}; sortedOld.forEach((p,i)=>{prevMap[p.nick]=i+1;});
+
+    const list = sortedNew.filter(p=>p.delta!==0);
 
     playersTb.innerHTML='';
     list.forEach(p=>{
       const tr=document.createElement('tr');
       const cls=p.delta>=0?'up':'down';
       const arrow=p.delta>0?'▲':p.delta<0?'▼':'';
-      tr.innerHTML=`<td>${p.nick}</td><td>${p.pts}</td><td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
+      const now=posMap[p.nick];
+      const prev=prevMap[p.nick];
+      const rank=getRankLetter(p.pts);
+      tr.innerHTML=`<td>#${now} (#${prev})</td>`+
+        `<td class="nick-${rank}">${p.nick}</td>`+
+        `<td>${p.pts}</td>`+
+        `<td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
       playersTb.appendChild(tr);
     });
 

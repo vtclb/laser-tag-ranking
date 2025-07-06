@@ -48,6 +48,12 @@
     tbody tr:nth-child(odd){ background:rgba(255,255,255,0.05); }
     .up   { color:lime; }
     .down { color:red; }
+    /* Nickname colors */
+    .nick-S { color: magenta; }
+    .nick-A { color: red; }
+    .nick-B { color: yellow; }
+    .nick-C { color: cyan; }
+    .nick-D { color: lime; }
     @media (max-width: 600px) {
       nav { font-size:0.75rem; }
       table { font-size:0.75rem; }
@@ -76,7 +82,11 @@
       <h2>Поточні гравці</h2>
       <div class="table-container">
         <table>
-          <thead><tr><th>Нік</th><th>Бали</th><th>Зміна</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Позиція (попередня)</th><th>Нік</th><th>Бали</th><th>Зміна</th>
+            </tr>
+          </thead>
           <tbody id="players"></tbody>
         </table>
       </div>

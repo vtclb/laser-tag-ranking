@@ -226,11 +226,21 @@
         top.forEach(p => {
           const card = document.createElement('div');
           card.className = 'mvp-card';
-          card.innerHTML = `
-            <h3>${p.nickname}</h3>
-            <div class="stats">${p.games} ігор | ${p.wins}W - ${p.losses}L | ${p.winRate}%</div>
-            <div class="stats">${p.mvp} MVP</div>
-          `;
+
+          const h = document.createElement('h3');
+          h.textContent = p.nickname;
+
+          const info = document.createElement('div');
+          info.className = 'stats';
+          info.textContent = `${p.games} ігор | ${p.wins}W - ${p.losses}L | ${p.winRate}%`;
+
+          const mvp = document.createElement('div');
+          mvp.className = 'stats';
+          mvp.textContent = `${p.mvp} MVP`;
+
+          card.appendChild(h);
+          card.appendChild(info);
+          card.appendChild(mvp);
           el.appendChild(card);
         });
       }
@@ -270,17 +280,36 @@
           const tr = document.createElement('tr');
           const cls = getRankClass(p.points);
           tr.className = i >= 10 ? cls + ' hidden' : cls;
-          tr.innerHTML = `
-            <td>${i + 1}</td>
-            <td class="nick-${cls.split('-')[1]}">${p.nickname}</td>
-            <td>${cls.split('-')[1]}</td>
-            <td>${p.points}</td>
-            <td>${p.games}</td>
-            <td>${p.wins}</td>
-            <td>${p.losses}</td>
-            <td>${p.winRate}%</td>
-            <td>${p.mvp}</td>
-          `;
+
+          const idx = document.createElement('td');
+          idx.textContent = i + 1;
+
+          const nick = document.createElement('td');
+          nick.className = 'nick-' + cls.split('-')[1];
+          nick.textContent = p.nickname;
+
+          const rank = document.createElement('td');
+          rank.textContent = cls.split('-')[1];
+
+          const pts = document.createElement('td');
+          pts.textContent = p.points;
+
+          const games = document.createElement('td');
+          games.textContent = p.games;
+
+          const wins = document.createElement('td');
+          wins.textContent = p.wins;
+
+          const losses = document.createElement('td');
+          losses.textContent = p.losses;
+
+          const rate = document.createElement('td');
+          rate.textContent = p.winRate + '%';
+
+          const mvp = document.createElement('td');
+          mvp.textContent = p.mvp;
+
+          [idx,nick,rank,pts,games,wins,losses,rate,mvp].forEach(td=>tr.appendChild(td));
           tb.appendChild(tr);
         });
       }

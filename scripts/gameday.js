@@ -22,7 +22,10 @@
   leagueSel.addEventListener('change', loadData);
   dateInput.addEventListener('change', loadData);
   if(loadBtn) loadBtn.addEventListener('click', loadData);
-  document.addEventListener('DOMContentLoaded', loadData);
+  document.addEventListener('DOMContentLoaded', () => {
+    dateInput.value = new Date().toISOString().slice(0,10);
+    loadData();
+  });
   window.addEventListener('storage', e => {
     if(e.key === 'gamedayRefresh') loadData();
   });

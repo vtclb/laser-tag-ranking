@@ -120,8 +120,7 @@
         if(winner==='team1') d+=20;
         if(mvp===n) d+=10;
         players[n].delta += d;
-        const span=`<span class="nick-${getRankLetter(players[n].pts)}">${n}</span>`;
-        team1Pts.push(span+' ('+(d>0?'+':'')+d+')');
+        team1Pts.push({nick:n,rank:getRankLetter(players[n].pts),delta:d});
       });
       t2.forEach(n=>{
         players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
@@ -131,18 +130,17 @@
         if(winner==='team2') d+=20;
         if(mvp===n) d+=10;
         players[n].delta += d;
-        const span=`<span class="nick-${getRankLetter(players[n].pts)}">${n}</span>`;
-        team2Pts.push(span+' ('+(d>0?'+':'')+d+')');
+        team2Pts.push({nick:n,rank:getRankLetter(players[n].pts),delta:d});
       });
       matchRows.push({
-        team1: team1Pts.join(', '),
-        team2: team2Pts.join(', '),
+        team1: team1Pts,
+        team2: team2Pts,
         t1sum,
         t2sum,
         score1: s1,
         score2: s2,
         winner,
-        mvp: `<span class="nick-${getRankLetter(players[mvp]?.pts||0)}">${mvp}</span>`
+        mvp: {nick:mvp,rank:getRankLetter(players[mvp]?.pts||0)}
       });
     });
 
@@ -172,13 +170,28 @@
       const cls=p.delta>=0?'up':'down';
       const arrow=p.delta>0?'▲':p.delta<0?'▼':'';
       const nClass='nick-'+getRankLetter(p.pts);
-      tr.innerHTML=
-        `<td>${p.currRank} (${p.prevRank})</td>`+
-        `<td class="${nClass}">${p.nick}</td>`+
-        `<td>${p.pts}</td>`+
-        `<td>${p.wins}</td>`+
-        `<td>${p.games}</td>`+
-        `<td class="${cls}">${arrow} ${(p.delta>0?'+':'')+p.delta}</td>`;
+
+      const rank=document.createElement('td');
+      rank.textContent=`${p.currRank} (${p.prevRank})`;
+
+      const nick=document.createElement('td');
+      nick.className=nClass;
+      nick.textContent=p.nick;
+
+      const pts=document.createElement('td');
+      pts.textContent=p.pts;
+
+      const wins=document.createElement('td');
+      wins.textContent=p.wins;
+
+      const games=document.createElement('td');
+      games.textContent=p.games;
+
+      const delta=document.createElement('td');
+      delta.className=cls;
+      delta.textContent=`${arrow} ${(p.delta>0?'+':'')+p.delta}`;
+
+      [rank,nick,pts,wins,games,delta].forEach(td=>tr.appendChild(td));
       playersTb.appendChild(tr);
     });
 
@@ -188,10 +201,52 @@
       const cls1=m.winner==='team1'?'team-win':m.winner==='team2'?'team-loss':'';
       const cls2=m.winner==='team2'?'team-win':m.winner==='team1'?'team-loss':'';
       const score=formatScore(m.score1,m.score2);
-      tr.innerHTML=`<td class="team-label ${cls1}">🛡️ ${m.team1}<span class="team-total">[${m.t1sum}]</span></td>`+
-        `<td><span class="vs">${score}</span></td>`+
-        `<td class="team-label ${cls2}">🚀 ${m.team2}<span class="team-total">[${m.t2sum}]</span></td>`+
-        `<td>${m.mvp}</td>`;
+
+      const td1=document.createElement('td');
+      td1.className='team-label '+cls1;
+      td1.textContent='🛡️ ';
+      m.team1.forEach((p,i)=>{
+        const span=document.createElement('span');
+        span.className='nick-'+p.rank;
+        span.textContent=p.nick;
+        td1.appendChild(span);
+        td1.appendChild(document.createTextNode(` (${p.delta>0?'+':''}${p.delta})`));
+        if(i<m.team1.length-1) td1.appendChild(document.createTextNode(', '));
+      });
+      const total1=document.createElement('span');
+      total1.className='team-total';
+      total1.textContent='['+m.t1sum+']';
+      td1.appendChild(total1);
+
+      const tdScore=document.createElement('td');
+      const vs=document.createElement('span');
+      vs.className='vs';
+      vs.textContent=score;
+      tdScore.appendChild(vs);
+
+      const td2=document.createElement('td');
+      td2.className='team-label '+cls2;
+      td2.textContent='🚀 ';
+      m.team2.forEach((p,i)=>{
+        const span=document.createElement('span');
+        span.className='nick-'+p.rank;
+        span.textContent=p.nick;
+        td2.appendChild(span);
+        td2.appendChild(document.createTextNode(` (${p.delta>0?'+':''}${p.delta})`));
+        if(i<m.team2.length-1) td2.appendChild(document.createTextNode(', '));
+      });
+      const total2=document.createElement('span');
+      total2.className='team-total';
+      total2.textContent='['+m.t2sum+']';
+      td2.appendChild(total2);
+
+      const tdMvp=document.createElement('td');
+      const mvpSpan=document.createElement('span');
+      mvpSpan.className='nick-'+m.mvp.rank;
+      mvpSpan.textContent=m.mvp.nick;
+      tdMvp.appendChild(mvpSpan);
+
+      [td1,tdScore,td2,tdMvp].forEach(td=>tr.appendChild(td));
       matchesTb.appendChild(tr);
     });
   }

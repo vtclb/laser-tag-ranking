@@ -33,8 +33,25 @@
     }
     /* Контейнер */
     .container { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
-    .test-season, .summary { text-align: center; margin-bottom: 1rem; }
-    .test-season { color: #f39c12; }
+    .season-info, .summary { text-align: center; margin-bottom: 1rem; }
+    .season-info { color: #f39c12; }
+    .rank-chart {
+      display: flex;
+      height: 1rem;
+      max-width: 400px;
+      margin: 0.5rem auto;
+      border: 1px solid #555;
+      border-radius: 4px;
+      overflow: hidden;
+      font-size: 0.6rem;
+      color: #000;
+    }
+    .rank-chart div { display:flex; align-items:center; justify-content:center; }
+    .seg-S { background: magenta; }
+    .seg-A { background: red; }
+    .seg-B { background: yellow; }
+    .seg-C { background: cyan; }
+    .seg-D { background: lime; }
     .summary { color: #ccc; font-size: 0.9rem; }
     /* Пошук */
     .search-box { text-align: center; margin-bottom: 1rem; }
@@ -99,8 +116,9 @@
     <a href="about.html">Про клуб</a>
   </nav>
   <div class="container">
-    <div class="test-season">⚠️</div>
+    <div id="season-info" class="season-info"></div>
     <div class="summary" id="summary"></div>
+    <div id="rank-chart" class="rank-chart"></div>
     <div class="search-box"><input type="text" id="search" placeholder="Пошук нікнейму…" /></div>
     <div class="top-mvp" id="top-mvp"></div>
     <div class="table-container">
@@ -138,6 +156,7 @@
         const games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;
 
         const stats = {};
+        let totalRounds = 0;
         const sundayGames = games.filter(g => g.League === 'sunday');
         sundayGames.forEach(g => {
           const t1 = g.Team1.split(',').map(n => alias[n.trim()] || n.trim());
@@ -151,13 +170,20 @@
           winTeam.forEach(n => stats[n].wins++);
           const m = alias[g.MVP] || g.MVP;
           if (stats[m]) stats[m].mvp++;
+          let s1=parseInt(g.Score1,10); let s2=parseInt(g.Score2,10);
+          if(isNaN(s1)||isNaN(s2)){
+            const mScore=(g.Series||g.series||'').match(/(\d+)\D+(\d+)/);
+            if(mScore){ s1=parseInt(mScore[1],10); s2=parseInt(mScore[2],10); }
+          }
+          if(!isNaN(s1)&&!isNaN(s2)) totalRounds += s1+s2;
         });
 
         const totalGames = sundayGames.length;
         const dates = sundayGames.map(g => new Date(g.Timestamp)).filter(d => !isNaN(d));
         const minD = dates.length ? dates.reduce((a, b) => a < b ? a : b) : null;
         const maxD = dates.length ? dates.reduce((a, b) => a > b ? a : b) : null;
-        document.getElementById('summary').textContent = `Ігор: ${totalGames}. Період: ${formatD(minD)}–${formatD(maxD)}`;
+        document.getElementById('summary').textContent = `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minD)}–${formatD(maxD)}`;
+        document.getElementById('season-info').textContent = `Перший сезон — старт ${formatFull(minD)}`;
 
         const players = rank.map(r => {
           const nick = alias[r.Nickname] || r.Nickname;
@@ -174,6 +200,7 @@
         }).sort((a, b) => b.points - a.points);
 
         renderTopMVP(players);
+        renderChart(players);
         renderTable(players);
         initSearch();
         initToggle();
@@ -184,6 +211,12 @@
         const dd = ('0' + d.getDate()).slice(-2);
         const mm = ('0' + (d.getMonth() + 1)).slice(-2);
         return `${dd}.${mm}`;
+      }
+      function formatFull(d) {
+        if (!d) return '-';
+        const dd = ('0' + d.getDate()).slice(-2);
+        const mm = ('0' + (d.getMonth() + 1)).slice(-2);
+        return `${dd}.${mm}.${d.getFullYear()}`;
       }
 
       function renderTopMVP(list) {
@@ -208,6 +241,26 @@
         if (points >= 500) return 'rank-B';
         if (points >= 200) return 'rank-C';
         return 'rank-D';
+      }
+
+      function renderChart(list) {
+        const counts = { S: 0, A: 0, B: 0, C: 0, D: 0 };
+        list.forEach(p => {
+          const r = getRankClass(p.points).replace('rank-', '');
+          counts[r] = (counts[r] || 0) + 1;
+        });
+        const total = list.length || 1;
+        const chart = document.getElementById('rank-chart');
+        chart.innerHTML = '';
+        ['S','A','B','C','D'].forEach(r => {
+          const pct = Math.round(counts[r] / total * 100);
+          if (!pct) return;
+          const div = document.createElement('div');
+          div.className = 'seg-' + r;
+          div.style.width = pct + '%';
+          div.textContent = pct + '%';
+          chart.appendChild(div);
+        });
       }
 
       function renderTable(list) {

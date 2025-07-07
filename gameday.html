@@ -71,16 +71,19 @@
       font-family: 'Press Start 2P', monospace;
       cursor:pointer;
     }
+    .table-container { overflow-x:auto; margin-bottom:1rem; }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 1rem;
       font-size: 0.75rem;
+      table-layout: fixed;
     }
     th, td {
       border: 1px solid #444;
       padding: 0.4rem;
       text-align: center;
+      word-wrap: break-word;
     }
     thead th { background:#222; color:#f39c12; position:sticky; top:0; }
     tbody tr:nth-child(odd){ background:rgba(255,255,255,0.05); }
@@ -92,10 +95,33 @@
     .nick-C { color: cyan; }
     .nick-D { color: lime; }
     .team-label {
-      display:inline-block;
+      position:relative;
+      display:block;
+      width:100%;
       background:rgba(0,0,0,0.6);
-      padding:0.25rem 0.5rem;
+      padding:0.25rem 1.5rem 0.25rem 0.5rem;
       border-radius:4px;
+      white-space:normal;
+    }
+    .team-total {
+      position:absolute;
+      right:0.25rem;
+      top:50%;
+      transform:translateY(-50%);
+      background:rgba(255,255,255,0.15);
+      padding:0 0.25rem;
+      border-radius:3px;
+    }
+    .team-win {
+      border:2px solid lime;
+      box-shadow:0 0 6px lime;
+    }
+    .team-loss {
+      border:2px solid red;
+      box-shadow:0 0 6px red;
+    }
+    .vp {
+      color:#ffd700;
     }
     .vs {
       color:#ffd700;
@@ -131,7 +157,7 @@
       <h2>Поточні гравці</h2>
       <div class="table-container">
         <table>
-          <thead><tr><th>Позиція (попередня)</th><th>Нік</th><th>Бали</th><th>Зміна</th></tr></thead>
+          <thead><tr><th>Позиція (попередня)</th><th>Нік</th><th>Бали</th><th>Перемоги</th><th>Ігор</th><th>Зміна</th></tr></thead>
           <tbody id="players"></tbody>
         </table>
       </div>

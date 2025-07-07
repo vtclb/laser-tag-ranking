@@ -142,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       initScenario();
 
       alert('Гру успішно збережено та рейтинги оновлено');
+      localStorage.setItem('gamedayRefresh', Date.now());
       btnClear.click();
     } catch (err) {
       console.error('Помилка під час збереження:', err);

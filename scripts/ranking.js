@@ -79,13 +79,35 @@ export function renderTable(list, tbodyEl){
     const cls=getRankClass(p.points);
     tr.className=cls+(i>=10?' hidden':'');
 
-    const cells=[i+1,p.nickname,cls.replace('rank-',''),p.points,p.games,p.wins,p.losses,p.winRate+'%',p.mvp];
-    cells.forEach((val,idx)=>{
+    const avatar=localStorage.getItem('avatar:'+p.nickname)||'https://via.placeholder.com/40';
+    const tdAvatar=document.createElement('td');
+    const img=document.createElement('img');
+    img.className='avatar-img';
+    img.src=avatar;
+    const input=document.createElement('input');
+    input.type='file';
+    input.accept='image/*';
+    input.addEventListener('change',e=>{
+      const file=e.target.files[0];
+      if(!file) return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        localStorage.setItem('avatar:'+p.nickname,ev.target.result);
+        img.src=ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    tdAvatar.appendChild(img);
+    tdAvatar.appendChild(input);
+
+    const vals=[i+1,p.nickname,cls.replace('rank-',''),p.points,p.games,p.wins,p.losses,p.winRate+'%',p.mvp];
+    vals.forEach((val,idx)=>{
       const td=document.createElement('td');
       if(idx===1) td.className=cls.replace('rank-','nick-');
       td.textContent=val;
       tr.appendChild(td);
     });
+    tr.insertBefore(tdAvatar,tr.children[1]);
     tbodyEl.appendChild(tr);
   });
 }

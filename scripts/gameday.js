@@ -187,6 +187,12 @@
       const rank=document.createElement('td');
       rank.textContent=`${p.currRank} (${p.prevRank})`;
 
+      const tdAvatar=document.createElement('td');
+      const img=document.createElement('img');
+      img.className='avatar-img';
+      img.src=localStorage.getItem('avatar:'+p.nick)||'https://via.placeholder.com/40';
+      tdAvatar.appendChild(img);
+
       const nick=document.createElement('td');
       nick.className=nClass;
       nick.textContent=p.nick;
@@ -204,7 +210,7 @@
       delta.className=cls;
       delta.textContent=`${arrow} ${(p.delta>0?'+':'')+p.delta}`;
 
-      [rank,nick,pts,wins,games,delta].forEach(td=>tr.appendChild(td));
+      [rank,tdAvatar,nick,pts,wins,games,delta].forEach(td=>tr.appendChild(td));
       playersTb.appendChild(tr);
     });
 

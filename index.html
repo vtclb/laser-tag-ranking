@@ -162,181 +162,24 @@
     </div>
     <button class="show-more" id="toggle">Всі гравці</button>
   </div>
-  <script>
-  (function(){
-    const rankingURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv";
-    const gamesURL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
-    const alias      = {"Zavodchanyn":"Romario","Mariko":"Gidora","Timabuilding":"Бойбуд"};
-
-    async function loadData(){
-      const [rText,gText] = await Promise.all([
-        fetch(rankingURL).then(r=>r.text()),
-        fetch(gamesURL ).then(r=>r.text())
-      ]);
-      const rank  = Papa.parse(rText,{header:true,skipEmptyLines:true}).data;
-      const games = Papa.parse(gText,{header:true,skipEmptyLines:true}).data;
-      const stats = {};
-      let totalRounds = 0;
-      const kids  = games.filter(g=>g.League==='kids');
-      kids.forEach(g=>{
-        let t1=g.Team1.split(',').map(n=>alias[n.trim()]||n.trim());
-        let t2=g.Team2.split(',').map(n=>alias[n.trim()]||n.trim());
-        const winKey= g.Winner;
-        const winT  = winKey==='team1'?t1:winKey==='team2'?t2:[];
-        const all   = t1.concat(t2);
-        all.forEach(n=>{ stats[n]=stats[n]||{games:0,wins:0,mvp:0}; stats[n].games++; });
-        winT.forEach(n=>stats[n].wins++);
-        const m = alias[g.MVP]||g.MVP; if(stats[m]) stats[m].mvp++;
-        let s1=parseInt(g.Score1,10); let s2=parseInt(g.Score2,10);
-        if(isNaN(s1) || isNaN(s2)){
-          const mScore=(g.Series||g.series||'').match(/(\d+)\D+(\d+)/);
-          if(mScore){ s1=parseInt(mScore[1],10); s2=parseInt(mScore[2],10); }
-        }
-        if(!isNaN(s1)&&!isNaN(s2)) totalRounds += s1+s2;
-      });
-      const totalGames = kids.length;
-      const dates = kids.map(g=>new Date(g.Timestamp)).filter(d=>!isNaN(d));
-      const minD = dates.length?dates.reduce((a,b)=>a<b?a:b):null;
-      const maxD = dates.length?dates.reduce((a,b)=>a>b?a:b):null;
-      document.getElementById('summary').textContent =
-        `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minD)}–${formatD(maxD)}`;
-      document.getElementById('season-info').textContent =
-        `Перший сезон — старт ${formatFull(minD)}`;
-      const players = rank.map(r=>{
-        const nick = alias[r.Nickname]||r.Nickname;
-        const p={ nickname: nick, points: +r.Points||0,
-                  games: stats[nick]?.games||0,
-                  wins:  stats[nick]?.wins||0,
-                  mvp:   stats[nick]?.mvp||0 };
-        p.losses = p.games - p.wins;
-        p.winRate= p.games>0?((p.wins/p.games*100).toFixed(2)):0;
-        return p;
-      }).sort((a,b)=>b.points - a.points);
-      renderTopMVP(players);
-      renderChart(players);
-      renderTable(players);
-      initSearch(); initToggle();
-    }
-    function formatD(d){
-      return d?('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2):'-';
-    }
-    function formatFull(d){
-      if(!d) return '-';
-      return ('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
-    }
-    function renderTopMVP(pl){
-      const top = pl.slice().sort((a,b)=>b.mvp-a.mvp).slice(0,3);
-      const el = document.getElementById('top-mvp'); el.innerHTML='';
-      top.forEach(p=>{
-        const c = document.createElement('div');
-        c.className='mvp-card';
-        const crown=document.createElement('div');
-        crown.style.fontSize='2rem';
-        crown.textContent='👑';
-        const h=document.createElement('h3');
-        h.className=getRankClass(p.points).replace('rank-','nick-');
-        h.textContent=p.nickname;
-        const stat=document.createElement('div');
-        stat.textContent=p.mvp+' MVP';
-        c.appendChild(crown);
-        c.appendChild(h);
-        c.appendChild(stat);
-        el.appendChild(c);
-      });
-    }
-    function getRankClass(points){
-      if(points>=1200) return 'rank-S';
-      if(points>=800 ) return 'rank-A';
-      if(points>=500 ) return 'rank-B';
-      if(points>=200 ) return 'rank-C';
-      return 'rank-D';
-    }
-    function renderChart(list){
-      const counts={S:0,A:0,B:0,C:0,D:0};
-      list.forEach(p=>{
-        const r=getRankClass(p.points).replace('rank-','');
-        counts[r] = (counts[r]||0)+1;
-      });
-      const total=list.length||1;
-      const chart=document.getElementById('rank-chart');
-      chart.innerHTML='';
-      ['S','A','B','C','D'].forEach(r=>{
-        const pct=Math.round(counts[r]/total*100);
-        if(!pct) return;
-        const div=document.createElement('div');
-        div.className='seg-'+r;
-        div.style.width=pct+'%';
-        div.textContent=pct+'%';
-        chart.appendChild(div);
-      });
-    }
-    function renderTable(pl){
-      const tb = document.getElementById('ranking'); tb.innerHTML='';
-      pl.forEach((p,i)=>{
-        const tr = document.createElement('tr');
-        const cls= getRankClass(p.points);
-        tr.className = cls + (i>=10? ' hidden':'');
-
-        const rankCell=document.createElement('td');
-        rankCell.textContent=i+1;
-
-        const nickCell=document.createElement('td');
-        nickCell.className=cls.replace('rank-','nick-');
-        nickCell.textContent=p.nickname;
-
-        const rCell=document.createElement('td');
-        rCell.textContent=cls.replace('rank-','');
-
-        const ptsCell=document.createElement('td');
-        ptsCell.textContent=p.points;
-
-        const gamesCell=document.createElement('td');
-        gamesCell.textContent=p.games||'-';
-
-        const winsCell=document.createElement('td');
-        winsCell.textContent=p.wins||'-';
-
-        const lossesCell=document.createElement('td');
-        lossesCell.textContent=p.losses||'-';
-
-        const winRateCell=document.createElement('td');
-        winRateCell.textContent=p.winRate+'%';
-
-        const mvpCell=document.createElement('td');
-        mvpCell.textContent=p.mvp||'-';
-
-        tr.appendChild(rankCell);
-        tr.appendChild(nickCell);
-        tr.appendChild(rCell);
-        tr.appendChild(ptsCell);
-        tr.appendChild(gamesCell);
-        tr.appendChild(winsCell);
-        tr.appendChild(lossesCell);
-        tr.appendChild(winRateCell);
-        tr.appendChild(mvpCell);
-        tb.appendChild(tr);
-      });
-    }
-    function initSearch(){
-      document.getElementById('search').addEventListener('input', e=>{
-        const q = e.target.value.toLowerCase();
-        document.querySelectorAll('#ranking tr').forEach(tr=>{
-          tr.style.display = tr.textContent.toLowerCase().includes(q)? '':'none';
-        });
-      });
-    }
-    function initToggle(){
-      const btn = document.getElementById('toggle');
-      btn.addEventListener('click', ()=>{
-        const expanded = btn.textContent === 'Всі гравці';
-        document.querySelectorAll('#ranking tr').forEach((tr,i)=>{
-          if(i>=10) tr.style.display = expanded? 'table-row':'none';
-        });
-        btn.textContent = expanded? 'Топ-10':'Всі гравці';
-      });
-    }
-    document.addEventListener('DOMContentLoaded', loadData);
-  })();
-  </script>
+<script type="module">
+  import {loadData,computeStats,renderTopMVP,renderChart,renderTable,initSearch,initToggle,formatD,formatFull} from './scripts/ranking.js';
+  const rankingURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv";
+  const gamesURL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
+  const alias = {"Zavodchanyn":"Romario","Mariko":"Gidora","Timabuilding":"Бойбуд"};
+  const league = 'kids';
+  async function init(){
+    const {rank,games} = await loadData(rankingURL,gamesURL);
+    const {players,totalGames,totalRounds,minDate,maxDate} = computeStats(rank,games,{alias,league});
+    document.getElementById('summary').textContent = `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
+    document.getElementById('season-info').textContent = `Перший сезон — старт ${formatFull(minDate)}`;
+    renderTopMVP(players, document.getElementById('top-mvp'));
+    renderChart(players, document.getElementById('rank-chart'));
+    renderTable(players, document.getElementById('ranking'));
+    initSearch(document.getElementById('search'), '#ranking tr');
+    initToggle(document.getElementById('toggle'), '#ranking tr');
+  }
+  document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>

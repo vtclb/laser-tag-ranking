@@ -107,6 +107,16 @@
       const winner = g.Winner;
       const mvp = normName(g.MVP);
 
+      let s1 = parseInt(g.Score1, 10);
+      let s2 = parseInt(g.Score2, 10);
+      if(isNaN(s1) || isNaN(s2)){
+        const mScore = (g.Series || g.series || '').match(/(\d+)\D+(\d+)/);
+        if(mScore){
+          s1 = parseInt(mScore[1], 10);
+          s2 = parseInt(mScore[2], 10);
+        }
+      }
+
 
       const team1Pts=[];
       const team2Pts=[];

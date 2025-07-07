@@ -72,10 +72,21 @@
   async function loadData(){
     if(!dateInput.value) return; // require date
     const rURL = rankingURLs[leagueSel.value];
-    const [rText,gText] = await Promise.all([
-      fetch(rURL).then(r=>r.text()),
-      fetch(gamesURL).then(r=>r.text())
-    ]);
+    let rText, gText;
+    try{
+      [rText, gText] = await Promise.all([
+        fetch(rURL).then(r=>r.text()),
+        fetch(gamesURL).then(r=>r.text())
+      ]);
+    }catch(err){
+      playersTb.innerHTML = '';
+      matchesTb.innerHTML = '';
+      console.error('Failed to load gameday data', err);
+      if(typeof alert === 'function'){
+        alert('Failed to load gameday data. Please try again later.');
+      }
+      return;
+    }
     const ranking = Papa.parse(rText,{header:true,skipEmptyLines:true}).data;
     const games   = Papa.parse(gText,{header:true,skipEmptyLines:true}).data;
 
@@ -95,15 +106,7 @@
       const t2 = g.Team2.split(',').map(s=>normName(s.trim()));
       const winner = g.Winner;
       const mvp = normName(g.MVP);
-      let s1 = parseInt(g.Score1,10);
-      let s2 = parseInt(g.Score2,10);
-      if(isNaN(s1) || isNaN(s2)){
-        const m=(g.Series||g.series||'').match(/(\d+)\D+(\d+)/);
-        if(m){
-          s1=parseInt(m[1],10);
-          s2=parseInt(m[2],10);
-        }
-      }
+
 
       const team1Pts=[];
       const team2Pts=[];

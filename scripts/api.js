@@ -48,3 +48,17 @@ export async function saveDetailedStats(matchId, statsArray) {
   });
   return res.text();
 }
+
+const avatarBase = `${proxyUrl}/avatars`;
+
+export function getAvatarURL(nick){
+  return `${avatarBase}/${encodeURIComponent(nick)}?t=${Date.now()}`;
+}
+
+export async function uploadAvatar(nick, file){
+  await fetch(`${avatarBase}/${encodeURIComponent(nick)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    body: file,
+  });
+}

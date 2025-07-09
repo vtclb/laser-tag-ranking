@@ -1,5 +1,5 @@
 // scripts/avatarAdmin.js
-import { uploadAvatar, getAvatarURL } from './api.js';
+import { uploadAvatar, getAvatarURL, getDefaultAvatarURL } from './api.js';
 
 function isAdminMode(){
   return localStorage.getItem('admin') === 'true';
@@ -22,7 +22,10 @@ export function initAvatarAdmin(players){
     img.className = 'avatar-img';
     img.dataset.nick = p.nick;
     img.src = getAvatarURL(p.nick);
-    img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
+    img.onerror = () => {
+      img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
+      img.src = getDefaultAvatarURL(p.nick);
+    };
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';

@@ -1,4 +1,4 @@
-import { uploadAvatar, getAvatarURL } from "./api.js";
+import { getAvatarURL, getDefaultAvatarURL } from "./api.js";
 export async function loadData(rankingURL, gamesURL){
   const [rText, gText] = await Promise.all([
     fetch(rankingURL).then(r=>r.text()),
@@ -54,9 +54,6 @@ export function getRankClass(points){
   return 'rank-D';
 }
 
-export function isAdminMode(){
-  return localStorage.getItem('admin') === 'true';
-}
 
 export function renderChart(list, chartEl){
   const counts={S:0,A:0,B:0,C:0,D:0};
@@ -89,24 +86,11 @@ export function renderTable(list, tbodyEl){
     img.className='avatar-img';
     img.dataset.nick=p.nickname;
     img.src=getAvatarURL(p.nickname);
-    img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+    img.onerror=()=>{
+      img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+      img.src=getDefaultAvatarURL(p.nickname);
+    };
     tdAvatar.appendChild(img);
-    if(isAdminMode()){
-      const input=document.createElement('input');
-      input.type='file';
-      input.accept='image/*';
-      input.addEventListener('change',e=>{
-        const file=e.target.files[0];
-        if(!file) return;
-        img.src=URL.createObjectURL(file);
-        uploadAvatar(p.nickname,file).then(()=>{
-          img.src=getAvatarURL(p.nickname);
-          localStorage.setItem('avatarRefresh', Date.now().toString());
-          refreshAvatars();
-        });
-      });
-      tdAvatar.appendChild(input);
-    }
 
     const vals=[i+1,p.nickname,cls.replace('rank-',''),p.points,p.games,p.wins,p.losses,p.winRate+'%',p.mvp];
     vals.forEach((val,idx)=>{

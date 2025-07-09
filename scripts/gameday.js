@@ -1,4 +1,7 @@
 (function(){
+  function isAdminMode(){
+    return localStorage.getItem('admin') === 'true';
+  }
   const rankingURLs = {
     kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
     sunday: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
@@ -192,6 +195,22 @@
       img.className='avatar-img';
       img.src=localStorage.getItem('avatar:'+p.nick)||'https://via.placeholder.com/40';
       tdAvatar.appendChild(img);
+      if(isAdminMode()){
+        const input=document.createElement('input');
+        input.type='file';
+        input.accept='image/*';
+        input.addEventListener('change',e=>{
+          const file=e.target.files[0];
+          if(!file) return;
+          const reader=new FileReader();
+          reader.onload=ev=>{
+            localStorage.setItem('avatar:'+p.nick,ev.target.result);
+            img.src=ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+        tdAvatar.appendChild(input);
+      }
 
       const nick=document.createElement('td');
       nick.className=nClass;

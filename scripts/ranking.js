@@ -53,6 +53,10 @@ export function getRankClass(points){
   return 'rank-D';
 }
 
+export function isAdminMode(){
+  return localStorage.getItem('admin') === 'true';
+}
+
 export function renderChart(list, chartEl){
   const counts={S:0,A:0,B:0,C:0,D:0};
   list.forEach(p=>{
@@ -84,21 +88,23 @@ export function renderTable(list, tbodyEl){
     const img=document.createElement('img');
     img.className='avatar-img';
     img.src=avatar;
-    const input=document.createElement('input');
-    input.type='file';
-    input.accept='image/*';
-    input.addEventListener('change',e=>{
-      const file=e.target.files[0];
-      if(!file) return;
-      const reader=new FileReader();
-      reader.onload=ev=>{
-        localStorage.setItem('avatar:'+p.nickname,ev.target.result);
-        img.src=ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
     tdAvatar.appendChild(img);
-    tdAvatar.appendChild(input);
+    if(isAdminMode()){
+      const input=document.createElement('input');
+      input.type='file';
+      input.accept='image/*';
+      input.addEventListener('change',e=>{
+        const file=e.target.files[0];
+        if(!file) return;
+        const reader=new FileReader();
+        reader.onload=ev=>{
+          localStorage.setItem('avatar:'+p.nickname,ev.target.result);
+          img.src=ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+      tdAvatar.appendChild(input);
+    }
 
     const vals=[i+1,p.nickname,cls.replace('rank-',''),p.points,p.games,p.wins,p.losses,p.winRate+'%',p.mvp];
     vals.forEach((val,idx)=>{

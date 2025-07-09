@@ -87,6 +87,7 @@ export function renderTable(list, tbodyEl){
     const tdAvatar=document.createElement('td');
     const img=document.createElement('img');
     img.className='avatar-img';
+    img.dataset.nick=p.nickname;
     img.src=getAvatarURL(p.nickname);
     img.onerror=()=>{img.src='https://via.placeholder.com/40';};
     tdAvatar.appendChild(img);
@@ -100,6 +101,8 @@ export function renderTable(list, tbodyEl){
         img.src=URL.createObjectURL(file);
         uploadAvatar(p.nickname,file).then(()=>{
           img.src=getAvatarURL(p.nickname);
+          localStorage.setItem('avatarRefresh', Date.now().toString());
+          refreshAvatars();
         });
       });
       tdAvatar.appendChild(input);
@@ -164,4 +167,16 @@ export function formatD(d){
 export function formatFull(d){
   if(!d) return '-';
   return ('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
+}
+
+export function refreshAvatars(){
+  document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
+    img.src=getAvatarURL(img.dataset.nick);
+  });
+}
+
+if(typeof window!=='undefined'){
+  window.addEventListener('storage',e=>{
+    if(e.key==='avatarRefresh') refreshAvatars();
+  });
 }

@@ -3,6 +3,12 @@ import { uploadAvatar, getAvatarURL } from "./api.js";
   function isAdminMode(){
     return localStorage.getItem('admin') === 'true';
   }
+
+  function refreshAvatars(){
+    document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
+      img.src=getAvatarURL(img.dataset.nick);
+    });
+  }
   const rankingURLs = {
     kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
     sunday: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
@@ -32,6 +38,7 @@ import { uploadAvatar, getAvatarURL } from "./api.js";
   });
   window.addEventListener('storage', e => {
     if(e.key === 'gamedayRefresh') loadData();
+    if(e.key === 'avatarRefresh') refreshAvatars();
   });
   if(fullscreenBtn){
     fullscreenBtn.addEventListener('click', () => {
@@ -194,6 +201,7 @@ import { uploadAvatar, getAvatarURL } from "./api.js";
       const tdAvatar=document.createElement('td');
       const img=document.createElement('img');
       img.className='avatar-img';
+      img.dataset.nick=p.nick;
       img.src=getAvatarURL(p.nick);
       img.onerror=()=>{img.src='https://via.placeholder.com/40';};
       tdAvatar.appendChild(img);
@@ -207,6 +215,8 @@ import { uploadAvatar, getAvatarURL } from "./api.js";
           img.src=URL.createObjectURL(file);
           uploadAvatar(p.nick,file).then(()=>{
             img.src=getAvatarURL(p.nick);
+            localStorage.setItem('avatarRefresh', Date.now().toString());
+            refreshAvatars();
           });
         });
         tdAvatar.appendChild(input);

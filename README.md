@@ -22,19 +22,9 @@ Then open `http://localhost:8080/index.html` in your browser. The other pages ar
 - **[`rules.html`](rules.html)** – club rules and scoring system.
 - **[`about.html`](about.html)** – small pixel arena demo.
 
-## Admin mode
-
-Some pages contain additional controls that are visible only when admin mode is enabled. To activate admin mode open your browser console and run:
-
-```javascript
-localStorage.setItem('admin', 'true');
-```
-
-Reload the page to reveal the admin sections. To disable admin mode run `localStorage.removeItem('admin')`.
-
 ## Avatar management
 
-Avatar uploads are managed **only** through `balance.html`. When admin mode is enabled that page shows the *Керування аватарами* section with file inputs next to each nickname. Uploaded files are sent to the `/avatars/{nick}` API endpoint defined in `scripts/api.js`.
+Avatar uploads are managed **only** through `balance.html`. The *Керування аватарами* section contains a file input next to each nickname and a **Зберегти аватари** button. Select the desired images, then click the button to upload them to the `/avatars/{nick}` API endpoint defined in `scripts/api.js`.
 
 If a player has no stored avatar the site will attempt to load a default image from `assets/default_avatars/{nick}.png` before falling back to a placeholder. Place any default avatars you want to use in that folder.
 
@@ -58,5 +48,5 @@ Requests to `/avatars/<nick>` support `GET` for downloading and `POST` for uploa
 
 1. Start a static server in the repository root.
 2. Visit `index.html` or any other page listed above.
-3. Optionally enable admin mode and open `balance.html` to upload avatars or manage data.
+3. Open `balance.html` to upload avatars or manage data.
 4. Ensure the Cloudflare Worker from `avatar-worker.js` is deployed if you need avatar uploads.

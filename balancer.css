@@ -82,4 +82,8 @@ button:hover{background:var(--accent-dark);}button:disabled{background:var(--tex
   object-fit: cover;
 }
 
+#save-avatars {
+  margin-top: 0.5rem;
+}
+
 

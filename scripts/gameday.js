@@ -1,8 +1,5 @@
-import { uploadAvatar, getAvatarURL } from "./api.js";
+import { getAvatarURL, getDefaultAvatarURL } from "./api.js";
 (function(){
-  function isAdminMode(){
-    return localStorage.getItem('admin') === 'true';
-  }
 
   function refreshAvatars(){
     document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
@@ -203,24 +200,11 @@ import { uploadAvatar, getAvatarURL } from "./api.js";
       img.className='avatar-img';
       img.dataset.nick=p.nick;
       img.src=getAvatarURL(p.nick);
-      img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+      img.onerror=()=>{
+        img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+        img.src=getDefaultAvatarURL(p.nick);
+      };
       tdAvatar.appendChild(img);
-      if(isAdminMode()){
-        const input=document.createElement('input');
-        input.type='file';
-        input.accept='image/*';
-        input.addEventListener('change',e=>{
-          const file=e.target.files[0];
-          if(!file) return;
-          img.src=URL.createObjectURL(file);
-          uploadAvatar(p.nick,file).then(()=>{
-            img.src=getAvatarURL(p.nick);
-            localStorage.setItem('avatarRefresh', Date.now().toString());
-            refreshAvatars();
-          });
-        });
-        tdAvatar.appendChild(input);
-      }
 
       const nick=document.createElement('td');
       nick.className=nClass;

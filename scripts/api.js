@@ -50,9 +50,14 @@ export async function saveDetailedStats(matchId, statsArray) {
 }
 
 const avatarBase = `${proxyUrl}/avatars`;
+const defaultAvatarBase = 'assets/default_avatars';
 
 export function getAvatarURL(nick){
   return `${avatarBase}/${encodeURIComponent(nick)}?t=${Date.now()}`;
+}
+
+export function getDefaultAvatarURL(nick){
+  return `${defaultAvatarBase}/${encodeURIComponent(nick)}.png`;
 }
 
 export async function uploadAvatar(nick, file){

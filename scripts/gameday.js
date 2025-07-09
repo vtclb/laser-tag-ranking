@@ -1,3 +1,4 @@
+import { uploadAvatar, getAvatarURL } from "./api.js";
 (function(){
   function isAdminMode(){
     return localStorage.getItem('admin') === 'true';
@@ -193,7 +194,8 @@
       const tdAvatar=document.createElement('td');
       const img=document.createElement('img');
       img.className='avatar-img';
-      img.src=localStorage.getItem('avatar:'+p.nick)||'https://via.placeholder.com/40';
+      img.src=getAvatarURL(p.nick);
+      img.onerror=()=>{img.src='https://via.placeholder.com/40';};
       tdAvatar.appendChild(img);
       if(isAdminMode()){
         const input=document.createElement('input');
@@ -202,12 +204,10 @@
         input.addEventListener('change',e=>{
           const file=e.target.files[0];
           if(!file) return;
-          const reader=new FileReader();
-          reader.onload=ev=>{
-            localStorage.setItem('avatar:'+p.nick,ev.target.result);
-            img.src=ev.target.result;
-          };
-          reader.readAsDataURL(file);
+          img.src=URL.createObjectURL(file);
+          uploadAvatar(p.nick,file).then(()=>{
+            img.src=getAvatarURL(p.nick);
+          });
         });
         tdAvatar.appendChild(input);
       }

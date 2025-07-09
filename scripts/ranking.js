@@ -1,3 +1,4 @@
+import { uploadAvatar, getAvatarURL } from "./api.js";
 export async function loadData(rankingURL, gamesURL){
   const [rText, gText] = await Promise.all([
     fetch(rankingURL).then(r=>r.text()),
@@ -83,11 +84,11 @@ export function renderTable(list, tbodyEl){
     const cls=getRankClass(p.points);
     tr.className=cls+(i>=10?' hidden':'');
 
-    const avatar=localStorage.getItem('avatar:'+p.nickname)||'https://via.placeholder.com/40';
     const tdAvatar=document.createElement('td');
     const img=document.createElement('img');
     img.className='avatar-img';
-    img.src=avatar;
+    img.src=getAvatarURL(p.nickname);
+    img.onerror=()=>{img.src='https://via.placeholder.com/40';};
     tdAvatar.appendChild(img);
     if(isAdminMode()){
       const input=document.createElement('input');
@@ -96,12 +97,10 @@ export function renderTable(list, tbodyEl){
       input.addEventListener('change',e=>{
         const file=e.target.files[0];
         if(!file) return;
-        const reader=new FileReader();
-        reader.onload=ev=>{
-          localStorage.setItem('avatar:'+p.nickname,ev.target.result);
-          img.src=ev.target.result;
-        };
-        reader.readAsDataURL(file);
+        img.src=URL.createObjectURL(file);
+        uploadAvatar(p.nickname,file).then(()=>{
+          img.src=getAvatarURL(p.nickname);
+        });
       });
       tdAvatar.appendChild(input);
     }

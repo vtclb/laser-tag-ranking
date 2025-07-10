@@ -92,7 +92,7 @@
     @keyframes pulse { 0%,100% { box-shadow:0 0 8px rgba(243,156,18,.6); } 50% { box-shadow:0 0 16px rgba(243,156,18,1); } }
     /* Table */
     .table-container { overflow-x: auto; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; min-width: 800px; font-size: 0.75rem; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; font-size: 0.75rem; }
     thead th {
       position: sticky; top: 0;
       background: #222;
@@ -135,7 +135,7 @@
     .nick-C { color: cyan; }
     .nick-D { color: lime; }
     .hidden { display: none; }
-    @media(max-width:600px) { table { min-width:600px; } .mvp-card { min-width:45%; } }
+    @media(max-width:600px) { table { min-width:480px; } .mvp-card { min-width:45%; } }
   </style>
 </head>
 <body>
@@ -156,7 +156,7 @@
       <table>
         <thead><tr>
           <th>Місце</th><th>Аватар</th><th>Нікнейм</th><th>Ранг</th><th>Бали</th>
-          <th>Ігор</th><th>Перемог</th><th>Поразок</th><th>% Win</th><th>MVP</th>
+          <th>Ігор</th><th>% Win</th><th>MVP</th>
         </tr></thead>
         <tbody id="ranking"></tbody>
       </table>

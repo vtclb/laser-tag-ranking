@@ -92,7 +92,7 @@ export function renderTable(list, tbodyEl){
     };
     tdAvatar.appendChild(img);
 
-    const vals=[i+1,p.nickname,cls.replace('rank-',''),p.points,p.games,p.wins,p.losses,p.winRate+'%',p.mvp];
+    const vals=[i+1,p.nickname,cls.replace('rank-',''),p.points,p.games,p.winRate+'%',p.mvp];
     vals.forEach((val,idx)=>{
       const td=document.createElement('td');
       if(idx===1) td.className=cls.replace('rank-','nick-');

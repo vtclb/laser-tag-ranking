@@ -1,34 +1,163 @@
-function doPost(e){
-  var payload = {};
-  try {
-    payload = JSON.parse(e.postData.contents || '{}');
-  } catch(err) {
-    return ContentService.createTextOutput('Invalid payload');
-  }
+const SHEET_ID = '19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw';
 
-  if (payload.action === 'getGenders') {
-    var ss = SpreadsheetApp.getActive();
-    var out = {};
-    ['kids','sundaygames'].forEach(function(name){
-      var sheet = ss.getSheetByName(name);
-      if(!sheet) return;
-      var headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
-      var nickCol = headers.indexOf('Nickname') + 1;
-      var genderCol = headers.indexOf('Gender') + 1;
-      if(nickCol && genderCol){
-        var values = sheet.getRange(2,1,sheet.getLastRow()-1,sheet.getLastColumn()).getValues();
-        values.forEach(function(row){
-          var nick = row[nickCol-1];
-          var gender = row[genderCol-1];
-          if(nick && gender){
-            out[nick.toString().trim()] = gender.toString().trim().toLowerCase();
-          }
+function doPost(e) {
+  try {
+    // ----- JSON payload actions -----
+    if (e.postData && e.postData.type === 'application/json') {
+      const payload = JSON.parse(e.postData.contents || '{}');
+
+      if (payload.action === 'importStats') {
+        const ss = SpreadsheetApp.openById(SHEET_ID);
+        let sheet = ss.getSheetByName('detailedStats');
+        if (!sheet) {
+          sheet = ss.insertSheet('detailedStats');
+          sheet.appendRow(['matchId','Nickname','Kills','Deaths','Shots','Hits','Accuracy']);
+        }
+        (payload.stats || []).forEach(r => {
+          sheet.appendRow([
+            payload.matchId,
+            r.nick,
+            r.kills,
+            r.deaths,
+            r.shots,
+            r.hits,
+            r.accuracy
+          ]);
         });
+        return ContentService.createTextOutput('OK');
+      }
+
+      if (payload.action === 'setGender') {
+        const league = (payload.league === 'kids') ? 'kids' : 'sundaygames';
+        const ss = SpreadsheetApp.openById(SHEET_ID);
+        const sheet = ss.getSheetByName(league);
+        if (!sheet) throw new Error(league + ' not found');
+
+        const hdr = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const nickCol = hdr.indexOf('Nickname') + 1;
+        let genderCol = hdr.indexOf('Gender') + 1;
+        if (nickCol < 1) throw new Error('Nickname column missing');
+        if (genderCol < 1) {
+          genderCol = hdr.length + 1;
+          sheet.insertColumnAfter(hdr.length);
+          sheet.getRange(1, genderCol).setValue('Gender');
+        }
+
+        const last = sheet.getLastRow();
+        const cell = last > 1
+          ? sheet.getRange(2, nickCol, last - 1, 1)
+              .createTextFinder(payload.nick)
+              .matchEntireCell(true)
+              .findNext()
+          : null;
+        const row = cell ? cell.getRow() : last + 1;
+        if (!cell) sheet.getRange(row, nickCol).setValue(payload.nick);
+        sheet.getRange(row, genderCol).setValue(payload.gender);
+        return ContentService
+          .createTextOutput(JSON.stringify('OK'))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // ----- Form URL encoded result save -----
+    const raw = e.postData && e.postData.contents;
+    if (!raw) throw new Error('postData empty');
+    const params = raw
+      .split('&')
+      .map(p => p.split('='))
+      .reduce((o, [k, v]) => {
+        o[decodeURIComponent(k)] = decodeURIComponent((v || '').replace(/\+/g, ' '));
+        return o;
+      }, {});
+
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const now = new Date();
+
+    // 1) Game log
+    const gamesSheet = ss.getSheetByName('games');
+    if (!gamesSheet) throw new Error('games not found');
+    const hdrGames = gamesSheet
+      .getRange(1, 1, 1, gamesSheet.getLastColumn())
+      .getValues()[0]
+      .map(h => h.toString().trim().toLowerCase());
+    const rowGames = hdrGames.map(h => {
+      switch (h) {
+        case 'timestamp': return now;
+        case 'league': return params.league || '';
+        case 'team1': return params.team1 || '';
+        case 'team2': return params.team2 || '';
+        case 'team3': return params.team3 || '';
+        case 'team4': return params.team4 || '';
+        case 'winner': return params.winner || '';
+        case 'mvp': return params.mvp || '';
+        case 'series': return params.series || '';
+        case 'penalties': return params.penalties || '';
+        default: return '';
       }
     });
-    return ContentService.createTextOutput(JSON.stringify(out))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+    gamesSheet.appendRow(rowGames);
 
-  return ContentService.createTextOutput('Unsupported');
+    // 2) Ranking update
+    const rankName = (params.league === 'kids') ? 'kids' : 'sundaygames';
+    const rankSheet = ss.getSheetByName(rankName);
+    if (!rankSheet) throw new Error(rankName + ' not found');
+    const hdrRank = rankSheet.getRange(1, 1, 1, rankSheet.getLastColumn()).getValues()[0];
+    const nickCol = hdrRank.indexOf('Nickname') + 1;
+    const ptsCol = hdrRank.indexOf('Points') + 1;
+    if (nickCol < 1 || ptsCol < 1) throw new Error('Nickname/Points columns missing');
+
+    const penaltyMap = {};
+    (params.penalties || '')
+      .split(',')
+      .forEach(p => {
+        const [nick, val] = p.split(':');
+        if (nick && val) penaltyMap[nick.trim()] = parseInt(val, 10) || 0;
+      });
+
+    const teams = {};
+    ['team1', 'team2', 'team3', 'team4'].forEach(key => {
+      teams[key] = (params[key] || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+    });
+    const allPlayers = Array.from(new Set(Object.values(teams).flat()));
+
+    let logS = ss.getSheetByName('logs');
+    if (!logS) {
+      logS = ss.insertSheet('logs');
+      logS.appendRow(['Timestamp', 'League', 'Nickname', 'Delta', 'NewPoints']);
+    }
+
+    const winnerKey = params.winner;
+    allPlayers.forEach(nick => {
+      const cell = rankSheet
+        .getRange(2, nickCol, rankSheet.getLastRow() - 1, 1)
+        .createTextFinder(nick)
+        .matchEntireCell(true)
+        .findNext();
+      if (!cell) return;
+      const row = cell.getRow();
+      const cur = rankSheet.getRange(row, ptsCol).getValue() || 0;
+
+      const rankCode = cur < 200 ? 'D'
+                       : cur < 500 ? 'C'
+                       : cur < 800 ? 'B'
+                       : cur < 1200 ? 'A'
+                       : 'S';
+      const partScore = { D: 5, C: 0, B: -5, A: -10, S: -15 }[rankCode] || 0;
+      const winScore = (winnerKey !== 'tie' && teams[winnerKey]?.includes(nick)) ? 20 : 0;
+      const mvpScore = (nick === params.mvp) ? 10 : 0;
+      const penScore = penaltyMap[nick] || 0;
+
+      const delta = partScore + winScore + mvpScore + penScore;
+      const updated = cur + delta;
+      rankSheet.getRange(row, ptsCol).setValue(updated);
+      logS.appendRow([now, params.league, nick, delta, updated]);
+    });
+
+    return ContentService.createTextOutput('OK');
+  } catch (err) {
+    return ContentService.createTextOutput('Error: ' + err.message);
+  }
 }

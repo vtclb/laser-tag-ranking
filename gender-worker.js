@@ -25,6 +25,7 @@ export default {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
         },
       });
     }
@@ -32,7 +33,7 @@ export default {
     if(request.method === 'POST'){
       const { gender } = await request.json();
       await env.GENDERS.put(nick, gender);
-      return new Response('OK', { headers: { 'Access-Control-Allow-Origin': '*' } });
+      return new Response('OK', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' } });
     }
 
     if(request.method === 'GET'){

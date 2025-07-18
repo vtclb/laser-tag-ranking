@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLoad   = document.getElementById('btn-load');
   const leagueSel = document.getElementById('league');
   const scenArea  = document.getElementById('scenario-area');
-  initAvatarAdmin([]);
+  initAvatarAdmin([], leagueSel ? leagueSel.value : '');
 
   if (!btnLoad || !leagueSel) {
     console.error('Не знайдено #btn-load або #league у DOM');
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const players = await loadPlayers(leagueSel.value);
       initLobby(players);          // Рендер лоббі
-      initAvatarAdmin(players);    // Рендер аватарів
+      initAvatarAdmin(players, leagueSel.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {
       console.error('Помилка loadPlayers:', err);
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // При зміні ліги — очищуємо поточне лоббі та ховаємо сценарій
   leagueSel.addEventListener('change', () => {
     initLobby([]);               // Порожнє лоббі
-    initAvatarAdmin([]);
+    initAvatarAdmin([], leagueSel.value);
     scenArea.classList.add('hidden');
   });
 });

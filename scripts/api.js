@@ -1,13 +1,16 @@
 // scripts/api.js
 
 const proxyUrl = 'https://laser-proxy.vartaclub.workers.dev';
-const gendersURL = `${proxyUrl}/genders`;
 const gendersFallback = 'assets/player_gender.json';
 
 export async function loadGenders(){
   let data = {};
   try{
-    const res = await fetch(gendersURL);
+    const res = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getGenders' })
+    });
     if(!res.ok) throw new Error('HTTP '+res.status);
     data = await res.json();
   }catch(err){
@@ -119,12 +122,12 @@ export async function uploadAvatar(nick, file){
   });
 }
 
-export async function saveGender(nick, gender, updateSheet = false){
+export async function saveGender(nick, gender, league = ''){
   try{
-    const res = await fetch(`${proxyUrl}/genders/${encodeURIComponent(nick)}`, {
+    const res = await fetch(proxyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gender, updateSheet })
+      body: JSON.stringify({ action: 'setGender', nick, gender, league })
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
   }catch(err){

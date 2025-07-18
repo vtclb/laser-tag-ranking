@@ -1,5 +1,5 @@
 // scripts/avatarAdmin.js
-import { uploadAvatar, getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, saveGender } from './api.js';
+import { uploadAvatar, getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, saveGender, loadGenders } from './api.js';
 
 let pending = {};
 let genderChanges = {};
@@ -8,30 +8,39 @@ export function initAvatarAdmin(players){
   const section = document.getElementById('avatar-admin');
   if(!section) return;
   const listEl = document.getElementById('avatar-list');
-  const saveBtn = document.getElementById('save-avatars');
-  if(!listEl || !saveBtn) return;
+  const saveAvBtn = document.getElementById('save-avatars');
+  const saveGenderBtn = document.getElementById('save-genders');
+  if(!listEl || !saveAvBtn || !saveGenderBtn) return;
   pending = {};
   genderChanges = {};
-  saveBtn.disabled = true;
+  saveAvBtn.disabled = true;
+  saveGenderBtn.disabled = true;
   listEl.innerHTML = '';
-  saveBtn.onclick = async () => {
+  saveAvBtn.onclick = async () => {
     const entries = Object.entries(pending);
-    const genderEntries = Object.entries(genderChanges);
     for(const [nick,obj] of entries){
       await uploadAvatar(nick, obj.file);
       obj.img.src = getAvatarURL(nick);
     }
+    if(entries.length){
+      localStorage.setItem('avatarRefresh', Date.now().toString());
+    }
+    pending = {};
+    saveAvBtn.disabled = true;
+  };
+
+  saveGenderBtn.onclick = async () => {
+    const genderEntries = Object.entries(genderChanges);
     for(const [nick,gender] of genderEntries){
       await saveGender(nick, gender);
       const img = listEl.querySelector(`img[data-nick="${nick}"]`);
       if(img) img.dataset.gender = gender;
     }
-    if(entries.length || genderEntries.length){
-      localStorage.setItem('avatarRefresh', Date.now().toString());
+    if(genderEntries.length){
+      localStorage.setItem('genderRefresh', Date.now().toString());
     }
-    pending = {};
     genderChanges = {};
-    saveBtn.disabled = true;
+    saveGenderBtn.disabled = true;
   };
   players.forEach(p => {
     const li = document.createElement('li');
@@ -55,7 +64,7 @@ export function initAvatarAdmin(players){
       if(!file) return;
       img.src = URL.createObjectURL(file);
       pending[p.nick] = { file, img };
-      saveBtn.disabled = false;
+      saveAvBtn.disabled = false;
     });
 
     const genderSel = document.createElement('select');
@@ -70,7 +79,7 @@ export function initAvatarAdmin(players){
     genderSel.value = p.gender || '';
     genderSel.addEventListener('change', e => {
       genderChanges[p.nick] = e.target.value;
-      saveBtn.disabled = false;
+      saveGenderBtn.disabled = false;
     });
 
     li.appendChild(img);
@@ -95,5 +104,14 @@ window.addEventListener('storage', e => {
         img.src = getProxyAvatarURL(img.dataset.nick);
       };
     });
+  }
+  if(e.key === 'genderRefresh'){
+    (async () => {
+      const genders = await loadGenders();
+      document.querySelectorAll('#avatar-list img.avatar-img[data-nick]').forEach(img => {
+        const g = genders[img.dataset.nick];
+        if(g) img.dataset.gender = g;
+      });
+    })();
   }
 });

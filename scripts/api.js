@@ -1,10 +1,25 @@
 // scripts/api.js
 
 const proxyUrl = 'https://laser-proxy.vartaclub.workers.dev';
+const gendersURL = 'assets/player_gender.json';
+
+export async function loadGenders(){
+  try{
+    const res = await fetch(gendersURL);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  }catch(err){
+    console.error('Failed to load genders', err);
+    return {};
+  }
+}
 
 
 export async function loadPlayers(league) {
-  const res = await fetch(`${proxyUrl}?league=${league}&t=${Date.now()}`);
+  const [genders, res] = await Promise.all([
+    loadGenders(),
+    fetch(`${proxyUrl}?league=${league}&t=${Date.now()}`)
+  ]);
   const txt = await res.text();
   return txt
     .trim()
@@ -19,7 +34,7 @@ export async function loadPlayers(league) {
                  : pts < 800  ? 'B'
                  : pts < 1200 ? 'A'
                  :              'S';
-      return { nick, pts, rank };
+      return { nick, pts, rank, gender: genders[nick] };
     });
 }
 

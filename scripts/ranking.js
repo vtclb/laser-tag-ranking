@@ -1,4 +1,4 @@
-import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
+import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, loadGenders } from "./api.js";
 export async function loadData(rankingURL, gamesURL){
   const [rText, gText] = await Promise.all([
     fetch(rankingURL).then(r=>r.text()),
@@ -170,8 +170,17 @@ export function refreshAvatars(){
   });
 }
 
+export async function refreshGenders(){
+  const genders = await loadGenders();
+  document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
+    const g = genders[img.dataset.nick];
+    if(g) img.dataset.gender = g;
+  });
+}
+
 if(typeof window!=='undefined'){
   window.addEventListener('storage',e=>{
     if(e.key==='avatarRefresh') refreshAvatars();
+    if(e.key==='genderRefresh') refreshGenders();
   });
 }

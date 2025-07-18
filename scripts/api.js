@@ -96,9 +96,13 @@ export function getProxyAvatarURL(nick){
 }
 
 export function getDefaultAvatarURL(gender){
-  return gender === 'female'
-    ? 'assets/default_avatars/av1.png'
-    : 'assets/default_avatars/av2.png';
+  if(gender === 'female'){
+    return 'assets/default_avatars/av1.png';
+  }
+  if(gender === 'male'){
+    return 'assets/default_avatars/av2.png';
+  }
+  return 'assets/default_avatars/av3.png';
 }
 
 export async function uploadAvatar(nick, file){
@@ -111,11 +115,12 @@ export async function uploadAvatar(nick, file){
 
 export async function saveGender(nick, gender){
   try{
-    await fetch(`${proxyUrl}/genders/${encodeURIComponent(nick)}`, {
+    const res = await fetch(`${proxyUrl}/genders/${encodeURIComponent(nick)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gender })
     });
+    if(!res.ok) throw new Error('HTTP '+res.status);
   }catch(err){
     const data = JSON.parse(localStorage.getItem('player_genders') || '{}');
     data[nick] = gender;

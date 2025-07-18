@@ -74,9 +74,13 @@ export function initAvatarAdmin(players){
     const optF = document.createElement('option');
     optF.value = 'female';
     optF.textContent = 'Female';
+    const optN = document.createElement('option');
+    optN.value = 'neutral';
+    optN.textContent = 'Neutral';
     genderSel.appendChild(optM);
     genderSel.appendChild(optF);
-    genderSel.value = p.gender || '';
+    genderSel.appendChild(optN);
+    genderSel.value = p.gender || 'neutral';
     genderSel.addEventListener('change', e => {
       genderChanges[p.nick] = e.target.value;
       saveGenderBtn.disabled = false;

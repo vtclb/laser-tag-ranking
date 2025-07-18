@@ -71,8 +71,10 @@ export function getAvatarURL(nick){
   return `${avatarBase}/${encodeURIComponent(nick)}?t=${Date.now()}`;
 }
 
-export function getDefaultAvatarURL(nick){
-  return `${defaultAvatarBase}/${encodeURIComponent(nick)}.png`;
+export function getDefaultAvatarURL(gender){
+  return gender === 'female'
+    ? 'assets/default_avatars/av1.png'
+    : 'assets/default_avatars/av2.png';
 }
 
 export async function uploadAvatar(nick, file){

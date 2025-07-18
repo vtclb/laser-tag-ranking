@@ -1,17 +1,33 @@
 // scripts/api.js
 
 const proxyUrl = 'https://laser-proxy.vartaclub.workers.dev';
-const gendersURL = 'assets/player_gender.json';
+const gendersURL = `${proxyUrl}/genders`;
+const gendersFallback = 'assets/player_gender.json';
 
 export async function loadGenders(){
+  let data = {};
   try{
     const res = await fetch(gendersURL);
     if(!res.ok) throw new Error('HTTP '+res.status);
-    return await res.json();
+    data = await res.json();
   }catch(err){
-    console.error('Failed to load genders', err);
-    return {};
+    console.warn('Failed to load genders from worker', err);
+    try{
+      const res = await fetch(gendersFallback);
+      if(res.ok) data = await res.json();
+    }catch(e){
+      console.error('Failed to load fallback genders', e);
+    }
   }
+  try{
+    const local = JSON.parse(localStorage.getItem('player_genders') || '{}');
+    data = { ...data, ...local };
+  }catch(e){}
+  Object.entries(data).forEach(([k,v]) => {
+    if(v === 'm') data[k] = 'male';
+    else if(v === 'f') data[k] = 'female';
+  });
+  return data;
 }
 
 
@@ -34,7 +50,9 @@ export async function loadPlayers(league) {
                  : pts < 800  ? 'B'
                  : pts < 1200 ? 'A'
                  :              'S';
-      return { nick, pts, rank, gender: genders[nick] };
+      const g = genders[nick];
+      const gender = g === 'm' ? 'male' : g === 'f' ? 'female' : g;
+      return { nick, pts, rank, gender };
     });
 }
 
@@ -83,4 +101,18 @@ export async function uploadAvatar(nick, file){
     headers: { 'Content-Type': file.type || 'application/octet-stream' },
     body: file,
   });
+}
+
+export async function saveGender(nick, gender){
+  try{
+    await fetch(`${proxyUrl}/genders/${encodeURIComponent(nick)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gender })
+    });
+  }catch(err){
+    const data = JSON.parse(localStorage.getItem('player_genders') || '{}');
+    data[nick] = gender;
+    localStorage.setItem('player_genders', JSON.stringify(data));
+  }
 }

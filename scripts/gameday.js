@@ -1,9 +1,16 @@
-import { getAvatarURL, getDefaultAvatarURL } from "./api.js";
+import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
 (function(){
 
   function refreshAvatars(){
     document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
       img.src=getAvatarURL(img.dataset.nick);
+      img.onerror=()=>{
+        img.onerror=()=>{
+          img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+          img.src=getDefaultAvatarURL(img.dataset.gender);
+        };
+        img.src=getProxyAvatarURL(img.dataset.nick);
+      };
     });
   }
   const rankingURLs = {
@@ -202,8 +209,11 @@ import { getAvatarURL, getDefaultAvatarURL } from "./api.js";
       if(p.gender) img.dataset.gender=p.gender;
       img.src=getAvatarURL(p.nick);
       img.onerror=()=>{
-        img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-        img.src=getDefaultAvatarURL(p.gender);
+        img.onerror=()=>{
+          img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+          img.src=getDefaultAvatarURL(p.gender);
+        };
+        img.src=getProxyAvatarURL(p.nick);
       };
       tdAvatar.appendChild(img);
 

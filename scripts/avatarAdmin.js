@@ -1,5 +1,5 @@
 // scripts/avatarAdmin.js
-import { uploadAvatar, getAvatarURL, getDefaultAvatarURL, saveGender } from './api.js';
+import { uploadAvatar, getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, saveGender } from './api.js';
 
 let pending = {};
 let genderChanges = {};
@@ -41,8 +41,11 @@ export function initAvatarAdmin(players){
     if(p.gender) img.dataset.gender = p.gender;
     img.src = getAvatarURL(p.nick);
     img.onerror = () => {
-      img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
-      img.src = getDefaultAvatarURL(p.gender);
+      img.onerror = () => {
+        img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
+        img.src = getDefaultAvatarURL(p.gender);
+      };
+      img.src = getProxyAvatarURL(p.nick);
     };
     const input = document.createElement('input');
     input.type = 'file';
@@ -85,8 +88,11 @@ window.addEventListener('storage', e => {
     document.querySelectorAll('#avatar-list img.avatar-img[data-nick]').forEach(img => {
       img.src = getAvatarURL(img.dataset.nick);
       img.onerror = () => {
-        img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
-        img.src = getDefaultAvatarURL(img.dataset.gender);
+        img.onerror = () => {
+          img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
+          img.src = getDefaultAvatarURL(img.dataset.gender);
+        };
+        img.src = getProxyAvatarURL(img.dataset.nick);
       };
     });
   }

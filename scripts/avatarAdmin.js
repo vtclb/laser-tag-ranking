@@ -3,8 +3,9 @@ import { uploadAvatar, getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, sav
 
 let pending = {};
 let genderChanges = {};
-
-export function initAvatarAdmin(players){
+let currentLeague = '';
+export function initAvatarAdmin(players, league=''){
+  currentLeague = league;
   const section = document.getElementById('avatar-admin');
   if(!section) return;
   const listEl = document.getElementById('avatar-list');
@@ -32,7 +33,7 @@ export function initAvatarAdmin(players){
   saveGenderBtn.onclick = async () => {
     const genderEntries = Object.entries(genderChanges);
     for(const [nick,gender] of genderEntries){
-      await saveGender(nick, gender, true);
+      await saveGender(nick, gender, currentLeague);
       const img = listEl.querySelector(`img[data-nick="${nick}"]`);
       if(img) img.dataset.gender = gender;
     }

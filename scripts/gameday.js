@@ -199,10 +199,11 @@ import { getAvatarURL, getDefaultAvatarURL } from "./api.js";
       const img=document.createElement('img');
       img.className='avatar-img';
       img.dataset.nick=p.nick;
+      if(p.gender) img.dataset.gender=p.gender;
       img.src=getAvatarURL(p.nick);
       img.onerror=()=>{
         img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-        img.src=getDefaultAvatarURL(p.nick);
+        img.src=getDefaultAvatarURL(p.gender);
       };
       tdAvatar.appendChild(img);
 

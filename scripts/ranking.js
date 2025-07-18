@@ -85,10 +85,11 @@ export function renderTable(list, tbodyEl){
     const img=document.createElement('img');
     img.className='avatar-img';
     img.dataset.nick=p.nickname;
+    if(p.gender) img.dataset.gender=p.gender;
     img.src=getAvatarURL(p.nickname);
     img.onerror=()=>{
       img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-      img.src=getDefaultAvatarURL(p.nickname);
+      img.src=getDefaultAvatarURL(p.gender);
     };
     tdAvatar.appendChild(img);
 

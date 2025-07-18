@@ -117,11 +117,12 @@ export function getDefaultAvatarURL(gender){
 }
 
 export async function uploadAvatar(nick, file){
-  await fetch(`${customAvatarUploadBase}/${encodeURIComponent(nick)}`, {
+  const res = await fetch(`${customAvatarUploadBase}/${encodeURIComponent(nick)}`, {
     method: 'POST',
     headers: { 'Content-Type': file.type || 'application/octet-stream' },
-    body: file,
+    body: file
   });
+  return res.ok;
 }
 
 export async function saveGender(nick, gender, league = ''){

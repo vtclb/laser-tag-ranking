@@ -19,12 +19,17 @@ export function initAvatarAdmin(players, league=''){
   listEl.innerHTML = '';
   saveAvBtn.onclick = async () => {
     const entries = Object.entries(pending);
+    const failed = [];
     for(const [nick,obj] of entries){
-      await uploadAvatar(nick, obj.file);
+      const success = await uploadAvatar(nick, obj.file);
+      if(!success) failed.push(nick);
       obj.img.src = getAvatarURL(nick);
     }
     if(entries.length){
       localStorage.setItem('avatarRefresh', Date.now().toString());
+    }
+    if(failed.length){
+      alert('Failed to upload avatars for: '+failed.join(', '));
     }
     pending = {};
     saveAvBtn.disabled = true;

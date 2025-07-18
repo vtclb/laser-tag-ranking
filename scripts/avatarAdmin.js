@@ -32,7 +32,7 @@ export function initAvatarAdmin(players){
   saveGenderBtn.onclick = async () => {
     const genderEntries = Object.entries(genderChanges);
     for(const [nick,gender] of genderEntries){
-      await saveGender(nick, gender);
+      await saveGender(nick, gender, true);
       const img = listEl.querySelector(`img[data-nick="${nick}"]`);
       if(img) img.dataset.gender = gender;
     }

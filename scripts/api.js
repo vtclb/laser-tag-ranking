@@ -1,9 +1,15 @@
 // scripts/api.js
 
 // All API requests are routed through a Google Apps Script which acts as a
-// simple backend for storing results and serving assets.
+// simple backend for storing results and serving assets. If the proxy fails
+// we fall back to loading data directly from the published Google Sheet.
 const proxyUrl = 'https://script.google.com/macros/s/AKfycbzLaserTagApi/exec';
 const gendersFallback = 'assets/player_gender.json';
+
+const rankingURLs = {
+  kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
+  sunday: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
+};
 
 export async function loadGenders(){
   let data = {};
@@ -37,10 +43,15 @@ export async function loadGenders(){
 
 
 export async function loadPlayers(league) {
-  const [genders, res] = await Promise.all([
-    loadGenders(),
-    fetch(`${proxyUrl}?league=${league}&t=${Date.now()}`)
-  ]);
+  const genders = await loadGenders();
+  let res;
+  try {
+    res = await fetch(`${proxyUrl}?league=${league}&t=${Date.now()}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+  } catch (err) {
+    console.warn('Failed to load players from proxy', err);
+    res = await fetch(rankingURLs[league]);
+  }
   const txt = await res.text();
   return txt
     .trim()

@@ -10,3 +10,5 @@ The ranking spreadsheet is expected to contain a `Gender` column after the `Poin
 
 The pages use ES modules, therefore they must be served via HTTP. Any static server will work, for example:
 
+If the API proxy is unavailable, the balancer page will fetch player data directly from the published Google Sheets.
+

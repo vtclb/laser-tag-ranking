@@ -50,8 +50,14 @@ export async function loadPlayers(league) {
                  : pts < 800  ? 'B'
                  : pts < 1200 ? 'A'
                  :              'S';
-      const g = genders[nick];
-      const gender = g === 'm' ? 'male' : g === 'f' ? 'female' : g;
+
+      let gender = cols[3]?.trim().toLowerCase();
+      if (gender === 'm') gender = 'male';
+      else if (gender === 'f') gender = 'female';
+      if (!gender) {
+        gender = genders[nick];
+      }
+
       return { nick, pts, rank, gender };
     });
 }
@@ -113,12 +119,12 @@ export async function uploadAvatar(nick, file){
   });
 }
 
-export async function saveGender(nick, gender){
+export async function saveGender(nick, gender, updateSheet = false){
   try{
     const res = await fetch(`${proxyUrl}/genders/${encodeURIComponent(nick)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gender })
+      body: JSON.stringify({ gender, updateSheet })
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
   }catch(err){

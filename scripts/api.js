@@ -1,6 +1,8 @@
 // scripts/api.js
 
-const proxyUrl = 'https://laser-proxy.vartaclub.workers.dev';
+// All API requests are routed through a Google Apps Script which acts as a
+// simple backend for storing results and serving assets.
+const proxyUrl = 'https://script.google.com/macros/s/AKfycbzLaserTagApi/exec';
 const gendersFallback = 'assets/player_gender.json';
 
 export async function loadGenders(){

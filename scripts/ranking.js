@@ -1,4 +1,4 @@
-import { getAvatarURL, getDefaultAvatarURL } from "./api.js";
+import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
 export async function loadData(rankingURL, gamesURL){
   const [rText, gText] = await Promise.all([
     fetch(rankingURL).then(r=>r.text()),
@@ -88,8 +88,11 @@ export function renderTable(list, tbodyEl){
     if(p.gender) img.dataset.gender=p.gender;
     img.src=getAvatarURL(p.nickname);
     img.onerror=()=>{
-      img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-      img.src=getDefaultAvatarURL(p.gender);
+      img.onerror=()=>{
+        img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+        img.src=getDefaultAvatarURL(p.gender);
+      };
+      img.src=getProxyAvatarURL(p.nickname);
     };
     tdAvatar.appendChild(img);
 
@@ -157,6 +160,13 @@ export function formatFull(d){
 export function refreshAvatars(){
   document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
     img.src=getAvatarURL(img.dataset.nick);
+    img.onerror=()=>{
+      img.onerror=()=>{
+        img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+        img.src=getDefaultAvatarURL(img.dataset.gender);
+      };
+      img.src=getProxyAvatarURL(img.dataset.nick);
+    };
   });
 }
 

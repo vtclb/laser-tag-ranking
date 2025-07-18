@@ -1,7 +1,8 @@
 // scripts/avatarAdmin.js
-import { uploadAvatar, getAvatarURL, getDefaultAvatarURL } from './api.js';
+import { uploadAvatar, getAvatarURL, getDefaultAvatarURL, saveGender } from './api.js';
 
 let pending = {};
+let genderChanges = {};
 
 export function initAvatarAdmin(players){
   const section = document.getElementById('avatar-admin');
@@ -10,18 +11,26 @@ export function initAvatarAdmin(players){
   const saveBtn = document.getElementById('save-avatars');
   if(!listEl || !saveBtn) return;
   pending = {};
+  genderChanges = {};
   saveBtn.disabled = true;
   listEl.innerHTML = '';
   saveBtn.onclick = async () => {
     const entries = Object.entries(pending);
+    const genderEntries = Object.entries(genderChanges);
     for(const [nick,obj] of entries){
       await uploadAvatar(nick, obj.file);
       obj.img.src = getAvatarURL(nick);
     }
-    if(entries.length){
+    for(const [nick,gender] of genderEntries){
+      await saveGender(nick, gender);
+      const img = listEl.querySelector(`img[data-nick="${nick}"]`);
+      if(img) img.dataset.gender = gender;
+    }
+    if(entries.length || genderEntries.length){
       localStorage.setItem('avatarRefresh', Date.now().toString());
     }
     pending = {};
+    genderChanges = {};
     saveBtn.disabled = true;
   };
   players.forEach(p => {
@@ -45,11 +54,28 @@ export function initAvatarAdmin(players){
       pending[p.nick] = { file, img };
       saveBtn.disabled = false;
     });
+
+    const genderSel = document.createElement('select');
+    const optM = document.createElement('option');
+    optM.value = 'male';
+    optM.textContent = 'Male';
+    const optF = document.createElement('option');
+    optF.value = 'female';
+    optF.textContent = 'Female';
+    genderSel.appendChild(optM);
+    genderSel.appendChild(optF);
+    genderSel.value = p.gender || '';
+    genderSel.addEventListener('change', e => {
+      genderChanges[p.nick] = e.target.value;
+      saveBtn.disabled = false;
+    });
+
     li.appendChild(img);
     const span = document.createElement('span');
     span.textContent = p.nick;
     li.appendChild(span);
     li.appendChild(input);
+    li.appendChild(genderSel);
     listEl.appendChild(li);
   });
 }

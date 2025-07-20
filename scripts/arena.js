@@ -146,7 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btnClear.click();
     } catch (err) {
       console.error('Помилка під час збереження:', err);
-      alert('Не вдалося зберегти гру: ' + err.message);
+      const msg = err && err.message ? err.message : String(err);
+      alert('Не вдалося зберегти гру:\n' + msg);
     }
   });
 

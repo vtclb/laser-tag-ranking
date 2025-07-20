@@ -1,4 +1,4 @@
-import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, loadGenders } from "./api.js";
+import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
 export async function loadData(rankingURL, gamesURL){
   const [rText, gText] = await Promise.all([
     fetch(rankingURL).then(r=>r.text()),
@@ -85,12 +85,11 @@ export function renderTable(list, tbodyEl){
     const img=document.createElement('img');
     img.className='avatar-img';
     img.dataset.nick=p.nickname;
-    if(p.gender) img.dataset.gender=p.gender;
     img.src=getAvatarURL(p.nickname);
     img.onerror=()=>{
       img.onerror=()=>{
         img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-        img.src=getDefaultAvatarURL(p.gender);
+        img.src=getDefaultAvatarURL();
       };
       img.src=getProxyAvatarURL(p.nickname);
     };
@@ -163,24 +162,15 @@ export function refreshAvatars(){
     img.onerror=()=>{
       img.onerror=()=>{
         img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-        img.src=getDefaultAvatarURL(img.dataset.gender);
+        img.src=getDefaultAvatarURL();
       };
       img.src=getProxyAvatarURL(img.dataset.nick);
     };
   });
 }
 
-export async function refreshGenders(){
-  const genders = await loadGenders();
-  document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
-    const g = genders[img.dataset.nick];
-    if(g) img.dataset.gender = g;
-  });
-}
-
 if(typeof window!=='undefined'){
   window.addEventListener('storage',e=>{
     if(e.key==='avatarRefresh') refreshAvatars();
-    if(e.key==='genderRefresh') refreshGenders();
   });
 }

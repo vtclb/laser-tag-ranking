@@ -4,46 +4,13 @@
 // simple backend for storing results and serving assets. If the proxy fails
 // we fall back to loading data directly from the published Google Sheet.
 const proxyUrl = 'https://script.google.com/macros/s/AKfycbzLaserTagApi/exec';
-const gendersFallback = 'assets/player_gender.json';
 
 const rankingURLs = {
   kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
   sunday: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
 };
 
-export async function loadGenders(){
-  let data = {};
-  try{
-    const res = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'getGenders' })
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    data = await res.json();
-  }catch(err){
-    console.warn('Failed to load genders from worker', err);
-    try{
-      const res = await fetch(gendersFallback);
-      if(res.ok) data = await res.json();
-    }catch(e){
-      console.error('Failed to load fallback genders', e);
-    }
-  }
-  try{
-    const local = JSON.parse(localStorage.getItem('player_genders') || '{}');
-    data = { ...data, ...local };
-  }catch(e){}
-  Object.entries(data).forEach(([k,v]) => {
-    if(v === 'm') data[k] = 'male';
-    else if(v === 'f') data[k] = 'female';
-  });
-  return data;
-}
-
-
 export async function loadPlayers(league) {
-  const genders = await loadGenders();
   let res;
   try {
     res = await fetch(`${proxyUrl}?league=${league}&t=${Date.now()}`);
@@ -67,14 +34,7 @@ export async function loadPlayers(league) {
                  : pts < 1200 ? 'A'
                  :              'S';
 
-      let gender = cols[3]?.trim().toLowerCase();
-      if (gender === 'm') gender = 'male';
-      else if (gender === 'f') gender = 'female';
-      if (!gender) {
-        gender = genders[nick];
-      }
-
-      return { nick, pts, rank, gender };
+      return { nick, pts, rank };
     });
 }
 
@@ -121,14 +81,8 @@ export function getProxyAvatarURL(nick){
   return `${avatarBase}/${encodeURIComponent(nick)}?t=${Date.now()}`;
 }
 
-export function getDefaultAvatarURL(gender){
-  if(gender === 'female'){
-    return 'assets/default_avatars/av1.png';
-  }
-  if(gender === 'male'){
-    return 'assets/default_avatars/av2.png';
-  }
-  return 'assets/default_avatars/av3.png';
+export function getDefaultAvatarURL(){
+  return 'assets/default_avatars/av0.png';
 }
 
 export async function uploadAvatar(nick, file){
@@ -140,17 +94,3 @@ export async function uploadAvatar(nick, file){
   return res.ok;
 }
 
-export async function saveGender(nick, gender, league = ''){
-  try{
-    const res = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setGender', nick, gender, league })
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-  }catch(err){
-    const data = JSON.parse(localStorage.getItem('player_genders') || '{}');
-    data[nick] = gender;
-    localStorage.setItem('player_genders', JSON.stringify(data));
-  }
-}

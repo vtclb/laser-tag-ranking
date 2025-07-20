@@ -1,4 +1,4 @@
-import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, loadGenders } from "./api.js";
+import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
 (function(){
 
   function refreshAvatars(){
@@ -7,18 +7,10 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, loadGenders } fro
       img.onerror=()=>{
         img.onerror=()=>{
           img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-          img.src=getDefaultAvatarURL(img.dataset.gender);
+          img.src=getDefaultAvatarURL();
         };
         img.src=getProxyAvatarURL(img.dataset.nick);
       };
-    });
-  }
-
-  async function refreshGenders(){
-    const genders = await loadGenders();
-    document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
-      const g = genders[img.dataset.nick];
-      if(g) img.dataset.gender = g;
     });
   }
   const rankingURLs = {
@@ -51,7 +43,6 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, loadGenders } fro
   window.addEventListener('storage', e => {
     if(e.key === 'gamedayRefresh') loadData();
     if(e.key === 'avatarRefresh') refreshAvatars();
-    if(e.key === 'genderRefresh') refreshGenders();
   });
   if(fullscreenBtn){
     fullscreenBtn.addEventListener('click', () => {
@@ -215,12 +206,11 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL, loadGenders } fro
       const img=document.createElement('img');
       img.className='avatar-img';
       img.dataset.nick=p.nick;
-      if(p.gender) img.dataset.gender=p.gender;
       img.src=getAvatarURL(p.nick);
       img.onerror=()=>{
         img.onerror=()=>{
           img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-          img.src=getDefaultAvatarURL(p.gender);
+          img.src=getDefaultAvatarURL();
         };
         img.src=getProxyAvatarURL(p.nick);
       };

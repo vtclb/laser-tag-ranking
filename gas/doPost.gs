@@ -1,6 +1,6 @@
 function doPost(e) {
   try {
-    // Handle JSON actions (importStats, setGender)
+    // Handle JSON actions (importStats)
     if (e.postData.type === 'application/json') {
       const payload = JSON.parse(e.postData.contents);
 
@@ -25,27 +25,6 @@ function doPost(e) {
         return ContentService.createTextOutput('OK');
       }
 
-      if (payload.action === 'setGender') {
-        const ss = SpreadsheetApp.openById('19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw');
-        const rankName  = (payload.league === 'kids') ? 'kids' : 'sundaygames';
-        const sheet = ss.getSheetByName(rankName);
-        if (!sheet) throw new Error(rankName + ' not found');
-        const hdr = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-        const nickCol = hdr.indexOf('Nickname') + 1;
-        let genderCol = hdr.indexOf('Gender') + 1;
-        if (nickCol < 1) throw new Error('Nickname column missing');
-        if (genderCol < 1) {
-          genderCol = hdr.length + 1;
-          sheet.insertColumnAfter(hdr.length);
-          sheet.getRange(1, genderCol).setValue('Gender');
-        }
-        const cell = sheet.getRange(2, nickCol, sheet.getLastRow() - 1, 1)
-          .createTextFinder(payload.nick).matchEntireCell(true).findNext();
-        const row = cell ? cell.getRow() : sheet.getLastRow() + 1;
-        if (!cell) sheet.getRange(row, nickCol).setValue(payload.nick);
-        sheet.getRange(row, genderCol).setValue(payload.gender);
-        return ContentService.createTextOutput('OK');
-      }
     }
 
     // --- Standard form-urlencoded POST for saving game result ---

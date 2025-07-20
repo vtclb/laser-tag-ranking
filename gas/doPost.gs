@@ -22,7 +22,9 @@ function doPost(e) {
             r.accuracy
           ]);
         });
-        return ContentService.createTextOutput('OK');
+        return ContentService.createTextOutput('OK')
+          .setMimeType(ContentService.MimeType.TEXT)
+          .setHeader('Access-Control-Allow-Origin','*');
       }
 
     }
@@ -113,9 +115,13 @@ function doPost(e) {
       logS.appendRow([now, params.league, nick, delta, updated]);
     });
 
-    return ContentService.createTextOutput('OK');
+    return ContentService.createTextOutput('OK')
+      .setMimeType(ContentService.MimeType.TEXT)
+      .setHeader('Access-Control-Allow-Origin','*');
   }
   catch (err) {
-    return ContentService.createTextOutput('Error: ' + err.message);
+    return ContentService.createTextOutput('Error: ' + err.message)
+      .setMimeType(ContentService.MimeType.TEXT)
+      .setHeader('Access-Control-Allow-Origin','*');
   }
 }

@@ -3,20 +3,30 @@ export default {
     const url = new URL(request.url);
     const m = url.pathname.match(/^\/custom_avatars\/(.+)$/);
     if (!m) {
-      return new Response('Not found', { status: 404 });
+      return new Response('Not found', {
+        status: 404,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
     }
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'POST,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
         },
       });
     }
     if (request.method !== 'POST') {
       return new Response('Method not allowed', {
         status: 405,
-        headers: { 'Access-Control-Allow-Origin': '*' },
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
       });
     }
     const nick = decodeURIComponent(m[1]);
@@ -56,12 +66,18 @@ export default {
       const text = await putRes.text();
       return new Response(text, {
         status: 500,
-        headers: { 'Access-Control-Allow-Origin': '*' },
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
       });
     }
 
     return new Response('OK', {
-      headers: { 'Access-Control-Allow-Origin': '*' },
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
     });
   },
 };

@@ -23,10 +23,15 @@ export async function initAvatarAdmin(players, league=''){
   if(!section) return;
   const listEl = document.getElementById('avatar-list');
   const saveAvBtn = document.getElementById('save-avatars');
+  const statusEl = document.getElementById('avatar-status');
   if(!listEl || !saveAvBtn) return;
   pending = {};
   saveAvBtn.disabled = true;
   listEl.innerHTML = '';
+  if(statusEl){
+    statusEl.textContent = '';
+    statusEl.classList.add('hidden');
+  }
   await loadDefaultAvatars();
   saveAvBtn.onclick = async () => {
     const entries = Object.entries(pending);
@@ -44,6 +49,11 @@ export async function initAvatarAdmin(players, league=''){
     }
     pending = {};
     saveAvBtn.disabled = true;
+    if(statusEl){
+      statusEl.textContent = 'Аватари оновлено';
+      statusEl.classList.remove('hidden');
+      setTimeout(()=>statusEl.classList.add('hidden'), 2000);
+    }
   };
 
   players.forEach(p => {

@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const players = await loadPlayers(leagueSel.value);
       initLobby(players);          // Рендер лоббі
-      initAvatarAdmin(players, leagueSel.value);    // Рендер аватарів
+      await initAvatarAdmin(players, leagueSel.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {
       console.error('Помилка loadPlayers:', err);
@@ -37,9 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // При зміні ліги — очищуємо поточне лоббі та ховаємо сценарій
-  leagueSel.addEventListener('change', () => {
+  leagueSel.addEventListener('change', async () => {
     initLobby([]);               // Порожнє лоббі
-    initAvatarAdmin([], leagueSel.value);
+    await initAvatarAdmin([], leagueSel.value);
     scenArea.classList.add('hidden');
   });
 });

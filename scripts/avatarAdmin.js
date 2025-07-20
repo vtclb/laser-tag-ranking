@@ -1,9 +1,23 @@
 // scripts/avatarAdmin.js
 import { uploadAvatar, getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from './api.js';
 
+let defaultAvatars = [];
+async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
+  if(defaultAvatars.length) return;
+  try{
+    const res = await fetch(path);
+    if(res.ok){
+      const list = await res.json();
+      defaultAvatars = list.map(f => `assets/default_avatars/${f}`);
+    }
+  }catch(err){
+    console.error('Failed to load default avatars', err);
+  }
+}
+
 let pending = {};
 let currentLeague = '';
-export function initAvatarAdmin(players, league=''){
+export async function initAvatarAdmin(players, league=''){
   currentLeague = league;
   const section = document.getElementById('avatar-admin');
   if(!section) return;
@@ -13,6 +27,7 @@ export function initAvatarAdmin(players, league=''){
   pending = {};
   saveAvBtn.disabled = true;
   listEl.innerHTML = '';
+  await loadDefaultAvatars();
   saveAvBtn.onclick = async () => {
     const entries = Object.entries(pending);
     const failed = [];
@@ -55,11 +70,34 @@ export function initAvatarAdmin(players, league=''){
       saveAvBtn.disabled = false;
     });
 
+    const thumbs = document.createElement('div');
+    thumbs.className = 'avatar-thumbs';
+    defaultAvatars.forEach(src => {
+      const t = document.createElement('img');
+      t.className = 'avatar-thumb';
+      t.src = src;
+      t.addEventListener('click', async () => {
+        thumbs.querySelectorAll('.avatar-thumb').forEach(el => el.classList.remove('selected'));
+        t.classList.add('selected');
+        try{
+          const resp = await fetch(src);
+          const blob = await resp.blob();
+          img.src = src;
+          pending[p.nick] = { file: blob, img };
+          saveAvBtn.disabled = false;
+        }catch(err){
+          console.error('Failed to fetch avatar', err);
+        }
+      });
+      thumbs.appendChild(t);
+    });
+
     li.appendChild(img);
     const span = document.createElement('span');
     span.textContent = p.nick;
     li.appendChild(span);
     li.appendChild(input);
+    li.appendChild(thumbs);
     listEl.appendChild(li);
   });
 }

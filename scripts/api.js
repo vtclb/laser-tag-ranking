@@ -86,7 +86,11 @@ export async function saveResult(data) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body
   });
-  return res.text();
+  const text = await res.text();
+  if(!res.ok){
+    throw new Error(text || ('HTTP '+res.status));
+  }
+  return text;
 }
 
 

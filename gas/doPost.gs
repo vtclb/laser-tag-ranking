@@ -27,6 +27,56 @@ function doPost(e) {
           .setHeader('Access-Control-Allow-Origin','*');
       }
 
+      if (payload.action === 'register') {
+        const ss = SpreadsheetApp.openById('19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw');
+        const age = parseInt(payload.age, 10) || 0;
+        const league = age < 14 ? 'kids' : 'sundaygames';
+        const sheet = ss.getSheetByName(league);
+        if (!sheet) throw new Error('Sheet not found');
+
+        if (sheet.getLastRow() === 0) {
+          sheet.appendRow(['Timestamp', 'Nickname', 'Points', 'Gender', 'Contact', 'Experience', 'Age']);
+        }
+
+        const hdr = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const nickCol = hdr.indexOf('Nickname') + 1;
+        const existing = sheet.getRange(2, nickCol, sheet.getLastRow() - 1, 1)
+          .createTextFinder(payload.nick).matchEntireCell(true).findNext();
+        if (existing) {
+          return ContentService.createTextOutput('DUPLICATE')
+            .setMimeType(ContentService.MimeType.TEXT)
+            .setHeader('Access-Control-Allow-Origin','*');
+        }
+
+        const points = 100;
+
+        sheet.appendRow([
+          new Date(),
+          payload.nick || '',
+          points,
+          payload.gender || '',
+          payload.contact || '',
+          payload.experience || '',
+          age || ''
+        ]);
+
+        return ContentService.createTextOutput('OK')
+          .setMimeType(ContentService.MimeType.TEXT)
+          .setHeader('Access-Control-Allow-Origin','*');
+      }
+
+      if (payload.action === 'getStats') {
+        const ss = SpreadsheetApp.openById('19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw');
+        const sheet = ss.getSheetByName('detailedStats');
+        const data = sheet.getDataRange().getValues();
+        const hdr = data[0];
+        const nicknameIndex = hdr.indexOf('Nickname');
+        const filtered = data.slice(1).filter(row => row[nicknameIndex] === payload.nick);
+        return ContentService.createTextOutput(JSON.stringify(filtered))
+          .setMimeType(ContentService.MimeType.JSON)
+          .setHeader('Access-Control-Allow-Origin','*');
+      }
+
     }
 
     // --- Standard form-urlencoded POST for saving game result ---

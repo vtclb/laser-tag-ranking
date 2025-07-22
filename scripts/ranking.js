@@ -98,7 +98,11 @@ export function renderTable(list, tbodyEl){
     const vals=[i+1,p.nickname,cls.replace('rank-',''),p.points,p.games,p.winRate+'%',p.mvp];
     vals.forEach((val,idx)=>{
       const td=document.createElement('td');
-      if(idx===1) td.className=cls.replace('rank-','nick-');
+      if(idx===1){
+        td.className=cls.replace('rank-','nick-');
+        td.style.cursor='pointer';
+        td.addEventListener('click',()=>{ if(window.loadStats) window.loadStats(p.nickname); });
+      }
       td.textContent=val;
       tr.appendChild(td);
     });

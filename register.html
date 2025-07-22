@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Реєстрація | Лазертаг</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:'Press Start 2P', monospace;
+      background:#111 url('assets/background_marathon.png') no-repeat center/cover;
+      color:#fff;
+    }
+    nav { display:flex; flex-wrap:wrap; justify-content:center; gap:0.5rem; background:rgba(0,0,0,0.7); padding:0.5rem; }
+    nav a { color:#f39c12; text-decoration:none; font-size:0.75rem; padding:0.25rem 0.5rem; transition:color 0.2s, background 0.2s; border-radius:3px; }
+    nav a:hover { color:#000; background:#ffd700; }
+    nav a.active { border-bottom:2px solid #ffd700; }
+    .container { max-width:600px; margin:1rem auto; padding:0 1rem; text-align:center; }
+    form { display:flex; flex-direction:column; gap:0.75rem; }
+    input, select { padding:0.5rem; font-size:0.75rem; border:2px solid #555; background:rgba(0,0,0,0.5); color:#fff; border-radius:4px; width:100%; }
+    label { font-size:0.75rem; text-align:left; }
+    button { cursor:pointer; border:none; padding:0.75rem; background:#222; color:#f39c12; border:2px solid #f39c12; border-radius:4px; font-family:'Press Start 2P', monospace; }
+    button:hover { background:#333; }
+    .status { margin-top:0.5rem; font-size:0.75rem; color:#f39c12; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">Молодша Ліга</a>
+    <a href="sunday.html">Старша Ліга</a>
+    <a href="gameday.html">Ігровий день</a>
+    <a href="rules.html">Правила</a>
+    <a href="about.html">Про клуб</a>
+    <a href="register.html" class="active">Реєстрація</a>
+  </nav>
+  <div class="container">
+    <h1 style="color:#f39c12; font-size:1rem; margin-bottom:1rem;">Приєднатися до ліги</h1>
+    <form id="reg-form">
+      <label>Нікнейм*<br><input name="nick" required></label>
+      <label>Вік*<br><input name="age" required type="number" min="1"></label>
+      <label>Стать<br>
+        <select name="gender">
+          <option value="male">Чоловіча</option>
+          <option value="female">Жіноча</option>
+          <option value="na">Не зазначати</option>
+        </select>
+      </label>
+      <label>Контакт<br><input name="contact" placeholder="telegram/phone"></label>
+      <label>Досвід<br>
+        <select name="experience">
+          <option value="beginner">Початківець</option>
+          <option value="played_once">Грав 1-2 рази</option>
+          <option value="regular">Постійний гравець</option>
+        </select>
+      </label>
+      <label><input type="checkbox" name="rules" required> Я погоджуюсь з правилами</label>
+      <button type="submit">Join the League</button>
+      <div id="reg-status" class="status"></div>
+    </form>
+  </div>
+  <script type="module" src="scripts/register.js"></script>
+</body>
+</html>

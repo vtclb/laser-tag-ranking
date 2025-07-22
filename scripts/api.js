@@ -94,3 +94,26 @@ export async function uploadAvatar(nick, file){
   return res.ok;
 }
 
+export async function registerPlayer(data){
+  const payload = Object.assign({action:'register'}, data);
+  const res = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  if(!res.ok) throw new Error(text || ('HTTP '+res.status));
+  return text.trim();
+}
+
+export async function fetchPlayerStats(nick){
+  const payload = {action:'getStats', nick};
+  const res = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.json();
+}
+

@@ -101,6 +101,10 @@
     .nick-C { color: cyan; }
     .nick-D { color: lime; }
     .hidden { display: none; }
+    .modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:1000; }
+    .modal.hidden { display:none; }
+    .modal-content { background:#222; padding:1rem; border-radius:4px; max-height:90%; overflow:auto; }
+    #stats-close { float:right; background:#444; border:none; color:#fff; cursor:pointer; padding:0.25rem 0.5rem; }
     @media(max-width:600px) {
       table { min-width: 480px; }
       nav { gap: 0.5rem; padding: 0.5rem; }
@@ -141,6 +145,12 @@
     </div>
     <button class="show-more" id="toggle">Всі гравці</button>
   </div>
+  <div id="stats-modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="stats-close">✕</button>
+      <div id="stats-body"></div>
+    </div>
+  </div>
 <script type="module">
   import {loadData,computeStats,renderTopMVP,renderChart,renderTable,initSearch,initToggle,formatD,formatFull} from './scripts/ranking.js';
   const rankingURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
@@ -160,5 +170,6 @@
   }
   document.addEventListener('DOMContentLoaded', init);
 </script>
+<script type="module" src="scripts/playerStats.js"></script>
 </body>
 </html>

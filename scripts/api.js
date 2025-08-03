@@ -74,25 +74,24 @@ export async function saveDetailedStats(matchId, statsArray) {
   return res.text();
 }
 
-const avatarBase = `${proxyUrl}/avatars`;
-const customAvatarUploadBase = `${proxyUrl}/custom_avatars`;
-const customAvatarBase = 'assets/custom_avatars';
+const avatarBase = '/avatars';
+const avatarUploadBase = '/upload-avatar';
 const defaultAvatarBase = 'assets/default_avatars';
 
 export function getAvatarURL(nick){
-  return `${customAvatarBase}/${encodeURIComponent(nick)}.png?t=${Date.now()}`;
-}
-
-export function getProxyAvatarURL(nick){
   return `${avatarBase}/${encodeURIComponent(nick)}?t=${Date.now()}`;
 }
 
+export function getProxyAvatarURL(nick){
+  return getAvatarURL(nick);
+}
+
 export function getDefaultAvatarURL(){
-  return 'assets/default_avatars/av0.png';
+  return `${defaultAvatarBase}/av0.png`;
 }
 
 export async function uploadAvatar(nick, file){
-  const res = await fetch(`${customAvatarUploadBase}/${encodeURIComponent(nick)}`, {
+  const res = await fetch(`${avatarUploadBase}/${encodeURIComponent(nick)}`, {
     method: 'POST',
     headers: { 'Content-Type': file.type || 'application/octet-stream' },
     body: file

@@ -1,8 +1,10 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const m = url.pathname.match(/^\/avatars\/(.+)$/);
-    if (!m) {
+    const avatarMatch = url.pathname.match(/^\/avatars\/(.+)$/);
+    const uploadMatch = url.pathname.match(/^\/upload-avatar\/(.+)$/);
+
+    if (!avatarMatch && !uploadMatch) {
       return new Response('Not found', {
         status: 404,
         headers: {
@@ -12,7 +14,8 @@ export default {
       });
     }
 
-    const nick = decodeURIComponent(m[1]);
+    const nick = decodeURIComponent(avatarMatch ? avatarMatch[1] : uploadMatch[1]);
+
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
@@ -23,7 +26,7 @@ export default {
       });
     }
 
-    if (request.method === 'GET') {
+    if (avatarMatch && request.method === 'GET') {
       const { value, metadata } = await env.AVATARS.getWithMetadata(nick, {
         type: 'arrayBuffer',
       });
@@ -46,7 +49,7 @@ export default {
       });
     }
 
-    if (request.method === 'POST') {
+    if (uploadMatch && request.method === 'POST') {
       const ct = request.headers.get('content-type') || 'application/octet-stream';
       const buf = await request.arrayBuffer();
       await env.AVATARS.put(nick, buf, { metadata: { contentType: ct } });

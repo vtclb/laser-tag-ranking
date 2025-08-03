@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Профіль гравця | Лазертаг</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:'Press Start 2P',monospace;
+      background:#111 url('assets/background_marathon.png') no-repeat center/cover;
+      color:#fff;
+    }
+    nav{display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;background:rgba(0,0,0,0.7);padding:0.5rem;}
+    nav a{color:#f39c12;text-decoration:none;font-size:0.7rem;padding:0.25rem 0.5rem;border-radius:3px;}
+    nav a:hover{color:#000;background:#ffd700;}
+    .profile{max-width:480px;margin:1rem auto;padding:0 1rem;text-align:center;}
+    .avatar-wrap{width:120px;height:120px;margin:0 auto;}
+    .avatar-wrap img{width:100%;height:100%;object-fit:cover;border-radius:50%;border:2px solid #f39c12;}
+    button{cursor:pointer;border:none;padding:0.5rem 1rem;background:#222;color:#f39c12;border:2px solid #f39c12;border-radius:4px;font-family:'Press Start 2P',monospace;font-size:0.6rem;}
+    #request-abonement{display:none;margin-top:0.5rem;}
+    .filter{margin-top:1rem;}
+    .filter input{width:100%;padding:0.5rem;border:2px solid #555;background:rgba(0,0,0,0.5);color:#fff;border-radius:4px;font-size:0.7rem;}
+    table{width:100%;border-collapse:collapse;margin-top:1rem;font-size:0.7rem;}
+    th,td{border:1px solid #444;padding:0.5rem;text-align:center;}
+    @media(min-width:768px){.profile{max-width:600px;}}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">Молодша Ліга</a>
+    <a href="sunday.html">Старша Ліга</a>
+    <a href="gameday.html">Ігровий день</a>
+    <a href="rules.html">Правила</a>
+    <a href="about.html">Про клуб</a>
+  </nav>
+  <div class="profile" id="profile">
+    <div class="avatar-wrap"><img id="avatar" alt="avatar"></div>
+    <button id="change-avatar" style="margin-top:0.5rem;">Змінити аватарку</button>
+    <input type="file" id="avatar-input" accept="image/*" style="display:none;">
+    <div id="rating" style="margin-top:1rem;"></div>
+    <div id="abonement-type" style="margin-top:0.5rem;"></div>
+    <button id="request-abonement">Запросити абонемент</button>
+    <div class="filter"><input type="date" id="date-filter"></div>
+    <table>
+      <thead><tr><th>Дата</th><th>ID</th><th>PDF</th></tr></thead>
+      <tbody id="games-body"></tbody>
+    </table>
+  </div>
+  <script type="module" src="scripts/profile.js"></script>
+</body>
+</html>

@@ -1,8 +1,17 @@
 import { loadPlayers, getAvatarURL, uploadAvatar, fetchPlayerGames, requestAbonement } from './api.js';
 
+let gameLimit = 0;
+let gamesLeftEl = null;
+
 function showError(msg){
   const container = document.getElementById('profile');
   container.innerHTML = `<p style="color:#f39c12;text-align:center;">${msg}</p>`;
+}
+
+function updateGamesLeft(used){
+  if(!gamesLeftEl) return;
+  const left = Math.max(gameLimit - used, 0);
+  gamesLeftEl.textContent = `Залишилось ${left} із ${gameLimit} ігор`;
 }
 
 function renderGames(list, league, nick){
@@ -29,6 +38,7 @@ function renderGames(list, league, nick){
       tr.appendChild(tdD); tr.appendChild(tdId); tr.appendChild(tdPdf);
       tbody.appendChild(tr);
     });
+  updateGamesLeft(list.length);
 }
 
 async function init(){
@@ -53,6 +63,16 @@ async function init(){
   document.getElementById('avatar').src = getAvatarURL(nick);
   document.getElementById('rating').textContent = `Рейтинг: ${player.pts} (${player.rank})`;
   document.getElementById('abonement-type').textContent = `Абонемент: ${player.abonement}`;
+
+  gameLimit = {standart:5, vip:10}[player.abonement] || 0;
+  gamesLeftEl = document.getElementById('games-left');
+  if(!gamesLeftEl){
+    gamesLeftEl = document.createElement('div');
+    gamesLeftEl.id = 'games-left';
+    gamesLeftEl.style.marginTop = '0.5rem';
+    const filterEl = document.querySelector('.filter');
+    filterEl.parentNode.insertBefore(gamesLeftEl, filterEl);
+  }
   const reqBtn = document.getElementById('request-abonement');
   if(player.abonement === 'none'){
     reqBtn.style.display='block';
@@ -83,6 +103,13 @@ async function init(){
 
   let games=[];
   try{ games = await fetchPlayerGames(nick, league); }catch(err){ games=[]; }
+  games = new Proxy(games, {
+    set(target, prop, value){
+      target[prop] = value;
+      if(prop !== 'length') renderGames(target, league, nick);
+      return true;
+    }
+  });
   renderGames(games, league, nick);
   document.getElementById('date-filter').addEventListener('change',()=>renderGames(games,league,nick));
 }

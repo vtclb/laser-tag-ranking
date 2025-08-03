@@ -2,9 +2,11 @@
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
+import { updateAbonement } from './api.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
+const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
 // Ініціалізує лоббі новим набором гравців
 export function initLobby(pl) {
@@ -97,6 +99,11 @@ function renderLobby() {
       <td>${p.pts}</td>
       <td>${p.rank}</td>
       <td>
+        <select class="abonement-select" data-i="${i}">
+          ${ABONEMENT_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+        </select>
+      </td>
+      <td>
         ${[...Array(manualCount)].map((_, k) =>
           `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
         ).join('')}
@@ -147,6 +154,26 @@ function renderLobby() {
       lobby.splice(idx, 1);
       renderLobby();
       renderSelect(filtered);
+    };
+  });
+
+  // Оновлення типу абонемента
+  tbody.querySelectorAll('.abonement-select').forEach(sel => {
+    const idx = +sel.dataset.i;
+    const player = lobby[idx];
+    sel.value = player.abonement || 'none';
+    sel.onchange = async () => {
+      const newType = sel.value;
+      try {
+        await updateAbonement(player.nick, newType);
+        player.abonement = newType;
+        const full = players.find(p => p.nick === player.nick);
+        if (full) full.abonement = newType;
+        alert('Абонемент оновлено');
+      } catch (err) {
+        sel.value = player.abonement || 'none';
+        alert('Помилка оновлення абонемента');
+      }
     };
   });
 }

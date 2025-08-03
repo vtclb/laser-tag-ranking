@@ -47,13 +47,16 @@ function renderGames(list, league, nick){
       const tdId=document.createElement('td');
       tdId.textContent=id;
       const tdPdf=document.createElement('td');
-      const a=document.createElement('a');
-      a.textContent='PDF';
-      a.href=`/pdfs/${league}/${dateStr}/${id}.pdf`;
-      a.target='_blank';
-      tdPdf.appendChild(a);
+      const pdfUrl = `/pdfs/${league}/${dateStr}/${id}.pdf`;
+      const btn=document.createElement('button');
+      btn.textContent='Переглянути звіт';
+      btn.addEventListener('click',()=>window.open(pdfUrl,'_blank'));
+      tdPdf.appendChild(btn);
       tr.appendChild(tdD); tr.appendChild(tdId); tr.appendChild(tdPdf);
       tbody.appendChild(tr);
+      fetch(pdfUrl,{method:'HEAD'})
+        .then(res=>{if(!res.ok){btn.disabled=true;btn.textContent='Звіт відсутній';}})
+        .catch(()=>{btn.disabled=true;btn.textContent='Звіт відсутній';});
     });
   updateGamesLeft(list.length);
 }

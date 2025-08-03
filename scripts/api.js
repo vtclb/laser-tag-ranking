@@ -134,6 +134,17 @@ export async function requestAbonement(nick){
   return res.text();
 }
 
+export async function updateAbonement(nick, abonement){
+  const payload = {action:'updateAbonement', nick, abonement};
+  const res = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.text();
+}
+
 export async function fetchPlayerGames(nick, league=''){
   let res;
   try {

@@ -40,7 +40,7 @@ export async function loadPlayers(league) {
                : pts < 1200 ? 'A'
                :              'S';
 
-    return { nick, pts, rank, abonement_type: type };
+    return { nick, pts, rank, abonement: type };
   });
 }
 
@@ -123,7 +123,18 @@ export async function fetchPlayerStats(nick){
   return res.json();
 }
 
-export async function fetchPlayerGames(){
+export async function requestAbonement(nick){
+  const payload = {action:'abonement_request', nick};
+  const res = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.text();
+}
+
+export async function fetchPlayerGames(nick, league=''){
   let res;
   try {
     res = await fetch(`${proxyUrl}?sheet=games&t=${Date.now()}`);
@@ -133,23 +144,30 @@ export async function fetchPlayerGames(){
     res = await fetch(gamesURL);
   }
   const text = await res.text();
+  let list;
   if (typeof Papa !== 'undefined') {
-    return Papa.parse(text, {header:true, skipEmptyLines:true}).data;
+    list = Papa.parse(text, {header:true, skipEmptyLines:true}).data;
+  } else {
+    list = text.trim().split('\n').slice(1).map(line => {
+      const cols = line.split(',');
+      return {
+        Timestamp: cols[0],
+        League: cols[1],
+        Team1: cols[2],
+        Team2: cols[3],
+        Team3: cols[4],
+        Team4: cols[5],
+        Winner: cols[6],
+        MVP: cols[7],
+        Series: cols[8],
+        ID: cols[9]
+      };
+    });
   }
-  return text.trim().split('\n').slice(1).map(line => {
-    const cols = line.split(',');
-    return {
-      Timestamp: cols[0],
-      League: cols[1],
-      Team1: cols[2],
-      Team2: cols[3],
-      Team3: cols[4],
-      Team4: cols[5],
-      Winner: cols[6],
-      MVP: cols[7],
-      Series: cols[8],
-      ID: cols[9]
-    };
+  return list.filter(g => {
+    if(league && g.League && g.League !== league) return false;
+    const teams = [g.Team1, g.Team2, g.Team3, g.Team4];
+    return teams.some(t => (t || '').split(',').map(s => s.trim()).includes(nick));
   });
 }
 

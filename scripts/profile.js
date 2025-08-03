@@ -1,4 +1,4 @@
-import { loadPlayers, getAvatarURL, uploadAvatar, fetchPlayerGames } from './api.js';
+import { loadPlayers, getAvatarURL, uploadAvatar, fetchPlayerGames, requestAbonement } from './api.js';
 
 function showError(msg){
   const container = document.getElementById('profile');
@@ -52,18 +52,14 @@ async function init(){
   }
   document.getElementById('avatar').src = getAvatarURL(nick);
   document.getElementById('rating').textContent = `Рейтинг: ${player.pts} (${player.rank})`;
-  document.getElementById('abonement-type').textContent = `Абонемент: ${player.abonement_type}`;
+  document.getElementById('abonement-type').textContent = `Абонемент: ${player.abonement}`;
   const reqBtn = document.getElementById('request-abonement');
-  if(player.abonement_type === 'none'){
+  if(player.abonement === 'none'){
     reqBtn.style.display='block';
     reqBtn.addEventListener('click', async ()=>{
       reqBtn.disabled=true;
       try{
-        await fetch('https://script.google.com/macros/s/AKfycbzjdoEtN8HsBFRGyme184NIGsZuCPyCPPtHNXU_PnJhoDi3mUVT40XnwzR90KHDa9J8pg/exec',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({action:'abonement_request',nick})
-        });
+        await requestAbonement(nick);
         reqBtn.textContent='Запит відправлено';
       }catch(err){
         reqBtn.disabled=false;
@@ -86,14 +82,9 @@ async function init(){
   });
 
   let games=[];
-  try{ games = await fetchPlayerGames(); }catch(err){ games=[]; }
-  const playerGames = games.filter(g=>{
-    if(g.League && g.League!==league) return false;
-    const teams=[g.Team1,g.Team2,g.Team3,g.Team4];
-    return teams.some(t=> (t||'').split(',').map(s=>s.trim()).includes(nick));
-  });
-  renderGames(playerGames, league, nick);
-  document.getElementById('date-filter').addEventListener('change',()=>renderGames(playerGames,league,nick));
+  try{ games = await fetchPlayerGames(nick, league); }catch(err){ games=[]; }
+  renderGames(games, league, nick);
+  document.getElementById('date-filter').addEventListener('change',()=>renderGames(games,league,nick));
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -5,7 +5,24 @@ let gamesLeftEl = null;
 
 function showError(msg){
   const container = document.getElementById('profile');
-  container.innerHTML = `<p style="color:#f39c12;text-align:center;">${msg}</p>`;
+  container.style.display = 'none';
+  let err = document.getElementById('profile-error');
+  if(!err){
+    err = document.createElement('div');
+    err.id = 'profile-error';
+    err.style.color = '#f39c12';
+    err.style.textAlign = 'center';
+    err.style.marginTop = '1rem';
+    document.querySelector('nav').insertAdjacentElement('afterend', err);
+    err.innerHTML = `\n      <p>${msg}</p>\n      <div style="margin-top:0.5rem;">\n        <input type="text" id="retry-nick" placeholder="Введіть нік" style="padding:0.5rem;border:2px solid #555;background:rgba(0,0,0,0.5);color:#fff;border-radius:4px;font-size:0.7rem;"/>\n        <button id="retry-search" style="margin-left:0.5rem;">Пошук</button>\n      </div>\n      <p style="margin-top:0.5rem;"><a href="index.html" style="color:#ffd700;">На головну</a></p>\n    `;
+    document.getElementById('retry-search').addEventListener('click', ()=>{
+      const val = document.getElementById('retry-nick').value.trim();
+      if(val) location.href = `profile.html?nick=${encodeURIComponent(val)}`;
+    });
+  } else {
+    err.querySelector('p').textContent = msg;
+    err.style.display = 'block';
+  }
 }
 
 function updateGamesLeft(used){

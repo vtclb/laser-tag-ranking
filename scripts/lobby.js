@@ -23,10 +23,15 @@ export function initLobby(pl) {
 
 export function updateLobbyState(updates){
   updates.forEach(u=>{
+    const norm = {nick:u.nick};
+    if(u.points!==undefined) norm.pts = u.points;
+    if(u.pts!==undefined)    norm.pts = u.pts;
+    if(u.rank!==undefined)   norm.rank = u.rank;
+
     const pAll = players.find(x=>x.nick===u.nick);
-    if(pAll) Object.assign(pAll, u);
+    if(pAll) Object.assign(pAll, norm);
     const pLobby = lobby.find(x=>x.nick===u.nick);
-    if(pLobby) Object.assign(pLobby, u);
+    if(pLobby) Object.assign(pLobby, norm);
   });
   renderLobby();
 }

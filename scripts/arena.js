@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Зберегти гру ---
-  btnSave.addEventListener('click', async () => {
+  async function saveGame(){
     try {
       const vs = (arenaVS.textContent.match(/\d+/g) || []).map(Number);
       if (vs.length !== 2) throw new Error('Неправильний формат арени');
@@ -148,7 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const msg = err && err.message ? err.message : String(err);
       alert('Не вдалося зберегти гру:\n' + msg);
     }
-  });
+  }
+  btnSave.addEventListener('click', saveGame);
 
   // --- Скинути арену ---
   btnClear.addEventListener('click', () => {

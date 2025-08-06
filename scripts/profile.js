@@ -136,12 +136,14 @@ async function init(){
 
 document.addEventListener('DOMContentLoaded', init);
 
-window.addEventListener('storage', e => {
-  if(e.key === 'avatarRefresh'){
-    const params = new URLSearchParams(location.search);
-    const nick = params.get('nick');
-    if(nick){
-      document.getElementById('avatar').src = getAvatarURL(nick);
-    }
+function refreshAvatars(){
+  const params = new URLSearchParams(location.search);
+  const nick = params.get('nick');
+  if(nick){
+    document.getElementById('avatar').src = getAvatarURL(nick);
   }
+}
+
+window.addEventListener('storage', e => {
+  if(e.key === 'avatarRefresh') refreshAvatars();
 });

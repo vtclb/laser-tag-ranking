@@ -84,6 +84,7 @@ export function renderTable(list, tbodyEl){
     const tdAvatar=document.createElement('td');
     const img=document.createElement('img');
     img.className='avatar-img';
+    img.alt=p.nickname;
     img.dataset.nick=p.nickname;
     img.src=getAvatarURL(p.nickname);
     img.onerror=()=>{

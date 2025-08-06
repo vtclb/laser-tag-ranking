@@ -118,6 +118,12 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
     const filtered = games.filter(g=>g.League===leagueSel.value)
       .filter(g=>parseDate(g.Timestamp)===dateInput.value);
 
+    filtered.sort((a,b)=>{
+      const tDiff = new Date(b.Timestamp) - new Date(a.Timestamp);
+      if(tDiff) return tDiff;
+      return (+b.ID || 0) - (+a.ID || 0);
+    });
+
     const matchRows = [];
     filtered.forEach(g=>{
       const t1 = g.Team1.split(',').map(s=>normName(s.trim()));
@@ -144,21 +150,25 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
         players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
         players[n].games++;
         if(winner==='team1') players[n].wins++;
-        let d = partPoints(getRankLetter(players[n].pts));
+        const rankBefore = getRankLetter(players[n].pts);
+        let d = partPoints(rankBefore);
         if(winner==='team1') d+=20;
         if(mvp===n) d+=10;
         players[n].delta += d;
-        team1Pts.push({nick:n,rank:getRankLetter(players[n].pts),delta:d});
+        team1Pts.push({nick:n,rank:rankBefore,delta:d});
+        players[n].pts += d;
       });
       t2.forEach(n=>{
         players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
         players[n].games++;
         if(winner==='team2') players[n].wins++;
-        let d = partPoints(getRankLetter(players[n].pts));
+        const rankBefore = getRankLetter(players[n].pts);
+        let d = partPoints(rankBefore);
         if(winner==='team2') d+=20;
         if(mvp===n) d+=10;
         players[n].delta += d;
-        team2Pts.push({nick:n,rank:getRankLetter(players[n].pts),delta:d});
+        team2Pts.push({nick:n,rank:rankBefore,delta:d});
+        players[n].pts += d;
       });
       matchRows.push({
         team1: team1Pts,
@@ -189,7 +199,7 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
     arr.slice().sort((a,b)=>b.pts - a.pts)
       .forEach((p,i)=>{ p.currRank = i+1; });
 
-    const list = arr.filter(p=>p.delta!==0)
+    const list = arr.filter(p=>p.games>0)
       .sort((a,b)=>a.currRank - b.currRank);
 
     playersTb.innerHTML='';
@@ -234,7 +244,7 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
       delta.className=cls;
       delta.textContent=`${arrow} ${(p.delta>0?'+':'')+p.delta}`;
 
-      [rank,tdAvatar,nick,pts,wins,games,delta].forEach(td=>tr.appendChild(td));
+      [rank,tdAvatar,nick,pts,games,wins,delta].forEach(td=>tr.appendChild(td));
       playersTb.appendChild(tr);
     });
 

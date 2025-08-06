@@ -52,11 +52,11 @@ export async function saveResult(data) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body
   });
-  const text = await res.text();
   if(!res.ok){
+    const text = await res.text();
     throw new Error(text || ('HTTP '+res.status));
   }
-  return text;
+  return res.json();
 }
 
 

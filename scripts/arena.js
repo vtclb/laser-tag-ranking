@@ -1,9 +1,8 @@
 // scripts/arena.js
 
-import { saveResult, loadPlayers, saveDetailedStats } from './api.js';
+import { saveResult, saveDetailedStats } from './api.js';
 import { parseGamePdf }                   from './pdfParser.js';
-import { initLobby }                      from './lobby.js';
-import { initScenario }                   from './scenario.js';
+import { updateLobbyState }               from './lobby.js';
 import { teams }                          from './teams.js';
 
 // Дочекаємося, поки DOM завантажиться
@@ -129,17 +128,17 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       const res = await saveResult(data);
-      if (res.trim() !== 'OK') {
-        alert('Помилка збереження: ' + res);
+      if (res.status !== 'OK') {
+        alert('Помилка збереження: ' + (res.status || res));
         return;
       }
 
       // Зберігаємо matchId для подальшого імпорту PDF
-      window.lastMatchId = Date.now();
+      window.lastMatchId = res.matchId || Date.now();
 
-      const updated = await loadPlayers(leagueSel.value);
-      initLobby(updated);
-      initScenario();
+      if (Array.isArray(res.players)) {
+        updateLobbyState(res.players);
+      }
 
       alert('Гру успішно збережено та рейтинги оновлено');
       localStorage.setItem('gamedayRefresh', Date.now());

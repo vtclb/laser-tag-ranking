@@ -21,6 +21,16 @@ export function initLobby(pl) {
   renderLobby();
 }
 
+export function updateLobbyState(updates){
+  updates.forEach(u=>{
+    const pAll = players.find(x=>x.nick===u.nick);
+    if(pAll) Object.assign(pAll, u);
+    const pLobby = lobby.find(x=>x.nick===u.nick);
+    if(pLobby) Object.assign(pLobby, u);
+  });
+  renderLobby();
+}
+
 // Рендер списку доступних гравців
 function renderSelect(arr) {
   document.getElementById('select-area').classList.remove('hidden');

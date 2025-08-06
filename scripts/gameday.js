@@ -205,6 +205,7 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
       const tdAvatar=document.createElement('td');
       const img=document.createElement('img');
       img.className='avatar-img';
+      img.alt=p.nick;
       img.dataset.nick=p.nick;
       img.src=getAvatarURL(p.nick);
       img.onerror=()=>{

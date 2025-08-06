@@ -60,6 +60,7 @@ export async function initAvatarAdmin(players, league=''){
     const li = document.createElement('li');
     const img = document.createElement('img');
     img.className = 'avatar-img';
+    img.alt = p.nick;
     img.dataset.nick = p.nick;
     img.src = getAvatarURL(p.nick);
     img.onerror = () => {
@@ -85,6 +86,7 @@ export async function initAvatarAdmin(players, league=''){
     defaultAvatars.forEach(src => {
       const t = document.createElement('img');
       t.className = 'avatar-thumb';
+      t.alt = 'avatar';
       t.src = src;
       t.addEventListener('click', async () => {
         thumbs.querySelectorAll('.avatar-thumb').forEach(el => el.classList.remove('selected'));

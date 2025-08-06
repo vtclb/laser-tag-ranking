@@ -114,17 +114,19 @@ export async function initAvatarAdmin(players, league=''){
   });
 }
 
-window.addEventListener('storage', e => {
-  if(e.key === 'avatarRefresh'){
-    document.querySelectorAll('#avatar-list img.avatar-img[data-nick]').forEach(img => {
-      img.src = getAvatarURL(img.dataset.nick);
+function refreshAvatars(){
+  document.querySelectorAll('#avatar-list img.avatar-img[data-nick]').forEach(img => {
+    img.src = getAvatarURL(img.dataset.nick);
+    img.onerror = () => {
       img.onerror = () => {
-        img.onerror = () => {
-          img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
-          img.src = getDefaultAvatarURL();
-        };
-        img.src = getProxyAvatarURL(img.dataset.nick);
+        img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
+        img.src = getDefaultAvatarURL();
       };
-    });
-  }
+      img.src = getProxyAvatarURL(img.dataset.nick);
+    };
+  });
+}
+
+window.addEventListener('storage', e => {
+  if(e.key === 'avatarRefresh') refreshAvatars();
 });

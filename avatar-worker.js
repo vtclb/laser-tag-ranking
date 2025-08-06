@@ -3,6 +3,10 @@ export default {
     const url = new URL(request.url);
     const avatarMatch = url.pathname.match(/^\/avatars\/(.+)$/);
     const uploadMatch = url.pathname.match(/^\/upload-avatar\/(.+)$/);
+    const cors = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
 
     if (!avatarMatch && !uploadMatch) {
       return new Response('Not found', {
@@ -52,13 +56,12 @@ export default {
     if (uploadMatch && request.method === 'POST') {
       const ct = request.headers.get('content-type') || 'application/octet-stream';
       const buf = await request.arrayBuffer();
+      if (ct.split('/')[0] !== 'image' || buf.byteLength > 1_000_000 ||
+          request.headers.get('X-Upload-Token') !== env.UPLOAD_TOKEN) {
+        return new Response('Invalid upload', { status: 400, headers: cors });
+      }
       await env.AVATARS.put(nick, buf, { metadata: { contentType: ct } });
-      return new Response('OK', {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      });
+      return new Response('OK', { headers: cors });
     }
 
     return new Response('Method not allowed', {

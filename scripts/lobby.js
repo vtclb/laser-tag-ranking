@@ -2,11 +2,18 @@
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement } from './api.js';
+import { updateAbonement, fetchPlayerData } from './api.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
+
+async function addPlayer(nick){
+  if(!nick) return;
+  const res = await fetchPlayerData(nick);
+  lobby.push({...res, team:null});
+  renderLobby();
+}
 
 // Ініціалізує лоббі новим набором гравців
 export function initLobby(pl) {
@@ -97,6 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
     selected = [];
     renderSelect(filtered);
   };
+
+  const addPlayerInput = document.getElementById('addPlayerInput');
+  const addPlayerBtn = document.getElementById('addPlayerBtn');
+  if(addPlayerInput && addPlayerBtn){
+    addPlayerBtn.addEventListener('click', () => {
+      addPlayer(addPlayerInput.value.trim());
+    });
+  }
 });
 
 // Встановлюємо кількість команд для ручного режиму

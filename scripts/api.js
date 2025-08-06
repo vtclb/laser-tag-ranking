@@ -3,7 +3,7 @@
 // All API requests are routed through a Google Apps Script which acts as a
 // simple backend for storing results and serving assets. If the proxy fails
 // we fall back to loading data directly from the published Google Sheet.
-const proxyUrl = 'https://script.google.com/macros/s/AKfycbzjdoEtN8HsBFRGyme184NIGsZuCPyCPPtHNXU_PnJhoDi3mUVT40XnwzR90KHDa9J8pg/exec';
+const proxyUrl = 'https://script.google.com/macros/s/AKfycby65ks_P5o_-cM3dT37xfhw_9iEG3YF4cPdATSZVym_HsYpY9I_n6JDpe1eZ9Rv3OsFyg/exec';
 
 const rankingURLs = {
   kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',

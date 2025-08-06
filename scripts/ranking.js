@@ -101,7 +101,10 @@ export function renderTable(list, tbodyEl){
       if(idx===1){
         td.className=cls.replace('rank-','nick-');
         td.style.cursor='pointer';
-        td.addEventListener('click',()=>{ if(window.loadStats) window.loadStats(p.nickname); });
+        td.addEventListener('click', () => {
+          const url = `profile.html?nick=${encodeURIComponent(p.nickname)}`;
+          window.location.href = url;
+        });
       }
       td.textContent=val;
       tr.appendChild(td);

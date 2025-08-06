@@ -10,3 +10,7 @@ The pages use ES modules, therefore they must be served via HTTP. Any static ser
 
 If the API proxy is unavailable, the balancer page will fetch player data directly from the published Google Sheets.
 
+## Avatar uploads
+
+The avatar upload worker requires an `UPLOAD_TOKEN` environment variable. Clients must send this token in the `X-Upload-Token` header when uploading images; the scripts expect it to be available as `window.UPLOAD_TOKEN`.
+

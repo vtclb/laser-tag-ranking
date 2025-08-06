@@ -91,9 +91,11 @@ export function getDefaultAvatarURL(){
 }
 
 export async function uploadAvatar(nick, file){
+  const headers = { 'Content-Type': file.type || 'application/octet-stream' };
+  if (window.UPLOAD_TOKEN) headers['X-Upload-Token'] = window.UPLOAD_TOKEN;
   const res = await fetch(`${avatarUploadBase}/${encodeURIComponent(nick)}`, {
     method: 'POST',
-    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    headers,
     body: file
   });
   return res.ok;

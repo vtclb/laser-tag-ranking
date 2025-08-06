@@ -143,6 +143,7 @@ function doPost(e) {
     }
 
     const winnerKey = params.winner;
+    const updatedPlayers = [];
     allPlayers.forEach(nick => {
       const cell = rankSheet.getRange(2, nickCol, rankSheet.getLastRow() - 1, 1)
         .createTextFinder(nick).matchEntireCell(true).findNext();
@@ -163,10 +164,16 @@ function doPost(e) {
       const updated = cur + delta;
       rankSheet.getRange(row, ptsCol).setValue(updated);
       logS.appendRow([now, params.league, nick, delta, updated]);
+
+      const rankLetter = updated < 200 ? 'D'
+                         : updated < 500 ? 'C'
+                         : updated < 800 ? 'B'
+                         : updated < 1200 ? 'A' : 'S';
+      updatedPlayers.push({nick: nick, points: updated, rank: rankLetter});
     });
 
-    return ContentService.createTextOutput('OK')
-      .setMimeType(ContentService.MimeType.TEXT)
+    return ContentService.createTextOutput(JSON.stringify({status:'OK', players: updatedPlayers}))
+      .setMimeType(ContentService.MimeType.JSON)
       .setHeader('Access-Control-Allow-Origin','*');
   }
   catch (err) {

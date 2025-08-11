@@ -49,66 +49,51 @@ async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
   }
 }
 
-let pending = {};
 let currentLeague = '';
-export async function initAvatarAdmin(players, league=''){
+export async function initAvatarAdmin(players = [], league = '') {
   currentLeague = league;
   const section = document.getElementById('avatar-admin');
-  if(!section) return;
+  if (!section) return;
   const listEl = document.getElementById('avatar-list');
   const saveAvBtn = document.getElementById('save-avatars');
   const statusEl = document.getElementById('avatar-status');
-  if(!listEl || !saveAvBtn) return;
-  pending = {};
-  saveAvBtn.disabled = true;
+  if (!listEl || !saveAvBtn) return;
   listEl.innerHTML = '';
-  if(statusEl){
+  if (statusEl) {
     statusEl.textContent = '';
     statusEl.classList.add('hidden');
   }
   await loadDefaultAvatars();
-  saveAvBtn.onclick = async () => {
-    const entries = Object.entries(pending);
-    const failed = [];
-    for(const [nick,obj] of entries){
-      try{
-        const url = await uploadAvatar(nick, obj.file);
-        obj.img.src = `${url}?t=${Date.now()}`;
-        localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
-      }catch{
-        failed.push(nick);
-      }
-    }
-    if(failed.length){
-      alert('Failed to upload avatars for: '+failed.join(', '));
-    }
-    pending = {};
-    saveAvBtn.disabled = true;
-    if(statusEl){
-      statusEl.textContent = 'Аватари оновлено';
-      statusEl.classList.remove('hidden');
-      setTimeout(()=>statusEl.classList.add('hidden'), 2000);
-    }
-  };
 
+  // create rows for players
   players.forEach(p => {
-    const li = document.createElement('li');
+    const tr = document.createElement('tr');
+    tr.className = 'avatar-row';
+    tr.dataset.nick = p.nick;
+
+    const imgTd = document.createElement('td');
     const img = document.createElement('img');
     img.className = 'avatar-img';
     img.alt = p.nick;
-    img.dataset.nick = p.nick;
     setAvatar(img, p.nick);
+    imgTd.appendChild(img);
+
+    const nickTd = document.createElement('td');
+    nickTd.textContent = p.nick;
+
+    const inputTd = document.createElement('td');
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if(!file) return;
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return updateSaveBtn();
       img.src = URL.createObjectURL(file);
-      pending[p.nick] = { file, img };
-      saveAvBtn.disabled = false;
+      updateSaveBtn();
     });
+    inputTd.appendChild(input);
 
+    const thumbsTd = document.createElement('td');
     const thumbs = document.createElement('div');
     thumbs.className = 'avatar-thumbs';
     defaultAvatars.forEach(src => {
@@ -119,27 +104,63 @@ export async function initAvatarAdmin(players, league=''){
       t.addEventListener('click', async () => {
         thumbs.querySelectorAll('.avatar-thumb').forEach(el => el.classList.remove('selected'));
         t.classList.add('selected');
-        try{
+        try {
           const resp = await fetch(src);
           const blob = await resp.blob();
+          const dt = new DataTransfer();
+          dt.items.add(new File([blob], 'avatar.png', { type: blob.type }));
+          input.files = dt.files;
           img.src = src;
-          pending[p.nick] = { file: blob, img };
-          saveAvBtn.disabled = false;
-        }catch(err){
+          updateSaveBtn();
+        } catch (err) {
           console.error('Failed to fetch avatar', err);
         }
       });
       thumbs.appendChild(t);
     });
+    thumbsTd.appendChild(thumbs);
 
-    li.appendChild(img);
-    const span = document.createElement('span');
-    span.textContent = p.nick;
-    li.appendChild(span);
-    li.appendChild(input);
-    li.appendChild(thumbs);
-    listEl.appendChild(li);
+    tr.appendChild(imgTd);
+    tr.appendChild(nickTd);
+    tr.appendChild(inputTd);
+    tr.appendChild(thumbsTd);
+    listEl.appendChild(tr);
   });
+
+  const rows = () => Array.from(document.querySelectorAll('#avatar-list .avatar-row'));
+
+  function updateSaveBtn() {
+    const hasFile = rows().some(r => r.querySelector('input[type="file"]').files[0]);
+    saveAvBtn.disabled = !hasFile;
+  }
+  updateSaveBtn();
+
+  saveAvBtn.onclick = async () => {
+    const failed = [];
+    for (const row of rows()) {
+      const file = row.querySelector('input[type="file"]').files[0];
+      if (!file) continue;
+      const nick = row.dataset.nick;
+      const img = row.querySelector('img.avatar-img');
+      try {
+        const url = await uploadAvatar(nick, file);
+        img.src = `${url}?t=${Date.now()}`;
+        localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
+        row.querySelector('input[type="file"]').value = '';
+      } catch {
+        failed.push(nick);
+      }
+    }
+    updateSaveBtn();
+    if (failed.length) {
+      alert('Failed to upload avatars for: ' + failed.join(', '));
+    }
+    if (statusEl) {
+      statusEl.textContent = 'Аватари оновлено';
+      statusEl.classList.remove('hidden');
+      setTimeout(() => statusEl.classList.add('hidden'), 2000);
+    }
+  };
 }
 
 function refreshAvatars(nick){

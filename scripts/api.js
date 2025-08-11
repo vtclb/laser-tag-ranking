@@ -1,7 +1,8 @@
 // scripts/api.js
 
 // Google Apps Script backend (веб-апп)
-const proxyUrl = 'https://script.google.com/macros/s/AKfycbxaISxiRGrsO4IS3Dy5T-y2pBpOfHAWCL0WTvuQFp_ZSH0NvSY2A5LhJxdKul5F2Kz4iw/exec';
+export const API_URL = 'https://script.google.com/macros/s/AKfycbxaISxiRGrsO4IS3Dy5T-y2pBpOfHAWCL0WTvuQFp_ZSH0NvSY2A5LhJxdKul5F2Kz4iw/exec';
+const proxyUrl = API_URL;
 
 // Публічні фіди рейтингу (CSV)
 const rankingURLs = {
@@ -133,14 +134,21 @@ export function getDefaultAvatarURL() {
 }
 
 export async function uploadAvatar(nick, file) {
-  const headers = { 'Content-Type': file.type || 'application/octet-stream' };
-  if (window.UPLOAD_TOKEN) headers['X-Upload-Token'] = window.UPLOAD_TOKEN;
-  const res = await fetch(`${avatarUploadBase}/${encodeURIComponent(nick)}`, {
+  const avatar = await toBase64NoPrefix(file);
+  const payload = { action: 'uploadAvatar', nick, avatar, mime: file.type || 'image/png' };
+  const res = await fetch(API_URL, {
     method: 'POST',
-    headers,
-    body: file
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   });
-  return res.ok;
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
+  try {
+    const data = JSON.parse(text);
+    return data.url || data.success || true;
+  } catch (_) {
+    return true;
+  }
 }
 
 // ---------------------- Реєстрація/статистика ----------------------
@@ -249,5 +257,60 @@ export async function fetchPlayerGames(nick, league = '') {
     if (lg && g.League && normalizeLeague(g.League) !== lg) return false;
     const teams = [g.Team1, g.Team2, g.Team3, g.Team4];
     return teams.some(t => (t || '').split(',').map(s => s.trim()).includes(nick));
+  });
+}
+
+// ---------------------- Новий JSON API ----------------------
+async function postJson(payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return text;
+  }
+}
+
+export async function adminCreatePlayer(data) {
+  return postJson({ action: 'adminCreatePlayer', ...(data || {}) });
+}
+
+export async function issueAccessKey(data) {
+  return postJson({ action: 'issueAccessKey', ...(data || {}) });
+}
+
+export async function getProfile(data) {
+  return postJson({ action: 'getProfile', ...(data || {}) });
+}
+
+export async function getAvatarUrl(nick) {
+  const data = await postJson({ action: 'getAvatarUrl', nick });
+  if (!data || !data.url) throw new Error('Invalid avatar URL response');
+  return data.url;
+}
+
+export async function getPdfLinks(params) {
+  return postJson({ action: 'getPdfLinks', ...(params || {}) });
+}
+
+export function toBase64NoPrefix(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result || '';
+      const comma = result.indexOf(',');
+      if (comma === -1) {
+        reject(new Error('Invalid file data'));
+      } else {
+        resolve(result.slice(comma + 1));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
   });
 }

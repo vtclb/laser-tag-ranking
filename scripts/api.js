@@ -1,7 +1,7 @@
 // scripts/api.js
 
 // Google Apps Script backend (веб-апп)
-const proxyUrl = 'https://script.google.com/macros/s/AKfycbzVt0xCYRR_maEe7ICewkSe-nx8QtN0LOQdniZlaMqkJaQaWxu_6CyYnTehxQz2R6zepg/exec';
+const proxyUrl = 'https://script.google.com/macros/s/AKfycbxaISxiRGrsO4IS3Dy5T-y2pBpOfHAWCL0WTvuQFp_ZSH0NvSY2A5LhJxdKul5F2Kz4iw/exec';
 
 // Публічні фіди рейтингу (CSV)
 const rankingURLs = {

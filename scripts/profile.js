@@ -162,7 +162,7 @@ async function loadProfile(nick, key = '') {
       const url = await uploadAvatar(nick, file);
       avatarUrl = url;
       document.getElementById('avatar').src = `${url}?v=${Date.now()}`;
-      localStorage.setItem('avatarRefresh', nick);
+      localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
       alert('Помилка завантаження');
     }
@@ -191,6 +191,9 @@ function refreshAvatar() {
 }
 
 window.addEventListener('storage', e => {
-  if (e.key === 'avatarRefresh' && e.newValue === currentNick) refreshAvatar();
+  if (e.key === 'avatarRefresh') {
+    const [nick] = (e.newValue || '').split(':');
+    if (nick === currentNick) refreshAvatar();
+  }
 });
 

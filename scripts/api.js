@@ -295,7 +295,7 @@ export async function getPdfLinks(params) {
   if (payload.league) payload.league = normalizeLeague(payload.league);
   const resp = await postJson(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  return resp;
+  return resp.links || {};
 }
 
 export function toBase64NoPrefix(file) {

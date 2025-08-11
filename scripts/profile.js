@@ -54,8 +54,8 @@ async function renderGames(list, league) {
   for (const dt of dates) {
     if (!pdfCache[dt]) {
       try {
-        const resp = await getPdfLinks({ league, date: dt });
-        pdfCache[dt] = resp.links || {};
+        const links = await getPdfLinks({ league, date: dt });
+        pdfCache[dt] = links;
       } catch (err) {
         pdfCache[dt] = {};
       }

@@ -52,7 +52,7 @@ function refreshAvatars(nick) {
 
 window.addEventListener("storage", (e) => {
   if (e.key === "avatarRefresh") {
-    const nick = e.newValue;
+    const [nick] = (e.newValue || "").split(":");
     if (nick) sessionStorage.removeItem(`avatar:${nick}`);
     refreshAvatars(nick);
   }

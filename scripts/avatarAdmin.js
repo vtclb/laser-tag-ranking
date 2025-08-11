@@ -45,7 +45,7 @@ export async function initAvatarAdmin(players, league=''){
       try{
         const url = await uploadAvatar(nick, obj.file);
         obj.img.src = `${url}?v=${Date.now()}`;
-        localStorage.setItem('avatarRefresh', nick);
+        localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
       }catch{
         failed.push(nick);
       }
@@ -135,5 +135,8 @@ function refreshAvatars(nick){
 }
 
 window.addEventListener('storage', e => {
-  if(e.key === 'avatarRefresh') refreshAvatars(e.newValue);
+  if(e.key === 'avatarRefresh') {
+    const [nick] = (e.newValue || '').split(':');
+    refreshAvatars(nick);
+  }
 });

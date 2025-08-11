@@ -74,7 +74,7 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
   window.addEventListener('storage', e => {
     if(e.key === 'gamedayRefresh') loadData();
     if(e.key === 'avatarRefresh') {
-      const nick = e.newValue;
+      const [nick] = (e.newValue || '').split(':');
       if(nick) sessionStorage.removeItem(`avatar:${nick}`);
       refreshAvatars(nick);
     }

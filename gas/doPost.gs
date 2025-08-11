@@ -382,6 +382,7 @@ function handleUploadAvatar_(payload) {
   const blob  = Utilities.newBlob(bytes, mime, nick + '.jpg');
 
   const url = saveAvatarBlob_(nick, blob); // save to Drive/avatars
+  if (!url) return JsonOK({status:'ERROR', reason: 'Missing Script Property ' + PKEY_AVATARS_FOLDER_ID});
   upsertAvatarUrl_(nick, url);
 
   return JsonOK({status:'OK', url});
@@ -397,6 +398,7 @@ function handleGetAvatarUrl_(payload) {
 // зберегти в Drive/avatars та повернути публічний URL
 function saveAvatarBlob_(nick, blob) {
   const folder = getFolderByPropKey_(PKEY_AVATARS_FOLDER_ID);
+  if (!folder) return null;
   const name = String(nick).trim() + '.jpg';
   const it = folder.getFilesByName(name);
   while (it.hasNext()) it.next().setTrashed(true);
@@ -455,11 +457,13 @@ function handleGetPdfLinks_(payload) {
   const ymd    = String(payload.date || '').trim();
   if (!league || !ymd) throw new Error('league/date required');
   const map = listPdfLinks_(league, ymd);
+  if (map === null) return JsonOK({status:'ERROR', reason: 'Missing Script Property ' + PKEY_PDFS_FOLDER_ID});
   return JsonOK({status:'OK', links: map});
 }
 
 function listPdfLinks_(league, ymd) {
   const root = getFolderByPropKey_(PKEY_PDFS_FOLDER_ID);
+  if (!root) return null;
   let lf = root.getFoldersByName(league);
   if (!lf.hasNext()) return {};
   const leagueFolder = lf.next();
@@ -494,8 +498,7 @@ function ensureOptionalCols_(sheet, hdr) {
 
 function getFolderByPropKey_(key) {
   const id = PropertiesService.getScriptProperties().getProperty(key);
-  if (!id) throw new Error(key + ' is not set in Script Properties');
-  return DriveApp.getFolderById(id);
+  return id ? DriveApp.getFolderById(id) : null;
 }
 function publicFileUrl_(fileId) {
   return 'https://drive.google.com/uc?export=view&id=' + fileId;

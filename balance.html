@@ -11,6 +11,7 @@
     <div class="logo">🎮 Game Balancer</div>
     <nav class="nav" style="display:flex; align-items:center; justify-content:center; gap:1rem;">
       <button id="btn-load">Завантажити гравців</button>
+      <button id="btn-create-player">Створити гравця</button>
       <select id="league" style="margin-left:auto">
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
@@ -45,7 +46,7 @@
       </div>
       <table class="table">
         <thead>
-          <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>→Команда / ✕</th></tr>
+          <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>Ключ</th><th>→Команда / ✕</th></tr>
         </thead>
         <tbody id="lobby-list"></tbody>
       </table>
@@ -116,6 +117,42 @@
         </div>
       </section>
   </main>
+
+  <div id="create-player-modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="create-player-close">✕</button>
+      <form id="create-player-form">
+        <label>Ліга:
+          <select name="league">
+            <option value="kids">Молодша ліга</option>
+            <option value="sunday">Старша ліга</option>
+          </select>
+        </label>
+        <label>Нік:
+          <input name="nick" required>
+        </label>
+        <label>Стать:
+          <select name="gender">
+            <option value="M">M</option>
+            <option value="F">F</option>
+          </select>
+        </label>
+        <label>Контакт:
+          <input name="contact">
+        </label>
+        <label>Досвід:
+          <input name="experience">
+        </label>
+        <label>Вік:
+          <input type="number" name="age">
+        </label>
+        <label>Стартові очки:
+          <input type="number" name="startPts" value="0">
+        </label>
+        <button type="submit">Створити</button>
+      </form>
+    </div>
+  </div>
 
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>

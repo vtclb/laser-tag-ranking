@@ -11,7 +11,7 @@ const PKEY_PDFS_FOLDER_ID    = 'LT_PDFS_FOLDER_ID';    // 1l3uM7cRTPe4aUclZ874hY
 function doPost(e) {
   try {
     // ---------- JSON API ----------
-    if (e.postData && e.postData.type === 'application/json') {
+    if (e.postData && String(e.postData.type || '').toLowerCase().startsWith('application/json')) {
       const payload = JSON.parse(e.postData.contents || '{}');
       const action = (payload.action || '').trim();
 

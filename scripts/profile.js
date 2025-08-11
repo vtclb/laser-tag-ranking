@@ -3,6 +3,7 @@ import { getProfile, uploadAvatar, getPdfLinks } from './api.js';
 let gameLimit = 0;
 let gamesLeftEl = null;
 let avatarUrl = '';
+let currentNick = '';
 const pdfCache = {};
 
 function showError(msg) {
@@ -121,6 +122,7 @@ function askKey(nick) {
 }
 
 async function loadProfile(nick, key = '') {
+  currentNick = nick;
   let data;
   try {
     data = await getProfile({ nick, key });
@@ -132,15 +134,16 @@ async function loadProfile(nick, key = '') {
     askKey(nick);
     return;
   }
-  const profile = data.profile || data.player || {};
+  const profile = data.profile || {};
   const league = data.league || profile.league || '';
   const games = data.games || [];
-  avatarUrl = profile.avatarUrl || profile.avatar || `/avatars/${encodeURIComponent(nick)}`;
-  document.getElementById('avatar').src = `${avatarUrl}?t=${Date.now()}`;
-  document.getElementById('rating').textContent = `Рейтинг: ${profile.pts} (${profile.rank})`;
-  document.getElementById('abonement-type').textContent = `Абонемент: ${profile.abonement}`;
+  avatarUrl = data.avatarUrl || `/avatars/${encodeURIComponent(nick)}`;
+  document.getElementById('avatar').src = `${avatarUrl}?v=${data.avatarUpdatedAt || Date.now()}`;
+  document.getElementById('rating').textContent = `Рейтинг: ${profile.points} (${profile.rank})`;
+  const aboType = profile.abonement?.type || '';
+  document.getElementById('abonement-type').textContent = `Абонемент: ${aboType}`;
 
-  gameLimit = profile.gameLimit || { standart: 5, vip: 10 }[profile.abonement] || 0;
+  gameLimit = profile.gameLimit || { standart: 5, vip: 10 }[aboType] || 0;
   gamesLeftEl = document.getElementById('games-left');
   if (!gamesLeftEl) {
     gamesLeftEl = document.createElement('div');
@@ -156,9 +159,10 @@ async function loadProfile(nick, key = '') {
     const file = fileInput.files[0];
     if (!file) return;
     try {
-      await uploadAvatar(nick, file);
-      document.getElementById('avatar').src = `${avatarUrl}?t=${Date.now()}`;
-      localStorage.setItem('avatarRefresh', Date.now().toString());
+      const url = await uploadAvatar(nick, file);
+      avatarUrl = url;
+      document.getElementById('avatar').src = `${url}?v=${Date.now()}`;
+      localStorage.setItem('avatarRefresh', nick);
     } catch (err) {
       alert('Помилка завантаження');
     }
@@ -176,16 +180,17 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
   const key = localStorage.getItem(`profileKey:${nick}`) || '';
+  currentNick = nick;
   loadProfile(nick, key);
 });
 
 function refreshAvatar() {
   if (avatarUrl) {
-    document.getElementById('avatar').src = `${avatarUrl}?t=${Date.now()}`;
+    document.getElementById('avatar').src = `${avatarUrl}?v=${Date.now()}`;
   }
 }
 
 window.addEventListener('storage', e => {
-  if (e.key === 'avatarRefresh') refreshAvatar();
+  if (e.key === 'avatarRefresh' && e.newValue === currentNick) refreshAvatar();
 });
 

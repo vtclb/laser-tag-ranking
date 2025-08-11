@@ -1,10 +1,7 @@
 import { getAvatarUrl, getPdfLinks } from "./api.js";
 (function(){
   const AVATAR_TTL = 6 * 60 * 60 * 1000;
-  const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
-  function getLocalAvatarUrl(nick){
-    return `/avatars/${encodeURIComponent(nick)}`;
-  }
+  const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
 
   async function fetchAvatar(nick){
     const key = `avatar:${nick}`;
@@ -27,16 +24,13 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     img.dataset.nick = nick;
     const info = await fetchAvatar(nick);
     if(info && info.url){
-      img.src = info.url;
+      img.src = `${info.url}?t=${Date.now()}`;
     }else{
       img.src = DEFAULT_AVATAR_URL;
     }
-    img.onerror=()=>{
-      img.onerror=()=>{
-        img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-        img.src=DEFAULT_AVATAR_URL;
-      };
-      img.src=getLocalAvatarUrl(nick);
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = DEFAULT_AVATAR_URL;
     };
   }
 

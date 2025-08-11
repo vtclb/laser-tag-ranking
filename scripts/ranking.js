@@ -1,9 +1,6 @@
 import { getAvatarUrl } from "./api.js";
 
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
-function getLocalAvatarUrl(nick) {
-  return `/avatars/${encodeURIComponent(nick)}`;
-}
+const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
 
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
 
@@ -28,18 +25,13 @@ async function setAvatar(img, nick) {
   img.dataset.nick = nick;
   const info = await fetchAvatar(nick);
   if (info && info.url) {
-    img.src = info.url;
+    img.src = `${info.url}?t=${Date.now()}`;
   } else {
     img.src = DEFAULT_AVATAR_URL;
   }
   img.onerror = () => {
-    img.onerror = () => {
-      img.onerror = () => {
-        img.src = "https://via.placeholder.com/40";
-      };
-      img.src = DEFAULT_AVATAR_URL;
-    };
-    img.src = getLocalAvatarUrl(nick);
+    img.onerror = null;
+    img.src = DEFAULT_AVATAR_URL;
   };
 }
 

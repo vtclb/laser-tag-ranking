@@ -1,10 +1,29 @@
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl } from './api.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
 let avatarUrl = '';
 let currentNick = '';
 const pdfCache = {};
+
+const AVATAR_TTL = 6 * 60 * 60 * 1000;
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+
+async function fetchAvatar(nick){
+  const key = `avatar:${nick}`;
+  const now = Date.now();
+  try{
+    const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+    if(cached && now - cached.time < AVATAR_TTL) return cached.url;
+  }catch{}
+  try{
+    const url = await getAvatarUrl(nick);
+    sessionStorage.setItem(key, JSON.stringify({ url, time: now }));
+    return url;
+  }catch{
+    return null;
+  }
+}
 
 function computeRank(points) {
   const p = +points || 0;
@@ -146,8 +165,10 @@ async function loadProfile(nick, key = '') {
   const profile = data.profile || {};
   const league = data.league || profile.league || '';
   const games = await fetchPlayerGames(nick, league);
-  avatarUrl = data.avatarUrl || `/avatars/${encodeURIComponent(nick)}`;
-  document.getElementById('avatar').src = `${avatarUrl}?v=${data.avatarUpdatedAt || Date.now()}`;
+  const fetched = await fetchAvatar(nick);
+  avatarUrl = fetched || DEFAULT_AVATAR_URL;
+  const avatarEl = document.getElementById('avatar');
+  avatarEl.src = fetched ? `${avatarUrl}?t=${Date.now()}` : DEFAULT_AVATAR_URL;
   const rank = computeRank(profile.points);
   document.getElementById('rating').textContent = `Рейтинг: ${profile.points} (${rank})`;
   const aboType = profile.abonement?.type || '';
@@ -171,7 +192,7 @@ async function loadProfile(nick, key = '') {
     try {
       const url = await uploadAvatar(nick, file);
       avatarUrl = url;
-      document.getElementById('avatar').src = `${url}?v=${Date.now()}`;
+      document.getElementById('avatar').src = `${url}?t=${Date.now()}`;
       localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
       alert('Помилка завантаження');
@@ -195,8 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function refreshAvatar() {
-  if (avatarUrl) {
-    document.getElementById('avatar').src = `${avatarUrl}?v=${Date.now()}`;
+  const avatarEl = document.getElementById('avatar');
+  if (avatarUrl && avatarUrl !== DEFAULT_AVATAR_URL) {
+    avatarEl.src = `${avatarUrl}?t=${Date.now()}`;
+  } else {
+    avatarEl.src = DEFAULT_AVATAR_URL;
   }
 }
 

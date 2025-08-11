@@ -291,7 +291,7 @@ export async function getProfile(data) {
 export async function getAvatarUrl(nick) {
   const data = await postJson({ action: 'getAvatarUrl', nick });
   if (!data || !data.url) throw new Error('Invalid avatar URL response');
-  return data.url;
+  return { url: data.url, updatedAt: data.updatedAt };
 }
 
 export async function getPdfLinks(params) {

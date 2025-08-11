@@ -1,4 +1,57 @@
-import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
+import { getAvatarUrl, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
+
+const AVATAR_TTL = 6 * 60 * 60 * 1000;
+
+async function fetchAvatar(nick) {
+  const key = `avatar:${nick}`;
+  const now = Date.now();
+  try {
+    const cached = JSON.parse(localStorage.getItem(key) || "null");
+    if (cached && now - cached.time < AVATAR_TTL) return cached;
+  } catch {}
+  try {
+    const data = await getAvatarUrl(nick);
+    const info = { url: data.url, updatedAt: data.updatedAt, time: now };
+    localStorage.setItem(key, JSON.stringify(info));
+    return info;
+  } catch {
+    return null;
+  }
+}
+
+async function setAvatar(img, nick) {
+  img.dataset.nick = nick;
+  const info = await fetchAvatar(nick);
+  if (info) {
+    img.src = `${info.url}?v=${info.updatedAt || 0}`;
+  } else {
+    img.src = getProxyAvatarURL(nick);
+  }
+  img.onerror = () => {
+    img.onerror = () => {
+      img.onerror = () => {
+        img.src = "https://via.placeholder.com/40";
+      };
+      img.src = getDefaultAvatarURL();
+    };
+    img.src = getProxyAvatarURL(nick);
+  };
+}
+
+function refreshAvatars(nick) {
+  const sel = nick
+    ? `img.avatar-img[data-nick="${nick}"]`
+    : "img.avatar-img[data-nick]";
+  document.querySelectorAll(sel).forEach((img) => setAvatar(img, img.dataset.nick));
+}
+
+window.addEventListener("storage", (e) => {
+  if (e.key === "avatarRefresh") {
+    const nick = e.newValue;
+    if (nick) localStorage.removeItem(`avatar:${nick}`);
+    refreshAvatars(nick);
+  }
+});
 export async function loadData(rankingURL, gamesURL) {
   const [rText, gText] = await Promise.all([
     fetch(rankingURL).then((r) => r.text()),
@@ -98,17 +151,7 @@ export function renderTable(list, tbodyEl) {
     const img = document.createElement("img");
     img.className = "avatar-img";
     img.alt = p.nickname;
-    img.dataset.nick = p.nickname;
-    img.src = getAvatarURL(p.nickname);
-    img.onerror = () => {
-      img.onerror = () => {
-        img.onerror = () => {
-          img.src = "https://via.placeholder.com/40";
-        };
-        img.src = getDefaultAvatarURL();
-      };
-      img.src = getProxyAvatarURL(p.nickname);
-    };
+    setAvatar(img, p.nickname);
     tdAvatar.appendChild(img);
 
     const vals = [
@@ -199,23 +242,3 @@ export function formatFull(d) {
   );
 }
 
-export function refreshAvatars() {
-  document.querySelectorAll("img.avatar-img[data-nick]").forEach((img) => {
-    img.src = getAvatarURL(img.dataset.nick);
-    img.onerror = () => {
-      img.onerror = () => {
-        img.onerror = () => {
-          img.src = "https://via.placeholder.com/40";
-        };
-        img.src = getDefaultAvatarURL();
-      };
-      img.src = getProxyAvatarURL(img.dataset.nick);
-    };
-  });
-}
-
-if (typeof window !== "undefined") {
-  window.addEventListener("storage", (e) => {
-    if (e.key === "avatarRefresh") refreshAvatars();
-  });
-}

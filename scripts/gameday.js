@@ -10,13 +10,13 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     const key = `avatar:${nick}`;
     const now = Date.now();
     try{
-      const cached = JSON.parse(localStorage.getItem(key) || 'null');
+      const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
       if(cached && now - cached.time < AVATAR_TTL) return cached;
     }catch{}
     try{
       const data = await getAvatarUrl(nick);
       const info = { url:data.url, updatedAt:data.updatedAt, time:now };
-      localStorage.setItem(key, JSON.stringify(info));
+      sessionStorage.setItem(key, JSON.stringify(info));
       return info;
     }catch{
       return null;
@@ -75,7 +75,7 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     if(e.key === 'gamedayRefresh') loadData();
     if(e.key === 'avatarRefresh') {
       const nick = e.newValue;
-      if(nick) localStorage.removeItem(`avatar:${nick}`);
+      if(nick) sessionStorage.removeItem(`avatar:${nick}`);
       refreshAvatars(nick);
     }
   });
@@ -160,9 +160,9 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
       .filter(g=>parseDate(g.Timestamp)===dateInput.value);
 
     filtered.sort((a,b)=>{
-      const tDiff = new Date(b.Timestamp) - new Date(a.Timestamp);
+      const tDiff = new Date(a.Timestamp) - new Date(b.Timestamp);
       if(tDiff) return tDiff;
-      return (+b.ID || 0) - (+a.ID || 0);
+      return (+a.ID || 0) - (+b.ID || 0);
     });
 
     const matchRows = [];
@@ -213,6 +213,7 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
       });
       matchRows.push({
         id: g.ID,
+        timestamp: g.Timestamp,
         team1: team1Pts,
         team2: team2Pts,
         t1sum,
@@ -282,8 +283,14 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
       playersTb.appendChild(tr);
     });
 
+    const displayMatches = matchRows.slice().sort((a,b)=>{
+      const tDiff = new Date(b.timestamp) - new Date(a.timestamp);
+      if(tDiff) return tDiff;
+      return (+b.id || 0) - (+a.id || 0);
+    });
+
     matchesTb.innerHTML='';
-    matchRows.forEach(m=>{
+    displayMatches.forEach(m=>{
       const tr=document.createElement('tr');
       const cls1=m.winner==='team1'?'team-win':m.winner==='team2'?'team-loss':'';
       const cls2=m.winner==='team2'?'team-win':m.winner==='team1'?'team-loss':'';

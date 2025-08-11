@@ -138,20 +138,28 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const fd=new FormData(form);
       const data=Object.fromEntries(fd.entries());
-      data.startPts=parseInt(data.startPts,10)||0;
+      data.points=parseInt(data.points,10)||0;
       try{
-        await adminCreatePlayer(data);
-        const pts=data.startPts;
-        const rank=pts<200?'D':pts<500?'C':pts<800?'B':pts<1200?'A':'S';
-        const newPlayer={nick:data.nick,pts,rank,abonement:'none'};
-        const currentLeague=document.getElementById('league')?.value;
-        if(data.league===currentLeague){
-          players.push(newPlayer);
-          filtered.push(newPlayer);
-          renderSelect(filtered);
+        const resp=await adminCreatePlayer(data);
+        if(resp.status==='DUPLICATE'){
+          alert('Такий нік вже існує');
+          return;
         }
-        form.reset();
-        hide();
+        if(resp.status==='OK'){
+          const pts=data.points;
+          const rank=pts<200?'D':pts<500?'C':pts<800?'B':pts<1200?'A':'S';
+          const newPlayer={nick:data.nick,pts,rank,abonement:'none'};
+          const currentLeague=document.getElementById('league')?.value;
+          if(data.league===currentLeague){
+            players.push(newPlayer);
+            filtered.push(newPlayer);
+            renderSelect(filtered);
+          }
+          form.reset();
+          hide();
+        }else{
+          alert('Не вдалося створити гравця');
+        }
       }catch(err){
         alert('Не вдалося створити гравця');
       }

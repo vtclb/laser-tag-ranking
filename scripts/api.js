@@ -264,7 +264,7 @@ async function postJson(payload) {
 
 export async function adminCreatePlayer(data) {
   const resp = await postJson({ action: 'adminCreatePlayer', ...(data || {}) });
-  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  if (resp.status && resp.status !== 'OK' && resp.status !== 'DUPLICATE') throw new Error(resp.status);
   return resp;
 }
 

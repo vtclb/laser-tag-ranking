@@ -1,17 +1,44 @@
-import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
+import { getAvatarUrl, getProxyAvatarURL, getDefaultAvatarURL, getPdfLinks } from "./api.js";
 (function(){
+  const AVATAR_TTL = 6 * 60 * 60 * 1000;
 
-  function refreshAvatars(){
-    document.querySelectorAll('img.avatar-img[data-nick]').forEach(img=>{
-      img.src=getAvatarURL(img.dataset.nick);
+  async function fetchAvatar(nick){
+    const key = `avatar:${nick}`;
+    const now = Date.now();
+    try{
+      const cached = JSON.parse(localStorage.getItem(key) || 'null');
+      if(cached && now - cached.time < AVATAR_TTL) return cached;
+    }catch{}
+    try{
+      const data = await getAvatarUrl(nick);
+      const info = { url:data.url, updatedAt:data.updatedAt, time:now };
+      localStorage.setItem(key, JSON.stringify(info));
+      return info;
+    }catch{
+      return null;
+    }
+  }
+
+  async function setAvatar(img, nick){
+    img.dataset.nick = nick;
+    const info = await fetchAvatar(nick);
+    if(info){
+      img.src = `${info.url}?v=${info.updatedAt || 0}`;
+    }else{
+      img.src = getProxyAvatarURL(nick);
+    }
+    img.onerror=()=>{
       img.onerror=()=>{
-        img.onerror=()=>{
-          img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-          img.src=getDefaultAvatarURL();
-        };
-        img.src=getProxyAvatarURL(img.dataset.nick);
+        img.onerror=()=>{img.src='https://via.placeholder.com/40';};
+        img.src=getDefaultAvatarURL();
       };
-    });
+      img.src=getProxyAvatarURL(nick);
+    };
+  }
+
+  function refreshAvatars(nick){
+    const sel = nick ? `img.avatar-img[data-nick="${nick}"]` : 'img.avatar-img[data-nick]';
+    document.querySelectorAll(sel).forEach(img=>setAvatar(img, img.dataset.nick));
   }
   const rankingURLs = {
     kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
@@ -42,7 +69,11 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
   });
   window.addEventListener('storage', e => {
     if(e.key === 'gamedayRefresh') loadData();
-    if(e.key === 'avatarRefresh') refreshAvatars();
+    if(e.key === 'avatarRefresh') {
+      const nick = e.newValue;
+      if(nick) localStorage.removeItem(`avatar:${nick}`);
+      refreshAvatars(nick);
+    }
   });
   if(fullscreenBtn){
     fullscreenBtn.addEventListener('click', () => {
@@ -107,6 +138,12 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
     }
     const ranking = Papa.parse(rText,{header:true,skipEmptyLines:true}).data;
     const games   = Papa.parse(gText,{header:true,skipEmptyLines:true}).data;
+    let pdfLinks = {};
+    try{
+      pdfLinks = await getPdfLinks({ league: leagueSel.value, date: dateInput.value });
+    }catch(err){
+      console.error('Failed to load PDF links', err);
+    }
 
     const players = {};
     ranking.forEach(r=>{
@@ -171,6 +208,7 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
         players[n].pts += d;
       });
       matchRows.push({
+        id: g.ID,
         team1: team1Pts,
         team2: team2Pts,
         t1sum,
@@ -216,15 +254,7 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
       const img=document.createElement('img');
       img.className='avatar-img';
       img.alt=p.nick;
-      img.dataset.nick=p.nick;
-      img.src=getAvatarURL(p.nick);
-      img.onerror=()=>{
-        img.onerror=()=>{
-          img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-          img.src=getDefaultAvatarURL();
-        };
-        img.src=getProxyAvatarURL(p.nick);
-      };
+      setAvatar(img,p.nick);
       tdAvatar.appendChild(img);
 
       const nick=document.createElement('td');
@@ -299,7 +329,17 @@ import { getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
       mvpSpan.textContent=m.mvp.nick;
       tdMvp.appendChild(mvpSpan);
 
-      [td1,tdScore,td2,tdMvp].forEach(td=>tr.appendChild(td));
+      const pdfTd=document.createElement('td');
+      const pdfUrl = pdfLinks[m.id];
+      if(pdfUrl){
+        const a=document.createElement('a');
+        a.href=pdfUrl;
+        a.textContent='PDF';
+        a.target='_blank';
+        pdfTd.appendChild(a);
+      }
+
+      [td1,tdScore,td2,tdMvp,pdfTd].forEach(td=>tr.appendChild(td));
       matchesTb.appendChild(tr);
     });
   }

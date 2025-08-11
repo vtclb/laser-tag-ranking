@@ -30,7 +30,7 @@ async function setAvatar(img, nick) {
   if (info && info.url) {
     img.src = `${info.url}?v=${info.updatedAt || 0}`;
   } else {
-    img.src = getLocalAvatarUrl(nick);
+    img.src = DEFAULT_AVATAR_URL;
   }
   img.onerror = () => {
     img.onerror = () => {

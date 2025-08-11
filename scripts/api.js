@@ -6,9 +6,9 @@ const proxyUrl = API_URL;
 
 // Публічні фіди рейтингу (CSV)
 const rankingURLs = {
-  kids:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
+  kids:        'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
   // було pubhtml -> виправлено на output=csv
-  sunday: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
+  sundaygames: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
 };
 
 // Логи ігор (CSV)
@@ -17,10 +17,11 @@ const gamesURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejv
 // ---------------------- Уніфікація ліг ----------------------
 export function normalizeLeague(v) {
   const x = String(v || '').toLowerCase();
-  if (x === 'sundaygames' || x === 'olds' || x === 'adult' || x === 'adults') return 'sunday';
+  if (x === 'sundaygames' || x === 'olds' || x === 'adult' || x === 'adults') return 'sundaygames';
   if (x === 'kid' || x === 'junior') return 'kids';
-  if (x === 'sunday' || x === 'kids') return x;
-  return 'sunday'; // дефолт — старша
+  if (x === 'sunday') return 'sundaygames';
+  if (x === 'kids') return 'kids';
+  return 'sundaygames'; // дефолт — старша
 }
 
 export function getLeagueFeedUrl(league) {
@@ -91,7 +92,9 @@ export async function fetchPlayerData(league) {
 
 // ---------------------- Збереження результату ----------------------
 export async function saveResult(data) {
-  const body = new URLSearchParams(data);
+  const payload = { ...(data || {}) };
+  if (payload.league) payload.league = normalizeLeague(payload.league);
+  const body = new URLSearchParams(payload);
   const res = await fetch(proxyUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -140,6 +143,7 @@ export async function uploadAvatar(nick, fileOrBlob) {
 // ---------------------- Реєстрація/статистика ----------------------
 export async function registerPlayer(data) {
   const payload = Object.assign({ action: 'register' }, data);
+  if (payload.league) payload.league = normalizeLeague(payload.league);
   const res = await fetch(proxyUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -263,19 +267,25 @@ async function postJson(payload) {
 }
 
 export async function adminCreatePlayer(data) {
-  const resp = await postJson({ action: 'adminCreatePlayer', ...(data || {}) });
+  const payload = { action: 'adminCreatePlayer', ...(data || {}) };
+  if (payload.league) payload.league = normalizeLeague(payload.league);
+  const resp = await postJson(payload);
   if (resp.status && resp.status !== 'OK' && resp.status !== 'DUPLICATE') throw new Error(resp.status);
   return resp;
 }
 
 export async function issueAccessKey(data) {
-  const resp = await postJson({ action: 'issueAccessKey', ...(data || {}) });
+  const payload = { action: 'issueAccessKey', ...(data || {}) };
+  if (payload.league) payload.league = normalizeLeague(payload.league);
+  const resp = await postJson(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
   return resp;
 }
 
 export async function getProfile(data) {
-  const resp = await postJson({ action: 'getProfile', ...(data || {}) });
+  const payload = { action: 'getProfile', ...(data || {}) };
+  if (payload.league) payload.league = normalizeLeague(payload.league);
+  const resp = await postJson(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
   return resp;
 }
@@ -288,7 +298,9 @@ export async function getAvatarUrl(nick) {
 }
 
 export async function getPdfLinks(params) {
-  const resp = await postJson({ action: 'getPdfLinks', ...(params || {}) });
+  const payload = { action: 'getPdfLinks', ...(params || {}) };
+  if (payload.league) payload.league = normalizeLeague(payload.league);
+  const resp = await postJson(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
   return resp;
 }

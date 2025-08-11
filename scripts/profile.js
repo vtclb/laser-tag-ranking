@@ -126,12 +126,12 @@ async function loadProfile(nick, key = '') {
   let data;
   try {
     data = await getProfile({ nick, key });
+    if (data.status === 'DENIED') {
+      askKey(nick);
+      return;
+    }
   } catch (err) {
     showError('Помилка завантаження профілю');
-    return;
-  }
-  if (data.status === 'DENIED') {
-    askKey(nick);
     return;
   }
   const profile = data.profile || {};

@@ -275,7 +275,9 @@ export async function getProfile(data) {
   const payload = { action: 'getProfile', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
   const resp = await postJson(payload);
-  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  if (resp.status && resp.status !== 'OK' && resp.status !== 'DENIED') {
+    throw new Error(resp.status);
+  }
   return resp;
 }
 

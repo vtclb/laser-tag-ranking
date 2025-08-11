@@ -1,9 +1,37 @@
 // scripts/avatarAdmin.js
-import { uploadAvatar } from './api.js';
+import { uploadAvatar, getAvatarUrl } from './api.js';
 
+const AVATAR_TTL = 6 * 60 * 60 * 1000;
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
-function localAvatarUrl(nick){
-  return `/avatars/${encodeURIComponent(nick)}?v=${Date.now()}`;
+
+async function fetchAvatar(nick){
+  const key = `avatar:${nick}`;
+  const now = Date.now();
+  try{
+    const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+    if(cached && now - cached.time < AVATAR_TTL) return cached.url;
+  }catch{}
+  try{
+    const url = await getAvatarUrl(nick);
+    sessionStorage.setItem(key, JSON.stringify({ url, time: now }));
+    return url;
+  }catch{
+    return null;
+  }
+}
+
+async function setAvatar(img, nick){
+  img.dataset.nick = nick;
+  const url = await fetchAvatar(nick);
+  if(url){
+    img.src = `${url}?t=${Date.now()}`;
+  }else{
+    img.src = DEFAULT_AVATAR_URL;
+  }
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = DEFAULT_AVATAR_URL;
+  };
 }
 
 let defaultAvatars = [];
@@ -44,7 +72,7 @@ export async function initAvatarAdmin(players, league=''){
     for(const [nick,obj] of entries){
       try{
         const url = await uploadAvatar(nick, obj.file);
-        obj.img.src = `${url}?v=${Date.now()}`;
+        obj.img.src = `${url}?t=${Date.now()}`;
         localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
       }catch{
         failed.push(nick);
@@ -68,14 +96,7 @@ export async function initAvatarAdmin(players, league=''){
     img.className = 'avatar-img';
     img.alt = p.nick;
     img.dataset.nick = p.nick;
-    img.src = localAvatarUrl(p.nick);
-    img.onerror = () => {
-      img.onerror = () => {
-        img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
-        img.src = DEFAULT_AVATAR_URL;
-      };
-      img.src = localAvatarUrl(p.nick);
-    };
+    setAvatar(img, p.nick);
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -123,14 +144,7 @@ export async function initAvatarAdmin(players, league=''){
 function refreshAvatars(nick){
   const sel = nick ? `#avatar-list img.avatar-img[data-nick="${nick}"]` : '#avatar-list img.avatar-img[data-nick]';
   document.querySelectorAll(sel).forEach(img => {
-    img.src = localAvatarUrl(img.dataset.nick);
-    img.onerror = () => {
-      img.onerror = () => {
-        img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
-        img.src = DEFAULT_AVATAR_URL;
-      };
-      img.src = localAvatarUrl(img.dataset.nick);
-    };
+    setAvatar(img, img.dataset.nick);
   });
 }
 

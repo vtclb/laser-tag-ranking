@@ -11,13 +11,13 @@ async function fetchAvatar(nick) {
   const key = `avatar:${nick}`;
   const now = Date.now();
   try {
-    const cached = JSON.parse(localStorage.getItem(key) || "null");
+    const cached = JSON.parse(sessionStorage.getItem(key) || "null");
     if (cached && now - cached.time < AVATAR_TTL) return cached;
   } catch {}
   try {
     const data = await getAvatarUrl(nick);
     const info = { url: data.url, updatedAt: data.updatedAt, time: now };
-    localStorage.setItem(key, JSON.stringify(info));
+    sessionStorage.setItem(key, JSON.stringify(info));
     return info;
   } catch {
     return null;
@@ -53,7 +53,7 @@ function refreshAvatars(nick) {
 window.addEventListener("storage", (e) => {
   if (e.key === "avatarRefresh") {
     const nick = e.newValue;
-    if (nick) localStorage.removeItem(`avatar:${nick}`);
+    if (nick) sessionStorage.removeItem(`avatar:${nick}`);
     refreshAvatars(nick);
   }
 });

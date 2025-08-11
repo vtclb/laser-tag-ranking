@@ -140,12 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const data=Object.fromEntries(fd.entries());
       data.points=parseInt(data.points,10)||0;
       try{
-        const resp=await adminCreatePlayer(data);
-        if(resp.status==='DUPLICATE'){
+        const status=await adminCreatePlayer(data);
+        if(status==='DUPLICATE'){
           alert('Такий нік вже існує');
           return;
         }
-        if(resp.status==='OK'){
+        if(status==='OK'){
           const pts=data.points;
           const rank=pts<200?'D':pts<500?'C':pts<800?'B':pts<1200?'A':'S';
           const newPlayer={nick:data.nick,pts,rank,abonement:'none'};
@@ -266,8 +266,7 @@ function renderLobby() {
       const idx=+btn.dataset.i;
       const player=lobby[idx];
       try{
-        const data=await issueAccessKey({nick:player.nick,league:document.getElementById('league')?.value});
-        const key=data.key||data.accessKey||data;
+        const key=await issueAccessKey({nick:player.nick,league:document.getElementById('league')?.value});
         alert(`Ключ: ${key}`);
         navigator.clipboard?.writeText(String(key)).catch(()=>{});
       }catch(err){

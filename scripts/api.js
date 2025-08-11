@@ -2,7 +2,6 @@
 
 // Google Apps Script backend (веб-апп)
 export const API_URL = 'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
-const proxyUrl = API_URL;
 
 // Публічні фіди рейтингу (CSV)
 const rankingURLs = {
@@ -57,7 +56,7 @@ export async function loadPlayers(league) {
   let res;
   try {
     // пробуємо через проксі (GAS)
-    res = await fetch(`${proxyUrl}?league=${lg}&t=${Date.now()}`);
+    res = await fetch(`${API_URL}?league=${lg}&t=${Date.now()}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (err) {
     console.warn('Failed to load players from proxy', err);
@@ -95,7 +94,7 @@ export async function saveResult(data) {
   const payload = { ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
   const body = new URLSearchParams(payload);
-  const res = await fetch(proxyUrl, {
+  const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body
@@ -111,7 +110,7 @@ export async function saveResult(data) {
 // ---------------------- Детальна статистика (PDF імпорт) ----------------------
 export async function saveDetailedStats(matchId, statsArray) {
   const payload = { action: 'importStats', matchId, stats: statsArray };
-  const res = await fetch(proxyUrl, {
+  const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -123,17 +122,16 @@ export async function saveDetailedStats(matchId, statsArray) {
 export async function uploadAvatar(nick, fileOrBlob) {
   const data = await toBase64NoPrefix(fileOrBlob);
   const mime = fileOrBlob.type || 'image/jpeg';
-  const resp = await postJson({ action: 'uploadAvatar', nick, mime, data });
+  const resp = await gasPost({ action: 'uploadAvatar', nick, mime, data });
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  if (!resp || !resp.url) throw new Error('No URL returned');
-  return resp.url;
+  return resp.url || null;
 }
 
 // ---------------------- Реєстрація/статистика ----------------------
 export async function registerPlayer(data) {
   const payload = Object.assign({ action: 'register' }, data);
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const res = await fetch(proxyUrl, {
+  const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -145,7 +143,7 @@ export async function registerPlayer(data) {
 
 export async function fetchPlayerStats(nick) {
   const payload = { action: 'getStats', nick };
-  const res = await fetch(proxyUrl, {
+  const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -164,7 +162,7 @@ export async function requestAbonement({ nick, league = 'sunday', requested = 'm
     league: normalizeLeague(league),
     requested
   };
-  const res = await fetch(proxyUrl, {
+  const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -182,7 +180,7 @@ export async function updateAbonement({ nick, league, type }) {
     league: normalizeLeague(league),
     type: String(type || 'none').toLowerCase()
   };
-  const res = await fetch(proxyUrl, {
+  const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -196,7 +194,7 @@ export async function fetchPlayerGames(nick, league = '') {
   let res;
   try {
     // якщо проксі віддає лист games
-    res = await fetch(`${proxyUrl}?sheet=games&t=${Date.now()}`);
+    res = await fetch(`${API_URL}?sheet=games&t=${Date.now()}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (err) {
     console.warn('Failed to load games from proxy', err);
@@ -240,10 +238,10 @@ export async function fetchPlayerGames(nick, league = '') {
 }
 
 // ---------------------- Новий JSON API ----------------------
-async function postJson(payload) {
+async function gasPost(payload) {
   const res = await fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
   const text = await res.text();
@@ -258,23 +256,23 @@ async function postJson(payload) {
 export async function adminCreatePlayer(data) {
   const payload = { action: 'adminCreatePlayer', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await postJson(payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK' && resp.status !== 'DUPLICATE') throw new Error(resp.status);
-  return resp;
+  return resp.status || '';
 }
 
 export async function issueAccessKey(data) {
   const payload = { action: 'issueAccessKey', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await postJson(payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  return resp;
+  return resp.key || resp.accessKey || null;
 }
 
 export async function getProfile(data) {
   const payload = { action: 'getProfile', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await postJson(payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK' && resp.status !== 'DENIED') {
     throw new Error(resp.status);
   }
@@ -282,18 +280,15 @@ export async function getProfile(data) {
 }
 
 export async function getAvatarUrl(nick) {
-  const resp = await postJson({ action: 'getAvatarUrl', nick });
+  const resp = await gasPost({ action: 'getAvatarUrl', nick });
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  if (!resp || !resp.url) {
-    return { url: null, updatedAt: null };
-  }
-  return { url: resp.url, updatedAt: resp.updatedAt };
+  return resp.url || null;
 }
 
 export async function getPdfLinks(params) {
   const payload = { action: 'getPdfLinks', ...(params || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await postJson(payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
   return resp.links || {};
 }

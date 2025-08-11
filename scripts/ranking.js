@@ -15,8 +15,8 @@ async function fetchAvatar(nick) {
     if (cached && now - cached.time < AVATAR_TTL) return cached;
   } catch {}
   try {
-    const data = await getAvatarUrl(nick);
-    const info = { url: data.url, updatedAt: data.updatedAt, time: now };
+    const url = await getAvatarUrl(nick);
+    const info = { url, time: now };
     sessionStorage.setItem(key, JSON.stringify(info));
     return info;
   } catch {
@@ -28,7 +28,7 @@ async function setAvatar(img, nick) {
   img.dataset.nick = nick;
   const info = await fetchAvatar(nick);
   if (info && info.url) {
-    img.src = `${info.url}?v=${info.updatedAt || 0}`;
+    img.src = info.url;
   } else {
     img.src = DEFAULT_AVATAR_URL;
   }

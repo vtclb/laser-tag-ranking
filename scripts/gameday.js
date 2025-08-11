@@ -1,6 +1,10 @@
-import { getAvatarUrl, getProxyAvatarURL, getDefaultAvatarURL, getPdfLinks } from "./api.js";
+import { getAvatarUrl, getPdfLinks } from "./api.js";
 (function(){
   const AVATAR_TTL = 6 * 60 * 60 * 1000;
+  const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+  function getLocalAvatarUrl(nick){
+    return `/avatars/${encodeURIComponent(nick)}`;
+  }
 
   async function fetchAvatar(nick){
     const key = `avatar:${nick}`;
@@ -25,14 +29,14 @@ import { getAvatarUrl, getProxyAvatarURL, getDefaultAvatarURL, getPdfLinks } fro
     if(info){
       img.src = `${info.url}?v=${info.updatedAt || 0}`;
     }else{
-      img.src = getProxyAvatarURL(nick);
+      img.src = getLocalAvatarUrl(nick);
     }
     img.onerror=()=>{
       img.onerror=()=>{
         img.onerror=()=>{img.src='https://via.placeholder.com/40';};
-        img.src=getDefaultAvatarURL();
+        img.src=DEFAULT_AVATAR_URL;
       };
-      img.src=getProxyAvatarURL(nick);
+      img.src=getLocalAvatarUrl(nick);
     };
   }
 

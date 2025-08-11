@@ -117,38 +117,17 @@ export async function saveDetailedStats(matchId, statsArray) {
 }
 
 // ---------------------- Аватарки ----------------------
-const avatarBase = '/avatars';
-const avatarUploadBase = '/upload-avatar';
-const defaultAvatarBase = 'assets/default_avatars';
-
-export function getAvatarURL(nick) {
-  return `${avatarBase}/${encodeURIComponent(nick)}?t=${Date.now()}`;
-}
-
-export function getProxyAvatarURL(nick) {
-  return getAvatarURL(nick);
-}
-
-export function getDefaultAvatarURL() {
-  return `${defaultAvatarBase}/av0.png`;
-}
-
-export async function uploadAvatar(nick, file) {
-  const avatar = await toBase64NoPrefix(file);
-  const payload = { action: 'uploadAvatar', nick, avatar, mime: file.type || 'image/png' };
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+export async function uploadAvatar(nick, fileOrBlob) {
+  const data = await toBase64NoPrefix(fileOrBlob);
+  const resp = await postJson({
+    action: 'uploadAvatar',
+    nick,
+    mime: fileOrBlob.type || 'image/png',
+    data
   });
-  const text = await res.text();
-  if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
-  try {
-    const data = JSON.parse(text);
-    return data.url || data.success || true;
-  } catch (_) {
-    return true;
-  }
+  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  if (!resp.url) throw new Error('No URL returned');
+  return resp.url;
 }
 
 // ---------------------- Реєстрація/статистика ----------------------
@@ -277,25 +256,34 @@ async function postJson(payload) {
 }
 
 export async function adminCreatePlayer(data) {
-  return postJson({ action: 'adminCreatePlayer', ...(data || {}) });
+  const resp = await postJson({ action: 'adminCreatePlayer', ...(data || {}) });
+  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  return resp;
 }
 
 export async function issueAccessKey(data) {
-  return postJson({ action: 'issueAccessKey', ...(data || {}) });
+  const resp = await postJson({ action: 'issueAccessKey', ...(data || {}) });
+  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  return resp;
 }
 
 export async function getProfile(data) {
-  return postJson({ action: 'getProfile', ...(data || {}) });
+  const resp = await postJson({ action: 'getProfile', ...(data || {}) });
+  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  return resp;
 }
 
 export async function getAvatarUrl(nick) {
-  const data = await postJson({ action: 'getAvatarUrl', nick });
-  if (!data || !data.url) throw new Error('Invalid avatar URL response');
-  return { url: data.url, updatedAt: data.updatedAt };
+  const resp = await postJson({ action: 'getAvatarUrl', nick });
+  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  if (!resp || !resp.url) throw new Error('Invalid avatar URL response');
+  return { url: resp.url, updatedAt: resp.updatedAt };
 }
 
 export async function getPdfLinks(params) {
-  return postJson({ action: 'getPdfLinks', ...(params || {}) });
+  const resp = await postJson({ action: 'getPdfLinks', ...(params || {}) });
+  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  return resp;
 }
 
 export function toBase64NoPrefix(file) {

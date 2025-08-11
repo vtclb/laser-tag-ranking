@@ -150,23 +150,26 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     }
 
     const players = {};
+    const rankMap = {};
     ranking.forEach(r=>{
       const name = normName(r.Nickname?.trim());
       if(!name) return;
-      players[name] = {pts:+r.Points||0, delta:0, wins:0, games:0};
+      players[name] = {pts:0, delta:0, wins:0, games:0};
+      rankMap[name] = +r.Points || 0;
     });
 
-    const filtered = games.filter(g=>g.League===leagueSel.value)
-      .filter(g=>parseDate(g.Timestamp)===dateInput.value);
-
-    filtered.sort((a,b)=>{
+    const allGames = games.filter(g=>g.League===leagueSel.value);
+    allGames.sort((a,b)=>{
       const tDiff = new Date(a.Timestamp) - new Date(b.Timestamp);
       if(tDiff) return tDiff;
       return (+a.ID || 0) - (+b.ID || 0);
     });
 
+    const preDayPts = {};
+    let captured = false;
     const matchRows = [];
-    filtered.forEach(g=>{
+    allGames.forEach(g=>{
+      const date = parseDate(g.Timestamp);
       const t1 = g.Team1.split(',').map(s=>normName(s.trim()));
       const t2 = g.Team2.split(',').map(s=>normName(s.trim()));
       const winner = g.Winner;
@@ -182,57 +185,67 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
         }
       }
 
+      function apply(team, isWin, store, arr){
+        team.forEach(n=>{
+          players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
+          const rankBefore = getRankLetter(players[n].pts);
+          let d = partPoints(rankBefore);
+          if(isWin) d+=20;
+          if(mvp===n) d+=10;
+          players[n].pts += d;
+          if(store){
+            players[n].games++;
+            if(isWin) players[n].wins++;
+            players[n].delta += d;
+            arr.push({nick:n,rank:rankBefore,delta:d});
+          }
+        });
+      }
 
-      const team1Pts=[];
-      const team2Pts=[];
-      const t1sum = t1.reduce((s,n)=>s+(players[n]?.pts||0),0);
-      const t2sum = t2.reduce((s,n)=>s+(players[n]?.pts||0),0);
-      t1.forEach(n=>{
-        players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
-        players[n].games++;
-        if(winner==='team1') players[n].wins++;
-        const rankBefore = getRankLetter(players[n].pts);
-        let d = partPoints(rankBefore);
-        if(winner==='team1') d+=20;
-        if(mvp===n) d+=10;
-        players[n].delta += d;
-        team1Pts.push({nick:n,rank:rankBefore,delta:d});
-        players[n].pts += d;
-      });
-      t2.forEach(n=>{
-        players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
-        players[n].games++;
-        if(winner==='team2') players[n].wins++;
-        const rankBefore = getRankLetter(players[n].pts);
-        let d = partPoints(rankBefore);
-        if(winner==='team2') d+=20;
-        if(mvp===n) d+=10;
-        players[n].delta += d;
-        team2Pts.push({nick:n,rank:rankBefore,delta:d});
-        players[n].pts += d;
-      });
-      matchRows.push({
-        id: g.ID,
-        timestamp: g.Timestamp,
-        team1: team1Pts,
-        team2: team2Pts,
-        t1sum,
-        t2sum,
-        score1: s1,
-        score2: s2,
-        winner,
-        mvp: {nick:mvp,rank:getRankLetter(players[mvp]?.pts||0)}
-      });
+      if(date < dateInput.value){
+        apply(t1, winner==='team1', false, []);
+        apply(t2, winner==='team2', false, []);
+      }else if(date === dateInput.value){
+        if(!captured){
+          Object.keys(players).forEach(n=>{ preDayPts[n] = players[n].pts; });
+          captured = true;
+        }
+        const t1sum = t1.reduce((s,n)=>s+(players[n]?.pts||0),0);
+        const t2sum = t2.reduce((s,n)=>s+(players[n]?.pts||0),0);
+        const team1Pts=[];
+        const team2Pts=[];
+        apply(t1, winner==='team1', true, team1Pts);
+        apply(t2, winner==='team2', true, team2Pts);
+        matchRows.push({
+          id: g.ID,
+          timestamp: g.Timestamp,
+          team1: team1Pts,
+          team2: team2Pts,
+          t1sum,
+          t2sum,
+          score1: s1,
+          score2: s2,
+          winner,
+          mvp: {nick:mvp,rank:getRankLetter(players[mvp]?.pts||0)}
+        });
+      }else{
+        apply(t1, winner==='team1', false, []);
+        apply(t2, winner==='team2', false, []);
+      }
     });
 
-    const arr = Object.keys(players).map(n=>({
-      nick: n,
-      pts: players[n].pts,
-      delta: players[n].delta,
-      wins: players[n].wins,
-      games: players[n].games,
-      prevPts: players[n].pts - players[n].delta
-    }));
+    const arr = Object.keys(players).map(n=>{
+      const finalPts = rankMap[n] ?? players[n].pts;
+      const prev = preDayPts[n] ?? (finalPts - players[n].delta);
+      return {
+        nick: n,
+        pts: finalPts,
+        delta: players[n].delta,
+        wins: players[n].wins,
+        games: players[n].games,
+        prevPts: prev
+      };
+    });
 
     // sort by previous points to calculate prior ranking
     arr.slice().sort((a,b)=>b.prevPts - a.prevPts)

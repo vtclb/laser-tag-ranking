@@ -63,18 +63,26 @@ button:hover{background:var(--accent-dark);}button:disabled{background:var(--tex
 }
 
 /* Avatar admin */
+.avatar-table {
+  width: 100%;
+  border-collapse: collapse;
+}
 #avatar-list {
-  list-style: none;
   max-height: 200px;
   overflow-y: auto;
+  display: block;
   padding: 0;
 }
-#avatar-list li {
+#avatar-list .avatar-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0;
   border-bottom: 1px solid #2e2e2e;
+}
+#avatar-list .avatar-row td {
+  border: none;
+  padding: 0;
 }
 .avatar-img {
   width: 40px;

@@ -1,23 +1,32 @@
-import { loadPlayers, getAvatarURL, uploadAvatar, fetchPlayerGames, requestAbonement } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks } from './api.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
+let avatarUrl = '';
+const pdfCache = {};
 
-function showError(msg){
+function showError(msg) {
   const container = document.getElementById('profile');
   container.style.display = 'none';
   let err = document.getElementById('profile-error');
-  if(!err){
+  if (!err) {
     err = document.createElement('div');
     err.id = 'profile-error';
     err.style.color = '#f39c12';
     err.style.textAlign = 'center';
     err.style.marginTop = '1rem';
     document.querySelector('nav').insertAdjacentElement('afterend', err);
-    err.innerHTML = `\n      <p>${msg}</p>\n      <div style="margin-top:0.5rem;">\n        <input type="text" id="retry-nick" placeholder="Введіть нік" style="padding:0.5rem;border:2px solid #555;background:rgba(0,0,0,0.5);color:#fff;border-radius:4px;font-size:0.7rem;"/>\n        <button id="retry-search" style="margin-left:0.5rem;">Пошук</button>\n      </div>\n      <p style="margin-top:0.5rem;"><a href="index.html" style="color:#ffd700;">На головну</a></p>\n    `;
-    document.getElementById('retry-search').addEventListener('click', ()=>{
+    err.innerHTML = `
+      <p>${msg}</p>
+      <div style="margin-top:0.5rem;">
+        <input type="text" id="retry-nick" placeholder="Введіть нік" style="padding:0.5rem;border:2px solid #555;background:rgba(0,0,0,0.5);color:#fff;border-radius:4px;font-size:0.7rem;"/>
+        <button id="retry-search" style="margin-left:0.5rem;">Пошук</button>
+      </div>
+      <p style="margin-top:0.5rem;"><a href="index.html" style="color:#ffd700;">На головну</a></p>
+    `;
+    document.getElementById('retry-search').addEventListener('click', () => {
       const val = document.getElementById('retry-nick').value.trim();
-      if(val) location.href = `profile.html?nick=${encodeURIComponent(val)}`;
+      if (val) location.href = `profile.html?nick=${encodeURIComponent(val)}`;
     });
   } else {
     err.querySelector('p').textContent = msg;
@@ -25,125 +34,172 @@ function showError(msg){
   }
 }
 
-function updateGamesLeft(used){
-  if(!gamesLeftEl) return;
+function updateGamesLeft(used) {
+  if (!gamesLeftEl) return;
   const left = Math.max(gameLimit - used, 0);
   gamesLeftEl.textContent = `Залишилось ${left} із ${gameLimit} ігор`;
 }
 
-function renderGames(list, league, nick){
+async function renderGames(list, league) {
   const tbody = document.getElementById('games-body');
   const filterVal = document.getElementById('date-filter').value;
   tbody.innerHTML = '';
-  list
-    .filter(g=>!filterVal || (g.Timestamp && g.Timestamp.startsWith(filterVal)))
-    .forEach(g=>{
-      const d = new Date(g.Timestamp);
-      const dateStr = isNaN(d)?'':d.toISOString().split('T')[0];
-      const id = g.ID || g.Id || g.GameID || g.game_id || g.gameId || '';
-      const tr=document.createElement('tr');
-      const tdD=document.createElement('td');
-      tdD.textContent=dateStr;
-      const tdId=document.createElement('td');
-      tdId.textContent=id;
-      const tdPdf=document.createElement('td');
-      const pdfUrl = `/pdfs/${league}/${dateStr}/${id}.pdf`;
-      const btn=document.createElement('button');
-      btn.textContent='Переглянути звіт';
-      btn.addEventListener('click',()=>window.open(pdfUrl,'_blank'));
-      tdPdf.appendChild(btn);
-      tr.appendChild(tdD); tr.appendChild(tdId); tr.appendChild(tdPdf);
-      tbody.appendChild(tr);
-      fetch(pdfUrl,{method:'HEAD'})
-        .then(res=>{if(!res.ok){btn.disabled=true;btn.textContent='Звіт відсутній';}})
-        .catch(()=>{btn.disabled=true;btn.textContent='Звіт відсутній';});
-    });
-  updateGamesLeft(list.length);
+  const filtered = list.filter(g => !filterVal || (g.Timestamp && g.Timestamp.startsWith(filterVal)));
+  const dates = [...new Set(filtered.map(g => {
+    const d = new Date(g.Timestamp);
+    return isNaN(d) ? '' : d.toISOString().split('T')[0];
+  }))].filter(Boolean);
+
+  for (const dt of dates) {
+    if (!pdfCache[dt]) {
+      try {
+        const resp = await getPdfLinks(league, dt);
+        pdfCache[dt] = resp.links || {};
+      } catch (err) {
+        pdfCache[dt] = {};
+      }
+    }
+  }
+
+  filtered.forEach(g => {
+    const d = new Date(g.Timestamp);
+    const dateStr = isNaN(d) ? '' : d.toISOString().split('T')[0];
+    const id = g.ID || g.Id || g.GameID || g.game_id || g.gameId || g.id || '';
+    const tr = document.createElement('tr');
+    const tdD = document.createElement('td');
+    tdD.textContent = dateStr;
+    const tdId = document.createElement('td');
+    tdId.textContent = id;
+    const tdPdf = document.createElement('td');
+    const btn = document.createElement('button');
+    const pdfUrl = (pdfCache[dateStr] || {})[id];
+    if (pdfUrl) {
+      btn.textContent = 'Переглянути звіт';
+      btn.addEventListener('click', () => window.open(pdfUrl, '_blank'));
+    } else {
+      btn.textContent = 'Звіт відсутній';
+      btn.disabled = true;
+    }
+    tdPdf.appendChild(btn);
+    tr.appendChild(tdD);
+    tr.appendChild(tdId);
+    tr.appendChild(tdPdf);
+    tbody.appendChild(tr);
+  });
+  updateGamesLeft(filtered.length);
 }
 
-async function init(){
-  const params = new URLSearchParams(location.search);
-  const nick = params.get('nick');
-  if(!nick){
-    showError('Нік не вказано');
-    return;
+function askKey(nick) {
+  let box = document.getElementById('profile-key');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'profile-key';
+    box.style.color = '#f39c12';
+    box.style.textAlign = 'center';
+    box.style.marginTop = '1rem';
+    box.innerHTML = `
+      <p>Потрібен ключ доступу</p>
+      <div style="margin-top:0.5rem;">
+        <input type="text" id="key-input" placeholder="Введіть ключ" style="padding:0.5rem;border:2px solid #555;background:rgba(0,0,0,0.5);color:#fff;border-radius:4px;font-size:0.7rem;"/>
+        <button id="key-submit" style="margin-left:0.5rem;">OK</button>
+      </div>
+      <p style="margin-top:0.5rem;"><a href="index.html" style="color:#ffd700;">На головну</a></p>
+    `;
+    document.querySelector('nav').insertAdjacentElement('afterend', box);
+    document.getElementById('key-submit').addEventListener('click', () => {
+      const key = document.getElementById('key-input').value.trim();
+      if (key) {
+        localStorage.setItem(`profileKey:${nick}`, key);
+        box.remove();
+        loadProfile(nick, key);
+      }
+    });
+  } else {
+    box.style.display = 'block';
   }
-  let player=null, league='';
-  for(const l of ['kids','sunday']){
-    try{
-      const players = await loadPlayers(l);
-      player = players.find(p=>p.nick===nick);
-      if(player){ league=l; break; }
-    }catch(err){/* ignore */}
-  }
-  if(!player){
-    showError('Гравця не знайдено');
-    return;
-  }
-  document.getElementById('avatar').src = getAvatarURL(nick);
-  document.getElementById('rating').textContent = `Рейтинг: ${player.pts} (${player.rank})`;
-  document.getElementById('abonement-type').textContent = `Абонемент: ${player.abonement}`;
+  document.getElementById('profile').style.display = 'none';
+}
 
-  gameLimit = {standart:5, vip:10}[player.abonement] || 0;
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = reader.result || '';
+      const comma = res.indexOf(',');
+      resolve(comma === -1 ? res : res.slice(comma + 1));
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadProfile(nick, key = '') {
+  let data;
+  try {
+    data = await getProfile({ nick, key });
+  } catch (err) {
+    showError('Помилка завантаження профілю');
+    return;
+  }
+  if (data.status === 'DENIED') {
+    askKey(nick);
+    return;
+  }
+  const profile = data.profile || data.player || {};
+  const league = data.league || profile.league || '';
+  const games = data.games || [];
+  avatarUrl = profile.avatarUrl || profile.avatar || `/avatars/${encodeURIComponent(nick)}`;
+  document.getElementById('avatar').src = `${avatarUrl}?t=${Date.now()}`;
+  document.getElementById('rating').textContent = `Рейтинг: ${profile.pts} (${profile.rank})`;
+  document.getElementById('abonement-type').textContent = `Абонемент: ${profile.abonement}`;
+
+  gameLimit = profile.gameLimit || { standart: 5, vip: 10 }[profile.abonement] || 0;
   gamesLeftEl = document.getElementById('games-left');
-  if(!gamesLeftEl){
+  if (!gamesLeftEl) {
     gamesLeftEl = document.createElement('div');
     gamesLeftEl.id = 'games-left';
     gamesLeftEl.style.marginTop = '0.5rem';
     const filterEl = document.querySelector('.filter');
     filterEl.parentNode.insertBefore(gamesLeftEl, filterEl);
   }
-  const reqBtn = document.getElementById('request-abonement');
-  if(player.abonement === 'none'){
-    reqBtn.style.display='block';
-    reqBtn.addEventListener('click', async ()=>{
-      reqBtn.disabled=true;
-      try{
-        await requestAbonement(nick);
-        reqBtn.textContent='Запит відправлено';
-      }catch(err){
-        reqBtn.disabled=false;
-        alert('Помилка запиту');
-      }
-    });
-  }
+
   const fileInput = document.getElementById('avatar-input');
-  document.getElementById('change-avatar').addEventListener('click',()=>fileInput.click());
-  fileInput.addEventListener('change',async()=>{
-    const file=fileInput.files[0];
-    if(!file) return;
-    const ok = await uploadAvatar(nick,file);
-    if(ok){
-      document.getElementById('avatar').src = getAvatarURL(nick);
-      localStorage.setItem('avatarRefresh', Date.now());
-    } else {
+  document.getElementById('change-avatar').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    try {
+      const avatar = await fileToBase64(file);
+      await uploadAvatar({ nick, avatar, mime: file.type });
+      document.getElementById('avatar').src = `${avatarUrl}?t=${Date.now()}`;
+      localStorage.setItem('avatarRefresh', Date.now().toString());
+    } catch (err) {
       alert('Помилка завантаження');
     }
   });
 
-  let games=[];
-  try{ games = await fetchPlayerGames(nick, league); }catch(err){ games=[]; }
-  games = new Proxy(games, {
-    set(target, prop, value){
-      target[prop] = value;
-      if(prop !== 'length') renderGames(target, league, nick);
-      return true;
-    }
-  });
-  renderGames(games, league, nick);
-  document.getElementById('date-filter').addEventListener('change',()=>renderGames(games,league,nick));
+  await renderGames(games, league);
+  document.getElementById('date-filter').addEventListener('change', () => renderGames(games, league));
 }
 
-document.addEventListener('DOMContentLoaded', init);
-
-function refreshAvatars(){
+document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(location.search);
   const nick = params.get('nick');
-  if(nick){
-    document.getElementById('avatar').src = getAvatarURL(nick);
+  if (!nick) {
+    showError('Нік не вказано');
+    return;
+  }
+  const key = localStorage.getItem(`profileKey:${nick}`) || '';
+  loadProfile(nick, key);
+});
+
+function refreshAvatar() {
+  if (avatarUrl) {
+    document.getElementById('avatar').src = `${avatarUrl}?t=${Date.now()}`;
   }
 }
 
 window.addEventListener('storage', e => {
-  if(e.key === 'avatarRefresh') refreshAvatars();
+  if (e.key === 'avatarRefresh') refreshAvatar();
 });
+

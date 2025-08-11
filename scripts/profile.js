@@ -53,7 +53,7 @@ async function renderGames(list, league) {
   for (const dt of dates) {
     if (!pdfCache[dt]) {
       try {
-        const resp = await getPdfLinks(league, dt);
+        const resp = await getPdfLinks({ league, date: dt });
         pdfCache[dt] = resp.links || {};
       } catch (err) {
         pdfCache[dt] = {};
@@ -120,19 +120,6 @@ function askKey(nick) {
   document.getElementById('profile').style.display = 'none';
 }
 
-async function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const res = reader.result || '';
-      const comma = res.indexOf(',');
-      resolve(comma === -1 ? res : res.slice(comma + 1));
-    };
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsDataURL(file);
-  });
-}
-
 async function loadProfile(nick, key = '') {
   let data;
   try {
@@ -169,8 +156,7 @@ async function loadProfile(nick, key = '') {
     const file = fileInput.files[0];
     if (!file) return;
     try {
-      const avatar = await fileToBase64(file);
-      await uploadAvatar({ nick, avatar, mime: file.type });
+      await uploadAvatar(nick, file);
       document.getElementById('avatar').src = `${avatarUrl}?t=${Date.now()}`;
       localStorage.setItem('avatarRefresh', Date.now().toString());
     } catch (err) {

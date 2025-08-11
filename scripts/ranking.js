@@ -1,4 +1,9 @@
-import { getAvatarUrl, getProxyAvatarURL, getDefaultAvatarURL } from "./api.js";
+import { getAvatarUrl } from "./api.js";
+
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+function getLocalAvatarUrl(nick) {
+  return `/avatars/${encodeURIComponent(nick)}`;
+}
 
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
 
@@ -25,16 +30,16 @@ async function setAvatar(img, nick) {
   if (info) {
     img.src = `${info.url}?v=${info.updatedAt || 0}`;
   } else {
-    img.src = getProxyAvatarURL(nick);
+    img.src = getLocalAvatarUrl(nick);
   }
   img.onerror = () => {
     img.onerror = () => {
       img.onerror = () => {
         img.src = "https://via.placeholder.com/40";
       };
-      img.src = getDefaultAvatarURL();
+      img.src = DEFAULT_AVATAR_URL;
     };
-    img.src = getProxyAvatarURL(nick);
+    img.src = getLocalAvatarUrl(nick);
   };
 }
 

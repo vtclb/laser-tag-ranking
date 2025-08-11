@@ -1,5 +1,10 @@
 // scripts/avatarAdmin.js
-import { uploadAvatar, getAvatarURL, getProxyAvatarURL, getDefaultAvatarURL } from './api.js';
+import { uploadAvatar } from './api.js';
+
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+function localAvatarUrl(nick){
+  return `/avatars/${encodeURIComponent(nick)}?t=${Date.now()}`;
+}
 
 let defaultAvatars = [];
 async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
@@ -39,7 +44,7 @@ export async function initAvatarAdmin(players, league=''){
     for(const [nick,obj] of entries){
       const success = await uploadAvatar(nick, obj.file);
       if(!success) failed.push(nick);
-      obj.img.src = getAvatarURL(nick);
+      obj.img.src = localAvatarUrl(nick);
     }
     if(entries.length){
       localStorage.setItem('avatarRefresh', Date.now().toString());
@@ -62,13 +67,13 @@ export async function initAvatarAdmin(players, league=''){
     img.className = 'avatar-img';
     img.alt = p.nick;
     img.dataset.nick = p.nick;
-    img.src = getAvatarURL(p.nick);
+    img.src = localAvatarUrl(p.nick);
     img.onerror = () => {
       img.onerror = () => {
         img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
-        img.src = getDefaultAvatarURL();
+        img.src = DEFAULT_AVATAR_URL;
       };
-      img.src = getProxyAvatarURL(p.nick);
+      img.src = localAvatarUrl(p.nick);
     };
     const input = document.createElement('input');
     input.type = 'file';
@@ -116,13 +121,13 @@ export async function initAvatarAdmin(players, league=''){
 
 function refreshAvatars(){
   document.querySelectorAll('#avatar-list img.avatar-img[data-nick]').forEach(img => {
-    img.src = getAvatarURL(img.dataset.nick);
+    img.src = localAvatarUrl(img.dataset.nick);
     img.onerror = () => {
       img.onerror = () => {
         img.onerror = () => { img.src = 'https://via.placeholder.com/40'; };
-        img.src = getDefaultAvatarURL();
+        img.src = DEFAULT_AVATAR_URL;
       };
-      img.src = getProxyAvatarURL(img.dataset.nick);
+      img.src = localAvatarUrl(img.dataset.nick);
     };
   });
 }

@@ -121,22 +121,11 @@ export async function saveDetailedStats(matchId, statsArray) {
 
 // ---------------------- Аватарки ----------------------
 export async function uploadAvatar(nick, fileOrBlob) {
-  const form = new FormData();
-  form.append('action', 'uploadAvatar');
-  form.append('nick', nick);
-  form.append('file', fileOrBlob, fileOrBlob.name || 'avatar.png');
-  const res = await fetch(proxyUrl, {
-    method: 'POST',
-    body: form
-  });
-  let resp;
-  try {
-    resp = await res.json();
-  } catch {
-    throw new Error('Invalid avatar response');
-  }
+  const data = await toBase64NoPrefix(fileOrBlob);
+  const mime = fileOrBlob.type || 'image/jpeg';
+  const resp = await postJson({ action: 'uploadAvatar', nick, mime, data });
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  if (!resp.url) throw new Error('No URL returned');
+  if (!resp || !resp.url) throw new Error('No URL returned');
   return resp.url;
 }
 

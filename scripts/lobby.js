@@ -186,7 +186,8 @@ function renderLobby() {
           ${ABONEMENT_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
         </select>
       </td>
-      <td><button class="issue-key" data-i="${i}">Видати ключ</button></td>
+      <td><button class="btn-issue-key" data-nick="${p.nick}">Видати ключ</button></td>
+      <td class="access-key"></td>
       <td>
         ${[...Array(manualCount)].map((_, k) =>
           `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
@@ -261,18 +262,18 @@ function renderLobby() {
     };
   });
 
-  tbody.querySelectorAll('.issue-key').forEach(btn=>{
-    btn.onclick=async()=>{
-      const idx=+btn.dataset.i;
-      const player=lobby[idx];
-      try{
-        const key=await issueAccessKey({nick:player.nick,league:document.getElementById('league')?.value});
-        alert(`Ключ: ${key}`);
-        navigator.clipboard?.writeText(String(key)).catch(()=>{});
-      }catch(err){
-        alert('Не вдалося видати ключ');
-      }
-    };
-  });
   saveLobbyState({lobby, teams, manualCount});
 }
+
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.btn-issue-key');
+  if (!btn) return;
+  const nick = btn.dataset.nick;
+  try {
+    const key = await issueAccessKey({ nick, league: document.getElementById('league')?.value });
+    const cell = btn.closest('tr')?.querySelector('.access-key');
+    if (cell) cell.textContent = key;
+  } catch (err) {
+    alert('Не вдалося видати ключ');
+  }
+});

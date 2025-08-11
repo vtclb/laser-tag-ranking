@@ -26,7 +26,7 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
   async function setAvatar(img, nick){
     img.dataset.nick = nick;
     const info = await fetchAvatar(nick);
-    if(info){
+    if(info && info.url){
       img.src = `${info.url}?v=${info.updatedAt || 0}`;
     }else{
       img.src = getLocalAvatarUrl(nick);

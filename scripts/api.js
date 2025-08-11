@@ -284,7 +284,9 @@ export async function getProfile(data) {
 export async function getAvatarUrl(nick) {
   const resp = await postJson({ action: 'getAvatarUrl', nick });
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  if (!resp || !resp.url) throw new Error('Invalid avatar URL response');
+  if (!resp || !resp.url) {
+    return { url: null, updatedAt: null };
+  }
   return { url: resp.url, updatedAt: resp.updatedAt };
 }
 

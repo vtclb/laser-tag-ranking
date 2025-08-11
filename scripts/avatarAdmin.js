@@ -3,7 +3,7 @@ import { uploadAvatar } from './api.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 function localAvatarUrl(nick){
-  return `/avatars/${encodeURIComponent(nick)}?t=${Date.now()}`;
+  return `/avatars/${encodeURIComponent(nick)}?v=${Date.now()}`;
 }
 
 let defaultAvatars = [];
@@ -42,12 +42,13 @@ export async function initAvatarAdmin(players, league=''){
     const entries = Object.entries(pending);
     const failed = [];
     for(const [nick,obj] of entries){
-      const success = await uploadAvatar(nick, obj.file);
-      if(!success) failed.push(nick);
-      obj.img.src = localAvatarUrl(nick);
-    }
-    if(entries.length){
-      localStorage.setItem('avatarRefresh', Date.now().toString());
+      try{
+        const url = await uploadAvatar(nick, obj.file);
+        obj.img.src = `${url}?v=${Date.now()}`;
+        localStorage.setItem('avatarRefresh', nick);
+      }catch{
+        failed.push(nick);
+      }
     }
     if(failed.length){
       alert('Failed to upload avatars for: '+failed.join(', '));
@@ -119,8 +120,9 @@ export async function initAvatarAdmin(players, league=''){
   });
 }
 
-function refreshAvatars(){
-  document.querySelectorAll('#avatar-list img.avatar-img[data-nick]').forEach(img => {
+function refreshAvatars(nick){
+  const sel = nick ? `#avatar-list img.avatar-img[data-nick="${nick}"]` : '#avatar-list img.avatar-img[data-nick]';
+  document.querySelectorAll(sel).forEach(img => {
     img.src = localAvatarUrl(img.dataset.nick);
     img.onerror = () => {
       img.onerror = () => {
@@ -133,5 +135,5 @@ function refreshAvatars(){
 }
 
 window.addEventListener('storage', e => {
-  if(e.key === 'avatarRefresh') refreshAvatars();
+  if(e.key === 'avatarRefresh') refreshAvatars(e.newValue);
 });

@@ -2,7 +2,7 @@
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, fetchPlayerData } from './api.js';
+import { updateAbonement, fetchPlayerData, adminCreatePlayer, issueAccessKey } from './api.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
@@ -112,6 +112,39 @@ document.addEventListener('DOMContentLoaded', () => {
       addPlayer(addPlayerInput.value.trim());
     });
   }
+
+  const createBtn = document.getElementById('btn-create-player');
+  const modal = document.getElementById('create-player-modal');
+  const closeModal = document.getElementById('create-player-close');
+  const form = document.getElementById('create-player-form');
+  if(createBtn && modal && closeModal && form){
+    const hide=()=>modal.classList.add('hidden');
+    createBtn.addEventListener('click',()=>modal.classList.remove('hidden'));
+    closeModal.addEventListener('click',hide);
+    modal.addEventListener('click',e=>{if(e.target===modal)hide();});
+    form.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const fd=new FormData(form);
+      const data=Object.fromEntries(fd.entries());
+      data.startPts=parseInt(data.startPts,10)||0;
+      try{
+        await adminCreatePlayer(data);
+        const pts=data.startPts;
+        const rank=pts<200?'D':pts<500?'C':pts<800?'B':pts<1200?'A':'S';
+        const newPlayer={nick:data.nick,pts,rank,abonement:'none'};
+        const currentLeague=document.getElementById('league')?.value;
+        if(data.league===currentLeague){
+          players.push(newPlayer);
+          filtered.push(newPlayer);
+          renderSelect(filtered);
+        }
+        form.reset();
+        hide();
+      }catch(err){
+        alert('Не вдалося створити гравця');
+      }
+    });
+  }
 });
 
 // Встановлюємо кількість команд для ручного режиму
@@ -133,6 +166,7 @@ function renderLobby() {
           ${ABONEMENT_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
         </select>
       </td>
+      <td><button class="issue-key" data-i="${i}">Видати ключ</button></td>
       <td>
         ${[...Array(manualCount)].map((_, k) =>
           `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
@@ -203,6 +237,21 @@ function renderLobby() {
       } catch (err) {
         sel.value = player.abonement || 'none';
         alert('Помилка оновлення абонемента');
+      }
+    };
+  });
+
+  tbody.querySelectorAll('.issue-key').forEach(btn=>{
+    btn.onclick=async()=>{
+      const idx=+btn.dataset.i;
+      const player=lobby[idx];
+      try{
+        const data=await issueAccessKey({nick:player.nick,league:document.getElementById('league')?.value});
+        const key=data.key||data.accessKey||data;
+        alert(`Ключ: ${key}`);
+        navigator.clipboard?.writeText(String(key)).catch(()=>{});
+      }catch(err){
+        alert('Не вдалося видати ключ');
       }
     };
   });

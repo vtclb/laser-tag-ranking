@@ -11,44 +11,48 @@ const PKEY_PDFS_FOLDER_ID    = 'LT_PDFS_FOLDER_ID';    // 1l3uM7cRTPe4aUclZ874hY
 function doPost(e) {
   try {
     // ---------- JSON API ----------
-    if (e.postData && String(e.postData.type || '').toLowerCase().startsWith('application/json')) {
-      const payload = JSON.parse(e.postData.contents || '{}');
-      const action = (payload.action || '').trim();
+    if (e.postData) {
+      const body = e.postData.contents || '';
+      const type = String(e.postData.type || '').toLowerCase();
+      if (type.includes('json') || /^\s*[\{\[]/.test(body)) {
+        const payload = JSON.parse(body || '{}');
+        const action = (payload.action || '').trim();
 
-      // 0) техсервісні
-      if (action === 'ping') {
-        return JsonOK({pong: true, ts: new Date().toISOString()});
+        // 0) техсервісні
+        if (action === 'ping') {
+          return JsonOK({pong: true, ts: new Date().toISOString()});
+        }
+
+        // 1) існуючі
+        if (action === 'importStats') return handleImportStats_(payload);
+        if (action === 'register')    return handleRegister_(payload);
+        if (action === 'getStats')    return handleGetStats_(payload);
+
+        // 2) НОВЕ: адміністратор створює гравця з балансера
+        // payload: { league:'kids'|'sundaygames', nick, gender?, contact?, experience?, age? }
+        if (action === 'adminCreatePlayer') return handleAdminCreatePlayer_(payload);
+
+        // 3) НОВЕ: видати/оновити accessKey для профілю
+        // payload: { league, nick } -> { key }
+        if (action === 'issueAccessKey') return handleIssueAccessKey_(payload);
+
+        // 4) НОВЕ: профіль гравця (з ключем або без)
+        // payload: { league?, nick, key? } -> повертає points, abonement_*, avatarUrl, тощо
+        if (action === 'getProfile') return handleGetProfile_(payload);
+
+        // 5) НОВЕ: аватарки (Drive avatars/)
+        // uploadAvatar: { nick, mime, data(base64) } -> { url }
+        if (action === 'uploadAvatar') return handleUploadAvatar_(payload);
+        // getAvatarUrl: { nick } -> { url|null, updatedAt? }
+        if (action === 'getAvatarUrl') return handleGetAvatarUrl_(payload);
+
+        // 6) НОВЕ: PDF links з Drive /pdfs/{league}/{YYYY-MM-DD}/<matchId>.pdf
+        // getPdfLinks: { league, date:'YYYY-MM-DD' } -> { links: {matchId:url} }
+        if (action === 'getPdfLinks') return handleGetPdfLinks_(payload);
+
+        // Unknown
+        return JsonOK({status:'ERROR', reason:'Unknown action'});
       }
-
-      // 1) існуючі
-      if (action === 'importStats') return handleImportStats_(payload);
-      if (action === 'register')    return handleRegister_(payload);
-      if (action === 'getStats')    return handleGetStats_(payload);
-
-      // 2) НОВЕ: адміністратор створює гравця з балансера
-      // payload: { league:'kids'|'sundaygames', nick, gender?, contact?, experience?, age? }
-      if (action === 'adminCreatePlayer') return handleAdminCreatePlayer_(payload);
-
-      // 3) НОВЕ: видати/оновити accessKey для профілю
-      // payload: { league, nick } -> { key }
-      if (action === 'issueAccessKey') return handleIssueAccessKey_(payload);
-
-      // 4) НОВЕ: профіль гравця (з ключем або без)
-      // payload: { league?, nick, key? } -> повертає points, abonement_*, avatarUrl, тощо
-      if (action === 'getProfile') return handleGetProfile_(payload);
-
-      // 5) НОВЕ: аватарки (Drive avatars/)
-      // uploadAvatar: { nick, mime, data(base64) } -> { url }
-      if (action === 'uploadAvatar') return handleUploadAvatar_(payload);
-      // getAvatarUrl: { nick } -> { url|null, updatedAt? }
-      if (action === 'getAvatarUrl') return handleGetAvatarUrl_(payload);
-
-      // 6) НОВЕ: PDF links з Drive /pdfs/{league}/{YYYY-MM-DD}/<matchId>.pdf
-      // getPdfLinks: { league, date:'YYYY-MM-DD' } -> { links: {matchId:url} }
-      if (action === 'getPdfLinks') return handleGetPdfLinks_(payload);
-
-      // Unknown
-      return TextPlain('Unknown action');
     }
 
     // ---------- FORM-URLENCODED: зберегти гру (твоя робоча логіка без змін) ----------

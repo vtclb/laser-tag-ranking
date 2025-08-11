@@ -3,6 +3,7 @@
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
 import { updateAbonement, fetchPlayerData, adminCreatePlayer, issueAccessKey } from './api.js';
+import { saveLobbyState, loadLobbyState } from './state.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
@@ -19,11 +20,16 @@ async function addPlayer(nick){
 export function initLobby(pl) {
   players = pl;
   filtered = [...players];
-  lobby = [];
+  const league = document.getElementById('league')?.value;
+  const saved = loadLobbyState(league);
+  lobby = saved?.lobby || [];
+  manualCount = saved?.manualCount || 0;
   selected = [];
-  manualCount = 0;
   const searchInput = document.getElementById('player-search');
   if (searchInput) searchInput.value = '';
+  if (manualCount > 0) {
+    initTeams(manualCount, saved?.teams || {});
+  }
   renderSelect(filtered);
   renderLobby();
 }
@@ -39,7 +45,13 @@ export function updateLobbyState(updates){
     if(pAll) Object.assign(pAll, norm);
     const pLobby = lobby.find(x=>x.nick===u.nick);
     if(pLobby) Object.assign(pLobby, norm);
+    Object.keys(teams).forEach(k=>{
+      const tp = teams[k].find(x=>x.nick===u.nick);
+      if(tp) Object.assign(tp, norm);
+    });
   });
+  const teamCount = Object.keys(teams).length;
+  if(teamCount) initTeams(teamCount, teams);
   renderLobby();
 }
 
@@ -255,4 +267,5 @@ function renderLobby() {
       }
     };
   });
+  saveLobbyState({lobby, teams, manualCount});
 }

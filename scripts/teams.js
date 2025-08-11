@@ -1,3 +1,6 @@
+import { saveLobbyState } from './state.js';
+import { lobby } from './lobby.js';
+
 export let teams = {};
 
 export function initTeams(n, data) {
@@ -20,4 +23,5 @@ export function initTeams(n, data) {
     `;
     area.append(div);
   }
+  saveLobbyState({lobby, teams, manualCount: n});
 }

@@ -3,7 +3,7 @@
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
 import { updateAbonement, fetchPlayerData, adminCreatePlayer, issueAccessKey } from './api.js';
-import { saveLobbyState, loadLobbyState } from './state.js';
+import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
@@ -173,6 +173,36 @@ export function setManualCount(n) {
   renderLobby();
 }
 
+export function clearLobby() {
+  lobby = [];
+  selected = [];
+  manualCount = 0;
+  initTeams(0, {});
+
+  document.getElementById('lobby-count').textContent = '0';
+  document.getElementById('lobby-sum').textContent   = '0';
+  document.getElementById('lobby-avg').textContent   = '0';
+
+  document.getElementById('arena-vs')?.textContent = '';
+  document.getElementById('arena-rounds')?.innerHTML = '';
+  document.getElementById('mvp')?.innerHTML = '';
+  const penaltyInput = document.getElementById('penalty');
+  if (penaltyInput) penaltyInput.value = '';
+  document.getElementById('btn-save-match')?.disabled = true;
+  document.getElementById('btn-start-match')?.disabled = true;
+  document.getElementById('arena-checkboxes')?.innerHTML = '';
+  document.querySelectorAll('.arena-team').forEach(cb => cb.checked = false);
+
+  renderLobby();
+  renderSelect(filtered);
+
+  document.getElementById('teams-area')?.classList.add('hidden');
+  document.getElementById('arena-select')?.classList.add('hidden');
+  document.getElementById('arena-area')?.classList.add('hidden');
+
+  localStorage.removeItem(getLobbyStorageKey());
+}
+
 // Рендер лоббі
 function renderLobby() {
   const tbody = document.getElementById('lobby-list');
@@ -201,13 +231,6 @@ function renderLobby() {
   document.getElementById('lobby-count').textContent = lobby.length;
   document.getElementById('lobby-sum').textContent   = total;
   document.getElementById('lobby-avg').textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
-
-  // Очистити лоббі
-  document.getElementById('btn-clear-lobby').onclick = () => {
-    lobby = [];
-    renderLobby();
-    renderSelect(filtered);
-  };
 
   // Прив'язуємо assign — додаємо гравця в ту команду, не втрачаючи інших
   tbody.querySelectorAll('.assign').forEach(btn => {
@@ -277,3 +300,5 @@ document.addEventListener('click', async e => {
     alert('Не вдалося видати ключ');
   }
 });
+
+document.getElementById('clear-lobby')?.addEventListener('click', clearLobby);

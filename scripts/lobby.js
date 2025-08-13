@@ -9,6 +9,9 @@ export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
+const select = document.getElementById('league-select');
+export const uiLeague = String(select?.value || '').toLowerCase() === 'kids' ? 'kids' : 'sunday';
+
 async function addPlayer(nick){
   if(!nick) return;
   const res = await fetchPlayerData(nick);
@@ -20,8 +23,7 @@ async function addPlayer(nick){
 export function initLobby(pl) {
   players = pl;
   filtered = [...players];
-  const league = document.getElementById('league')?.value;
-  const saved = loadLobbyState(league);
+  const saved = loadLobbyState(uiLeague);
   lobby = saved?.lobby || [];
   manualCount = saved?.manualCount || 0;
   selected = [];
@@ -149,11 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const pts=data.points;
           const rank=pts<200?'D':pts<500?'C':pts<800?'B':pts<1200?'A':'S';
           const newPlayer={nick:data.nick,pts,rank,abonement:'none'};
-          const currentLeague=document.getElementById('league')?.value;
-          if(data.league===currentLeague){
-            players.push(newPlayer);
-            filtered.push(newPlayer);
-            renderSelect(filtered);
+            if(data.league===uiLeague){
+              players.push(newPlayer);
+              filtered.push(newPlayer);
+              renderSelect(filtered);
           }
           form.reset();
           hide();
@@ -293,7 +294,7 @@ document.addEventListener('click', async e => {
   if (!btn) return;
   const nick = btn.dataset.nick;
   try {
-    const key = await issueAccessKey({ nick, league: document.getElementById('league')?.value });
+    const key = await issueAccessKey({ nick, league: uiLeague });
     const cell = btn.closest('tr')?.querySelector('.access-key');
     if (cell) cell.textContent = key;
   } catch (err) {

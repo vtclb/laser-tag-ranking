@@ -5,73 +5,88 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Балансер команд</title>
   <link rel="stylesheet" href="balancer.css">
+  <link rel="stylesheet" href="styles/balance-mobile.css">
 </head>
 <body>
-  <header class="header">
-    <div class="logo">🎮 Game Balancer</div>
-    <nav class="nav" style="display:flex; align-items:center; justify-content:center; gap:1rem;">
-      <select id="league-select" style="margin-right:auto">
+  <header class="blc-top sticky">
+    <div class="blc-row">
+      <select id="league">
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
-      <button id="btn-load">Завантажити гравців</button>
-      <input type="text" id="new-nick" placeholder="Нік">
-      <input type="number" id="new-age" placeholder="Вік" min="0">
-      <button id="btn-create-player">Створити гравця</button>
-      <button id="clear-lobby" type="button">Очистити лоббі</button>
-    </nav>
+      <div class="blc-actions">
+        <button id="btn-load">Завантажити гравців</button>
+        <input type="text" id="new-nick" placeholder="Нік">
+        <input type="number" id="new-age" placeholder="Вік" min="0">
+        <button id="btn-create">Створити гравця</button>
+        <button id="btn-clear-lobby" class="danger">Очистити лоббі</button>
+      </div>
+    </div>
   </header>
 
   <main class="container">
     <!-- 1. Вибір гравців -->
-    <section id="select-area" class="card hidden">
-      <h2>Вибір гравців</h2>
-      <div class="search-wrapper">
-        <input type="text" id="player-search" placeholder="🔍 Пошук гравця..." autocomplete="off">
-      </div>
-      <div class="sort-controls">
-        <button id="btn-sort-name">А–Я</button>
-        <button id="btn-sort-pts">За балами ↓</button>
-      </div>
-      <ul id="select-list" class="list"></ul>
-      <div class="actions">
-        <button id="btn-add-selected">Додати у лоббі</button>
-        <button id="btn-clear-selected">Очистити вибір</button>
+    <section class="blc-accordion" id="sec-player-picker">
+      <h2 class="blc-acc-head">Вибір гравців</h2>
+      <div class="blc-acc-body">
+        <section id="select-area" class="card hidden">
+          <div class="search-wrapper">
+            <input type="text" id="player-search" placeholder="🔍 Пошук гравця..." autocomplete="off">
+          </div>
+          <div class="sort-controls">
+            <button id="btn-sort-name">А–Я</button>
+            <button id="btn-sort-pts">За балами ↓</button>
+          </div>
+          <ul id="select-list" class="list"></ul>
+          <div class="actions">
+            <button id="btn-add-selected">Додати у лоббі</button>
+            <button id="btn-clear-selected">Очистити вибір</button>
+          </div>
+        </section>
       </div>
     </section>
 
     <!-- 2. Лоббі дня -->
-    <section id="lobby-area" class="card">
-      <h2>Лоббі дня</h2>
-      <div class="add-player">
-        <input type="text" id="addPlayerInput" placeholder="Нік гравця">
-        <button id="addPlayerBtn">Add</button>
+    <section class="blc-accordion open" id="sec-lobby">
+      <h2 class="blc-acc-head">Лоббі дня</h2>
+      <div class="blc-acc-body">
+        <section id="lobby-area" class="card">
+          <div class="add-player">
+            <input type="text" id="addPlayerInput" placeholder="Нік гравця">
+            <button id="addPlayerBtn">Add</button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>Ключ</th><th>→Команда / ✕</th></tr>
+            </thead>
+            <tbody id="lobby-list"></tbody>
+          </table>
+          <p class="text-muted">
+            Гравців: <span id="lobby-count">0</span> |
+            Сума: <span id="lobby-sum">0</span> |
+            Середній: <span id="lobby-avg">0</span>
+          </p>
+          <button id="btn-clear-lobby-dup" class="danger only-mobile">Очистити лоббі</button>
+        </section>
       </div>
-      <table class="table">
-        <thead>
-          <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>Ключ</th><th>→Команда / ✕</th></tr>
-        </thead>
-        <tbody id="lobby-list"></tbody>
-      </table>
-      <p class="text-muted">
-        Гравців: <span id="lobby-count">0</span> |
-        Сума: <span id="lobby-sum">0</span> |
-        Середній: <span id="lobby-avg">0</span>
-      </p>
     </section>
 
     <!-- 3. Сценарій -->
-    <section id="scenario-area" class="card hidden">
-      <h2>Режим гри</h2>
-      <label for="teamsize">Кількість команд:</label>
-      <select id="teamsize">
-        <option value="2">2 команди</option>
-        <option value="3">3 команди</option>
-        <option value="4">4 команди</option>
-      </select>
-      <div class="actions">
-        <button id="btn-auto">Авто-баланс</button>
-        <button id="btn-manual">Ручне формування</button>
+    <section class="blc-accordion" id="sec-scenario">
+      <h2 class="blc-acc-head">Режим гри</h2>
+      <div class="blc-acc-body">
+        <section id="scenario-area" class="card hidden">
+          <label for="teamsize">Кількість команд:</label>
+          <select id="teamsize">
+            <option value="2">2 команди</option>
+            <option value="3">3 команди</option>
+            <option value="4">4 команди</option>
+          </select>
+          <div class="actions">
+            <button id="btn-auto">Авто-баланс</button>
+            <button id="btn-manual">Ручне формування</button>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -107,17 +122,21 @@
     </section>
 
     <!-- 7. Адміністрування аватарів -->
-      <section id="avatar-admin" class="card">
-        <h2>Керування аватарами</h2>
-        <p class="text-muted">Обери мініатюру для гравця, натисни «Зберегти аватари» та зображення оновиться автоматично.</p>
-        <table class="table avatar-table">
-          <tbody id="avatar-list"></tbody>
-        </table>
-        <div class="actions">
-          <button id="save-avatars" disabled>Зберегти аватари</button>
-          <span id="avatar-status" class="text-muted hidden" style="align-self:center;">Аватари оновлено</span>
-        </div>
-      </section>
+    <section class="blc-accordion" id="sec-avatar-admin">
+      <h2 class="blc-acc-head">Керування аватарами</h2>
+      <div class="blc-acc-body">
+        <section id="avatar-admin" class="card">
+          <p class="text-muted">Обери мініатюру для гравця, натисни «Зберегти аватари» та зображення оновиться автоматично.</p>
+          <table class="table avatar-table">
+            <tbody id="avatar-list"></tbody>
+          </table>
+          <div class="actions">
+            <button id="save-avatars" disabled>Зберегти аватари</button>
+            <span id="avatar-status" class="text-muted hidden" style="align-self:center;">Аватари оновлено</span>
+          </div>
+        </section>
+      </div>
+    </section>
   </main>
 
 

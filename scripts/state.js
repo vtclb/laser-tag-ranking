@@ -1,6 +1,6 @@
 export function getLobbyStorageKey(date, league){
   const d = date || document.getElementById('date')?.value || new Date().toISOString().slice(0,10);
-  const sel = document.querySelector('#league-select') || document.querySelector('#league');
+  const sel = document.getElementById('league');
   const l = league || sel?.value || '';
   return `lobby::${d}::${l}`;
 }

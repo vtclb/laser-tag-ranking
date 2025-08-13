@@ -1,17 +1,17 @@
 // scripts/main.js
 
 import { loadPlayers } from './api.js';
-import { initLobby, uiLeague }   from './lobby.js';
+import { initLobby }   from './lobby.js';
 import { initScenario } from './scenario.js';
 import { initAvatarAdmin } from './avatarAdmin.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const btnLoad   = document.getElementById('btn-load');
-  const leagueSel = document.getElementById('league-select');
+  const selLeague = document.querySelector('#league-select') || document.querySelector('#league');
   const scenArea  = document.getElementById('scenario-area');
-  initAvatarAdmin([], uiLeague);
+  initAvatarAdmin([], selLeague?.value || '');
 
-  if (!btnLoad || !leagueSel) {
+  if (!btnLoad || !selLeague) {
     console.error('Не знайдено #btn-load або #league-select у DOM');
     return;
   }
@@ -23,9 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLoad.textContent = 'Завантаження...';
 
     try {
-      const players = await loadPlayers(uiLeague);
-      initLobby(players);          // Рендер лоббі
-      await initAvatarAdmin(players, uiLeague);    // Рендер аватарів
+      const csvLeague = window.uiLeagueToCsv(selLeague.value);
+      const players = await loadPlayers(csvLeague);
+      initLobby(players, csvLeague);          // Рендер лоббі
+      await initAvatarAdmin(players, selLeague.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {
       console.error('Помилка loadPlayers:', err);
@@ -37,9 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // При зміні ліги — очищуємо поточне лоббі та ховаємо сценарій
-  leagueSel.addEventListener('change', async () => {
-    initLobby([]);               // Порожнє лоббі
-    await initAvatarAdmin([], uiLeague);
+  selLeague.addEventListener('change', async () => {
+    const csvLeague = window.uiLeagueToCsv(selLeague.value);
+    initLobby([], csvLeague);               // Порожнє лоббі
+    await initAvatarAdmin([], selLeague.value);
     scenArea.classList.add('hidden');
   });
 });

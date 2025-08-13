@@ -9,8 +9,7 @@ export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
-const select = document.getElementById('league-select');
-export const uiLeague = String(select?.value || '').toLowerCase() === 'kids' ? 'kids' : 'sunday';
+let uiLeague = 'sunday';
 
 async function addPlayer(nick){
   if(!nick) return;
@@ -20,7 +19,8 @@ async function addPlayer(nick){
 }
 
 // Ініціалізує лоббі новим набором гравців
-export function initLobby(pl) {
+export function initLobby(pl, league = uiLeague) {
+  uiLeague = String(league || '').toLowerCase() === 'kids' ? 'kids' : 'sunday';
   players = pl;
   filtered = [...players];
   const saved = loadLobbyState(uiLeague);
@@ -168,7 +168,7 @@ export function clearLobby() {
   lobby.length = 0;
   Object.keys(teams).forEach(k => { teams[k].length = 0; });
 
-  localStorage.removeItem(getLobbyStorageKey());
+  localStorage.removeItem(getLobbyStorageKey(undefined, uiLeague));
 
   renderLobby();
   renderTeams();
@@ -272,7 +272,7 @@ function renderLobby() {
     };
   });
 
-  saveLobbyState({lobby, teams, manualCount});
+  saveLobbyState({lobby, teams, manualCount, league: uiLeague});
 }
 
 document.addEventListener('click', async e => {

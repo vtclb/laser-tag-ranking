@@ -1,5 +1,46 @@
 // scripts/api.js
 
+// ---------------------- Глобальні утиліти ----------------------
+// Веб-апп GAS, якщо ще не визначено
+window.WEB_APP_URL =
+  window.WEB_APP_URL ||
+  'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
+
+// Допоміжний POST JSON запит
+window.postJson =
+  window.postJson ||
+  ((url, data) =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }));
+
+// Відображення UI-ліг до CSV та GAS назв
+window.uiLeagueToCsv =
+  window.uiLeagueToCsv || {
+    kid: 'kids',
+    kids: 'kids',
+    junior: 'kids',
+    sunday: 'sunday',
+    sundaygames: 'sunday',
+    adult: 'sunday',
+    adults: 'sunday',
+    olds: 'sunday'
+  };
+
+window.uiLeagueToGas =
+  window.uiLeagueToGas || {
+    kid: 'kids',
+    kids: 'kids',
+    junior: 'kids',
+    sunday: 'sundaygames',
+    sundaygames: 'sundaygames',
+    adult: 'sundaygames',
+    adults: 'sundaygames',
+    olds: 'sundaygames'
+  };
+
 // Google Apps Script backend (веб-апп)
 export const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
 

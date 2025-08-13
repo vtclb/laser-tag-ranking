@@ -78,6 +78,7 @@ button, select, input {
   .lobby-card .row {display: flex; justify-content: space-between; padding: 4px 0;}
 
   /* Avatar admin mobile adjustments */
+  .avatar-table {display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;}
   #avatar-list {display: grid; gap: 10px;}
   #avatar-list .avatar-row {display: grid; grid-template-columns: 1fr auto; align-items: center;}
   #save-avatars {width: 100%;}

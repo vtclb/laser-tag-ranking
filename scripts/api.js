@@ -54,35 +54,16 @@ export async function fetchCsv(url) {
 
 // ---------------------- Рейтинг/гравці ----------------------
 export async function loadPlayers(league) {
-  const lg = league === 'kids' ? 'kids' : 'sunday';
-  const res = await fetch(rankingURLs[lg], { cache: 'no-store' });
-  if (!res.ok) throw new Error(`loadPlayers HTTP ${res.status}`);
-  const text = await res.text();
-
-  // 1) Парсинг CSV
-  let rows;
-  if (typeof Papa !== 'undefined') {
-    const parsed = Papa.parse(text, { skipEmptyLines: true });
-    rows = parsed.data;
-  } else {
-    rows = text.trim().split(/\r?\n/).map(r => r.split(','));
-  }
-  if (!rows || !rows.length) return [];
-
-  // 2) Індекси колонок
-  const hdr = rows[0];
-  const idxNick = hdr.indexOf('Nickname');
-  const idxPts  = hdr.indexOf('Points');
-  const idxAb   = hdr.indexOf('abonement_type'); // може не бути
-  if (idxNick < 0 || idxPts < 0) return [];
-
-  // 3) Маппінг у потрібну форму
-  return rows.slice(1).map(r => {
-    const nick = (r[idxNick] || '').trim();
-    const pts  = Number(r[idxPts] || 0);
-    const rank = rankFromPoints(pts);
-    const abonement = idxAb > -1 ? String(r[idxAb] || 'none').trim() : 'none';
-    return nick ? { nick, points: pts, rank, abonement } : null;
+  const url = getLeagueFeedUrl(league);
+  const rows = await fetchCsv(url);
+  return rows.map(r => {
+    const nick = String(r.Nickname || '').trim();
+    if (!nick) return null;
+    const pts = Number(r.Points || 0);
+    const player = { nick, pts, rank: rankFromPoints(pts) };
+    const ab = r.abonement_type ? String(r.abonement_type).trim() : '';
+    if (ab) player.abonement = ab;
+    return player;
   }).filter(Boolean);
 }
 

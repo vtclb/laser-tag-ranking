@@ -214,62 +214,85 @@ function renderLobby() {
     </tr>
   `).join('');
 
+  const cards = document.querySelector('.lobby-cards');
+  if (cards) {
+    cards.innerHTML = lobby.map((p, i) => `
+      <div class="lobby-card">
+        <div class="row"><span class="nick">${p.nick}</span><span class="pts">${p.pts}</span></div>
+        <div class="row"><span class="rank">${p.rank}</span><span class="season">${p.abonement || ''}</span></div>
+        <div class="row">
+          <span class="key"><button class="btn-issue-key" data-nick="${p.nick}">Видати ключ</button><span class="access-key"></span></span>
+          <span class="actions">
+            ${[...Array(manualCount)].map((_, k) =>
+              `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
+            ).join('')}
+            <button class="remove-lobby" data-i="${i}">✕</button>
+          </span>
+        </div>
+      </div>
+    `).join('');
+  }
+
   const total = lobby.reduce((s, p) => s + p.pts, 0);
   document.getElementById('lobby-count').textContent = lobby.length;
   document.getElementById('lobby-sum').textContent   = total;
   document.getElementById('lobby-avg').textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
 
+  const containers = [tbody, cards].filter(Boolean);
+
   // Прив'язуємо assign — додаємо гравця в ту команду, не втрачаючи інших
-  tbody.querySelectorAll('.assign').forEach(btn => {
-    btn.onclick = () => {
-      const idx = +btn.dataset.i;
-      const teamNo = +btn.dataset.team;
-      const p = lobby.splice(idx, 1)[0];
+  containers.forEach(container => {
+    container.querySelectorAll('.assign').forEach(btn => {
+      btn.onclick = () => {
+        const idx = +btn.dataset.i;
+        const teamNo = +btn.dataset.team;
+        const p = lobby.splice(idx, 1)[0];
 
-      // Створюємо копію всіх існуючих команд
-      const preset = {};
-      Object.keys(teams).forEach(key => {
-        preset[key] = [...teams[key]];
-      });
-      // Додаємо гравця в обрану команду
-      preset[teamNo] = preset[teamNo] || [];
-      preset[teamNo].push(p);
+        // Створюємо копію всіх існуючих команд
+        const preset = {};
+        Object.keys(teams).forEach(key => {
+          preset[key] = [...teams[key]];
+        });
+        // Додаємо гравця в обрану команду
+        preset[teamNo] = preset[teamNo] || [];
+        preset[teamNo].push(p);
 
-      // Ререндеримо всі команди
-      initTeams(manualCount, preset);
-      renderLobby();
-      renderSelect(filtered);
-    };
-  });
+        // Ререндеримо всі команди
+        initTeams(manualCount, preset);
+        renderLobby();
+        renderSelect(filtered);
+      };
+    });
 
-  // Видалити з лоббі
-  tbody.querySelectorAll('.remove-lobby').forEach(btn => {
-    btn.onclick = () => {
-      const idx = +btn.dataset.i;
-      lobby.splice(idx, 1);
-      renderLobby();
-      renderSelect(filtered);
-    };
-  });
+    // Видалити з лоббі
+    container.querySelectorAll('.remove-lobby').forEach(btn => {
+      btn.onclick = () => {
+        const idx = +btn.dataset.i;
+        lobby.splice(idx, 1);
+        renderLobby();
+        renderSelect(filtered);
+      };
+    });
 
-  // Оновлення типу абонемента
-  tbody.querySelectorAll('.abonement-select').forEach(sel => {
-    const idx = +sel.dataset.i;
-    const player = lobby[idx];
-    sel.value = player.abonement || 'none';
-    sel.onchange = async () => {
-      const newType = sel.value;
-      try {
-        await updateAbonement(player.nick, newType);
-        player.abonement = newType;
-        const full = players.find(p => p.nick === player.nick);
-        if (full) full.abonement = newType;
-        alert('Абонемент оновлено');
-      } catch (err) {
-        sel.value = player.abonement || 'none';
-        alert('Помилка оновлення абонемента');
-      }
-    };
+    // Оновлення типу абонемента
+    container.querySelectorAll('.abonement-select').forEach(sel => {
+      const idx = +sel.dataset.i;
+      const player = lobby[idx];
+      sel.value = player.abonement || 'none';
+      sel.onchange = async () => {
+        const newType = sel.value;
+        try {
+          await updateAbonement(player.nick, newType);
+          player.abonement = newType;
+          const full = players.find(p => p.nick === player.nick);
+          if (full) full.abonement = newType;
+          alert('Абонемент оновлено');
+        } catch (err) {
+          sel.value = player.abonement || 'none';
+          alert('Помилка оновлення абонемента');
+        }
+      };
+    });
   });
 
   saveLobbyState({lobby, teams, manualCount, league: uiLeague});
@@ -281,7 +304,8 @@ document.addEventListener('click', async e => {
   const nick = btn.dataset.nick;
   try {
     const key = await issueAccessKey({ nick, league: uiLeague });
-    const cell = btn.closest('tr')?.querySelector('.access-key');
+    const host = btn.closest('tr') || btn.closest('.lobby-card');
+    const cell = host?.querySelector('.access-key');
     if (cell) cell.textContent = key;
   } catch (err) {
     alert('Не вдалося видати ключ');

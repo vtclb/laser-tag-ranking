@@ -128,40 +128,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const createBtn = document.getElementById('btn-create-player');
-  const modal = document.getElementById('create-player-modal');
-  const closeModal = document.getElementById('create-player-close');
-  const form = document.getElementById('create-player-form');
-  if(createBtn && modal && closeModal && form){
-    const hide=()=>modal.classList.add('hidden');
-    createBtn.addEventListener('click',()=>modal.classList.remove('hidden'));
-    closeModal.addEventListener('click',hide);
-    modal.addEventListener('click',e=>{if(e.target===modal)hide();});
-    form.addEventListener('submit',async e=>{
-      e.preventDefault();
-      const fd=new FormData(form);
-      const data=Object.fromEntries(fd.entries());
-      data.points=parseInt(data.points,10)||0;
-      try{
-        const status=await adminCreatePlayer(data);
-        if(status==='DUPLICATE'){
+  const newNick = document.getElementById('new-nick');
+  const newAge  = document.getElementById('new-age');
+  if (createBtn && newNick && newAge) {
+    createBtn.addEventListener('click', async () => {
+      const nick = newNick.value.trim();
+      if (!nick) return;
+      const age = parseInt(newAge.value, 10) || 0;
+      try {
+        const status = await adminCreatePlayer({ league: uiLeague, nick, age });
+        if (status === 'DUPLICATE') {
           alert('Такий нік вже існує');
           return;
         }
-        if(status==='OK'){
-          const pts=data.points;
-          const rank=pts<200?'D':pts<500?'C':pts<800?'B':pts<1200?'A':'S';
-          const newPlayer={nick:data.nick,pts,rank,abonement:'none'};
-            if(data.league===uiLeague){
-              players.push(newPlayer);
-              filtered.push(newPlayer);
-              renderSelect(filtered);
-          }
-          form.reset();
-          hide();
-        }else{
+        if (status === 'OK') {
+          const newPlayer = { nick, pts: 0, rank: 'D', abonement: 'none' };
+          players.push(newPlayer);
+          filtered.push(newPlayer);
+          renderSelect(filtered);
+          newNick.value = '';
+          newAge.value = '';
+        } else {
           alert('Не вдалося створити гравця');
         }
-      }catch(err){
+      } catch (err) {
         alert('Не вдалося створити гравця');
       }
     });

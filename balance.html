@@ -10,12 +10,15 @@
   <header class="header">
     <div class="logo">🎮 Game Balancer</div>
     <nav class="nav" style="display:flex; align-items:center; justify-content:center; gap:1rem;">
-      <button id="btn-load">Завантажити гравців</button>
-      <button id="btn-create-player">Створити гравця</button>
-      <select id="league" style="margin-left:auto">
+      <select id="league-select" style="margin-right:auto">
         <option value="kids">Молодша ліга</option>
         <option value="sunday">Старша ліга</option>
       </select>
+      <button id="btn-load">Завантажити гравців</button>
+      <input type="text" id="new-nick" placeholder="Нік">
+      <input type="number" id="new-age" placeholder="Вік" min="0">
+      <button id="btn-create-player">Створити гравця</button>
+      <button id="clear-lobby" type="button">Очистити лоббі</button>
     </nav>
   </header>
 
@@ -55,9 +58,6 @@
         Сума: <span id="lobby-sum">0</span> |
         Середній: <span id="lobby-avg">0</span>
       </p>
-      <div class="actions">
-        <button id="clear-lobby" type="button">Очистити лоббі</button>
-      </div>
     </section>
 
     <!-- 3. Сценарій -->
@@ -120,41 +120,6 @@
       </section>
   </main>
 
-  <div id="create-player-modal" class="modal hidden">
-    <div class="modal-content">
-      <button id="create-player-close">✕</button>
-      <form id="create-player-form">
-        <label>Ліга:
-          <select name="league">
-            <option value="kids">Молодша ліга</option>
-            <option value="sunday">Старша ліга</option>
-          </select>
-        </label>
-        <label>Нік:
-          <input name="nick" required>
-        </label>
-        <label>Стать:
-          <select name="gender">
-            <option value="M">M</option>
-            <option value="F">F</option>
-          </select>
-        </label>
-        <label>Контакт:
-          <input name="contact">
-        </label>
-        <label>Досвід:
-          <input name="experience">
-        </label>
-        <label>Вік:
-          <input type="number" name="age">
-        </label>
-        <label>Очки:
-          <input type="number" name="points" value="0">
-        </label>
-        <button type="submit">Створити</button>
-      </form>
-    </div>
-  </div>
 
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>

@@ -1,12 +1,13 @@
 export function getLobbyStorageKey(date, league){
   const d = date || document.getElementById('date')?.value || new Date().toISOString().slice(0,10);
-  const l = league || document.getElementById('league')?.value || '';
+  const sel = document.querySelector('#league-select') || document.querySelector('#league');
+  const l = league || sel?.value || '';
   return `lobby::${d}::${l}`;
 }
 
-export function saveLobbyState({lobby, teams, manualCount}){
+export function saveLobbyState({lobby, teams, manualCount, league}){
   try{
-    const key = getLobbyStorageKey();
+    const key = getLobbyStorageKey(undefined, league);
     localStorage.setItem(key, JSON.stringify({lobby, teams, manualCount}));
   }catch(err){
     console.error('Failed to save lobby state', err);

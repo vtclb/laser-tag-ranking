@@ -175,33 +175,29 @@ export function setManualCount(n) {
 }
 
 export function clearLobby() {
-  lobby = [];
-  selected = [];
-  manualCount = 0;
-  initTeams(0, {});
-
-  document.getElementById('lobby-count').textContent = '0';
-  document.getElementById('lobby-sum').textContent   = '0';
-  document.getElementById('lobby-avg').textContent   = '0';
-
-  document.getElementById('arena-vs')?.textContent = '';
-  document.getElementById('arena-rounds')?.innerHTML = '';
-  document.getElementById('mvp')?.innerHTML = '';
-  const penaltyInput = document.getElementById('penalty');
-  if (penaltyInput) penaltyInput.value = '';
-  document.getElementById('btn-save-match')?.disabled = true;
-  document.getElementById('btn-start-match')?.disabled = true;
-  document.getElementById('arena-checkboxes')?.innerHTML = '';
-  document.querySelectorAll('.arena-team').forEach(cb => cb.checked = false);
-
-  renderLobby();
-  renderSelect(filtered);
-
-  document.getElementById('teams-area')?.classList.add('hidden');
-  document.getElementById('arena-select')?.classList.add('hidden');
-  document.getElementById('arena-area')?.classList.add('hidden');
+  lobby.length = 0;
+  Object.keys(teams).forEach(k => { teams[k].length = 0; });
 
   localStorage.removeItem(getLobbyStorageKey());
+
+  renderLobby();
+  renderTeams();
+  updateSummary();
+}
+
+function renderTeams() {
+  const area = document.getElementById('teams-area');
+  if (area) area.innerHTML = '';
+}
+
+function updateSummary() {
+  const total = lobby.reduce((s, p) => s + p.pts, 0);
+  const countEl = document.getElementById('lobby-count');
+  const sumEl   = document.getElementById('lobby-sum');
+  const avgEl   = document.getElementById('lobby-avg');
+  if (countEl) countEl.textContent = lobby.length;
+  if (sumEl)   sumEl.textContent   = total;
+  if (avgEl)   avgEl.textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
 }
 
 // Рендер лоббі

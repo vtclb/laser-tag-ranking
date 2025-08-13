@@ -116,6 +116,11 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     return `${vpIcons(a)} - ${vpIcons(b)}`;
   }
 
+  function normalizeLeagueForFilter(v){
+    const s = String(v || '').toLowerCase();
+    return s === 'sundaygames' ? 'sunday' : s;
+  }
+
   async function loadData(){
     if(!dateInput.value) return; // require date
     const rURL = rankingURLs[leagueSel.value];
@@ -152,7 +157,9 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
       rankMap[name] = +r.Points || 0;
     });
 
-    const allGames = games.filter(g=>g.League===leagueSel.value);
+    const allGames = games.filter(
+      g => normalizeLeagueForFilter(g.League) === leagueSel.value
+    );
     allGames.sort((a,b)=>{
       const tDiff = new Date(a.Timestamp) - new Date(b.Timestamp);
       if(tDiff) return tDiff;

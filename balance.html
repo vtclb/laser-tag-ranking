@@ -28,16 +28,16 @@
     <!-- 1. Вибір гравців -->
     <section class="blc-accordion" id="sec-player-picker">
       <h2 class="blc-acc-head">Вибір гравців</h2>
-      <div class="blc-acc-body">
+      <div class="blc-acc-body scroll-pane">
         <section id="select-area" class="card hidden">
-          <div class="search-wrapper">
+          <div class="blc-row">
             <input type="text" id="player-search" placeholder="🔍 Пошук гравця..." autocomplete="off">
+            <div class="sort-controls">
+              <button id="btn-sort-name">А–Я</button>
+              <button id="btn-sort-pts">За балами ↓</button>
+            </div>
           </div>
-          <div class="sort-controls">
-            <button id="btn-sort-name">А–Я</button>
-            <button id="btn-sort-pts">За балами ↓</button>
-          </div>
-          <ul id="select-list" class="list scroll-pane"></ul>
+          <ul id="select-list" class="list"></ul>
           <div class="actions">
             <button id="btn-add-selected">Додати у лоббі</button>
             <button id="btn-clear-selected">Очистити вибір</button>

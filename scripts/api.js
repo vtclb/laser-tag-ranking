@@ -17,29 +17,13 @@ window.postJson =
     }));
 
 // Відображення UI-ліг до CSV та GAS назв
-window.uiLeagueToCsv =
-  window.uiLeagueToCsv || {
-    kid: 'kids',
-    kids: 'kids',
-    junior: 'kids',
-    sunday: 'sunday',
-    sundaygames: 'sunday',
-    adult: 'sunday',
-    adults: 'sunday',
-    olds: 'sunday'
-  };
+window.uiLeagueToCsv = window.uiLeagueToCsv || function uiLeagueToCsv(v) {
+  return String(v).toLowerCase() === 'kids' ? 'kids' : 'sunday';
+};
 
-window.uiLeagueToGas =
-  window.uiLeagueToGas || {
-    kid: 'kids',
-    kids: 'kids',
-    junior: 'kids',
-    sunday: 'sundaygames',
-    sundaygames: 'sundaygames',
-    adult: 'sundaygames',
-    adults: 'sundaygames',
-    olds: 'sundaygames'
-  };
+window.uiLeagueToGas = window.uiLeagueToGas || function uiLeagueToGas(v) {
+  return String(v).toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
+};
 
 // Google Apps Script backend (веб-апп)
 export const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';

@@ -7,14 +7,19 @@ window.WEB_APP_URL =
   'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
 
 // Допоміжний POST JSON запит
-window.postJson =
-  window.postJson ||
-  ((url, data) =>
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }));
+window.postJson = window.postJson || async function postJson(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { status: 'TEXT', text };
+  }
+};
 
 // Відображення UI-ліг до CSV та GAS назв
 window.uiLeagueToCsv = window.uiLeagueToCsv || function uiLeagueToCsv(v) {

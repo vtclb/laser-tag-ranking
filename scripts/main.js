@@ -7,12 +7,12 @@ import { initAvatarAdmin } from './avatarAdmin.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const btnLoad   = document.getElementById('btn-load');
-  const selLeague = document.querySelector('#league-select') || document.querySelector('#league');
+  const selLeague = document.getElementById('league');
   const scenArea  = document.getElementById('scenario-area');
   initAvatarAdmin([], selLeague?.value || '');
 
   if (!btnLoad || !selLeague) {
-    console.error('Не знайдено #btn-load або #league-select у DOM');
+    console.error('Не знайдено #btn-load або #league у DOM');
     return;
   }
 

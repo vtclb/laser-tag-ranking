@@ -1,0 +1,46 @@
+/* Mobile-specific styles for balance page */
+.blc-top {
+  background: var(--surface, #1F1F1F);
+  padding: 0.5rem 1rem;
+}
+.blc-top.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.blc-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.blc-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.danger {
+  background: var(--danger, #E53935);
+}
+.blc-accordion {
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+}
+.blc-acc-head {
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+}
+.blc-acc-body {
+  padding: 0.5rem 1rem;
+  display: none;
+}
+.blc-accordion.open .blc-acc-body {
+  display: block;
+}
+.only-mobile {
+  display: none;
+}
+@media (max-width: 600px) {
+  .only-mobile {
+    display: inline-block;
+  }
+}

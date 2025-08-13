@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const createBtn = document.getElementById('btn-create-player');
+  const createBtn = document.getElementById('btn-create');
   const newNick = document.getElementById('new-nick');
   const newAge  = document.getElementById('new-age');
   if (createBtn && newNick && newAge) {
@@ -288,4 +288,5 @@ document.addEventListener('click', async e => {
   }
 });
 
-document.getElementById('clear-lobby')?.addEventListener('click', clearLobby);
+document.getElementById('btn-clear-lobby')?.addEventListener('click', clearLobby);
+document.getElementById('btn-clear-lobby-dup')?.addEventListener('click', clearLobby);

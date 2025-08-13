@@ -1,46 +1,90 @@
 /* Mobile-specific styles for balance page */
-.blc-top {
-  background: var(--surface, #1F1F1F);
-  padding: 0.5rem 1rem;
+
+/* Base layout */
+.blc-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
 }
-.blc-top.sticky {
+
+.sticky {
   position: sticky;
   top: 0;
   z-index: 100;
 }
+
 .blc-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-.blc-actions {
-  display: flex;
-  gap: 0.5rem;
+  gap: 10px;
   flex-wrap: wrap;
 }
+
+.blc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button, select, input {
+  min-height: 42px;
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
 .danger {
   background: var(--danger, #E53935);
 }
+
+/* Accordion behavior */
 .blc-accordion {
   border: 1px solid #2e2e2e;
   border-radius: 8px;
 }
+
 .blc-acc-head {
   font-size: 1.1rem;
-  padding: 0.5rem 1rem;
+  padding: 10px;
+  cursor: pointer;
 }
+
 .blc-acc-body {
-  padding: 0.5rem 1rem;
+  padding: 10px;
+}
+
+.blc-accordion:not(.open) .blc-acc-body {
   display: none;
 }
-.blc-accordion.open .blc-acc-body {
-  display: block;
+
+/* Scrollable player selector */
+.scroll-pane {
+  max-height: 60vh;
+  overflow: auto;
 }
-.only-mobile {
-  display: none;
+
+/* Lobby responsiveness */
+.lobby-table-wrap {overflow-x: auto;}
+.lobby-table thead th {position: sticky; top: 0;}
+.lobby-cards {display: none;}
+
+.only-mobile {display: none;}
+
+@media (max-width: 768px) {
+  .only-mobile {display: block;}
+  .lobby-table {display: none;}
+  .lobby-cards {display: grid; gap: 10px;}
+  .lobby-card {border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px; background: #121212;}
+  .lobby-card .row {display: flex; justify-content: space-between; padding: 4px 0;}
+
+  /* Avatar admin mobile adjustments */
+  #avatar-list {display: grid; gap: 10px;}
+  #avatar-list .avatar-row {display: grid; grid-template-columns: 1fr auto; align-items: center;}
+  #save-avatars {width: 100%;}
 }
-@media (max-width: 600px) {
-  .only-mobile {
-    display: inline-block;
-  }
+
+/* Expand all sections on wider screens */
+@media (min-width: 769px) {
+  .blc-accordion .blc-acc-body {display: block !important;}
 }
+

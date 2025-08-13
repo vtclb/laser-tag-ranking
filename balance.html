@@ -24,7 +24,7 @@
     </div>
   </header>
 
-  <main class="container">
+  <main class="container blc-container">
     <!-- 1. Вибір гравців -->
     <section class="blc-accordion" id="sec-player-picker">
       <h2 class="blc-acc-head">Вибір гравців</h2>
@@ -37,7 +37,7 @@
             <button id="btn-sort-name">А–Я</button>
             <button id="btn-sort-pts">За балами ↓</button>
           </div>
-          <ul id="select-list" class="list"></ul>
+          <ul id="select-list" class="list scroll-pane"></ul>
           <div class="actions">
             <button id="btn-add-selected">Додати у лоббі</button>
             <button id="btn-clear-selected">Очистити вибір</button>
@@ -55,12 +55,15 @@
             <input type="text" id="addPlayerInput" placeholder="Нік гравця">
             <button id="addPlayerBtn">Add</button>
           </div>
-          <table class="table">
-            <thead>
-              <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>Ключ</th><th>→Команда / ✕</th></tr>
-            </thead>
-            <tbody id="lobby-list"></tbody>
-          </table>
+          <div class="lobby-table-wrap">
+            <table class="lobby-table table">
+              <thead>
+                <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>Ключ</th><th>→Команда / ✕</th></tr>
+              </thead>
+              <tbody id="lobby-list"></tbody>
+            </table>
+          </div>
+          <div class="lobby-cards"></div>
           <p class="text-muted">
             Гравців: <span id="lobby-count">0</span> |
             Сума: <span id="lobby-sum">0</span> |

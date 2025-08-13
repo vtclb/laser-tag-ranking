@@ -5,10 +5,12 @@ export const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJR
 
 // Публічні фіди рейтингу (CSV)
 const rankingURLs = {
-  kids:        'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
-  // було pubhtml -> виправлено на output=csv
-  sundaygames: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
+  kids:        'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1648067737',
+  sunday:      'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1286735969',
+  sundaygames: 'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1286735969'
 };
+
+const rankFromPoints = p => (p < 200 ? 'D' : p < 500 ? 'C' : p < 800 ? 'B' : p < 1200 ? 'A' : 'S');
 
 // Логи ігор (CSV)
 const gamesURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv';
@@ -52,23 +54,36 @@ export async function fetchCsv(url) {
 
 // ---------------------- Рейтинг/гравці ----------------------
 export async function loadPlayers(league) {
-  const lg = normalizeLeague(league);
-  const url = rankingURLs[lg];
-  if (!url) throw new Error('Unknown league: ' + league);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const lg = league === 'kids' ? 'kids' : 'sunday';
+  const res = await fetch(rankingURLs[lg], { cache: 'no-store' });
+  if (!res.ok) throw new Error(`loadPlayers HTTP ${res.status}`);
   const text = await res.text();
-  const lines = text.trim().split('\n').filter(Boolean);
-  if (!lines.length) return [];
-  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-  const nickIdx = header.indexOf('nickname');
-  const ptsIdx = header.indexOf('points');
-  return lines.slice(1).map(line => {
-    const cols = line.split(',');
-    const nick = cols[nickIdx]?.trim() || '';
-    const points = parseInt(cols[ptsIdx], 10) || 0;
-    return { nick, points };
-  });
+
+  // 1) Парсинг CSV
+  let rows;
+  if (typeof Papa !== 'undefined') {
+    const parsed = Papa.parse(text, { skipEmptyLines: true });
+    rows = parsed.data;
+  } else {
+    rows = text.trim().split(/\r?\n/).map(r => r.split(','));
+  }
+  if (!rows || !rows.length) return [];
+
+  // 2) Індекси колонок
+  const hdr = rows[0];
+  const idxNick = hdr.indexOf('Nickname');
+  const idxPts  = hdr.indexOf('Points');
+  const idxAb   = hdr.indexOf('abonement_type'); // може не бути
+  if (idxNick < 0 || idxPts < 0) return [];
+
+  // 3) Маппінг у потрібну форму
+  return rows.slice(1).map(r => {
+    const nick = (r[idxNick] || '').trim();
+    const pts  = Number(r[idxPts] || 0);
+    const rank = rankFromPoints(pts);
+    const abonement = idxAb > -1 ? String(r[idxAb] || 'none').trim() : 'none';
+    return nick ? { nick, points: pts, rank, abonement } : null;
+  }).filter(Boolean);
 }
 
 // Back-compat для балансера: він імпортує саме fetchPlayerData

@@ -117,8 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
                    : winsB > winsA ? 'team2'
                    : 'tie';
 
+      const leagueForGamesLog = leagueSel.value === 'kids' ? 'kids' : 'sunday';
+
       const data = {
-        league: leagueSel.value,
+        league: leagueForGamesLog,
         team1: teams[vs[0]].map(p => p.nick).join(', '),
         team2: teams[vs[1]].map(p => p.nick).join(', '),
         winner,

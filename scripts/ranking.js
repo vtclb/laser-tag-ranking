@@ -50,13 +50,25 @@ window.addEventListener("storage", (e) => {
   }
 });
 export async function loadData(rankingURL, gamesURL) {
-  const [rText, gText] = await Promise.all([
-    fetch(rankingURL).then((r) => r.text()),
-    fetch(gamesURL).then((r) => r.text()),
-  ]);
-  const rank = Papa.parse(rText, { header: true, skipEmptyLines: true }).data;
-  const games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;
-  return { rank, games };
+  try {
+    const [rText, gText] = await Promise.all([
+      fetch(rankingURL).then((r) => r.text()),
+      fetch(gamesURL).then((r) => r.text()),
+    ]);
+    const rank = Papa.parse(rText, { header: true, skipEmptyLines: true }).data;
+    const games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;
+    return { rank, games };
+  } catch (err) {
+    console.error("Failed to load or parse ranking data", err);
+    const msg = "Не вдалося завантажити дані рейтингу";
+    if (typeof alert === "function") alert(msg);
+    if (typeof document !== "undefined") {
+      const div = document.createElement("div");
+      div.textContent = msg;
+      document.body.appendChild(div);
+    }
+    return { rank: [], games: [] };
+  }
 }
 
 export function computeStats(rank, games, { alias = {}, league } = {}) {

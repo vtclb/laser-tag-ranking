@@ -165,6 +165,12 @@ function createRow(p, i) {
   const tdNick = document.createElement("td");
   tdNick.className = cls.replace("rank-", "nick-");
   tdNick.style.cursor = "pointer";
+  tdNick.tabIndex = 0;
+  tdNick.setAttribute("role", "button");
+  tdNick.setAttribute(
+    "aria-label",
+    `Показати статистику гравця ${p.nickname}`
+  );
   tdNick.textContent = p.nickname;
   tr.appendChild(tdNick);
 
@@ -361,6 +367,14 @@ async function init() {
   rankingEl.addEventListener("click", (e) => {
     const cell = e.target.closest("td");
     if (cell && cell.className.startsWith("nick-")) {
+      showQuickStats(cell.textContent, e);
+    }
+  });
+  rankingEl.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const cell = e.target.closest("td");
+    if (cell && cell.className.startsWith("nick-")) {
+      e.preventDefault();
       showQuickStats(cell.textContent, e);
     }
   });

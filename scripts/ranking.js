@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getAvatarUrl, fetchOnce, CSV_URLS, clearFetchCache } from "./api.js";
+import { getAvatarUrl, fetchOnce, CSV_URLS, clearFetchCache, safeDel } from "./api.js";
 import { LEAGUE } from "./constants.js";
 
 const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
@@ -37,11 +37,7 @@ window.addEventListener("storage", (e) => {
     const [nick] = (e.newValue || "").split(":");
     if (nick) {
       clearFetchCache(`avatar:${nick}`);
-      try {
-        sessionStorage.removeItem(`avatar:${nick}`);
-      } catch (err) {
-        log('[ranking]', err);
-      }
+      safeDel(sessionStorage, `avatar:${nick}`);
     }
     refreshAvatars(nick);
   }

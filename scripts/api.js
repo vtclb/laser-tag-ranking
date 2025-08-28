@@ -1,6 +1,35 @@
 // scripts/api.js
 import { log } from './logger.js';
 
+// ---------------------- Safe storage helpers ----------------------
+export function safeGet(storage, key) {
+  if (!storage) return null;
+  try {
+    return storage.getItem(key);
+  } catch (err) {
+    log('[ranking]', err);
+    return null;
+  }
+}
+
+export function safeSet(storage, key, value) {
+  if (!storage) return;
+  try {
+    storage.setItem(key, value);
+  } catch (err) {
+    log('[ranking]', err);
+  }
+}
+
+export function safeDel(storage, key) {
+  if (!storage) return;
+  try {
+    storage.removeItem(key);
+  } catch (err) {
+    log('[ranking]', err);
+  }
+}
+
 // ---------------------- Глобальні утиліти ----------------------
 // Веб-апп GAS, якщо ще не визначено
 window.WEB_APP_URL =
@@ -59,11 +88,7 @@ const _fetchCache = {};
 
 export function clearFetchCache(key) {
   delete _fetchCache[key];
-  try {
-    sessionStorage.removeItem(key);
-  } catch (err) {
-    log('[ranking]', err);
-  }
+  safeDel(sessionStorage, key);
 }
 
 export async function fetchOnce(url, ttlMs = 0, fetchFn) {
@@ -71,33 +96,24 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
   const cached = _fetchCache[url];
   if (cached && now - cached.time < ttlMs) return cached.data;
 
-  let storageOk = true;
-  try {
-    const raw = sessionStorage.getItem(url);
-    if (raw) {
+  const raw = safeGet(sessionStorage, url);
+  if (raw) {
+    try {
       const obj = JSON.parse(raw);
       if (now - obj.time < ttlMs) {
         _fetchCache[url] = obj;
         return obj.data;
       }
-    }
-  } catch (e) {
-    log('[ranking]', e);
-    if (e && e.name === 'SecurityError') {
-      storageOk = false;
+    } catch (e) {
+      log('[ranking]', e);
     }
   }
 
   const data = await (fetchFn ? fetchFn() : fetch(url).then(r => r.text()));
-  if (!storageOk) return data;
 
   const info = { data, time: now };
   _fetchCache[url] = info;
-  try {
-    sessionStorage.setItem(url, JSON.stringify(info));
-  } catch (err) {
-    log('[ranking]', err);
-  }
+  safeSet(sessionStorage, url, JSON.stringify(info));
   return data;
 }
 

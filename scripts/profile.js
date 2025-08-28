@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, fetchOnce } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, fetchOnce, safeSet, safeGet } from './api.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
@@ -128,7 +128,7 @@ function askKey(nick) {
     document.getElementById('key-submit').addEventListener('click', () => {
       const key = document.getElementById('key-input').value.trim();
       if (key) {
-        localStorage.setItem(`profileKey:${nick}`, key);
+        safeSet(localStorage, `profileKey:${nick}`, key);
         box.remove();
         loadProfile(nick, key);
       }
@@ -185,7 +185,7 @@ async function loadProfile(nick, key = '') {
       const url = await uploadAvatar(nick, file);
       avatarUrl = url;
       document.getElementById('avatar').src = `${url}?t=${Date.now()}`;
-      localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
+      safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
       log('[ranking]', err);
       showToast('Помилка завантаження');
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showError('Нік не вказано');
     return;
   }
-  const key = localStorage.getItem(`profileKey:${nick}`) || '';
+  const key = safeGet(localStorage, `profileKey:${nick}`) || '';
   currentNick = nick;
   loadProfile(nick, key);
 });

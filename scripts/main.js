@@ -1,7 +1,7 @@
 // scripts/main.js
 import { log } from './logger.js';
 
-import { loadPlayers } from './api.js';
+import { loadPlayers, safeGet, safeSet } from './api.js';
 import { initLobby }   from './lobby.js';
 import { initScenario } from './scenario.js';
 import { initAvatarAdmin } from './avatarAdmin.js';
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cacheKey = csvLeague + CACHE_VERSION;
 
       let players;
-      const cached = sessionStorage.getItem(cacheKey);
+      const cached = safeGet(sessionStorage, cacheKey);
       if (cached) {
         try {
           players = JSON.parse(cached);
@@ -40,11 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (!players) {
         players = await loadPlayers(csvLeague);
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(players));
-        } catch (e) {
-          log('[ranking]', e);
-        }
+        safeSet(sessionStorage, cacheKey, JSON.stringify(players));
       }
 
       initLobby(players, csvLeague);          // Рендер лоббі

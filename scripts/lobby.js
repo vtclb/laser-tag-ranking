@@ -3,7 +3,7 @@ import { log } from './logger.js';
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile, fetchOnce } from './api.js';
+import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile, fetchOnce, safeDel } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 
 export let lobby = [];
@@ -225,7 +225,7 @@ export function clearLobby() {
   manualCount = 0;
   Object.keys(teams).forEach(k => { teams[k].length = 0; });
 
-  localStorage.removeItem(getLobbyStorageKey(undefined, uiLeague));
+  safeDel(localStorage, getLobbyStorageKey(undefined, uiLeague));
 
   renderLobby();
   renderTeams();

@@ -1,7 +1,7 @@
 // scripts/arena.js
 import { log } from './logger.js';
 
-import { saveResult, saveDetailedStats, normalizeLeague } from './api.js';
+import { saveResult, saveDetailedStats, normalizeLeague, safeSet } from './api.js';
 import { parseGamePdf }                   from './pdfParser.js';
 import { updateLobbyState }               from './lobby.js';
 import { teams }                          from './teams.js';
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       alert('Гру успішно збережено та рейтинги оновлено');
-      localStorage.setItem('gamedayRefresh', Date.now());
+      safeSet(localStorage, 'gamedayRefresh', Date.now());
       btnClear.click();
     } catch (err) {
       log('[ranking]', err);

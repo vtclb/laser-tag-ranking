@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS } from "./api.js";
+import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel } from "./api.js";
 (function () {
   const AVATAR_TTL = 6 * 60 * 60 * 1000;
   const CSV_TTL = 60 * 1000;
@@ -55,7 +55,7 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS } from "./api.js";
     if(e.key === 'avatarRefresh') {
       const [nick] = (e.newValue || '').split(':');
       if(nick){
-      try{ sessionStorage.removeItem(`avatar:${nick}`); }catch(err){ log('[ranking]', err); }
+      safeDel(sessionStorage, `avatar:${nick}`);
       }
       refreshAvatars(nick);
     }

@@ -1,6 +1,6 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js';
-import { uploadAvatar, getAvatarUrl, fetchOnce } from './api.js';
+import { uploadAvatar, getAvatarUrl, fetchOnce, safeSet } from './api.js';
 
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
@@ -136,7 +136,7 @@ export async function initAvatarAdmin(players = [], league = '') {
       try {
         const url = await uploadAvatar(nick, file);
         img.src = `${url}?t=${Date.now()}`;
-        localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
+        safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
         row.querySelector('input[type="file"]').value = '';
       } catch (err) {
         log('[ranking]', err);

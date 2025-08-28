@@ -314,3 +314,46 @@ document.addEventListener('click', async e => {
 
 document.getElementById('btn-clear-lobby')?.addEventListener('click', clearLobby);
 document.getElementById('btn-clear-lobby-dup')?.addEventListener('click', clearLobby);
+
+// Mobile shell
+(() => {
+  if (window.__balMobileInit) return;
+  window.__balMobileInit = true;
+
+  if (typeof window.clearLobby !== 'function') {
+    window.clearLobby = clearLobby;
+  }
+
+  const burger  = document.getElementById('ui-burger');
+  const panel   = document.getElementById('ui-panel');
+  const overlay = document.getElementById('ui-overlay');
+
+  const closePanel = () => {
+    if (panel) panel.hidden = true;
+    if (overlay) overlay.hidden = true;
+  };
+  const openPanel = () => {
+    if (panel) panel.hidden = false;
+    if (overlay) overlay.hidden = false;
+  };
+
+  burger?.addEventListener('click', openPanel);
+  overlay?.addEventListener('click', closePanel);
+  panel?.addEventListener('click', e => e.stopPropagation());
+
+  document.getElementById('ui-clear-lobby')?.addEventListener('click', () => {
+    if (typeof window.clearLobby === 'function') window.clearLobby();
+    else {
+      document.getElementById('lobby-list')?.replaceChildren();
+      document.querySelector('.bal__players')?.replaceChildren();
+    }
+    closePanel();
+  });
+
+  const fixVh = () => {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  };
+  fixVh();
+  window.addEventListener('resize', fixVh);
+})();

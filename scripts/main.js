@@ -5,6 +5,8 @@ import { initLobby }   from './lobby.js';
 import { initScenario } from './scenario.js';
 import { initAvatarAdmin } from './avatarAdmin.js';
 
+const CACHE_VERSION = window.CACHE_VERSION || '1';
+
 document.addEventListener('DOMContentLoaded', () => {
   const btnLoad   = document.getElementById('btn-load');
   const selLeague = document.getElementById('league');
@@ -24,7 +26,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const csvLeague = window.uiLeagueToCsv(selLeague.value);
-      const players = await loadPlayers(csvLeague);
+      const cacheKey = csvLeague + CACHE_VERSION;
+
+      let players;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          players = JSON.parse(cached);
+        } catch (e) {
+          // ignore bad cache
+        }
+      }
+      if (!players) {
+        players = await loadPlayers(csvLeague);
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(players));
+        } catch (e) {
+          // ignore storage errors
+        }
+      }
+
       initLobby(players, csvLeague);          // Рендер лоббі
       await initAvatarAdmin(players, selLeague.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»

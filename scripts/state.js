@@ -1,4 +1,5 @@
 import { log } from './logger.js';
+import { safeSet, safeGet } from './api.js';
 export function getLobbyStorageKey(date, league){
   const d = date || document.getElementById('date')?.value || new Date().toISOString().slice(0,10);
   const sel = document.getElementById('league');
@@ -7,20 +8,17 @@ export function getLobbyStorageKey(date, league){
 }
 
 export function saveLobbyState({lobby, teams, manualCount, league}){
-  try{
-    const key = getLobbyStorageKey(undefined, league);
-    localStorage.setItem(key, JSON.stringify({lobby, teams, manualCount}));
-  }catch(err){
-    log('[ranking]', err);
-  }
+  const key = getLobbyStorageKey(undefined, league);
+  safeSet(localStorage, key, JSON.stringify({lobby, teams, manualCount}));
 }
 
 export function loadLobbyState(league){
-  try{
-    const key = getLobbyStorageKey(undefined, league);
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  }catch(err){
+  const key = getLobbyStorageKey(undefined, league);
+  const data = safeGet(localStorage, key);
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch (err) {
     log('[ranking]', err);
     return null;
   }

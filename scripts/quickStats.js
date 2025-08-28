@@ -1,5 +1,6 @@
 // Quick stats popover
 import { log } from './logger.js';
+import { safeGet, safeSet } from './api.js';
 const STYLE_ID = "quick-stats-style";
 if (!document.getElementById(STYLE_ID)) {
   const style = document.createElement("style");
@@ -89,17 +90,17 @@ export async function showQuickStats(nick, evt) {
   };
 
   const key = `quickStats:${nick}`;
-  try {
-    const cached = localStorage.getItem(key);
-    if (cached) {
+  const cached = safeGet(localStorage, key);
+  if (cached) {
+    try {
       const obj = JSON.parse(cached);
       if (Date.now() - obj.ts < 6 * 60 * 60 * 1000) {
         render(obj.data);
         return;
       }
+    } catch (e) {
+      log('[ranking]', e);
     }
-  } catch (e) {
-    log('[ranking]', e);
   }
 
   try {
@@ -107,11 +108,7 @@ export async function showQuickStats(nick, evt) {
     const rows = Papa.parse(txt, { header: true, skipEmptyLines: true }).data;
     const data = computeStats(rows, nick);
     render(data);
-    try {
-      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
-    } catch (e) {
-      log('[ranking]', e);
-    }
+    safeSet(localStorage, key, JSON.stringify({ ts: Date.now(), data }));
   } catch (err) {
     log('[ranking]', err);
     if (typeof showToast === 'function') showToast('Не вдалося завантажити статистику');

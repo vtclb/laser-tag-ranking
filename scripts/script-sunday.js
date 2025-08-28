@@ -1,5 +1,6 @@
+import { CSV_URLS } from "./api.js";
 
-const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv";
+const csvUrl = CSV_URLS.sundaygames.ranking;
 
 function getRank(points) {
     if (points >= 1200) return { rank: "S-ранг", class: "rank-S", icon: "🟣" };

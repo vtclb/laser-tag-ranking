@@ -1,5 +1,5 @@
-import { getAvatarUrl, getPdfLinks, fetchOnce } from "./api.js";
-(function(){
+import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS } from "./api.js";
+(function () {
   const AVATAR_TTL = 6 * 60 * 60 * 1000;
   const CSV_TTL = 60 * 1000;
   const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
@@ -26,11 +26,7 @@ import { getAvatarUrl, getPdfLinks, fetchOnce } from "./api.js";
     const sel = nick ? `img.avatar-img[data-nick="${nick}"]` : 'img.avatar-img[data-nick]';
     document.querySelectorAll(sel).forEach(img=>setAvatar(img, img.dataset.nick));
   }
-    const rankingURLs = {
-      kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
-      sundaygames: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
-    };
-  const gamesURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
+
 
   const alias = {
     "Zavodchanyn": "Romario",
@@ -112,12 +108,13 @@ import { getAvatarUrl, getPdfLinks, fetchOnce } from "./api.js";
 
   async function loadData(){
     if(!dateInput.value) return; // require date
-    const rURL = rankingURLs[leagueSel.value];
+    const rURL = CSV_URLS[leagueSel.value].ranking;
+    const gURL = CSV_URLS[leagueSel.value].games;
     let rText, gText;
-    try{
+    try {
       [rText, gText] = await Promise.all([
         fetchOnce(rURL, CSV_TTL),
-        fetchOnce(gamesURL, CSV_TTL)
+        fetchOnce(gURL, CSV_TTL),
       ]);
     }catch(err){
       playersTb.innerHTML = '';

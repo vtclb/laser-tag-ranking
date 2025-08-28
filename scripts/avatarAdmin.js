@@ -1,24 +1,12 @@
 // scripts/avatarAdmin.js
-import { uploadAvatar, getAvatarUrl } from './api.js';
+import { uploadAvatar, getAvatarUrl, fetchOnce } from './api.js';
 
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 
 async function fetchAvatar(nick){
-  const key = `avatar:${nick}`;
-  const now = Date.now();
-  try{
-    const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
-    if(cached && now - cached.time < AVATAR_TTL) return cached.url;
-  }catch{}
-  try{
-    const url = await getAvatarUrl(nick);
-    sessionStorage.setItem(key, JSON.stringify({ url, time: now }));
-    return url;
-  }catch{
-    return null;
-  }
+  return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
 }
 
 async function setAvatar(img, nick){

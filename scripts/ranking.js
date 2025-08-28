@@ -1,32 +1,20 @@
-import { getAvatarUrl } from "./api.js";
+import { getAvatarUrl, fetchOnce } from "./api.js";
 import { LEAGUE } from "./constants.js";
 
 const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
 
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
+const CSV_TTL = 60 * 1000;
 
 async function fetchAvatar(nick) {
-  const key = `avatar:${nick}`;
-  const now = Date.now();
-  try {
-    const cached = JSON.parse(sessionStorage.getItem(key) || "null");
-    if (cached && now - cached.time < AVATAR_TTL) return cached;
-  } catch {}
-  try {
-    const url = await getAvatarUrl(nick);
-    const info = { url, time: now };
-    sessionStorage.setItem(key, JSON.stringify(info));
-    return info;
-  } catch {
-    return null;
-  }
+  return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
 }
 
 async function setAvatar(img, nick) {
   img.dataset.nick = nick;
-  const info = await fetchAvatar(nick);
-  if (info && info.url) {
-    img.src = `${info.url}?t=${Date.now()}`;
+  const url = await fetchAvatar(nick);
+  if (url) {
+    img.src = `${url}?t=${Date.now()}`;
   } else {
     img.src = DEFAULT_AVATAR_URL;
   }
@@ -46,15 +34,19 @@ function refreshAvatars(nick) {
 window.addEventListener("storage", (e) => {
   if (e.key === "avatarRefresh") {
     const [nick] = (e.newValue || "").split(":");
-    if (nick) sessionStorage.removeItem(`avatar:${nick}`);
+    if (nick) {
+      try {
+        sessionStorage.removeItem(`avatar:${nick}`);
+      } catch {}
+    }
     refreshAvatars(nick);
   }
 });
 export async function loadData(rankingURL, gamesURL) {
   try {
     const [rText, gText] = await Promise.all([
-      fetch(rankingURL).then((r) => r.text()),
-      fetch(gamesURL).then((r) => r.text()),
+      fetchOnce(rankingURL, CSV_TTL),
+      fetchOnce(gamesURL, CSV_TTL),
     ]);
     const rank = Papa.parse(rText, { header: true, skipEmptyLines: true }).data;
     const games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;

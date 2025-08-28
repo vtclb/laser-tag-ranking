@@ -1,30 +1,18 @@
-import { getAvatarUrl, getPdfLinks } from "./api.js";
+import { getAvatarUrl, getPdfLinks, fetchOnce } from "./api.js";
 (function(){
   const AVATAR_TTL = 6 * 60 * 60 * 1000;
+  const CSV_TTL = 60 * 1000;
   const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
 
   async function fetchAvatar(nick){
-    const key = `avatar:${nick}`;
-    const now = Date.now();
-    try{
-      const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
-      if(cached && now - cached.time < AVATAR_TTL) return cached;
-    }catch{}
-    try{
-      const url = await getAvatarUrl(nick);
-      const info = { url, time:now };
-      sessionStorage.setItem(key, JSON.stringify(info));
-      return info;
-    }catch{
-      return null;
-    }
+    return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
   }
 
   async function setAvatar(img, nick){
     img.dataset.nick = nick;
-    const info = await fetchAvatar(nick);
-    if(info && info.url){
-      img.src = `${info.url}?t=${Date.now()}`;
+    const url = await fetchAvatar(nick);
+    if(url){
+      img.src = `${url}?t=${Date.now()}`;
     }else{
       img.src = DEFAULT_AVATAR_URL;
     }
@@ -69,7 +57,9 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     if(e.key === 'gamedayRefresh') loadData();
     if(e.key === 'avatarRefresh') {
       const [nick] = (e.newValue || '').split(':');
-      if(nick) sessionStorage.removeItem(`avatar:${nick}`);
+      if(nick){
+        try{ sessionStorage.removeItem(`avatar:${nick}`); }catch{}
+      }
       refreshAvatars(nick);
     }
   });
@@ -126,8 +116,8 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     let rText, gText;
     try{
       [rText, gText] = await Promise.all([
-        fetch(rURL).then(r=>r.text()),
-        fetch(gamesURL).then(r=>r.text())
+        fetchOnce(rURL, CSV_TTL),
+        fetchOnce(gamesURL, CSV_TTL)
       ]);
     }catch(err){
       playersTb.innerHTML = '';

@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel } from "./api.js";
+import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCache } from "./api.js";
 (function () {
   const AVATAR_TTL = 6 * 60 * 60 * 1000;
   const CSV_TTL = 60 * 1000;
@@ -9,14 +9,23 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel } from "./api.j
     return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
   }
 
+  const avatarFailures = new Set();
+
   async function setAvatar(img, nick){
     img.dataset.nick = nick;
-    const url = await fetchAvatar(nick);
-    if(url){
-      img.src = `${url}?t=${Date.now()}`;
-    }else{
-      img.src = DEFAULT_AVATAR_URL;
+    let url;
+    for(let attempt=0; attempt<2 && !url; attempt++){
+      try{
+        url = await fetchAvatar(nick);
+        avatarFailures.delete(nick);
+      }catch(err){
+        if(!avatarFailures.has(nick)){
+          log('[ranking]', err);
+          avatarFailures.add(nick);
+        }
+      }
     }
+    img.src = url || DEFAULT_AVATAR_URL;
     img.onerror = () => {
       img.onerror = null;
       img.src = DEFAULT_AVATAR_URL;
@@ -55,7 +64,8 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel } from "./api.j
     if(e.key === 'avatarRefresh') {
       const [nick] = (e.newValue || '').split(':');
       if(nick){
-      safeDel(sessionStorage, `avatar:${nick}`);
+        clearFetchCache(`avatar:${nick}`);
+        safeDel(sessionStorage, `avatar:${nick}`);
       }
       refreshAvatars(nick);
     }

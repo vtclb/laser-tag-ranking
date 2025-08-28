@@ -9,7 +9,7 @@ export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
-let uiLeague = 'sunday';
+  let uiLeague = 'sundaygames';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
@@ -70,8 +70,8 @@ async function addPlayer(nick){
 }
 
 // Ініціалізує лоббі новим набором гравців
-export function initLobby(pl, league = uiLeague) {
-  uiLeague = String(league || '').toLowerCase() === 'kids' ? 'kids' : 'sunday';
+  export function initLobby(pl, league = uiLeague) {
+    uiLeague = String(league || '').toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
   players = pl;
   filtered = [...players];
   const saved = loadLobbyState(uiLeague);

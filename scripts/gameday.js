@@ -38,10 +38,10 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
     const sel = nick ? `img.avatar-img[data-nick="${nick}"]` : 'img.avatar-img[data-nick]';
     document.querySelectorAll(sel).forEach(img=>setAvatar(img, img.dataset.nick));
   }
-  const rankingURLs = {
-    kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
-    sunday: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
-  };
+    const rankingURLs = {
+      kids: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
+      sundaygames: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv"
+    };
   const gamesURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
 
   const alias = {
@@ -117,8 +117,7 @@ import { getAvatarUrl, getPdfLinks } from "./api.js";
   }
 
   function normalizeLeagueForFilter(v){
-    const s = String(v || '').toLowerCase();
-    return s === 'sundaygames' ? 'sunday' : s;
+    return String(v || '').toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
   }
 
   async function loadData(){

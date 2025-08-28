@@ -46,7 +46,9 @@ async function addPlayer(nick){
         players.push(res);
         filtered.push(res);
       }
-    } catch {}
+    } catch (err) {
+      console.debug('[ranking]', err);
+    }
   }
   if (!res) {
     alert('Гравця не знайдено');
@@ -195,10 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
           newNick.value = '';
           newAge.value = '';
         } else {
-          alert('Не вдалося створити гравця');
+          showToast('Не вдалося створити гравця');
         }
       } catch (err) {
-        alert('Не вдалося створити гравця');
+        console.debug('[ranking]', err);
+        showToast('Не вдалося створити гравця');
       }
     });
   }
@@ -414,10 +417,11 @@ function onLobbyAction(e) {
         player.abonement = newType;
         const full = players.find(p => p.nick === player.nick);
         if (full) full.abonement = newType;
-        alert('Абонемент оновлено');
+        showToast('Абонемент оновлено');
       } catch (err) {
         sel.value = prevType;
-        alert('Помилка оновлення абонемента');
+        console.debug('[ranking]', err);
+        showToast('Помилка оновлення абонемента');
       }
     })();
   }
@@ -435,7 +439,8 @@ document.addEventListener('click', async e => {
       cell.innerHTML = `<span class='key'>${key}</span><button class='copy-key'>Copy</button>`;
     }
   } catch (err) {
-    alert('Не вдалося видати ключ');
+    console.debug('[ranking]', err);
+    showToast('Не вдалося видати ключ');
   }
 });
 
@@ -448,7 +453,7 @@ document.addEventListener('click', async e => {
   try {
     await navigator.clipboard.writeText(key);
   } catch (err) {
-    // ignore
+    console.debug('[ranking]', err);
   }
 });
 

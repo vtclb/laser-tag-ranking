@@ -84,7 +84,7 @@ export async function showQuickStats(nick, evt) {
       }
     }
   } catch (e) {
-    /* ignore */
+    console.debug('[ranking]', e);
   }
 
   try {
@@ -95,9 +95,11 @@ export async function showQuickStats(nick, evt) {
     try {
       localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
     } catch (e) {
-      /* ignore */
+      console.debug('[ranking]', e);
     }
   } catch (err) {
+    console.debug('[ranking]', err);
+    showToast('Не вдалося завантажити статистику');
     render(null);
   }
 }

@@ -10,7 +10,7 @@ export function saveLobbyState({lobby, teams, manualCount, league}){
     const key = getLobbyStorageKey(undefined, league);
     localStorage.setItem(key, JSON.stringify({lobby, teams, manualCount}));
   }catch(err){
-    console.error('Failed to save lobby state', err);
+    console.debug('[ranking]', err);
   }
 }
 
@@ -20,7 +20,7 @@ export function loadLobbyState(league){
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   }catch(err){
-    console.error('Failed to load lobby state', err);
+    console.debug('[ranking]', err);
     return null;
   }
 }

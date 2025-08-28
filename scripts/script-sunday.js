@@ -37,7 +37,10 @@ function loadRanking() {
                 table.appendChild(row);
             });
         })
-        .catch(error => console.error("Помилка завантаження даних:", error));
+        .catch(err => {
+            console.debug('[ranking]', err);
+            showToast('Помилка завантаження даних');
+        });
 }
 
 function togglePlayers() {

@@ -58,7 +58,7 @@ import { getAvatarUrl, getPdfLinks, fetchOnce } from "./api.js";
     if(e.key === 'avatarRefresh') {
       const [nick] = (e.newValue || '').split(':');
       if(nick){
-        try{ sessionStorage.removeItem(`avatar:${nick}`); }catch{}
+      try{ sessionStorage.removeItem(`avatar:${nick}`); }catch(err){ console.debug('[ranking]', err); }
       }
       refreshAvatars(nick);
     }
@@ -122,10 +122,8 @@ import { getAvatarUrl, getPdfLinks, fetchOnce } from "./api.js";
     }catch(err){
       playersTb.innerHTML = '';
       matchesTb.innerHTML = '';
-      console.error('Failed to load gameday data', err);
-      if(typeof alert === 'function'){
-        alert('Failed to load gameday data. Please try again later.');
-      }
+      console.debug('[ranking]', err);
+      showToast('Failed to load gameday data. Please try again later.');
       return;
     }
     const ranking = Papa.parse(rText,{header:true,skipEmptyLines:true}).data;
@@ -134,7 +132,7 @@ import { getAvatarUrl, getPdfLinks, fetchOnce } from "./api.js";
     try{
       pdfLinks = await getPdfLinks({ league: leagueSel.value, date: dateInput.value });
     }catch(err){
-      console.error('Failed to load PDF links', err);
+      console.debug('[ranking]', err);
     }
 
     const players = {};

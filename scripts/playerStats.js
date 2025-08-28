@@ -31,6 +31,8 @@ function init(){
       table.appendChild(tb);
       body.appendChild(table);
     }catch(err){
+      console.debug('[ranking]', err);
+      showToast('Помилка завантаження');
       body.textContent='Помилка завантаження';
     }
   };

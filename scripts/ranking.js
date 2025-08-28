@@ -149,6 +149,24 @@ export function renderChart(list, chartEl) {
 const rowMap = new Map();
 const dataMap = new Map();
 
+let players = [];
+let searchInput;
+let filterRows = () => {};
+const sortState = { key: "points", dir: -1 };
+let rankingEl;
+
+function updateArrows() {
+  document.querySelectorAll("thead th[data-key]").forEach((th) => {
+    const arrow = th.querySelector(".sort-arrow");
+    if (!arrow) return;
+    if (th.dataset.key === sortState.key) {
+      arrow.textContent = sortState.dir === 1 ? "\u25B2" : "\u25BC";
+    } else {
+      arrow.textContent = "";
+    }
+  });
+}
+
 function createRow(p, i) {
   const tr = document.createElement("tr");
   const cls = getRankClass(p.points);
@@ -288,12 +306,14 @@ export function renderTopMVP(list, container) {
 }
 
 export function initSearch(inputEl, rowSelector) {
-  inputEl.addEventListener("input", (e) => {
-    const q = e.target.value.toLowerCase();
+  searchInput = inputEl;
+  filterRows = () => {
+    const q = searchInput.value.toLowerCase();
     document.querySelectorAll(rowSelector).forEach((tr) => {
       tr.style.display = tr.textContent.toLowerCase().includes(q) ? "" : "none";
     });
-  });
+  };
+  inputEl.addEventListener("input", filterRows);
 }
 
 export function initToggle(btnEl, rowSelector) {
@@ -351,18 +371,21 @@ async function init() {
     CSV_URLS[LEAGUE].ranking,
     CSV_URLS[LEAGUE].games
   );
-  const { players, totalGames, totalRounds, minDate, maxDate } = computeStats(
-    rank,
-    games,
-    { alias: cfg.alias, league: LEAGUE }
-  );
+  const {
+    players: pl,
+    totalGames,
+    totalRounds,
+    minDate,
+    maxDate,
+  } = computeStats(rank, games, { alias: cfg.alias, league: LEAGUE });
+  players = pl.map((p, i) => ({ ...p, _index: i }));
   document.getElementById("summary").textContent =
     `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
   document.getElementById("season-info").textContent =
     `Перший сезон — старт ${formatFull(minDate)}`;
   renderTopMVP(players, document.getElementById("top-mvp"));
   renderChart(players, document.getElementById("rank-chart"));
-  const rankingEl = document.getElementById("ranking");
+  rankingEl = document.getElementById("ranking");
   rankingEl.addEventListener("click", (e) => {
     const cell = e.target.closest("td");
     if (cell && cell.className.startsWith("nick-")) {
@@ -377,9 +400,57 @@ async function init() {
       showQuickStats(cell.textContent, e);
     }
   });
+  const thead = document.querySelector("thead");
+  thead.addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-key]");
+    if (!th) return;
+    const key = th.dataset.key;
+    if (sortState.key === key) {
+      sortState.dir *= -1;
+    } else {
+      sortState.key = key;
+      sortState.dir = key === "points" ? -1 : 1;
+    }
+    const dir = sortState.dir;
+    players.sort((a, b) => {
+      let res = 0;
+      switch (key) {
+        case "place":
+          res = a._index - b._index;
+          break;
+        case "nickname":
+          res = a.nickname.localeCompare(b.nickname);
+          break;
+        case "rank":
+          res = getRankClass(a.points).localeCompare(getRankClass(b.points));
+          break;
+        case "points":
+          res = a.points - b.points;
+          break;
+        case "games":
+          res = a.games - b.games;
+          break;
+        case "winRate":
+          res = parseFloat(a.winRate) - parseFloat(b.winRate);
+          break;
+        case "mvp":
+          res = a.mvp - b.mvp;
+          break;
+        default:
+          res = 0;
+      }
+      if (res === 0) res = a._index - b._index;
+      return res * dir;
+    });
+    renderTable(players, rankingEl);
+    filterRows();
+    updateArrows();
+  });
   renderTable(players, rankingEl);
   initSearch(document.getElementById("search"), "#ranking tr");
   initToggle(document.getElementById("toggle"), "#ranking tr");
+  filterRows();
+  updateArrows();
 }
 
 document.addEventListener("DOMContentLoaded", init);

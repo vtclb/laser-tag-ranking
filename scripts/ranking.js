@@ -251,11 +251,11 @@ function createRow(p, i) {
   const tdNick = document.createElement("td");
   tdNick.className = cls.replace("rank-", "nick-");
   tdNick.style.cursor = "pointer";
-  tdNick.tabIndex = 0;
   tdNick.setAttribute("role", "button");
+  tdNick.setAttribute("tabindex", "0");
   tdNick.setAttribute(
     "aria-label",
-    `Показати статистику гравця ${p.nickname}`
+    `Показати статистику ${p.nickname}`
   );
   tdNick.textContent = p.nickname;
   tr.appendChild(tdNick);
@@ -443,21 +443,19 @@ async function init() {
     `Перший сезон — старт ${formatFull(minDate)}`;
   renderTopMVP(allPlayers, document.getElementById("top-mvp"));
   renderChart(allPlayers, document.getElementById("rank-chart"));
-  rankingEl = document.getElementById("ranking");
-  rankingEl.addEventListener("click", (e) => {
+  rankingEl = document.querySelector("#ranking tbody");
+  const onRankInteract = (e) => {
     const cell = e.target.closest("td");
-    if (cell && cell.className.startsWith("nick-")) {
+    if (!cell || !cell.className.startsWith("nick-")) return;
+    if (e.type === "click") {
       showQuickStats(cell.textContent, e);
-    }
-  });
-  rankingEl.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter" && e.key !== " ") return;
-    const cell = e.target.closest("td");
-    if (cell && cell.className.startsWith("nick-")) {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       showQuickStats(cell.textContent, e);
     }
-  });
+  };
+  rankingEl.addEventListener("click", onRankInteract);
+  rankingEl.addEventListener("keydown", onRankInteract);
   const thead = document.querySelector("thead");
   verifySortableHeaders();
   thead.addEventListener("click", (e) => {

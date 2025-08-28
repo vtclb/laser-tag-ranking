@@ -2,7 +2,7 @@
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, fetchPlayerData, adminCreatePlayer, issueAccessKey, getAvatarUrl } from './api.js';
+import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 
 export let lobby = [];
@@ -42,8 +42,27 @@ async function setAvatar(img, nick) {
 
 async function addPlayer(nick){
   if(!nick) return;
-  const res = await fetchPlayerData(nick);
-  lobby.push({...res, team:null});
+  if (lobby.some(p => p.nick === nick)) {
+    alert('Гравець вже у лобі');
+    return;
+  }
+  let res = players.find(p => p.nick === nick);
+  if (!res) {
+    try {
+      const data = await getProfile({ nick });
+      const profile = data && data.profile;
+      if (profile) {
+        const pts = Number(profile.points || 0);
+        const rank = pts < 200 ? 'D' : pts < 500 ? 'C' : pts < 800 ? 'B' : pts < 1200 ? 'A' : 'S';
+        res = { nick, pts, rank, abonement: profile.abonement?.type || 'none' };
+      }
+    } catch {}
+  }
+  if (!res) {
+    alert('Гравця не знайдено');
+    return;
+  }
+  lobby.push({ ...res, team: null });
   renderLobby();
 }
 

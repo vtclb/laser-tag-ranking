@@ -1,4 +1,4 @@
-import { getAvatarUrl, fetchOnce, CSV_URLS } from "./api.js";
+import { getAvatarUrl, fetchOnce, CSV_URLS, clearFetchCache } from "./api.js";
 import { LEAGUE } from "./constants.js";
 
 const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
@@ -14,7 +14,7 @@ async function setAvatar(img, nick) {
   img.dataset.nick = nick;
   const url = await fetchAvatar(nick);
   if (url) {
-    img.src = `${url}?t=${Date.now()}`;
+    img.src = url;
   } else {
     img.src = DEFAULT_AVATAR_URL;
   }
@@ -35,6 +35,7 @@ window.addEventListener("storage", (e) => {
   if (e.key === "avatarRefresh") {
     const [nick] = (e.newValue || "").split(":");
     if (nick) {
+      clearFetchCache(`avatar:${nick}`);
       try {
         sessionStorage.removeItem(`avatar:${nick}`);
       } catch (err) {

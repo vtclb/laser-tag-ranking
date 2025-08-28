@@ -63,26 +63,19 @@ export async function showQuickStats(nick, evt) {
       v === undefined || v === null || Number.isNaN(v) || v === "N/A"
         ? "N/A"
         : v;
-    const table = data.lastMatches && data.lastMatches.length
-      ? `<table><thead><tr><th>Date</th><th>Teams</th><th>Score</th><th>Result</th><th>MVP</th></tr></thead><tbody>` +
-        data.lastMatches
-          .map(
-            (m) =>
-              `<tr><td>${m.date}</td><td>${m.teams}</td><td>${m.score}</td><td>${m.result}</td><td>${m.mvp}</td></tr>`
-          )
-          .join("") +
-        "</tbody></table>"
-      : "";
+    const winsLosses =
+      val(data.wins) === "N/A" || val(data.losses) === "N/A"
+        ? "N/A"
+        : `${val(data.wins)}/${val(data.losses)}`;
     el.innerHTML = `<h4>${nick}</h4>
     <ul>
+      <li>Last on: ${val(data.lastOn)}</li>
       <li>Matches: ${val(data.matches)}</li>
       <li>Rounds: ${val(data.rounds)}</li>
-      <li>Wins/Losses: ${val(data.wins)}/${val(data.losses)}</li>
+      <li>Wins/Losses: ${winsLosses}</li>
       <li>K/D: ${val(data.kd)}</li>
       <li>Accuracy: ${val(data.accuracy)}</li>
-      <li>Top teammates: ${data.teammates.length ? data.teammates.join(", ") : "N/A"}</li>
     </ul>
-    ${table}
     <button id="qs-open">Profile</button>`;
     document.getElementById("qs-open").addEventListener("click", () => {
       window.location.href = `profile.html?nick=${encodeURIComponent(nick)}`;
@@ -124,8 +117,8 @@ function computeStats(rows, nick) {
   let kills = 0;
   let deaths = 0;
   let valid = true;
-  const mates = {};
-  const recent = [];
+  let lastOnTs = 0;
+  let lastOn = null;
   rows.forEach((g) => {
     const t1 = (g.Team1 || "")
       .split(",")
@@ -135,18 +128,13 @@ function computeStats(rows, nick) {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    let team, opp;
+    let team;
     if (t1.includes(nick)) {
       team = t1;
-      opp = t2;
     } else if (t2.includes(nick)) {
       team = t2;
-      opp = t1;
     } else return;
     matches++;
-    team.forEach((n) => {
-      if (n !== nick) mates[n] = (mates[n] || 0) + 1;
-    });
     const s1 = parseInt(g.Score1, 10);
     const s2 = parseInt(g.Score2, 10);
     const winner = g.Winner;
@@ -162,28 +150,21 @@ function computeStats(rows, nick) {
     } else {
       valid = false;
     }
-    let result = "N/A";
     if (winner === "team1" || winner === "team2") {
       const pt = team === t1 ? "team1" : "team2";
       if (winner === pt) {
         wins++;
-        result = "Win";
       } else {
         losses++;
-        result = "Loss";
       }
     } else {
       valid = false;
     }
     const ts = new Date(g.Timestamp).getTime();
-    recent.push({
-      ts,
-      date: g.Timestamp || "N/A",
-      teams: `${t1.join(", ")} vs ${t2.join(", ")}`,
-      score: !isNaN(s1) && !isNaN(s2) ? `${s1}-${s2}` : "N/A",
-      result,
-      mvp: g.MVP || "N/A",
-    });
+    if (!isNaN(ts) && ts > lastOnTs) {
+      lastOnTs = ts;
+      lastOn = g.Timestamp;
+    }
   });
   const kd =
     !valid || deaths === 0
@@ -195,19 +176,14 @@ function computeStats(rows, nick) {
     !valid || kills + deaths === 0
       ? "N/A"
       : ((kills / (kills + deaths)) * 100).toFixed(2) + "%";
-  recent.sort((a, b) => b.ts - a.ts);
   return {
+    lastOn: lastOn || "N/A",
     matches: valid ? matches : "N/A",
     rounds: valid ? rounds : "N/A",
     wins: valid ? wins : "N/A",
     losses: valid ? losses : "N/A",
     kd,
     accuracy,
-    teammates: Object.entries(mates)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([n, c]) => `${n} (${c})`),
-    lastMatches: recent.slice(0, 5).map(({ ts, ...rest }) => rest),
   };
 }
 

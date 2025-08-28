@@ -1,6 +1,6 @@
 // scripts/arena.js
 
-import { saveResult, saveDetailedStats } from './api.js';
+import { saveResult, saveDetailedStats, normalizeLeague } from './api.js';
 import { parseGamePdf }                   from './pdfParser.js';
 import { updateLobbyState }               from './lobby.js';
 import { teams }                          from './teams.js';
@@ -117,10 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
                    : winsB > winsA ? 'team2'
                    : 'tie';
 
-      const leagueForGamesLog = leagueSel.value === 'kids' ? 'kids' : 'sunday';
+      const league = normalizeLeague(leagueSel.value);
 
       const data = {
-        league: leagueForGamesLog,
+        league,
         team1: teams[vs[0]].map(p => p.nick).join(', '),
         team2: teams[vs[1]].map(p => p.nick).join(', '),
         winner,

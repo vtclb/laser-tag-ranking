@@ -105,9 +105,7 @@ export async function fetchPlayerData(league) {
 // ---------------------- Збереження результату ----------------------
 export async function saveResult(data) {
   const payload = { ...(data || {}) };
-  if (payload.league && !['kids', 'sunday'].includes(payload.league)) {
-    payload.league = 'sunday';
-  }
+  if (payload.league) payload.league = normalizeLeague(payload.league);
   const body = new URLSearchParams(payload);
   const res = await fetch(PROXY_URL, {
     method: 'POST',

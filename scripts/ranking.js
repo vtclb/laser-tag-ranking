@@ -70,7 +70,8 @@ export async function loadData(rankingURL, gamesURL) {
 export function computeStats(rank, games, { alias = {}, league } = {}) {
   const stats = {};
   let totalRounds = 0;
-  const filtered = league ? games.filter((g) => g.League === league) : games;
+  const leagueKey = league === 'sundaygames' ? 'olds' : league;
+  const filtered = league ? games.filter((g) => g.League === leagueKey) : games;
   filtered.forEach((g) => {
     const t1 = g.Team1.split(",").map((n) => alias[n.trim()] || n.trim());
     const t2 = g.Team2.split(",").map((n) => alias[n.trim()] || n.trim());

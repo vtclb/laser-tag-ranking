@@ -5,28 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Балансер команд</title>
   <link rel="stylesheet" href="balancer.css">
-  <link rel="stylesheet" href="styles/balance-mobile.css">
+  <link rel="stylesheet" href="styles/balance.css">
 </head>
-<body>
-  <header class="blc-top sticky">
-    <div class="blc-row">
-      <select id="league">
-        <option value="kids">Молодша ліга</option>
-        <option value="sunday">Старша ліга</option>
-      </select>
-      <div class="blc-actions">
-        <button id="btn-load">Завантажити гравців</button>
-        <input type="text" id="new-nick" placeholder="Нік">
-        <input type="number" id="new-age" placeholder="Вік" min="0">
-        <button id="btn-create">Створити гравця</button>
-        <button id="btn-clear-lobby" class="danger">Очистити лоббі</button>
-      </div>
-    </div>
+<body class="bal">
+  <header>
+    <button id="ui-burger"></button>
   </header>
+  <div id="ui-panel">
+    <section class="bal__card">
+      <div class="blc-row">
+        <select id="league">
+          <option value="kids">Молодша ліга</option>
+          <option value="sunday">Старша ліга</option>
+        </select>
+        <div class="blc-actions">
+          <button id="btn-load">Завантажити гравців</button>
+          <input type="text" id="new-nick" placeholder="Нік">
+          <input type="number" id="new-age" placeholder="Вік" min="0">
+          <button id="btn-create">Створити гравця</button>
+          <button id="btn-clear-lobby" class="danger">Очистити лоббі</button>
+        </div>
+      </div>
+    </section>
 
-  <main class="container blc-container">
-    <!-- 1. Вибір гравців -->
-    <section class="blc-accordion" id="sec-player-picker">
+    <section class="bal__card" id="sec-player-picker">
       <h2 class="blc-acc-head">Вибір гравців</h2>
       <div class="blc-acc-body scroll-pane">
         <section id="select-area" class="card hidden">
@@ -46,8 +48,7 @@
       </div>
     </section>
 
-    <!-- 2. Лоббі дня -->
-    <section class="blc-accordion open" id="sec-lobby">
+    <section class="bal__card open" id="sec-lobby">
       <h2 class="blc-acc-head">Лоббі дня</h2>
       <div class="blc-acc-body">
         <section id="lobby-area" class="card">
@@ -74,8 +75,7 @@
       </div>
     </section>
 
-    <!-- 3. Сценарій -->
-    <section class="blc-accordion" id="sec-scenario">
+    <section class="bal__card" id="sec-scenario">
       <h2 class="blc-acc-head">Режим гри</h2>
       <div class="blc-acc-body">
         <section id="scenario-area" class="card hidden">
@@ -93,11 +93,9 @@
       </div>
     </section>
 
-    <!-- 4. Команди -->
-    <section id="teams-area" class="grid hidden"></section>
+    <section id="teams-area" class="bal__card grid hidden"></section>
 
-    <!-- 5. Вибір команд для арени -->
-    <section id="arena-select" class="card hidden">
+    <section id="arena-select" class="bal__card card hidden">
       <h2>Виберіть дві команди</h2>
       <div id="arena-checkboxes" class="flex gap-2"></div>
       <div class="actions">
@@ -105,8 +103,7 @@
       </div>
     </section>
 
-    <!-- 6. Арена -->
-    <section id="arena-area" class="card hidden">
+    <section id="arena-area" class="bal__card card hidden">
       <h2>Арена: <span id="arena-vs"></span></h2>
       <label for="mvp">MVP:</label>
       <select id="mvp"></select>
@@ -124,8 +121,7 @@
       </div>
     </section>
 
-    <!-- 7. Адміністрування аватарів -->
-    <section class="blc-accordion" id="sec-avatar-admin">
+    <section class="bal__card" id="sec-avatar-admin">
       <h2 class="blc-acc-head">Керування аватарами</h2>
       <section id="avatar-admin" class="card">
         <div class="blc-acc-body">
@@ -140,8 +136,11 @@
         </div>
       </section>
     </section>
-  </main>
+  </div>
 
+  <main class="bal__main"></main>
+
+  <div class="bal__overlay" id="ui-overlay" hidden></div>
 
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -163,3 +162,4 @@
   <script type="module" src="scripts/main.js"></script>
 </body>
 </html>
+

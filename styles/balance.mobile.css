@@ -1,0 +1,24 @@
+/* Mobile specific styles for the balance page */
+@media (max-width: 600px) {
+  .bal__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bal__actions {
+    flex-direction: column;
+  }
+
+  .bal__actions button,
+  .bal__actions input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 8px;
+  }
+
+  .bal__table th,
+  .bal__table td {
+    padding: 4px;
+  }
+}

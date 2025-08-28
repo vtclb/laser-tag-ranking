@@ -11,28 +11,28 @@
   <header>
     <button id="ui-burger"></button>
   </header>
-  <div id="ui-panel">
+  <div id="ui-panel" class="bal__panel">
     <section class="bal__card">
-      <div class="blc-row">
+      <div class="bal__row">
         <select id="league">
           <option value="kids">Молодша ліга</option>
           <option value="sunday">Старша ліга</option>
         </select>
-        <div class="blc-actions">
+        <div class="bal__actions">
           <button id="btn-load">Завантажити гравців</button>
           <input type="text" id="new-nick" placeholder="Нік">
           <input type="number" id="new-age" placeholder="Вік" min="0">
           <button id="btn-create">Створити гравця</button>
-          <button id="btn-clear-lobby" class="danger">Очистити лоббі</button>
+          <button id="btn-clear-lobby" class="btn--danger">Очистити лоббі</button>
         </div>
       </div>
     </section>
 
     <section class="bal__card" id="sec-player-picker">
-      <h2 class="blc-acc-head">Вибір гравців</h2>
-      <div class="blc-acc-body scroll-pane">
+      <h2 class="bal__acc-head">Вибір гравців</h2>
+      <div class="bal__acc-body scroll-pane">
         <section id="select-area" class="card hidden">
-          <div class="blc-row">
+          <div class="bal__row">
             <input type="text" id="player-search" placeholder="🔍 Пошук гравця..." autocomplete="off">
             <div class="sort-controls">
               <button id="btn-sort-name">А–Я</button>
@@ -49,35 +49,35 @@
     </section>
 
     <section class="bal__card open" id="sec-lobby">
-      <h2 class="blc-acc-head">Лоббі дня</h2>
-      <div class="blc-acc-body">
+      <h2 class="bal__acc-head">Лоббі дня</h2>
+      <div class="bal__acc-body">
         <section id="lobby-area" class="card">
           <div class="add-player">
             <input type="text" id="addPlayerInput" placeholder="Нік гравця">
             <button id="addPlayerBtn">Add</button>
           </div>
-          <div class="lobby-table-wrap">
-            <table class="lobby-table table">
+          <div class="bal__table-wrap">
+            <table class="bal__table table">
               <thead>
                 <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>Ключ</th><th>→Команда / ✕</th></tr>
               </thead>
               <tbody id="lobby-list"></tbody>
             </table>
           </div>
-          <div class="lobby-cards only-mobile"></div>
+          <div class="bal__players only-mobile"></div>
           <p class="text-muted">
             Гравців: <span id="lobby-count">0</span> |
             Сума: <span id="lobby-sum">0</span> |
             Середній: <span id="lobby-avg">0</span>
           </p>
-          <button id="btn-clear-lobby-dup" class="danger only-mobile">Очистити лоббі</button>
+          <button id="btn-clear-lobby-dup" class="btn--danger only-mobile">Очистити лоббі</button>
         </section>
       </div>
     </section>
 
     <section class="bal__card" id="sec-scenario">
-      <h2 class="blc-acc-head">Режим гри</h2>
-      <div class="blc-acc-body">
+      <h2 class="bal__acc-head">Режим гри</h2>
+      <div class="bal__acc-body">
         <section id="scenario-area" class="card hidden">
           <label for="teamsize">Кількість команд:</label>
           <select id="teamsize">
@@ -85,7 +85,7 @@
             <option value="3">3 команди</option>
             <option value="4">4 команди</option>
           </select>
-          <div class="blc-actions">
+          <div class="bal__actions">
             <button id="btn-auto">Авто-баланс</button>
             <button id="btn-manual">Ручне формування</button>
           </div>
@@ -122,9 +122,9 @@
     </section>
 
     <section class="bal__card" id="sec-avatar-admin">
-      <h2 class="blc-acc-head">Керування аватарами</h2>
+      <h2 class="bal__acc-head">Керування аватарами</h2>
       <section id="avatar-admin" class="card">
-        <div class="blc-acc-body">
+        <div class="bal__acc-body">
           <p class="text-muted">Обери мініатюру для гравця, натисни «Зберегти аватари» та зображення оновиться автоматично.</p>
           <table class="table avatar-table">
             <tbody id="avatar-list"></tbody>

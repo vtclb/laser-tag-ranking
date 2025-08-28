@@ -10,6 +10,8 @@ if (!document.getElementById(STYLE_ID)) {
   #quick-stats ul{list-style:none;padding:0;margin:0;}
   #quick-stats li{margin:0.25rem 0;}
   #quick-stats button{margin-top:0.5rem;padding:0.25rem 0.5rem;background:#444;border:1px solid #f39c12;color:#f39c12;font-family:inherit;cursor:pointer;}
+  #quick-stats table{width:100%;border-collapse:collapse;margin-top:0.5rem;}
+  #quick-stats th,#quick-stats td{border:1px solid #f39c12;padding:0.25rem;text-align:center;}
   .qs-loading{display:flex;gap:4px;justify-content:center;}
   .qs-loading div{width:6px;height:6px;background:#f39c12;animation:qs-blink 1s infinite;}
   .qs-loading div:nth-child(2){animation-delay:0.2s;}
@@ -59,14 +61,26 @@ export async function showQuickStats(nick, evt) {
       v === undefined || v === null || Number.isNaN(v) || v === "N/A"
         ? "N/A"
         : v;
+    const table = data.lastMatches && data.lastMatches.length
+      ? `<table><thead><tr><th>Date</th><th>Teams</th><th>Score</th><th>Result</th><th>MVP</th></tr></thead><tbody>` +
+        data.lastMatches
+          .map(
+            (m) =>
+              `<tr><td>${m.date}</td><td>${m.teams}</td><td>${m.score}</td><td>${m.result}</td><td>${m.mvp}</td></tr>`
+          )
+          .join("") +
+        "</tbody></table>"
+      : "";
     el.innerHTML = `<h4>${nick}</h4>
     <ul>
       <li>Matches: ${val(data.matches)}</li>
       <li>Rounds: ${val(data.rounds)}</li>
       <li>Wins/Losses: ${val(data.wins)}/${val(data.losses)}</li>
       <li>K/D: ${val(data.kd)}</li>
+      <li>Accuracy: ${val(data.accuracy)}</li>
       <li>Top teammates: ${data.teammates.length ? data.teammates.join(", ") : "N/A"}</li>
     </ul>
+    ${table}
     <button id="qs-open">Profile</button>`;
     document.getElementById("qs-open").addEventListener("click", () => {
       window.location.href = `profile.html?nick=${encodeURIComponent(nick)}`;
@@ -99,7 +113,7 @@ export async function showQuickStats(nick, evt) {
     }
   } catch (err) {
     console.debug('[ranking]', err);
-    showToast('Не вдалося завантажити статистику');
+    if (typeof showToast === 'function') showToast('Не вдалося завантажити статистику');
     render(null);
   }
 }
@@ -113,6 +127,7 @@ function computeStats(rows, nick) {
   let deaths = 0;
   let valid = true;
   const mates = {};
+  const recent = [];
   rows.forEach((g) => {
     const t1 = (g.Team1 || "")
       .split(",")
@@ -136,6 +151,7 @@ function computeStats(rows, nick) {
     });
     const s1 = parseInt(g.Score1, 10);
     const s2 = parseInt(g.Score2, 10);
+    const winner = g.Winner;
     if (!isNaN(s1) && !isNaN(s2)) {
       rounds += s1 + s2;
       if (team === t1) {
@@ -148,14 +164,28 @@ function computeStats(rows, nick) {
     } else {
       valid = false;
     }
-    const winner = g.Winner;
+    let result = "N/A";
     if (winner === "team1" || winner === "team2") {
       const pt = team === t1 ? "team1" : "team2";
-      if (winner === pt) wins++;
-      else losses++;
+      if (winner === pt) {
+        wins++;
+        result = "Win";
+      } else {
+        losses++;
+        result = "Loss";
+      }
     } else {
       valid = false;
     }
+    const ts = new Date(g.Timestamp).getTime();
+    recent.push({
+      ts,
+      date: g.Timestamp || "N/A",
+      teams: `${t1.join(", ")} vs ${t2.join(", ")}`,
+      score: !isNaN(s1) && !isNaN(s2) ? `${s1}-${s2}` : "N/A",
+      result,
+      mvp: g.MVP || "N/A",
+    });
   });
   const kd =
     !valid || deaths === 0
@@ -163,16 +193,23 @@ function computeStats(rows, nick) {
         ? "Inf"
         : "N/A"
       : (kills / deaths).toFixed(2);
+  const accuracy =
+    !valid || kills + deaths === 0
+      ? "N/A"
+      : ((kills / (kills + deaths)) * 100).toFixed(2) + "%";
+  recent.sort((a, b) => b.ts - a.ts);
   return {
     matches: valid ? matches : "N/A",
     rounds: valid ? rounds : "N/A",
     wins: valid ? wins : "N/A",
     losses: valid ? losses : "N/A",
     kd,
+    accuracy,
     teammates: Object.entries(mates)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([n, c]) => `${n} (${c})`),
+    lastMatches: recent.slice(0, 5).map(({ ts, ...rest }) => rest),
   };
 }
 

@@ -10,12 +10,7 @@
       rel="stylesheet"
     />
     <!-- PapaParse для CSV -->
-    <script src="assets/papaparse.min.js"></script>
-    <script>
-      if (typeof Papa === "undefined") {
-        throw new Error("PapaParse failed to load");
-      }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <style>
       /* Reset & Base */
       * {
@@ -322,45 +317,8 @@
         <div id="stats-body"></div>
       </div>
     </div>
-    <script type="module">
-      import { LEAGUE } from "./scripts/constants.js";
-      import {
-        loadData,
-        computeStats,
-        renderTopMVP,
-        renderChart,
-        renderTable,
-        initSearch,
-        initToggle,
-        formatD,
-        formatFull,
-      } from "./scripts/ranking.js";
-      const rankingURL =
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv";
-      const gamesURL =
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv";
-      const alias = {
-        Zavodchanyn: "Romario",
-        Mariko: "Gidora",
-        Timabuilding: "Бойбуд",
-      };
-      async function init() {
-        const { rank, games } = await loadData(rankingURL, gamesURL);
-        const { players, totalGames, totalRounds, minDate, maxDate } =
-          computeStats(rank, games, { alias, league: LEAGUE });
-        document.getElementById("summary").textContent =
-          `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
-        document.getElementById("season-info").textContent =
-          `Перший сезон — старт ${formatFull(minDate)}`;
-        renderTopMVP(players, document.getElementById("top-mvp"));
-        renderChart(players, document.getElementById("rank-chart"));
-        renderTable(players, document.getElementById("ranking"));
-        initSearch(document.getElementById("search"), "#ranking tr");
-        initToggle(document.getElementById("toggle"), "#ranking tr");
-      }
-      document.addEventListener("DOMContentLoaded", init);
-    </script>
-    <script type="module" src="scripts/playerStats.js"></script>
+    <script type="module" src="scripts/api.js"></script>
     <script type="module" src="scripts/quickStats.js"></script>
+    <script type="module" src="scripts/ranking.js"></script>
   </body>
 </html>

@@ -320,6 +320,7 @@
       </div>
     </div>
     <script type="module">
+      import { LEAGUE } from "./scripts/constants.js";
       import {
         loadData,
         computeStats,
@@ -340,11 +341,10 @@
         Mariko: "Gidora",
         Timabuilding: "Бойбуд",
       };
-      const league = "sunday";
       async function init() {
         const { rank, games } = await loadData(rankingURL, gamesURL);
         const { players, totalGames, totalRounds, minDate, maxDate } =
-          computeStats(rank, games, { alias, league });
+          computeStats(rank, games, { alias, league: LEAGUE });
         document.getElementById("summary").textContent =
           `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
         document.getElementById("season-info").textContent =

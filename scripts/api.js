@@ -22,9 +22,9 @@ window.postJson = window.postJson || async function postJson(url, body) {
 };
 
 // Відображення UI-ліг до CSV та GAS назв
-window.uiLeagueToCsv = window.uiLeagueToCsv || function uiLeagueToCsv(v) {
-  return String(v).toLowerCase() === 'kids' ? 'kids' : 'sunday';
-};
+  window.uiLeagueToCsv = window.uiLeagueToCsv || function uiLeagueToCsv(v) {
+    return String(v).toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
+  };
 
 window.uiLeagueToGas = window.uiLeagueToGas || function uiLeagueToGas(v) {
   return String(v).toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
@@ -34,11 +34,10 @@ window.uiLeagueToGas = window.uiLeagueToGas || function uiLeagueToGas(v) {
 export const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
 
 // Публічні фіди рейтингу (CSV)
-const rankingURLs = {
-  kids:        'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1648067737',
-  sunday:      'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1286735969',
-  sundaygames: 'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1286735969'
-};
+  const rankingURLs = {
+    kids:        'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1648067737',
+    sundaygames: 'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1286735969'
+  };
 
 const rankFromPoints = p => (p < 200 ? 'D' : p < 500 ? 'C' : p < 800 ? 'B' : p < 1200 ? 'A' : 'S');
 
@@ -48,12 +47,11 @@ const gamesURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejv
 // ---------------------- Уніфікація ліг ----------------------
 export function normalizeLeague(v) {
   const x = String(v || '').toLowerCase();
-  if (x === 'sundaygames' || x === 'olds' || x === 'adult' || x === 'adults') return 'sundaygames';
-  if (x === 'kid' || x === 'junior') return 'kids';
-  if (x === 'sunday') return 'sundaygames';
-  if (x === 'kids') return 'kids';
-  return 'sundaygames'; // дефолт — старша
-}
+    if (x === 'sundaygames' || x === 'olds' || x === 'adult' || x === 'adults') return 'sundaygames';
+    if (x === 'kid' || x === 'junior') return 'kids';
+    if (x === 'kids') return 'kids';
+    return 'sundaygames'; // дефолт — старша
+  }
 
 export function getLeagueFeedUrl(league) {
   const key = normalizeLeague(league);
@@ -170,7 +168,7 @@ export async function fetchPlayerStats(nick) {
 // ---------------------- Абонементи ----------------------
 // Кнопка “Запросити абонемент” у профілі.
 // Під бекенд: action = 'requestAbonement' (а не 'abonement_request')
-export async function requestAbonement({ nick, league = 'sunday', requested = 'month' }) {
+export async function requestAbonement({ nick, league = 'sundaygames', requested = 'month' }) {
   const payload = {
     action: 'requestAbonement',
     nick,

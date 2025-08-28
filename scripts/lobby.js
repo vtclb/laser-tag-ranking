@@ -406,14 +406,16 @@ function renderLobby() {
       sel.value = player.abonement || 'none';
       sel.onchange = async () => {
         const newType = sel.value;
+        const prevType = player.abonement || 'none';
         try {
-          await updateAbonement(player.nick, newType);
+          const res = await updateAbonement({ nick: player.nick, league: uiLeague, type: newType });
+          if (res !== 'OK' && res?.status !== 'OK') throw new Error('Failed');
           player.abonement = newType;
           const full = players.find(p => p.nick === player.nick);
           if (full) full.abonement = newType;
           alert('Абонемент оновлено');
         } catch (err) {
-          sel.value = player.abonement || 'none';
+          sel.value = prevType;
           alert('Помилка оновлення абонемента');
         }
       };

@@ -49,12 +49,14 @@ async function addPlayer(nick){
   let res = players.find(p => p.nick === nick);
   if (!res) {
     try {
-      const data = await getProfile({ nick });
+      const data = await getProfile({ nick, league: uiLeague });
       const profile = data && data.profile;
       if (profile) {
         const pts = Number(profile.points || 0);
         const rank = pts < 200 ? 'D' : pts < 500 ? 'C' : pts < 800 ? 'B' : pts < 1200 ? 'A' : 'S';
         res = { nick, pts, rank, abonement: profile.abonement?.type || 'none' };
+        players.push(res);
+        filtered.push(res);
       }
     } catch {}
   }
@@ -64,6 +66,7 @@ async function addPlayer(nick){
   }
   lobby.push({ ...res, team: null });
   renderLobby();
+  renderSelect(filtered);
 }
 
 // Ініціалізує лоббі новим набором гравців

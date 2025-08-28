@@ -440,9 +440,24 @@ document.addEventListener('click', async e => {
     const key = await issueAccessKey({ nick, league: uiLeague });
     const host = btn.closest('tr') || btn.closest('.player');
     const cell = host?.querySelector('.access-key');
-    if (cell) cell.textContent = key;
+    if (cell) {
+      cell.innerHTML = `<span class='key'>${key}</span><button class='copy-key'>Copy</button>`;
+    }
   } catch (err) {
     alert('Не вдалося видати ключ');
+  }
+});
+
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.copy-key');
+  if (!btn) return;
+  const cell = btn.closest('.access-key');
+  const key = cell?.querySelector('.key')?.textContent;
+  if (!key) return;
+  try {
+    await navigator.clipboard.writeText(key);
+  } catch (err) {
+    // ignore
   }
 });
 

@@ -11,14 +11,23 @@ async function fetchAvatar(nick) {
   return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
 }
 
+const avatarFailLog = new Set();
+
 async function setAvatar(img, nick) {
   img.dataset.nick = nick;
-  const url = await fetchAvatar(nick);
-  if (url) {
-    img.src = url;
-  } else {
-    img.src = DEFAULT_AVATAR_URL;
+  let url;
+  for (let attempt = 0; attempt < 2 && !url; attempt++) {
+    try {
+      url = await fetchAvatar(nick);
+      avatarFailLog.delete(nick);
+    } catch (err) {
+      if (!avatarFailLog.has(nick)) {
+        log('[ranking]', err);
+        avatarFailLog.add(nick);
+      }
+    }
   }
+  img.src = url || DEFAULT_AVATAR_URL;
   img.onerror = () => {
     img.onerror = null;
     img.src = DEFAULT_AVATAR_URL;

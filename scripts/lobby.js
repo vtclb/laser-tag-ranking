@@ -3,7 +3,7 @@ import { log } from './logger.js';
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile, fetchOnce, safeDel } from './api.js';
+import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile, fetchOnce, safeDel, clearFetchCache } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 
 export let lobby = [];
@@ -19,15 +19,44 @@ async function fetchAvatar(nick) {
   return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
 }
 
+const avatarFailures = new Set();
+
 async function setAvatar(img, nick) {
   img.dataset.nick = nick;
-  const url = await fetchAvatar(nick);
-  img.src = url ? `${url}?t=${Date.now()}` : DEFAULT_AVATAR_URL;
+  let url;
+  for (let attempt = 0; attempt < 2 && !url; attempt++) {
+    try {
+      url = await fetchAvatar(nick);
+      avatarFailures.delete(nick);
+    } catch (err) {
+      if (!avatarFailures.has(nick)) {
+        log('[ranking]', err);
+        avatarFailures.add(nick);
+      }
+    }
+  }
+  img.src = url || DEFAULT_AVATAR_URL;
   img.onerror = () => {
     img.onerror = null;
     img.src = DEFAULT_AVATAR_URL;
   };
 }
+
+function refreshAvatars(nick) {
+  const sel = nick ? `img.avatar-img[data-nick="${nick}"]` : 'img.avatar-img[data-nick]';
+  document.querySelectorAll(sel).forEach(img => setAvatar(img, img.dataset.nick));
+}
+
+window.addEventListener('storage', e => {
+  if (e.key === 'avatarRefresh') {
+    const [nick] = (e.newValue || '').split(':');
+    if (nick) {
+      clearFetchCache(`avatar:${nick}`);
+      safeDel(sessionStorage, `avatar:${nick}`);
+    }
+    refreshAvatars(nick);
+  }
+});
 
 async function addPlayer(nick){
   if(!nick) return;

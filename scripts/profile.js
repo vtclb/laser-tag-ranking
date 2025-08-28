@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, fetchOnce, safeSet, safeGet } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, fetchOnce, safeSet, safeGet, clearFetchCache, safeDel } from './api.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
@@ -12,6 +12,32 @@ const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 async function fetchAvatar(nick){
   return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
+}
+
+const avatarFailures = new Set();
+
+async function updateAvatar(nick) {
+  let url;
+  for (let attempt = 0; attempt < 2 && !url; attempt++) {
+    try {
+      url = await fetchAvatar(nick);
+      avatarFailures.delete(nick);
+    } catch (err) {
+      if (!avatarFailures.has(nick)) {
+        log('[ranking]', err);
+        avatarFailures.add(nick);
+      }
+    }
+  }
+  avatarUrl = url || DEFAULT_AVATAR_URL;
+  const avatarEl = document.getElementById('avatar');
+  if (avatarEl) {
+    avatarEl.src = avatarUrl;
+    avatarEl.onerror = () => {
+      avatarEl.onerror = null;
+      avatarEl.src = DEFAULT_AVATAR_URL;
+    };
+  }
 }
 
 function computeRank(points) {
@@ -157,10 +183,7 @@ async function loadProfile(nick, key = '') {
   const profile = data.profile || {};
   const league = data.league || profile.league || '';
   const games = await fetchPlayerGames(nick, league);
-  const fetched = await fetchAvatar(nick);
-  avatarUrl = fetched || DEFAULT_AVATAR_URL;
-  const avatarEl = document.getElementById('avatar');
-  avatarEl.src = fetched ? `${avatarUrl}?t=${Date.now()}` : DEFAULT_AVATAR_URL;
+  await updateAvatar(nick);
   const rank = computeRank(profile.points);
   document.getElementById('rating').textContent = `Рейтинг: ${profile.points} (${rank})`;
   const aboType = profile.abonement?.type || '';
@@ -184,7 +207,8 @@ async function loadProfile(nick, key = '') {
     try {
       const url = await uploadAvatar(nick, file);
       avatarUrl = url;
-      document.getElementById('avatar').src = `${url}?t=${Date.now()}`;
+      document.getElementById('avatar').src = url;
+      avatarFailures.delete(nick);
       safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
       log('[ranking]', err);
@@ -208,19 +232,14 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProfile(nick, key);
 });
 
-function refreshAvatar() {
-  const avatarEl = document.getElementById('avatar');
-  if (avatarUrl && avatarUrl !== DEFAULT_AVATAR_URL) {
-    avatarEl.src = `${avatarUrl}?t=${Date.now()}`;
-  } else {
-    avatarEl.src = DEFAULT_AVATAR_URL;
-  }
-}
-
 window.addEventListener('storage', e => {
   if (e.key === 'avatarRefresh') {
     const [nick] = (e.newValue || '').split(':');
-    if (nick === currentNick) refreshAvatar();
+    if (nick) {
+      clearFetchCache(`avatar:${nick}`);
+      safeDel(sessionStorage, `avatar:${nick}`);
+      if (nick === currentNick) updateAvatar(nick);
+    }
   }
 });
 

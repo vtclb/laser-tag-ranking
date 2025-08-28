@@ -38,7 +38,8 @@
 }
 .btn--danger:hover { background: #c62828; }
 
-.bal__accordion {
+.bal__accordion,
+.blc-accordion {
   border: 1px solid #2e2e2e;
   border-radius: 8px;
 }
@@ -53,8 +54,14 @@
   padding: 10px;
 }
 
-.bal__accordion:not(.open) .bal__acc-body {
+.bal__accordion:not(.open) .bal__acc-body,
+.blc-accordion:not(.open) .bal__acc-body {
   display: none;
+}
+
+.bal__accordion.open .bal__acc-body,
+.blc-accordion.open .bal__acc-body {
+  display: block;
 }
 
 .scroll-pane {
@@ -103,6 +110,7 @@
 }
 
 @media (min-width: 769px) {
-  .bal__accordion .bal__acc-body { display: block !important; }
+  .bal__accordion .bal__acc-body,
+  .blc-accordion .bal__acc-body { display: block !important; }
 }
 

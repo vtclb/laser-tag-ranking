@@ -1,91 +1,108 @@
-/* Mobile-specific styles for balance page */
+:root {
+  --bal-gap: 10px;
+  --bal-panel-width: 360px;
+  --bal-card-bg: var(--card-bg, #242424);
+}
 
-/* Base layout */
-.blc-container {
+.bal__panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px;
+  gap: var(--bal-gap);
+  padding: var(--bal-gap);
+  width: 100%;
+  max-width: var(--bal-panel-width);
 }
 
-.sticky {
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.bal__card {
+  background: var(--bal-card-bg);
+  border-radius: 8px;
+  padding: var(--bal-gap);
 }
 
-.blc-row {
+.bal__row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--bal-gap);
   flex-wrap: wrap;
 }
 
-.blc-actions {
+.bal__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-button, select, input {
-  min-height: 42px;
-  font-size: 14px;
-  padding: 6px 12px;
+.btn--danger {
+  background: var(--danger);
+  color: #fff;
 }
+.btn--danger:hover { background: #c62828; }
 
-.danger {
-  background: var(--danger, #E53935);
-}
-
-/* Accordion behavior */
-.blc-accordion {
+.bal__accordion {
   border: 1px solid #2e2e2e;
   border-radius: 8px;
 }
 
-.blc-acc-head {
+.bal__acc-head {
   font-size: 1.1rem;
   padding: 10px;
   cursor: pointer;
 }
 
-.blc-acc-body {
+.bal__acc-body {
   padding: 10px;
 }
 
-.blc-accordion:not(.open) .blc-acc-body {
+.bal__accordion:not(.open) .bal__acc-body {
   display: none;
 }
 
-/* Scrollable player selector */
 .scroll-pane {
   max-height: 60vh;
   overflow: auto;
 }
 
-/* Lobby responsiveness */
-.lobby-table-wrap {overflow-x: auto;}
-.lobby-table thead th {position: sticky; top: 0;}
-.lobby-cards {display: none;}
+.bal__table-wrap { overflow-x: auto; }
+.bal__table thead th { position: sticky; top: 0; }
 
-.only-mobile {display: none;}
+.bal__players { display: none; }
+.only-mobile { display: none; }
 
 @media (max-width: 768px) {
-  .only-mobile {display: block;}
-  .lobby-table {display: none;}
-  .lobby-cards {display: grid; gap: 10px;}
-  .lobby-card {border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px; background: #121212;}
-  .lobby-card .row {display: flex; justify-content: space-between; padding: 4px 0;}
+  .only-mobile { display: block; }
+  .bal__table { display: none; }
+  .bal__players { display: grid; gap: 10px; }
+  .player {
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 10px;
+    background: #121212;
+  }
+  .player .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
 
   /* Avatar admin mobile adjustments */
-  .avatar-table {display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;}
-  #avatar-list {display: grid; gap: 10px;}
-  #avatar-list .avatar-row {display: grid; grid-template-columns: 1fr auto; align-items: center;}
-  #save-avatars {width: 100%;}
+  .avatar-table {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  #avatar-list {
+    display: grid;
+    gap: 10px;
+  }
+  #avatar-list .avatar-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+  #save-avatars { width: 100%; }
 }
 
-/* Expand all sections on wider screens */
 @media (min-width: 769px) {
-  .blc-accordion .blc-acc-body {display: block !important;}
+  .bal__accordion .bal__acc-body { display: block !important; }
 }
 

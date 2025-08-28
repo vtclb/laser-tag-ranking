@@ -214,10 +214,10 @@ function renderLobby() {
     </tr>
   `).join('');
 
-  const cards = document.querySelector('.lobby-cards');
+  const cards = document.querySelector('.bal__players');
   if (cards) {
     cards.innerHTML = lobby.map((p, i) => `
-      <div class="lobby-card">
+      <div class="player">
         <div class="row"><span class="nick">${p.nick}</span><span class="pts">${p.pts}</span></div>
         <div class="row"><span class="rank">${p.rank}</span><span class="season">${p.abonement || ''}</span></div>
         <div class="row">
@@ -304,7 +304,7 @@ document.addEventListener('click', async e => {
   const nick = btn.dataset.nick;
   try {
     const key = await issueAccessKey({ nick, league: uiLeague });
-    const host = btn.closest('tr') || btn.closest('.lobby-card');
+    const host = btn.closest('tr') || btn.closest('.player');
     const cell = host?.querySelector('.access-key');
     if (cell) cell.textContent = key;
   } catch (err) {

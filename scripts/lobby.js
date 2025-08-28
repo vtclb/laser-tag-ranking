@@ -2,7 +2,7 @@
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, fetchPlayerData, adminCreatePlayer, issueAccessKey } from './api.js';
+import { updateAbonement, fetchPlayerData, adminCreatePlayer, issueAccessKey, getAvatarUrl } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 
 export let lobby = [];
@@ -10,6 +10,35 @@ let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
 let uiLeague = 'sunday';
+
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+const AVATAR_TTL = 6 * 60 * 60 * 1000;
+
+async function fetchAvatar(nick) {
+  const key = `avatar:${nick}`;
+  const now = Date.now();
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+    if (cached && now - cached.time < AVATAR_TTL) return cached.url;
+  } catch {}
+  try {
+    const url = await getAvatarUrl(nick);
+    if (url) sessionStorage.setItem(key, JSON.stringify({ url, time: now }));
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+async function setAvatar(img, nick) {
+  img.dataset.nick = nick;
+  const url = await fetchAvatar(nick);
+  img.src = url ? `${url}?t=${Date.now()}` : DEFAULT_AVATAR_URL;
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = DEFAULT_AVATAR_URL;
+  };
+}
 
 async function addPlayer(nick){
   if(!nick) return;
@@ -190,9 +219,86 @@ function updateSummary() {
   if (avgEl)   avgEl.textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
 }
 
+function playerHtml(p) {
+  return `
+    <div class="player" data-nick="${p.nick}" draggable="true">
+      <img class="player__avatar" src="${DEFAULT_AVATAR_URL}" alt="avatar">
+      <div class="player__meta">
+        <div class="player__name">${p.nick}</div>
+        <div class="player__points">${p.pts} pts</div>
+      </div>
+      <div class="player__drag">≡</div>
+    </div>
+  `;
+}
+
+function renderPlayerList(el, arr) {
+  if (!el) return;
+  el.innerHTML = arr.map(playerHtml).join('');
+  el.querySelectorAll('.player').forEach(div => {
+    const img = div.querySelector('.player__avatar');
+    setAvatar(img, div.dataset.nick);
+  });
+}
+
+function setupDnD(containers) {
+  containers.forEach(c => {
+    c.addEventListener('dragover', e => e.preventDefault());
+    c.addEventListener('drop', e => {
+      e.preventDefault();
+      const nick = e.dataTransfer.getData('text/plain');
+      movePlayer(nick, c.id);
+    });
+  });
+
+  containers.forEach(c => {
+    c.querySelectorAll('.player').forEach(p => {
+      p.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', p.dataset.nick);
+      });
+    });
+  });
+}
+
+function takePlayer(nick) {
+  let idx = lobby.findIndex(p => p.nick === nick);
+  if (idx !== -1) return lobby.splice(idx, 1)[0];
+  if (!teams[1]) teams[1] = [];
+  if (!teams[2]) teams[2] = [];
+  idx = teams[1].findIndex(p => p.nick === nick);
+  if (idx !== -1) return teams[1].splice(idx, 1)[0];
+  idx = teams[2].findIndex(p => p.nick === nick);
+  if (idx !== -1) return teams[2].splice(idx, 1)[0];
+  return null;
+}
+
+function movePlayer(nick, targetId) {
+  const p = takePlayer(nick);
+  if (!p) return;
+  if (targetId === 'lobby-list') lobby.push(p);
+  else if (targetId === 'team-a') teams[1].push(p);
+  else if (targetId === 'team-b') teams[2].push(p);
+  renderLobby();
+}
+
 // Рендер лоббі
 function renderLobby() {
-  const tbody = document.getElementById('lobby-list');
+  const lobbyEl = document.getElementById('lobby-list');
+  const teamAEl = document.getElementById('team-a');
+  const teamBEl = document.getElementById('team-b');
+  if (teamAEl || teamBEl) {
+    teams[1] = teams[1] || [];
+    teams[2] = teams[2] || [];
+    renderPlayerList(lobbyEl, lobby);
+    renderPlayerList(teamAEl, teams[1]);
+    renderPlayerList(teamBEl, teams[2]);
+    setupDnD([lobbyEl, teamAEl, teamBEl].filter(Boolean));
+    updateSummary();
+    saveLobbyState({ lobby, teams, manualCount, league: uiLeague });
+    return;
+  }
+
+  const tbody = lobbyEl;
   tbody.innerHTML = lobby.map((p, i) => `
     <tr>
       <td>${p.nick}</td>

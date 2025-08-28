@@ -170,7 +170,6 @@ export function renderTable(list, tbodyEl) {
       if (idx === 1) {
         td.className = cls.replace("rank-", "nick-");
         td.style.cursor = "pointer";
-        td.addEventListener("click", (e) => showQuickStats(p.nickname, e));
       }
       td.textContent = val;
       tr.appendChild(td);
@@ -284,7 +283,14 @@ async function init() {
     `Перший сезон — старт ${formatFull(minDate)}`;
   renderTopMVP(players, document.getElementById("top-mvp"));
   renderChart(players, document.getElementById("rank-chart"));
-  renderTable(players, document.getElementById("ranking"));
+  const rankingEl = document.getElementById("ranking");
+  rankingEl.addEventListener("click", (e) => {
+    const cell = e.target.closest("td");
+    if (cell && cell.className.startsWith("nick-")) {
+      showQuickStats(cell.textContent, e);
+    }
+  });
+  renderTable(players, rankingEl);
   initSearch(document.getElementById("search"), "#ranking tr");
   initToggle(document.getElementById("toggle"), "#ranking tr");
 }

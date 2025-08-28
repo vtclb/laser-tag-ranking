@@ -44,6 +44,41 @@ const rankFromPoints = p => (p < 200 ? 'D' : p < 500 ? 'C' : p < 800 ? 'B' : p <
 // Логи ігор (CSV)
 const gamesURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv';
 
+// ---------------------- Cached fetch ----------------------
+const _fetchCache = {};
+
+export async function fetchOnce(url, ttlMs = 0, fetchFn) {
+  const now = Date.now();
+  const cached = _fetchCache[url];
+  if (cached && now - cached.time < ttlMs) return cached.data;
+
+  let storageOk = true;
+  try {
+    const raw = sessionStorage.getItem(url);
+    if (raw) {
+      const obj = JSON.parse(raw);
+      if (now - obj.time < ttlMs) {
+        _fetchCache[url] = obj;
+        return obj.data;
+      }
+    }
+  } catch (e) {
+    if (e && e.name === 'SecurityError') {
+      storageOk = false;
+    }
+  }
+
+  const data = await (fetchFn ? fetchFn() : fetch(url).then(r => r.text()));
+  if (!storageOk) return data;
+
+  const info = { data, time: now };
+  _fetchCache[url] = info;
+  try {
+    sessionStorage.setItem(url, JSON.stringify(info));
+  } catch {}
+  return data;
+}
+
 // ---------------------- Уніфікація ліг ----------------------
 export function normalizeLeague(v) {
   const x = String(v || '').toLowerCase();
@@ -61,10 +96,11 @@ export function getLeagueFeedUrl(league) {
 }
 
 // ---------------------- CSV helper ----------------------
-export async function fetchCsv(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('API: feed failed ' + res.status);
-  const text = await res.text();
+export async function fetchCsv(url, ttlMs = 0) {
+  const text = await fetchOnce(url, ttlMs);
+  if (typeof text !== 'string') {
+    throw new Error('API: feed failed');
+  }
   // якщо є Papa — віддамо заголовками, якщо ні — швидкий парсер нижче
   if (typeof Papa !== 'undefined') {
     return Papa.parse(text, { header: true, skipEmptyLines: true }).data;

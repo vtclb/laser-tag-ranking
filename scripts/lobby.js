@@ -2,7 +2,7 @@
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile } from './api.js';
+import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile, fetchOnce } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 
 export let lobby = [];
@@ -15,19 +15,7 @@ const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
 
 async function fetchAvatar(nick) {
-  const key = `avatar:${nick}`;
-  const now = Date.now();
-  try {
-    const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
-    if (cached && now - cached.time < AVATAR_TTL) return cached.url;
-  } catch {}
-  try {
-    const url = await getAvatarUrl(nick);
-    if (url) sessionStorage.setItem(key, JSON.stringify({ url, time: now }));
-    return url;
-  } catch {
-    return null;
-  }
+  return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
 }
 
 async function setAvatar(img, nick) {

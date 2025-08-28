@@ -135,11 +135,15 @@ function renderSelect(arr) {
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('player-search');
   if (searchInput) {
+    let searchTimeout;
     searchInput.addEventListener('input', () => {
-      const term = searchInput.value.trim().toLowerCase();
-      filtered = players.filter(p => p.nick.toLowerCase().includes(term));
-      selected = [];
-      renderSelect(filtered);
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const term = searchInput.value.trim().toLowerCase();
+        filtered = players.filter(p => p.nick.toLowerCase().includes(term));
+        selected = [];
+        renderSelect(filtered);
+      }, 300);
     });
   }
 

@@ -115,6 +115,7 @@ function renderSelect(arr) {
         <input
           type="checkbox"
           data-i="${i}"
+          ${selected.includes(p) ? 'checked' : ''}
           ${lobby.includes(p) || Object.values(teams).flat().includes(p) ? 'disabled' : ''}
         >
         ${p.nick} (${p.pts}) – ${p.rank}
@@ -141,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       searchTimeout = setTimeout(() => {
         const term = searchInput.value.trim().toLowerCase();
         filtered = players.filter(p => p.nick.toLowerCase().includes(term));
-        selected = [];
+        selected = selected.filter(p => filtered.includes(p));
         renderSelect(filtered);
       }, 300);
     });
@@ -149,11 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-sort-name').onclick = () => {
     filtered = sortByName(filtered);
+    selected = selected.filter(p => filtered.includes(p));
     renderSelect(filtered);
   };
 
   document.getElementById('btn-sort-pts').onclick = () => {
     filtered = sortByPtsDesc(filtered);
+    selected = selected.filter(p => filtered.includes(p));
     renderSelect(filtered);
   };
 

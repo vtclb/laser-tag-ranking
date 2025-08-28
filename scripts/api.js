@@ -32,18 +32,26 @@ window.uiLeagueToGas = window.uiLeagueToGas || function uiLeagueToGas(v) {
 };
 
 // Google Apps Script backend (веб-апп)
-export const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
+export const PROXY_URL =
+  'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
 
-// Публічні фіди рейтингу (CSV)
-  const rankingURLs = {
-    kids:        'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1648067737',
-    sundaygames: 'https://docs.google.com/spreadsheets/d/19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw/export?format=csv&gid=1286735969'
-  };
+// Публічні фіди (CSV)
+export const CSV_URLS = {
+  kids: {
+    ranking:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
+    games:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv',
+  },
+  sundaygames: {
+    ranking:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv',
+    games:
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv',
+  },
+};
 
-const rankFromPoints = p => (p < 200 ? 'D' : p < 500 ? 'C' : p < 800 ? 'B' : p < 1200 ? 'A' : 'S');
-
-// Логи ігор (CSV)
-const gamesURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv';
+const rankFromPoints = (p) => (p < 200 ? 'D' : p < 500 ? 'C' : p < 800 ? 'B' : p < 1200 ? 'A' : 'S');
 
 // ---------------------- Cached fetch ----------------------
 const _fetchCache = {};
@@ -94,7 +102,14 @@ export function normalizeLeague(v) {
 
 export function getLeagueFeedUrl(league) {
   const key = normalizeLeague(league);
-  const url = rankingURLs[key];
+  const url = CSV_URLS[key]?.ranking;
+  if (!url) throw new Error('Unknown league: ' + league);
+  return url;
+}
+
+export function getGamesFeedUrl(league) {
+  const key = normalizeLeague(league);
+  const url = CSV_URLS[key]?.games;
   if (!url) throw new Error('Unknown league: ' + league);
   return url;
 }
@@ -251,7 +266,7 @@ export async function fetchPlayerGames(nick, league = '') {
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (err) {
     console.debug('[ranking]', err);
-    res = await fetch(gamesURL);
+    res = await fetch(getGamesFeedUrl(league));
   }
   const text = await res.text();
 

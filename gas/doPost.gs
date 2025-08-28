@@ -8,6 +8,14 @@ const SPREADSHEET_ID = '19VYkNmFJCArLFDngYLkpkxF0LYqvDz78yF1oqLT7Ukw';
 const PKEY_AVATARS_FOLDER_ID = 'LT_AVATARS_FOLDER_ID'; // 1UdG7dhV7iT1a5H2HkvjYxV711hT_ahhn
 const PKEY_PDFS_FOLDER_ID    = 'LT_PDFS_FOLDER_ID';    // 1l3uM7cRTPe4aUclZ874hYz_LxrZV4riP
 
+function log(...args) {
+  if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+    console.debug(...args);
+  } else if (typeof console !== 'undefined' && typeof console.log === 'function') {
+    console.log(...args);
+  }
+}
+
 function doPost(e) {
   try {
     // ---------- JSON API ----------
@@ -167,7 +175,7 @@ function doPost(e) {
 
     return JsonOK({status:'OK', players: updatedPlayers});
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     return TextPlain('Error: ' + err.message);
   }
 }

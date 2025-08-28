@@ -1,4 +1,5 @@
 // scripts/main.js
+import { log } from './logger.js';
 
 import { loadPlayers } from './api.js';
 import { initLobby }   from './lobby.js';
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           players = JSON.parse(cached);
         } catch (e) {
-          console.debug('[ranking]', e);
+          log('[ranking]', e);
         }
       }
       if (!players) {
@@ -42,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           sessionStorage.setItem(cacheKey, JSON.stringify(players));
         } catch (e) {
-          console.debug('[ranking]', e);
+          log('[ranking]', e);
         }
       }
 
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await initAvatarAdmin(players, selLeague.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {
-      console.debug('[ranking]', err);
+      log('[ranking]', err);
       showToast('Не вдалося завантажити гравців');
     } finally {
       btnLoad.disabled = false;

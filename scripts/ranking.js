@@ -67,8 +67,10 @@ export async function loadData(rankingURL, gamesURL) {
 export function computeStats(rank, games, { alias = {}, league } = {}) {
   const stats = {};
   let totalRounds = 0;
-  const leagueKey = league === 'sundaygames' ? 'olds' : league;
-  const filtered = league ? games.filter((g) => g.League === leagueKey) : games;
+  const validLeagues = ["kids", "olds"];
+  const filtered = validLeagues.includes(league)
+    ? games.filter((g) => g.League === league)
+    : games;
   filtered.forEach((g) => {
     const t1 = g.Team1.split(",").map((n) => alias[n.trim()] || n.trim());
     const t2 = g.Team2.split(",").map((n) => alias[n.trim()] || n.trim());
@@ -109,7 +111,7 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
         mvp: stats[nick]?.mvp || 0,
       };
       p.losses = p.games - p.wins;
-      p.winRate = p.games ? ((p.wins / p.games) * 100).toFixed(2) : "0";
+      p.winRate = p.games ? ((p.wins / p.games) * 100).toFixed(2) : "0.00";
       return p;
     })
     .sort((a, b) => b.points - a.points);

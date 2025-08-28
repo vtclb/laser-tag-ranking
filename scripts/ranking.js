@@ -142,41 +142,115 @@ export function renderChart(list, chartEl) {
   });
 }
 
+const rowMap = new Map();
+const dataMap = new Map();
+
+function createRow(p, i) {
+  const tr = document.createElement("tr");
+  const cls = getRankClass(p.points);
+  tr.className = cls + (i >= 10 ? " hidden" : "");
+
+  const tdRank = document.createElement("td");
+  tdRank.textContent = i + 1;
+  tr.appendChild(tdRank);
+
+  const tdAvatar = document.createElement("td");
+  const img = document.createElement("img");
+  img.className = "avatar-img";
+  img.alt = p.nickname;
+  setAvatar(img, p.nickname);
+  tdAvatar.appendChild(img);
+  tr.appendChild(tdAvatar);
+
+  const tdNick = document.createElement("td");
+  tdNick.className = cls.replace("rank-", "nick-");
+  tdNick.style.cursor = "pointer";
+  tdNick.textContent = p.nickname;
+  tr.appendChild(tdNick);
+
+  const tdRankCls = document.createElement("td");
+  tdRankCls.textContent = cls.replace("rank-", "");
+  tr.appendChild(tdRankCls);
+
+  const tdPoints = document.createElement("td");
+  tdPoints.textContent = p.points;
+  tr.appendChild(tdPoints);
+
+  const tdGames = document.createElement("td");
+  tdGames.textContent = p.games;
+  tr.appendChild(tdGames);
+
+  const tdWin = document.createElement("td");
+  tdWin.textContent = p.winRate + "%";
+  tr.appendChild(tdWin);
+
+  const tdMvp = document.createElement("td");
+  tdMvp.textContent = p.mvp;
+  tr.appendChild(tdMvp);
+
+  rowMap.set(p.nickname, tr);
+  dataMap.set(p.nickname, { ...p, index: i });
+  return tr;
+}
+
 export function renderTable(list, tbodyEl) {
-  tbodyEl.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+  const ops = [];
+  const seen = new Set();
+
   list.forEach((p, i) => {
-    const tr = document.createElement("tr");
+    seen.add(p.nickname);
+    const prev = dataMap.get(p.nickname);
+    if (!prev) {
+      const row = createRow(p, i);
+      fragment.appendChild(row);
+      ops.push({ row, index: i });
+      return;
+    }
+    const row = rowMap.get(p.nickname);
+    const cells = row.children;
     const cls = getRankClass(p.points);
-    tr.className = cls + (i >= 10 ? " hidden" : "");
 
-    const tdAvatar = document.createElement("td");
-    const img = document.createElement("img");
-    img.className = "avatar-img";
-    img.alt = p.nickname;
-    setAvatar(img, p.nickname);
-    tdAvatar.appendChild(img);
+    if (prev.points !== p.points) cells[4].textContent = p.points;
+    if (prev.games !== p.games) cells[5].textContent = p.games;
+    if (prev.winRate !== p.winRate) cells[6].textContent = p.winRate + "%";
+    if (prev.mvp !== p.mvp) cells[7].textContent = p.mvp;
 
-    const vals = [
-      i + 1,
-      p.nickname,
-      cls.replace("rank-", ""),
-      p.points,
-      p.games,
-      p.winRate + "%",
-      p.mvp,
-    ];
-    vals.forEach((val, idx) => {
-      const td = document.createElement("td");
-      if (idx === 1) {
-        td.className = cls.replace("rank-", "nick-");
-        td.style.cursor = "pointer";
-      }
-      td.textContent = val;
-      tr.appendChild(td);
-    });
-    tr.insertBefore(tdAvatar, tr.children[1]);
-    tbodyEl.appendChild(tr);
+    const newCls = cls + (i >= 10 ? " hidden" : "");
+    if (row.className !== newCls) row.className = newCls;
+    const nickCls = cls.replace("rank-", "nick-");
+    if (cells[2].className !== nickCls) cells[2].className = nickCls;
+    const rankText = cls.replace("rank-", "");
+    if (cells[3].textContent !== rankText) cells[3].textContent = rankText;
+    if (prev.index !== i) {
+      cells[0].textContent = i + 1;
+      fragment.appendChild(row);
+      ops.push({ row, index: i });
+    } else if (cells[0].textContent !== String(i + 1)) {
+      cells[0].textContent = i + 1;
+    }
+
+    dataMap.set(p.nickname, { ...p, index: i });
   });
+
+  for (const nick of Array.from(rowMap.keys())) {
+    if (!seen.has(nick)) {
+      const row = rowMap.get(nick);
+      row.remove();
+      rowMap.delete(nick);
+      dataMap.delete(nick);
+    }
+  }
+
+  if (ops.length) {
+    requestAnimationFrame(() => {
+      ops
+        .sort((a, b) => a.index - b.index)
+        .forEach(({ row, index }) => {
+          tbodyEl.insertBefore(row, tbodyEl.children[index] || null);
+        });
+    });
+  }
 }
 
 export function renderTopMVP(list, container) {

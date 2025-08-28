@@ -1,4 +1,5 @@
 // scripts/arena.js
+import { log } from './logger.js';
 
 import { saveResult, saveDetailedStats, normalizeLeague } from './api.js';
 import { parseGamePdf }                   from './pdfParser.js';
@@ -51,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast('Помилка імпорту статистики: ' + res);
         }
       } catch (err) {
-        console.debug('[ranking]', err);
+        log('[ranking]', err);
         alert('Не вдалося розпарсити PDF: ' + err.message);
       }
     });
@@ -146,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('gamedayRefresh', Date.now());
       btnClear.click();
     } catch (err) {
-      console.debug('[ranking]', err);
+      log('[ranking]', err);
       showToast('Не вдалося зберегти гру');
     }
   }

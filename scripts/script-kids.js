@@ -1,3 +1,4 @@
+import { log } from './logger.js';
 import { CSV_URLS } from "./api.js";
 
 const csvUrl = CSV_URLS.kids.ranking;
@@ -39,7 +40,7 @@ function loadRanking() {
             });
       })
         .catch(err => {
-            console.debug('[ranking]', err);
+            log('[ranking]', err);
             showToast('Помилка завантаження даних');
         });
 }

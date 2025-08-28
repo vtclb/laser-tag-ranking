@@ -1,3 +1,4 @@
+import { log } from './logger.js';
 import { getAvatarUrl, fetchOnce, CSV_URLS, clearFetchCache } from "./api.js";
 import { LEAGUE } from "./constants.js";
 
@@ -39,7 +40,7 @@ window.addEventListener("storage", (e) => {
       try {
         sessionStorage.removeItem(`avatar:${nick}`);
       } catch (err) {
-        console.debug('[ranking]', err);
+        log('[ranking]', err);
       }
     }
     refreshAvatars(nick);
@@ -55,7 +56,7 @@ export async function loadData(rankingURL, gamesURL) {
     const games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;
     return { rank, games };
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     const msg = "Не вдалося завантажити дані рейтингу";
     if (typeof showToast === 'function') showToast(msg);
     if (typeof document !== "undefined") {

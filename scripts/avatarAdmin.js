@@ -1,4 +1,5 @@
 // scripts/avatarAdmin.js
+import { log } from './logger.js';
 import { uploadAvatar, getAvatarUrl, fetchOnce } from './api.js';
 
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
@@ -33,7 +34,7 @@ async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
       defaultAvatars = list.map(f => `assets/default_avatars/${f}`);
     }
   }catch(err){
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     showToast('Failed to load default avatars');
   }
 }
@@ -102,7 +103,7 @@ export async function initAvatarAdmin(players = [], league = '') {
           img.src = src;
           updateSaveBtn();
         } catch (err) {
-          console.debug('[ranking]', err);
+          log('[ranking]', err);
           showToast('Failed to fetch avatar');
         }
       });
@@ -138,7 +139,7 @@ export async function initAvatarAdmin(players = [], league = '') {
         localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
         row.querySelector('input[type="file"]').value = '';
       } catch (err) {
-        console.debug('[ranking]', err);
+        log('[ranking]', err);
         failed.push(nick);
       }
     }

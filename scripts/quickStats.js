@@ -1,4 +1,5 @@
 // Quick stats popover
+import { log } from './logger.js';
 const STYLE_ID = "quick-stats-style";
 if (!document.getElementById(STYLE_ID)) {
   const style = document.createElement("style");
@@ -98,7 +99,7 @@ export async function showQuickStats(nick, evt) {
       }
     }
   } catch (e) {
-    console.debug('[ranking]', e);
+    log('[ranking]', e);
   }
 
   try {
@@ -109,10 +110,10 @@ export async function showQuickStats(nick, evt) {
     try {
       localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
     } catch (e) {
-      console.debug('[ranking]', e);
+      log('[ranking]', e);
     }
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     if (typeof showToast === 'function') showToast('Не вдалося завантажити статистику');
     render(null);
   }

@@ -1,3 +1,4 @@
+import { log } from './logger.js';
 import { fetchPlayerStats } from './api.js';
 
 function init(){
@@ -31,7 +32,7 @@ function init(){
       table.appendChild(tb);
       body.appendChild(table);
     }catch(err){
-      console.debug('[ranking]', err);
+      log('[ranking]', err);
       showToast('Помилка завантаження');
       body.textContent='Помилка завантаження';
     }

@@ -1,4 +1,5 @@
 // scripts/api.js
+import { log } from './logger.js';
 
 // ---------------------- Глобальні утиліти ----------------------
 // Веб-апп GAS, якщо ще не визначено
@@ -17,7 +18,7 @@ window.postJson = window.postJson || async function postJson(url, body) {
   try {
     return JSON.parse(text);
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     return { status: 'TEXT', text };
   }
 };
@@ -61,7 +62,7 @@ export function clearFetchCache(key) {
   try {
     sessionStorage.removeItem(key);
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
   }
 }
 
@@ -81,7 +82,7 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
       }
     }
   } catch (e) {
-    console.debug('[ranking]', e);
+    log('[ranking]', e);
     if (e && e.name === 'SecurityError') {
       storageOk = false;
     }
@@ -95,7 +96,7 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
   try {
     sessionStorage.setItem(url, JSON.stringify(info));
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
   }
   return data;
 }
@@ -274,7 +275,7 @@ export async function fetchPlayerGames(nick, league = '') {
     res = await fetch(`${PROXY_URL}?sheet=games&t=${Date.now()}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     res = await fetch(getGamesFeedUrl(league));
   }
   const text = await res.text();
@@ -328,7 +329,7 @@ async function gasPost(action, payload = {}) {
     try {
       return JSON.parse(text);
     } catch (err) {
-      console.debug('[ranking]', err);
+      log('[ranking]', err);
       return text;
     }
   }

@@ -1,4 +1,5 @@
 // scripts/lobby.js
+import { log } from './logger.js';
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
@@ -47,7 +48,7 @@ async function addPlayer(nick){
         filtered.push(res);
       }
     } catch (err) {
-      console.debug('[ranking]', err);
+      log('[ranking]', err);
     }
   }
   if (!res) {
@@ -200,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast('Не вдалося створити гравця');
         }
       } catch (err) {
-        console.debug('[ranking]', err);
+        log('[ranking]', err);
         showToast('Не вдалося створити гравця');
       }
     });
@@ -420,7 +421,7 @@ function onLobbyAction(e) {
         showToast('Абонемент оновлено');
       } catch (err) {
         sel.value = prevType;
-        console.debug('[ranking]', err);
+        log('[ranking]', err);
         showToast('Помилка оновлення абонемента');
       }
     })();
@@ -439,7 +440,7 @@ document.addEventListener('click', async e => {
       cell.innerHTML = `<span class='key'>${key}</span><button class='copy-key'>Copy</button>`;
     }
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     showToast('Не вдалося видати ключ');
   }
 });
@@ -453,7 +454,7 @@ document.addEventListener('click', async e => {
   try {
     await navigator.clipboard.writeText(key);
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
   }
 });
 

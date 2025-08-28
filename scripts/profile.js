@@ -1,3 +1,4 @@
+import { log } from './logger.js';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, fetchOnce } from './api.js';
 
 let gameLimit = 0;
@@ -73,7 +74,7 @@ async function renderGames(list, league) {
         const links = await getPdfLinks({ league, date: dt });
         pdfCache[dt] = links;
       } catch (err) {
-        console.debug('[ranking]', err);
+        log('[ranking]', err);
         pdfCache[dt] = {};
       }
     }
@@ -148,7 +149,7 @@ async function loadProfile(nick, key = '') {
       return;
     }
   } catch (err) {
-    console.debug('[ranking]', err);
+    log('[ranking]', err);
     showToast('Помилка завантаження профілю');
     showError('Помилка завантаження профілю');
     return;
@@ -186,7 +187,7 @@ async function loadProfile(nick, key = '') {
       document.getElementById('avatar').src = `${url}?t=${Date.now()}`;
       localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
-      console.debug('[ranking]', err);
+      log('[ranking]', err);
       showToast('Помилка завантаження');
     }
   });

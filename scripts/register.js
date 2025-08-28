@@ -1,3 +1,4 @@
+import { log } from './logger.js';
 import { registerPlayer } from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
       }
     }catch(err){
-      console.debug('[ranking]', err);
+      log('[ranking]', err);
       status.textContent = 'Помилка: '+err.message;
       showToast('Помилка реєстрації');
     }

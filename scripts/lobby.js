@@ -230,6 +230,7 @@ export function setManualCount(n) {
 
 export function clearLobby() {
   lobby.length = 0;
+  manualCount = 0;
   Object.keys(teams).forEach(k => { teams[k].length = 0; });
 
   localStorage.removeItem(getLobbyStorageKey(undefined, uiLeague));
@@ -237,6 +238,7 @@ export function clearLobby() {
   renderLobby();
   renderTeams();
   updateSummary();
+  renderSelect(filtered);
 }
 
 function renderTeams() {

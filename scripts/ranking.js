@@ -1,4 +1,5 @@
 import { getAvatarUrl } from "./api.js";
+import { LEAGUE } from "./constants.js";
 
 const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
 
@@ -250,4 +251,51 @@ export function formatFull(d) {
     d.getFullYear()
   );
 }
+
+const CONFIG = {
+  kids: {
+    rankingURL:
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv",
+    gamesURL:
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv",
+    alias: {
+      Zavodchanyn: "Romario",
+      Mariko: "Gidora",
+      Timabuilding: "Бойбуд",
+    },
+  },
+  sundaygames: {
+    rankingURL:
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv",
+    gamesURL:
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv",
+    alias: {
+      Romario: "Zavodchanyn",
+      Mariko: "Gidora",
+      Timabuilding: "Бойбуд",
+    },
+  },
+};
+
+async function init() {
+  const cfg = CONFIG[LEAGUE];
+  if (!cfg) return;
+  const { rank, games } = await loadData(cfg.rankingURL, cfg.gamesURL);
+  const { players, totalGames, totalRounds, minDate, maxDate } = computeStats(
+    rank,
+    games,
+    { alias: cfg.alias, league: LEAGUE }
+  );
+  document.getElementById("summary").textContent =
+    `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
+  document.getElementById("season-info").textContent =
+    `Перший сезон — старт ${formatFull(minDate)}`;
+  renderTopMVP(players, document.getElementById("top-mvp"));
+  renderChart(players, document.getElementById("rank-chart"));
+  renderTable(players, document.getElementById("ranking"));
+  initSearch(document.getElementById("search"), "#ranking tr");
+  initToggle(document.getElementById("toggle"), "#ranking tr");
+}
+
+document.addEventListener("DOMContentLoaded", init);
 

@@ -16,7 +16,8 @@ window.postJson = window.postJson || async function postJson(url, body) {
   const text = await res.text();
   try {
     return JSON.parse(text);
-  } catch {
+  } catch (err) {
+    console.debug('[ranking]', err);
     return { status: 'TEXT', text };
   }
 };
@@ -63,6 +64,7 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
       }
     }
   } catch (e) {
+    console.debug('[ranking]', e);
     if (e && e.name === 'SecurityError') {
       storageOk = false;
     }
@@ -75,7 +77,9 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
   _fetchCache[url] = info;
   try {
     sessionStorage.setItem(url, JSON.stringify(info));
-  } catch {}
+  } catch (err) {
+    console.debug('[ranking]', err);
+  }
   return data;
 }
 
@@ -246,7 +250,7 @@ export async function fetchPlayerGames(nick, league = '') {
     res = await fetch(`${PROXY_URL}?sheet=games&t=${Date.now()}`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (err) {
-    console.warn('Failed to load games from proxy', err);
+    console.debug('[ranking]', err);
     res = await fetch(gamesURL);
   }
   const text = await res.text();
@@ -299,7 +303,8 @@ async function gasPost(action, payload = {}) {
   if (ct.includes('application/json')) {
     try {
       return JSON.parse(text);
-    } catch {
+    } catch (err) {
+      console.debug('[ranking]', err);
       return text;
     }
   }

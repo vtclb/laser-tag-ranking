@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           players = JSON.parse(cached);
         } catch (e) {
-          // ignore bad cache
+          console.debug('[ranking]', e);
         }
       }
       if (!players) {
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           sessionStorage.setItem(cacheKey, JSON.stringify(players));
         } catch (e) {
-          // ignore storage errors
+          console.debug('[ranking]', e);
         }
       }
 
@@ -50,8 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
       await initAvatarAdmin(players, selLeague.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {
-      console.error('Помилка loadPlayers:', err);
-      alert('Не вдалося завантажити гравців:\n' + err.message);
+      console.debug('[ranking]', err);
+      showToast('Не вдалося завантажити гравців');
     } finally {
       btnLoad.disabled = false;
       btnLoad.textContent = 'Завантажити гравців';

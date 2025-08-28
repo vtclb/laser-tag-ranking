@@ -167,6 +167,7 @@ function doPost(e) {
 
     return JsonOK({status:'OK', players: updatedPlayers});
   } catch (err) {
+    console.debug('[ranking]', err);
     return TextPlain('Error: ' + err.message);
   }
 }

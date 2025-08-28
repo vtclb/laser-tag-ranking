@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
       }
     }catch(err){
+      console.debug('[ranking]', err);
       status.textContent = 'Помилка: '+err.message;
+      showToast('Помилка реєстрації');
     }
   });
 });

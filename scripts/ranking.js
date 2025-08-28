@@ -37,7 +37,9 @@ window.addEventListener("storage", (e) => {
     if (nick) {
       try {
         sessionStorage.removeItem(`avatar:${nick}`);
-      } catch {}
+      } catch (err) {
+        console.debug('[ranking]', err);
+      }
     }
     refreshAvatars(nick);
   }
@@ -52,9 +54,9 @@ export async function loadData(rankingURL, gamesURL) {
     const games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;
     return { rank, games };
   } catch (err) {
-    console.error("Failed to load or parse ranking data", err);
+    console.debug('[ranking]', err);
     const msg = "Не вдалося завантажити дані рейтингу";
-    if (typeof alert === "function") alert(msg);
+    if (typeof showToast === 'function') showToast(msg);
     if (typeof document !== "undefined") {
       const div = document.createElement("div");
       div.textContent = msg;

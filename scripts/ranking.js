@@ -157,11 +157,26 @@ export function renderChart(list, chartEl) {
 const rowMap = new Map();
 const dataMap = new Map();
 
+let allPlayers = [];
 let players = [];
 let searchInput;
-let filterRows = () => {};
 const sortState = { key: "points", dir: -1 };
 let rankingEl;
+
+function verifySortableHeaders() {
+  ["points", "games", "winRate", "mvp"].forEach((key) => {
+    const th = document.querySelector(`thead th[data-key="${key}"]`);
+    if (!th) {
+      log("[ranking]", `Missing data-key for ${key} column`);
+      return;
+    }
+    if (!th.querySelector(".sort-arrow")) {
+      const span = document.createElement("span");
+      span.className = "sort-arrow";
+      th.appendChild(span);
+    }
+  });
+}
 
 function updateArrows() {
   document.querySelectorAll("thead th[data-key]").forEach((th) => {
@@ -173,6 +188,47 @@ function updateArrows() {
       arrow.textContent = "";
     }
   });
+}
+
+function sortPlayers() {
+  const { key, dir } = sortState;
+  allPlayers.sort((a, b) => {
+    let res = 0;
+    switch (key) {
+      case "place":
+        res = a._index - b._index;
+        break;
+      case "nickname":
+        res = a.nickname.localeCompare(b.nickname);
+        break;
+      case "rank":
+        res = getRankClass(a.points).localeCompare(getRankClass(b.points));
+        break;
+      case "points":
+        res = a.points - b.points;
+        break;
+      case "games":
+        res = a.games - b.games;
+        break;
+      case "winRate":
+        res = parseFloat(a.winRate) - parseFloat(b.winRate);
+        break;
+      case "mvp":
+        res = a.mvp - b.mvp;
+        break;
+      default:
+        res = 0;
+    }
+    if (res === 0) res = a._index - b._index;
+    return res * dir;
+  });
+  allPlayers.forEach((p, i) => (p._index = i));
+}
+
+function applyFilters() {
+  const q = (searchInput?.value || "").toLowerCase();
+  players = allPlayers.filter((p) => p.nickname.toLowerCase().includes(q));
+  renderTable(players, rankingEl);
 }
 
 function createRow(p, i) {
@@ -313,15 +369,9 @@ export function renderTopMVP(list, container) {
   });
 }
 
-export function initSearch(inputEl, rowSelector) {
+export function initSearch(inputEl) {
   searchInput = inputEl;
-  filterRows = () => {
-    const q = searchInput.value.toLowerCase();
-    document.querySelectorAll(rowSelector).forEach((tr) => {
-      tr.style.display = tr.textContent.toLowerCase().includes(q) ? "" : "none";
-    });
-  };
-  inputEl.addEventListener("input", filterRows);
+  searchInput.addEventListener("input", applyFilters);
 }
 
 export function initToggle(btnEl, rowSelector) {
@@ -386,13 +436,13 @@ async function init() {
     minDate,
     maxDate,
   } = computeStats(rank, games, { alias: cfg.alias, league: LEAGUE });
-  players = pl.map((p, i) => ({ ...p, _index: i }));
+  allPlayers = pl.map((p, i) => ({ ...p, _index: i }));
   document.getElementById("summary").textContent =
     `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
   document.getElementById("season-info").textContent =
     `Перший сезон — старт ${formatFull(minDate)}`;
-  renderTopMVP(players, document.getElementById("top-mvp"));
-  renderChart(players, document.getElementById("rank-chart"));
+  renderTopMVP(allPlayers, document.getElementById("top-mvp"));
+  renderChart(allPlayers, document.getElementById("rank-chart"));
   rankingEl = document.getElementById("ranking");
   rankingEl.addEventListener("click", (e) => {
     const cell = e.target.closest("td");
@@ -409,6 +459,7 @@ async function init() {
     }
   });
   const thead = document.querySelector("thead");
+  verifySortableHeaders();
   thead.addEventListener("click", (e) => {
     const th = e.target.closest("th[data-key]");
     if (!th) return;
@@ -419,45 +470,14 @@ async function init() {
       sortState.key = key;
       sortState.dir = key === "points" ? -1 : 1;
     }
-    const dir = sortState.dir;
-    players.sort((a, b) => {
-      let res = 0;
-      switch (key) {
-        case "place":
-          res = a._index - b._index;
-          break;
-        case "nickname":
-          res = a.nickname.localeCompare(b.nickname);
-          break;
-        case "rank":
-          res = getRankClass(a.points).localeCompare(getRankClass(b.points));
-          break;
-        case "points":
-          res = a.points - b.points;
-          break;
-        case "games":
-          res = a.games - b.games;
-          break;
-        case "winRate":
-          res = parseFloat(a.winRate) - parseFloat(b.winRate);
-          break;
-        case "mvp":
-          res = a.mvp - b.mvp;
-          break;
-        default:
-          res = 0;
-      }
-      if (res === 0) res = a._index - b._index;
-      return res * dir;
-    });
-    renderTable(players, rankingEl);
-    filterRows();
+    sortPlayers();
+    applyFilters();
     updateArrows();
   });
-  renderTable(players, rankingEl);
-  initSearch(document.getElementById("search"), "#ranking tr");
+  initSearch(document.getElementById("search"));
+  sortPlayers();
+  applyFilters();
   initToggle(document.getElementById("toggle"), "#ranking tr");
-  filterRows();
   updateArrows();
 }
 

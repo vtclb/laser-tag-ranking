@@ -18,7 +18,8 @@
   }
 
   #btn-load,
-  #ui-clear-lobby {
+  #ui-clear-lobby,
+  #btn-clear-lobby {
     width: 100%;
   }
 

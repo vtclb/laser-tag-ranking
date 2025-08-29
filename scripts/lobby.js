@@ -546,6 +546,10 @@ document.addEventListener('click', async e => {
     closePanel();
   });
 
+  document.getElementById('btn-clear-lobby')?.addEventListener('click', () => {
+    if (typeof clearLobby === 'function') clearLobby();
+  });
+
   const fixVh = () => {
     const vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--vh', `${vh}px`);

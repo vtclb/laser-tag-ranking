@@ -179,10 +179,14 @@
         height: 40px;
         object-fit: cover;
       }
-      /* Кнопка */
-      .show-more {
-        display: block;
-        margin: 1rem auto;
+      /* Пагінація */
+      .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin: 1rem 0;
+      }
+      .pagination button {
         padding: 0.75rem 1.5rem;
         background: #222;
         color: #f39c12;
@@ -196,8 +200,11 @@
           auto;
         transition: transform 0.2s;
       }
-      .show-more:hover {
+      .pagination button:hover {
         transform: scale(1.05);
+      }
+      .page-info {
+        align-self: center;
       }
       /* Ранги */
       .rank-S td {
@@ -311,7 +318,12 @@
           <tbody></tbody>
         </table>
       </div>
-      <button class="show-more" id="toggle">Всі гравці</button>
+      <div class="pagination">
+        <button id="prev-page">Назад</button>
+        <span id="page-info" class="page-info"></span>
+        <button id="next-page">Вперед</button>
+        <button id="show-all">Показати всі</button>
+      </div>
     </div>
     <div id="stats-modal" class="modal hidden">
       <div class="modal-content">

@@ -162,6 +162,10 @@ let players = [];
 let searchInput;
 const sortState = { key: "points", dir: -1 };
 let rankingEl;
+let currentPage = 1;
+const rowsPerPage = 10;
+let showAll = false;
+let prevBtn, nextBtn, pageInfoEl, showAllBtn;
 
 function verifySortableHeaders() {
   ["points", "games", "winRate", "mvp"].forEach((key) => {
@@ -228,13 +232,15 @@ function sortPlayers() {
 function applyFilters() {
   const q = (searchInput?.value || "").toLowerCase();
   players = allPlayers.filter((p) => p.nickname.toLowerCase().includes(q));
+  currentPage = 1;
   renderTable(players, rankingEl);
+  applyPagination();
 }
 
 function createRow(p, i) {
   const tr = document.createElement("tr");
   const cls = getRankClass(p.points);
-  tr.className = cls + (i >= 10 ? " hidden" : "");
+  tr.className = cls;
 
   const tdRank = document.createElement("td");
   tdRank.textContent = i + 1;
@@ -308,7 +314,7 @@ export function renderTable(list, tbodyEl) {
     if (prev.winRate !== p.winRate) cells[6].textContent = p.winRate + "%";
     if (prev.mvp !== p.mvp) cells[7].textContent = p.mvp;
 
-    const newCls = cls + (i >= 10 ? " hidden" : "");
+    const newCls = cls;
     if (row.className !== newCls) row.className = newCls;
     const nickCls = cls.replace("rank-", "nick-");
     if (cells[2].className !== nickCls) cells[2].className = nickCls;
@@ -374,18 +380,44 @@ export function initSearch(inputEl) {
   searchInput.addEventListener("input", applyFilters);
 }
 
-export function initToggle(btnEl, rowSelector) {
-  btnEl.addEventListener("click", () => {
-    const expanded =
-      btnEl.textContent ===
-      "\u0412\u0441\u0456 \u0433\u0440\u0430\u0432\u0446\u0456";
-    document.querySelectorAll(rowSelector).forEach((tr, i) => {
-      if (i >= 10) tr.style.display = expanded ? "table-row" : "none";
-    });
-    btnEl.textContent = expanded
-      ? "\u0422\u043e\u043f-10"
-      : "\u0412\u0441\u0456 \u0433\u0440\u0430\u0432\u0446\u0456";
+function initPagination(prevEl, nextEl, infoEl, allEl) {
+  prevBtn = prevEl;
+  nextBtn = nextEl;
+  pageInfoEl = infoEl;
+  showAllBtn = allEl;
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      applyPagination();
+    }
   });
+  nextBtn.addEventListener("click", () => {
+    currentPage++;
+    applyPagination();
+  });
+  showAllBtn.addEventListener("click", () => {
+    showAll = !showAll;
+    applyPagination();
+  });
+}
+
+function applyPagination() {
+  if (!rankingEl) return;
+  const totalPages = Math.max(1, Math.ceil(players.length / rowsPerPage));
+  if (!showAll && currentPage > totalPages) currentPage = totalPages;
+  const start = showAll ? 0 : (currentPage - 1) * rowsPerPage;
+  const end = showAll ? players.length : start + rowsPerPage;
+  rankingEl.querySelectorAll("tr").forEach((tr, i) => {
+    tr.style.display = i >= start && i < end ? "table-row" : "none";
+  });
+  if (pageInfoEl)
+    pageInfoEl.textContent = showAll
+      ? `Всі (${players.length})`
+      : `${currentPage}/${totalPages}`;
+  if (prevBtn) prevBtn.disabled = showAll || currentPage <= 1;
+  if (nextBtn) nextBtn.disabled = showAll || currentPage >= totalPages;
+  if (showAllBtn)
+    showAllBtn.textContent = showAll ? "Сторінки" : "Показати всі";
 }
 
 export function formatD(d) {
@@ -473,9 +505,14 @@ async function init() {
     updateArrows();
   });
   initSearch(document.getElementById("search"));
+  initPagination(
+    document.getElementById("prev-page"),
+    document.getElementById("next-page"),
+    document.getElementById("page-info"),
+    document.getElementById("show-all")
+  );
   sortPlayers();
   applyFilters();
-  initToggle(document.getElementById("toggle"), "#ranking tr");
   updateArrows();
 }
 

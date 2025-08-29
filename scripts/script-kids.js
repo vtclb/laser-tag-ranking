@@ -29,7 +29,6 @@ function loadRanking() {
                 const rankInfo = getRank(player.points);
                 const row = document.createElement("tr");
                 row.classList.add(rankInfo.class);
-                if (index >= 10) row.classList.add("hidden-players");
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td>${rankInfo.icon} ${player.nickname}</td>
@@ -43,18 +42,6 @@ function loadRanking() {
             log('[ranking]', err);
             showToast('Помилка завантаження даних');
         });
-}
-
-function togglePlayers() {
-    const hiddenRows = document.querySelectorAll(".hidden-players");
-    const button = document.querySelector(".show-more");
-    if (hiddenRows[0].style.display === "none" || hiddenRows[0].style.display === "") {
-        hiddenRows.forEach(row => row.style.display = "table-row");
-        button.textContent = "Показати Топ-10";
-    } else {
-        hiddenRows.forEach(row => row.style.display = "none");
-        button.textContent = "Показати більше";
-    }
 }
 
 document.addEventListener("DOMContentLoaded", loadRanking);

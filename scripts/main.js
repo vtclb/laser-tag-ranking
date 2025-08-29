@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       initLobby(players, csvLeague);          // Рендер лоббі
+      document.getElementById('sec-player-picker')?.classList.add('open');
       await initAvatarAdmin(players, selLeague.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {

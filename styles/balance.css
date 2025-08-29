@@ -71,7 +71,6 @@
 
 .bal__players { display: none; }
 .only-mobile { display: none; }
-#ui-clear-lobby.only-mobile { display: inline-block; }
 .only-desktop { display: inline-block; }
 
 @media (max-width: 768px) {

@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('sec-player-picker')?.classList.add('open');
       await initAvatarAdmin(players, selLeague.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
+      document.getElementById('ui-panel').hidden = true;
+      document.getElementById('ui-overlay').hidden = true;
     } catch (err) {
       log('[ranking]', err);
       const msg = 'Не вдалося завантажити гравців';
@@ -63,5 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLobby([], csvLeague);               // Порожнє лоббі
     await initAvatarAdmin([], selLeague.value);
     scenArea.classList.add('hidden');
+    document.getElementById('ui-panel').hidden = true;
+    document.getElementById('ui-overlay').hidden = true;
   });
 });

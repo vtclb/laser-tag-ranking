@@ -18,7 +18,7 @@
   }
 
   #btn-load,
-  #ui-clear-lobby {
+  #ui-clear-lobby.only-mobile {
     width: 100%;
   }
 

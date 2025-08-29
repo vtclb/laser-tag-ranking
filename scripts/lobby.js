@@ -227,11 +227,13 @@ document.addEventListener('DOMContentLoaded', () => {
           newNick.value = '';
           newAge.value = '';
         } else {
-          showToast('Не вдалося створити гравця');
+          const msg = 'Не вдалося створити гравця';
+          if (typeof showToast === 'function') showToast(msg); else alert(msg);
         }
       } catch (err) {
         log('[ranking]', err);
-        showToast('Не вдалося створити гравця');
+        const msg = 'Не вдалося створити гравця';
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
       }
     });
   }
@@ -447,11 +449,13 @@ function onLobbyAction(e) {
         player.abonement = newType;
         const full = players.find(p => p.nick === player.nick);
         if (full) full.abonement = newType;
-        showToast('Абонемент оновлено');
+        const msg = 'Абонемент оновлено';
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
       } catch (err) {
         sel.value = prevType;
         log('[ranking]', err);
-        showToast('Помилка оновлення абонемента');
+        const msg = 'Помилка оновлення абонемента';
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
       }
     })();
   }
@@ -470,7 +474,8 @@ document.addEventListener('click', async e => {
     }
   } catch (err) {
     log('[ranking]', err);
-    showToast('Не вдалося видати ключ');
+    const msg = 'Не вдалося видати ключ';
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
   }
 });
 

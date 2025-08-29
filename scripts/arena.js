@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.trim() === 'OK') {
           alert('Детальна статистика з PDF імпортована успішно');
         } else {
-          showToast('Помилка імпорту статистики: ' + res);
+          const msg = 'Помилка імпорту статистики: ' + res;
+          if (typeof showToast === 'function') showToast(msg); else alert(msg);
         }
       } catch (err) {
         log('[ranking]', err);
@@ -132,7 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const res = await saveResult(data);
       if (res.status !== 'OK') {
-        showToast('Помилка збереження: ' + (res.status || res));
+        const msg = 'Помилка збереження: ' + (res.status || res);
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
         return;
       }
 
@@ -148,7 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
       btnClear.click();
     } catch (err) {
       log('[ranking]', err);
-      showToast('Не вдалося зберегти гру');
+      const msg = 'Не вдалося зберегти гру';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
     }
   }
   btnSave.addEventListener('click', saveGame);

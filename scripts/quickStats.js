@@ -104,7 +104,8 @@ export async function showQuickStats(nick, evt) {
     safeSet(localStorage, key, JSON.stringify({ ts: Date.now(), data }));
   } catch (err) {
     log('[ranking]', err);
-    if (typeof showToast === 'function') showToast('Не вдалося завантажити статистику');
+    const msg = 'Не вдалося завантажити статистику';
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
     render(null);
   }
 }

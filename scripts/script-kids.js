@@ -40,7 +40,8 @@ function loadRanking() {
       })
         .catch(err => {
             log('[ranking]', err);
-            showToast('Помилка завантаження даних');
+            const msg = 'Помилка завантаження даних';
+            if (typeof showToast === 'function') showToast(msg); else alert(msg);
         });
 }
 

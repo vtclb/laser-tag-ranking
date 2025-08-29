@@ -63,7 +63,7 @@ export async function loadData(rankingURL, gamesURL) {
   } catch (err) {
     log('[ranking]', err);
     const msg = "Не вдалося завантажити дані рейтингу";
-    if (typeof showToast === 'function') showToast(msg);
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
     if (typeof document !== "undefined") {
       const div = document.createElement("div");
       div.textContent = msg;

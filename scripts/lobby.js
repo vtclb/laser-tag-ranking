@@ -86,6 +86,7 @@ async function addPlayer(nick){
   }
   lobby.push({ ...res, team: null });
   renderLobby();
+  renderLobbyCards();
   renderSelect(filtered);
 }
 
@@ -105,6 +106,7 @@ async function addPlayer(nick){
   }
   renderSelect(filtered);
   renderLobby();
+  renderLobbyCards();
 }
 
 export function updateLobbyState(updates){
@@ -126,6 +128,7 @@ export function updateLobbyState(updates){
   const teamCount = Object.keys(teams).length;
   if(teamCount) initTeams(teamCount, teams);
   renderLobby();
+  renderLobbyCards();
 }
 
 // Рендер списку доступних гравців
@@ -189,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     selected = [];
     renderLobby();
+    renderLobbyCards();
     renderSelect(filtered);
   };
 
@@ -249,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
 export function setManualCount(n) {
   manualCount = n;
   renderLobby();
+  renderLobbyCards();
 }
 
 export function clearLobby() {
@@ -259,6 +264,7 @@ export function clearLobby() {
   safeDel(localStorage, getLobbyStorageKey(undefined, uiLeague));
 
   renderLobby();
+  renderLobbyCards();
   renderTeams();
   updateSummary();
   renderSelect(filtered);
@@ -339,6 +345,7 @@ function movePlayer(nick, targetId) {
   else if (targetId === 'team-a') teams[1].push(p);
   else if (targetId === 'team-b') teams[2].push(p);
   renderLobby();
+  renderLobbyCards();
 }
 
 // Рендер лоббі
@@ -380,9 +387,26 @@ function renderLobby() {
     </tr>
   `).join('');
 
-  const cards = document.querySelector('.bal__players');
-  if (cards) {
-    cards.innerHTML = lobby.map((p, i) => `
+  const total = lobby.reduce((s, p) => s + p.pts, 0);
+  document.getElementById('lobby-count').textContent = lobby.length;
+  document.getElementById('lobby-sum').textContent   = total;
+  document.getElementById('lobby-avg').textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
+
+  saveLobbyState({lobby, teams, manualCount, league: uiLeague});
+}
+
+function renderLobbyCards() {
+  let cards = document.querySelector('.bal__players');
+  if (!cards) {
+    const area = document.getElementById('lobby-area');
+    if (area) {
+      cards = document.createElement('div');
+      cards.className = 'bal__players only-mobile';
+      area.appendChild(cards);
+    }
+  }
+  if (!cards) return;
+  cards.innerHTML = lobby.map((p, i) => `
       <div class="player">
         <div class="row"><span class="nick">${p.nick}</span><span class="pts">${p.pts}</span></div>
         <div class="row"><span class="rank">${p.rank}</span><span class="season">${p.abonement || ''}</span></div>
@@ -397,14 +421,6 @@ function renderLobby() {
         </div>
       </div>
     `).join('');
-  }
-
-  const total = lobby.reduce((s, p) => s + p.pts, 0);
-  document.getElementById('lobby-count').textContent = lobby.length;
-  document.getElementById('lobby-sum').textContent   = total;
-  document.getElementById('lobby-avg').textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
-
-  saveLobbyState({lobby, teams, manualCount, league: uiLeague});
 }
 
 function onLobbyAction(e) {
@@ -423,6 +439,7 @@ function onLobbyAction(e) {
 
     initTeams(manualCount, preset);
     renderLobby();
+    renderLobbyCards();
     renderSelect(filtered);
     return;
   }
@@ -432,6 +449,7 @@ function onLobbyAction(e) {
     const idx = +remove.dataset.i;
     lobby.splice(idx, 1);
     renderLobby();
+    renderLobbyCards();
     renderSelect(filtered);
     return;
   }

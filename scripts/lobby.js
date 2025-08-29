@@ -510,7 +510,6 @@ document.addEventListener('click', async e => {
   }
 });
 
-document.getElementById('btn-clear-lobby-dup')?.addEventListener('click', clearLobby);
 
 // Mobile shell
 (() => {

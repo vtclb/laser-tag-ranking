@@ -31,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }catch(err){
       log('[ranking]', err);
       status.textContent = 'Помилка: '+err.message;
-      showToast('Помилка реєстрації');
+      const msg = 'Помилка реєстрації';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
     }
   });
 });

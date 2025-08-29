@@ -176,7 +176,8 @@ async function loadProfile(nick, key = '') {
     }
   } catch (err) {
     log('[ranking]', err);
-    showToast('Помилка завантаження профілю');
+    const msg = 'Помилка завантаження профілю';
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
     showError('Помилка завантаження профілю');
     return;
   }
@@ -212,7 +213,8 @@ async function loadProfile(nick, key = '') {
       safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
       log('[ranking]', err);
-      showToast('Помилка завантаження');
+      const msg = 'Помилка завантаження';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
     }
   });
 

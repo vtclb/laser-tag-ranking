@@ -131,7 +131,8 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCach
       playersTb.innerHTML = '';
       matchesTb.innerHTML = '';
       log('[ranking]', err);
-      showToast('Failed to load gameday data. Please try again later.');
+      const msg = 'Failed to load gameday data. Please try again later.';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
       return;
     }
     const ranking = Papa.parse(rText,{header:true,skipEmptyLines:true}).data;

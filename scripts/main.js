@@ -48,7 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
     } catch (err) {
       log('[ranking]', err);
-      showToast('Не вдалося завантажити гравців');
+      const msg = 'Не вдалося завантажити гравців';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
     } finally {
       btnLoad.disabled = false;
       btnLoad.textContent = 'Завантажити гравців';

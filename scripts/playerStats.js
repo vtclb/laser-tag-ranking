@@ -33,7 +33,8 @@ function init(){
       body.appendChild(table);
     }catch(err){
       log('[ranking]', err);
-      showToast('Помилка завантаження');
+      const msg = 'Помилка завантаження';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
       body.textContent='Помилка завантаження';
     }
   };

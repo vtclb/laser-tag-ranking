@@ -44,7 +44,8 @@ async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
     }
   }catch(err){
     log('[ranking]', err);
-    showToast('Failed to load default avatars');
+    const msg = 'Failed to load default avatars';
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
   }
 }
 
@@ -113,7 +114,8 @@ export async function initAvatarAdmin(players = [], league = '') {
           updateSaveBtn();
         } catch (err) {
           log('[ranking]', err);
-          showToast('Failed to fetch avatar');
+          const msg = 'Failed to fetch avatar';
+          if (typeof showToast === 'function') showToast(msg); else alert(msg);
         }
       });
       thumbs.appendChild(t);
@@ -155,7 +157,8 @@ export async function initAvatarAdmin(players = [], league = '') {
     }
     updateSaveBtn();
     if (failed.length) {
-      showToast('Failed to upload avatars for: ' + failed.join(', '));
+      const msg = 'Failed to upload avatars for: ' + failed.join(', ');
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
     }
     if (statusEl) {
       statusEl.textContent = 'Аватари оновлено';

@@ -71,9 +71,11 @@
 
 .bal__players { display: none; }
 .only-mobile { display: none; }
+.only-desktop { display: inline-block; }
 
 @media (max-width: 768px) {
   .only-mobile { display: block; }
+  .only-desktop { display: none; }
   .bal__table { display: none; }
   .bal__players { display: grid; gap: 10px; }
   .player {

@@ -1,5 +1,5 @@
 /* Mobile specific styles for the balance page */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .bal__row {
     flex-direction: column;
     align-items: stretch;
@@ -15,6 +15,11 @@
     box-sizing: border-box;
     font-size: 1rem;
     padding: 8px;
+  }
+
+  #btn-load,
+  #ui-clear-lobby {
+    width: 100%;
   }
 
   .bal__table th,

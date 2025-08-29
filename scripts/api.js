@@ -288,7 +288,8 @@ export async function fetchPlayerGames(nick, league = '') {
   let res;
   try {
     // якщо проксі віддає лист games
-    res = await fetch(`${PROXY_URL}?sheet=games&t=${Date.now()}`);
+    // Use a fixed version to control cache invalidation instead of Date.now()
+    res = await fetch(`${PROXY_URL}?sheet=games&v=1`);
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (err) {
     log('[ranking]', err);

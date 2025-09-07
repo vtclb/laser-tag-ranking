@@ -62,6 +62,13 @@ function handleManual() {
   updateStartButton();
 }
 
+export function refreshArenaTeams() {
+  renderArenaCheckboxes();
+  updateStartButton();
+}
+
+export { renderArenaCheckboxes, updateStartButton };
+
 // Встановлюємо слухачі після завантаження DOM
 document.addEventListener('DOMContentLoaded', () => {
   scenarioArea    = document.getElementById('scenario-area');

@@ -5,6 +5,7 @@ import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
 import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile, fetchOnce, safeDel, clearFetchCache } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
+import { refreshArenaTeams } from './scenario.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
@@ -438,6 +439,7 @@ function onLobbyAction(e) {
     preset[teamNo].push(p);
 
     initTeams(manualCount, preset);
+    refreshArenaTeams();
     renderLobby();
     renderLobbyCards();
     renderSelect(filtered);
@@ -451,6 +453,7 @@ function onLobbyAction(e) {
     renderLobby();
     renderLobbyCards();
     renderSelect(filtered);
+    refreshArenaTeams();
     return;
   }
 

@@ -1,6 +1,7 @@
 import { log } from './logger.js';
 import { getAvatarUrl, fetchOnce, CSV_URLS, clearFetchCache, safeDel } from "./api.js";
 import { LEAGUE } from "./constants.js";
+import { rankLetterForPoints } from './rankUtils.js';
 
 const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
 
@@ -90,8 +91,13 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
       stats[n].games++;
     });
     winT.forEach((n) => stats[n].wins++);
-    const m = alias[g.MVP] || g.MVP;
-    if (stats[m]) stats[m].mvp++;
+    const mvpList = String(g.MVP || '')
+      .split(/[;,]/)
+      .map((s) => alias[s.trim()] || s.trim())
+      .filter(Boolean);
+    mvpList.forEach((m) => {
+      if (stats[m]) stats[m].mvp++;
+    });
     let s1 = parseInt(g.Score1, 10);
     let s2 = parseInt(g.Score2, 10);
     if (isNaN(s1) || isNaN(s2)) {
@@ -128,22 +134,19 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
 }
 
 export function getRankClass(points) {
-  if (points >= 1200) return "rank-S";
-  if (points >= 800) return "rank-A";
-  if (points >= 500) return "rank-B";
-  if (points >= 200) return "rank-C";
-  return "rank-D";
+  const letter = rankLetterForPoints(points);
+  return `rank-${letter}`;
 }
 
 export function renderChart(list, chartEl) {
-  const counts = { S: 0, A: 0, B: 0, C: 0, D: 0 };
+  const counts = { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
   list.forEach((p) => {
     const r = getRankClass(p.points).replace("rank-", "");
     counts[r] = (counts[r] || 0) + 1;
   });
   const total = list.length || 1;
   chartEl.innerHTML = "";
-  ["S", "A", "B", "C", "D"].forEach((r) => {
+  ["S", "A", "B", "C", "D", "E", "F"].forEach((r) => {
     const pct = Math.round((counts[r] / total) * 100);
     if (!pct) return;
     const div = document.createElement("div");

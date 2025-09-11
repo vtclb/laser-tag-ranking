@@ -1,5 +1,6 @@
 import { log } from './logger.js';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, fetchOnce, safeSet, safeGet, clearFetchCache, safeDel } from './api.js';
+import { rankLetterForPoints } from './rankUtils.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
@@ -40,14 +41,6 @@ async function updateAvatar(nick) {
   }
 }
 
-function computeRank(points) {
-  const p = +points || 0;
-  if (p >= 1200) return 'S';
-  if (p >= 800) return 'A';
-  if (p >= 500) return 'B';
-  if (p >= 200) return 'C';
-  return 'D';
-}
 
 function showError(msg) {
   const container = document.getElementById('profile');
@@ -185,7 +178,7 @@ async function loadProfile(nick, key = '') {
   const league = data.league || profile.league || '';
   const games = await fetchPlayerGames(nick, league);
   await updateAvatar(nick);
-  const rank = computeRank(profile.points);
+  const rank = rankLetterForPoints(profile.points);
   document.getElementById('rating').textContent = `Рейтинг: ${profile.points} (${rank})`;
   const aboType = profile.abonement?.type || '';
   document.getElementById('abonement-type').textContent = `Абонемент: ${aboType}`;

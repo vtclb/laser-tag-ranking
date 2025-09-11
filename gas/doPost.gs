@@ -16,6 +16,17 @@ function log(...args) {
   }
 }
 
+function rankLetterForPoints(p) {
+  p = Number(p) || 0;
+  if (p >= 1200) return 'S';
+  if (p >= 1000) return 'A';
+  if (p >= 800)  return 'B';
+  if (p >= 600)  return 'C';
+  if (p >= 400)  return 'D';
+  if (p >= 200)  return 'E';
+  return 'F';
+}
+
 function doPost(e) {
   try {
     // ---------- JSON API ----------
@@ -134,6 +145,14 @@ function doPost(e) {
     }
 
     const winnerKey = params.winner;
+    // Розпарсити список MVP (допускаємо коми/крапки з комою та пробіли)
+    const mvpList = String(params.mvp || '')
+      .split(/[;,]/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    // Розклад бонусів за позицією у списку: 1-й, 2-й, 3-й
+    const MVP_BONUSES = [12, 7, 3];
+
     const updatedPlayers = [];
 
     allPlayers.forEach(nick => {
@@ -144,10 +163,16 @@ function doPost(e) {
       const cur = Number(rankSheet.getRange(row, ptsCol).getValue()) || 0;
 
       // ранг на момент цього матчу (за поточними очками до оновлення)
-      const rankCode = (cur < 200) ? 'D' : (cur < 500) ? 'C' : (cur < 800) ? 'B' : (cur < 1200) ? 'A' : 'S';
-      const partScore = ({D:5, C:0, B:-5, A:-10, S:-15}[rankCode]) ?? 0;
+      const rl = rankLetterForPoints(cur);
+      const partScore = ({F:0, E:-4, D:-6, C:-8, B:-10, A:-12, S:-14})[rl] || 0;
       const winScore  = (winnerKey !== 'tie' && teams[winnerKey]?.includes(nick)) ? 20 : 0;
-      const mvpScore  = (nick === params.mvp) ? 10 : 0;
+
+      let mvpScore = 0;
+      for (let i = 0; i < mvpList.length && i < 3; i++) {
+        if (mvpList[i] === nick) {
+          mvpScore += MVP_BONUSES[i];
+        }
+      }
       const penScore  = penaltyMap[nick] || 0;
 
       const delta   = partScore + winScore + mvpScore + penScore;
@@ -169,7 +194,7 @@ function doPost(e) {
         }
       }
 
-      const rankLetter = (updated < 200) ? 'D' : (updated < 500) ? 'C' : (updated < 800) ? 'B' : (updated < 1200) ? 'A' : 'S';
+      const rankLetter = rankLetterForPoints(updated);
       updatedPlayers.push({nick: nick, points: updated, rank: rankLetter});
     });
 

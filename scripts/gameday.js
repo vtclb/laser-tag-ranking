@@ -1,5 +1,6 @@
 import { log } from './logger.js';
 import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCache } from "./api.js";
+import { rankLetterForPoints } from './rankUtils.js';
 (function () {
   const AVATAR_TTL = 6 * 60 * 60 * 1000;
   const CSV_TTL = 60 * 1000;
@@ -82,15 +83,8 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCach
 
   function normName(n){ return alias[n] || n; }
 
-  function getRankLetter(pts){
-    if(pts>=1200) return 'S';
-    if(pts>=800 ) return 'A';
-    if(pts>=500 ) return 'B';
-    if(pts>=200 ) return 'C';
-    return 'D';
-  }
   function partPoints(rank){
-    return {S:-15,A:-10,B:-5,C:0,D:5}[rank] || 0;
+    return {S:-14,A:-12,B:-10,C:-8,D:-6,E:-4,F:0}[rank] || 0;
   }
 
   function parseDate(ts) {
@@ -170,7 +164,10 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCach
       const t1 = g.Team1.split(',').map(s=>normName(s.trim()));
       const t2 = g.Team2.split(',').map(s=>normName(s.trim()));
       const winner = g.Winner;
-      const mvp = normName(g.MVP);
+      const mvpList = String(g.MVP || '')
+        .split(/[;,]/)
+        .map(s => normName(s.trim()))
+        .filter(Boolean);
 
       let s1 = parseInt(g.Score1, 10);
       let s2 = parseInt(g.Score2, 10);
@@ -185,10 +182,11 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCach
       function apply(team, isWin, store, arr){
         team.forEach(n=>{
           players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
-          const rankBefore = getRankLetter(players[n].pts);
+          const rankBefore = rankLetterForPoints(players[n].pts);
           let d = partPoints(rankBefore);
           if(isWin) d+=20;
-          if(mvp===n) d+=10;
+          const idx = mvpList.indexOf(n);
+          if(idx > -1) d += [12,7,3][idx] || 0;
           players[n].pts += d;
           if(store){
             players[n].games++;
@@ -223,7 +221,7 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCach
           score1: s1,
           score2: s2,
           winner,
-          mvp: {nick:mvp,rank:getRankLetter(players[mvp]?.pts||0)}
+          mvp: mvpList.map(n => ({nick:n,rank:rankLetterForPoints(players[n]?.pts||0)}))
         });
       }else{
         apply(t1, winner==='team1', false, []);
@@ -260,7 +258,7 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCach
       const tr=document.createElement('tr');
       const cls=p.delta>=0?'up':'down';
       const arrow=p.delta>0?'▲':p.delta<0?'▼':'';
-      const nClass='nick-'+getRankLetter(p.pts);
+      const nClass='nick-'+rankLetterForPoints(p.pts);
 
       const rank=document.createElement('td');
       rank.textContent=`${p.currRank} (${p.prevRank})`;
@@ -345,10 +343,13 @@ import { getAvatarUrl, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCach
       td2.appendChild(total2);
 
       const tdMvp=document.createElement('td');
-      const mvpSpan=document.createElement('span');
-      mvpSpan.className='nick-'+m.mvp.rank;
-      mvpSpan.textContent=m.mvp.nick;
-      tdMvp.appendChild(mvpSpan);
+      m.mvp.forEach((mv,idx)=>{
+        const mvpSpan=document.createElement('span');
+        mvpSpan.className='nick-'+mv.rank;
+        mvpSpan.textContent=mv.nick;
+        tdMvp.appendChild(mvpSpan);
+        if(idx<m.mvp.length-1) tdMvp.appendChild(document.createTextNode(', '));
+      });
 
       const pdfTd=document.createElement('td');
       const pdfUrl = pdfLinks[m.id];

@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, fetchOnce, safeSet, safeGet, clearFetchCache, safeDel } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, avatarSrcFromRecord, safeSet, safeGet, clearFetchCache, safeDel } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
 
 let gameLimit = 0;
@@ -8,20 +8,19 @@ let avatarUrl = '';
 let currentNick = '';
 const pdfCache = {};
 
-const AVATAR_TTL = 6 * 60 * 60 * 1000;
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 async function fetchAvatar(nick){
-  return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
+  return getAvatarUrl(nick);
 }
 
 const avatarFailures = new Set();
 
 async function updateAvatar(nick) {
-  let url;
-  for (let attempt = 0; attempt < 2 && !url; attempt++) {
+  let rec;
+  for (let attempt = 0; attempt < 2 && !rec; attempt++) {
     try {
-      url = await fetchAvatar(nick);
+      rec = await fetchAvatar(nick);
       avatarFailures.delete(nick);
     } catch (err) {
       if (!avatarFailures.has(nick)) {
@@ -30,13 +29,13 @@ async function updateAvatar(nick) {
       }
     }
   }
-  avatarUrl = url || DEFAULT_AVATAR_URL;
+  avatarUrl = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
   const avatarEl = document.getElementById('avatar');
   if (avatarEl) {
-    avatarEl.src = avatarUrl + '?t=' + Date.now();
+    avatarEl.src = avatarUrl;
     avatarEl.onerror = () => {
       avatarEl.onerror = null;
-      avatarEl.src = DEFAULT_AVATAR_URL + '?t=' + Date.now();
+      avatarEl.src = DEFAULT_AVATAR_URL;
     };
   }
 }

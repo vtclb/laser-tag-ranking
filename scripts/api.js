@@ -31,10 +31,13 @@ export function safeDel(storage, key) {
 }
 
 // ---------------------- Глобальні утиліти ----------------------
-// Веб-апп GAS, якщо ще не визначено
-window.WEB_APP_URL =
+// Google Apps Script backend (веб-апп)
+export const WEB_APP_URL =
   window.WEB_APP_URL ||
   'https://script.google.com/macros/s/AKfycbwubiypVk99U_BJnV3aWLeXDAVTgNsq3IiEE20QECnSKHPf7yLZdcMx0bZMWL_jsF4gcw/exec';
+window.WEB_APP_URL = WEB_APP_URL;
+// back-compat
+export const PROXY_URL = WEB_APP_URL;
 
 // Допоміжний POST JSON запит
 window.postJson = window.postJson || async function postJson(url, body) {
@@ -61,10 +64,6 @@ window.uiLeagueToGas = window.uiLeagueToGas || function uiLeagueToGas(v) {
   return String(v).toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
 };
 
-// Google Apps Script backend (веб-апп)
-export const PROXY_URL =
-  'https://script.google.com/macros/s/AKfycbwubiypVk99U_BJnV3aWLeXDAVTgNsq3IiEE20QECnSKHPf7yLZdcMx0bZMWL_jsF4gcw/exec';
-
 // Публічні фіди (CSV)
 export const CSV_URLS = {
   kids: {
@@ -85,10 +84,12 @@ const rankFromPoints = (p) => (p < 200 ? 'D' : p < 500 ? 'C' : p < 800 ? 'B' : p
 
 // ---------------------- Cached fetch ----------------------
 const _fetchCache = {};
+const avatarCache = new Map();
 
 export function clearFetchCache(key) {
   delete _fetchCache[key];
   safeDel(sessionStorage, key);
+  if (key.startsWith('avatar:')) avatarCache.delete(key.slice(7));
 }
 
 export async function fetchOnce(url, ttlMs = 0, fetchFn) {
@@ -214,7 +215,7 @@ export async function saveDetailedStats(matchId, statsArray) {
 export async function uploadAvatar(nick, file) {
   const data = await toBase64NoPrefix(file);
   const mime = file.type || 'image/jpeg';
-  const resp = await gasPost('uploadAvatar', { nick, mime, data });
+  const resp = await gasPost({ action: 'uploadAvatar', nick, mime, data });
   if (resp && typeof resp === 'object' && resp.status && resp.status !== 'OK') {
     throw new Error(resp.status);
   }
@@ -333,11 +334,11 @@ export async function fetchPlayerGames(nick, league = '') {
 }
 
 // ---------------------- Новий JSON API ----------------------
-async function gasPost(action, payload = {}) {
-  const res = await fetch(PROXY_URL, {
+async function gasPost(payload = {}) {
+  const res = await fetch(WEB_APP_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...payload })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   });
   const text = await res.text();
   if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
@@ -345,30 +346,30 @@ async function gasPost(action, payload = {}) {
     return JSON.parse(text);
   } catch (err) {
     log('[ranking]', err);
-    return { status: text };
+    return { status: 'TEXT', text };
   }
 }
 
 export async function adminCreatePlayer(data) {
-  const payload = { ...(data || {}) };
+  const payload = { action: 'adminCreatePlayer', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost('adminCreatePlayer', payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK' && resp.status !== 'DUPLICATE') throw new Error(resp.status);
   return resp.status || '';
 }
 
 export async function issueAccessKey(data) {
-  const payload = { ...(data || {}) };
+  const payload = { action: 'issueAccessKey', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost('issueAccessKey', payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
   return resp.key || resp.accessKey || null;
 }
 
 export async function getProfile(data) {
-  const payload = { ...(data || {}) };
+  const payload = { action: 'getProfile', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost('getProfile', payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK' && resp.status !== 'DENIED') {
     throw new Error(resp.status);
   }
@@ -376,17 +377,41 @@ export async function getProfile(data) {
 }
 
 export async function getAvatarUrl(nick) {
-  const resp = await gasPost('getAvatarUrl', { nick });
+  const key = `avatar:${nick}`;
+  let rec = avatarCache.get(nick);
+  if (!rec) {
+    const raw = safeGet(sessionStorage, key);
+    if (raw) {
+      try {
+        rec = JSON.parse(raw);
+        avatarCache.set(nick, rec);
+      } catch (err) {
+        safeDel(sessionStorage, key);
+      }
+    }
+  }
+  if (rec) return rec;
+
+  const resp = await gasPost({ action: 'getAvatarUrl', nick });
   if (resp && resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  return resp && resp.url ? resp.url : null;
+  rec = { url: resp.url || null, updatedAt: resp.updatedAt || Date.now() };
+  avatarCache.set(nick, rec);
+  safeSet(sessionStorage, key, JSON.stringify(rec));
+  return rec;
 }
 
 export async function getPdfLinks(params) {
-  const payload = { ...(params || {}) };
+  const payload = { action: 'getPdfLinks', ...(params || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost('getPdfLinks', payload);
+  const resp = await gasPost(payload);
   if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
   return resp.links || {};
+}
+
+export function avatarSrcFromRecord(rec) {
+  if (!rec || !rec.url) return '';
+  const v = rec.updatedAt ? Number(rec.updatedAt) : Date.now();
+  return `${rec.url}?v=${v}`;
 }
 
 export function toBase64NoPrefix(file) {

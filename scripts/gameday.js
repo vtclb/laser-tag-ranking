@@ -164,8 +164,8 @@ import { rankLetterForPoints } from './rankUtils.js';
       const t1 = g.Team1.split(',').map(s=>normName(s.trim()));
       const t2 = g.Team2.split(',').map(s=>normName(s.trim()));
       const winner = g.Winner;
-      const mvpList = String(g.MVP || '')
-        .split(/[;,]/)
+      const mvpList = [g.MVP, g.mvp2, g.mvp3]
+        .flatMap(v => String(v || '').split(/[;,]/))
         .map(s => normName(s.trim()))
         .filter(Boolean);
 
@@ -343,13 +343,19 @@ import { rankLetterForPoints } from './rankUtils.js';
       td2.appendChild(total2);
 
       const tdMvp=document.createElement('td');
-      m.mvp.forEach((mv,idx)=>{
-        const mvpSpan=document.createElement('span');
-        mvpSpan.className='nick-'+mv.rank;
-        mvpSpan.textContent=mv.nick;
-        tdMvp.appendChild(mvpSpan);
-        if(idx<m.mvp.length-1) tdMvp.appendChild(document.createTextNode(', '));
-      });
+      function addMvp(label, mv){
+        if(!mv) return;
+        const div=document.createElement('div');
+        div.textContent=label+' ';
+        const span=document.createElement('span');
+        span.className='nick-'+mv.rank;
+        span.textContent=mv.nick;
+        div.appendChild(span);
+        tdMvp.appendChild(div);
+      }
+      addMvp('🏅 MVP:', m.mvp[0]);
+      addMvp('⭐ Срібна зірка:', m.mvp[1]);
+      addMvp('⭐ Бронзова зірка:', m.mvp[2]);
 
       const pdfTd=document.createElement('td');
       const pdfUrl = pdfLinks[m.id];

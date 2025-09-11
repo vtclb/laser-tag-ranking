@@ -33,10 +33,10 @@ async function updateAvatar(nick) {
   avatarUrl = url || DEFAULT_AVATAR_URL;
   const avatarEl = document.getElementById('avatar');
   if (avatarEl) {
-    avatarEl.src = avatarUrl;
+    avatarEl.src = avatarUrl + '?t=' + Date.now();
     avatarEl.onerror = () => {
       avatarEl.onerror = null;
-      avatarEl.src = DEFAULT_AVATAR_URL;
+      avatarEl.src = DEFAULT_AVATAR_URL + '?t=' + Date.now();
     };
   }
 }
@@ -198,10 +198,16 @@ async function loadProfile(nick, key = '') {
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      const msg = 'Файл завеликий (max 2MB)';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
+      fileInput.value = '';
+      return;
+    }
     try {
       const url = await uploadAvatar(nick, file);
       avatarUrl = url;
-      document.getElementById('avatar').src = url;
+      document.getElementById('avatar').src = url + '?t=' + Date.now();
       avatarFailures.delete(nick);
       safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
     } catch (err) {

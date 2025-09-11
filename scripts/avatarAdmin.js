@@ -26,10 +26,10 @@ async function setAvatar(img, nick){
       }
     }
   }
-  img.src = url || DEFAULT_AVATAR_URL;
+  img.src = (url || DEFAULT_AVATAR_URL) + '?t=' + Date.now();
   img.onerror = () => {
     img.onerror = null;
-    img.src = DEFAULT_AVATAR_URL;
+    img.src = DEFAULT_AVATAR_URL + '?t=' + Date.now();
   };
 }
 
@@ -88,6 +88,12 @@ export async function initAvatarAdmin(players = [], league = '') {
     input.addEventListener('change', () => {
       const file = input.files[0];
       if (!file) return updateSaveBtn();
+      if (file.size > 2 * 1024 * 1024) {
+        const msg = 'File too large (max 2MB)';
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
+        input.value = '';
+        return updateSaveBtn();
+      }
       img.src = URL.createObjectURL(file);
       updateSaveBtn();
     });
@@ -110,7 +116,7 @@ export async function initAvatarAdmin(players = [], league = '') {
           const dt = new DataTransfer();
           dt.items.add(new File([blob], 'avatar.png', { type: blob.type }));
           input.files = dt.files;
-          img.src = src;
+          img.src = src + '?t=' + Date.now();
           updateSaveBtn();
         } catch (err) {
           log('[ranking]', err);
@@ -142,11 +148,17 @@ export async function initAvatarAdmin(players = [], league = '') {
     for (const row of rows()) {
       const file = row.querySelector('input[type="file"]').files[0];
       if (!file) continue;
+      if (file.size > 2 * 1024 * 1024) {
+        const msg = 'File too large (max 2MB)';
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
+        failed.push(row.dataset.nick);
+        continue;
+      }
       const nick = row.dataset.nick;
       const img = row.querySelector('img.avatar-img');
       try {
         const url = await uploadAvatar(nick, file);
-        img.src = url;
+        img.src = url + '?t=' + Date.now();
         avatarFailures.delete(nick);
         safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
         row.querySelector('input[type="file"]').value = '';

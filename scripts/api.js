@@ -336,21 +336,17 @@ export async function fetchPlayerGames(nick, league = '') {
 async function gasPost(action, payload = {}) {
   const res = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action, ...payload })
   });
-  const ct = res.headers.get('content-type') || '';
   const text = await res.text();
   if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
-  if (ct.includes('application/json')) {
-    try {
-      return JSON.parse(text);
-    } catch (err) {
-      log('[ranking]', err);
-      return text;
-    }
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    log('[ranking]', err);
+    return { status: text };
   }
-  return text;
 }
 
 export async function adminCreatePlayer(data) {
@@ -381,9 +377,6 @@ export async function getProfile(data) {
 
 export async function getAvatarUrl(nick) {
   const resp = await gasPost('getAvatarUrl', { nick });
-  if (typeof resp === 'string') {
-    return resp.trim() || null;
-  }
   if (resp && resp.status && resp.status !== 'OK') throw new Error(resp.status);
   return resp && resp.url ? resp.url : null;
 }

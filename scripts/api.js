@@ -34,7 +34,7 @@ export function safeDel(storage, key) {
 // Веб-апп GAS, якщо ще не визначено
 window.WEB_APP_URL =
   window.WEB_APP_URL ||
-  'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
+  'https://script.google.com/macros/s/AKfycbwubiypVk99U_BJnV3aWLeXDAVTgNsq3IiEE20QECnSKHPf7yLZdcMx0bZMWL_jsF4gcw/exec';
 
 // Допоміжний POST JSON запит
 window.postJson = window.postJson || async function postJson(url, body) {
@@ -63,7 +63,7 @@ window.uiLeagueToGas = window.uiLeagueToGas || function uiLeagueToGas(v) {
 
 // Google Apps Script backend (веб-апп)
 export const PROXY_URL =
-  'https://script.google.com/macros/s/AKfycbyXQz_D2HMtVJRomi83nK3iuIMSPKOehg2Lesj7IvHE1TwpqCiHqVCPwsvboxigvV1yIA/exec';
+  'https://script.google.com/macros/s/AKfycbwubiypVk99U_BJnV3aWLeXDAVTgNsq3IiEE20QECnSKHPf7yLZdcMx0bZMWL_jsF4gcw/exec';
 
 // Публічні фіди (CSV)
 export const CSV_URLS = {

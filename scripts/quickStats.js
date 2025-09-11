@@ -31,8 +31,10 @@ export async function showQuickStats(nick, evt) {
   if (existing) existing.remove();
   const el = document.createElement("div");
   el.id = "quick-stats";
-  el.innerHTML =
-    '<div class="qs-loading"><div></div><div></div><div></div></div>';
+  const loading = document.createElement('div');
+  loading.className = 'qs-loading';
+  for (let i = 0; i < 3; i++) loading.appendChild(document.createElement('div'));
+  el.appendChild(loading);
   if (window.matchMedia("(pointer:coarse)").matches) {
     el.classList.add("bottom");
   } else {
@@ -55,8 +57,11 @@ export async function showQuickStats(nick, evt) {
   document.addEventListener("keydown", onKey);
 
   const render = (data) => {
+    el.replaceChildren();
     if (!data) {
-      el.innerHTML = "<p>N/A</p>";
+      const p = document.createElement('p');
+      p.textContent = 'N/A';
+      el.appendChild(p);
       return;
     }
     const val = (v) =>
@@ -67,19 +72,33 @@ export async function showQuickStats(nick, evt) {
       val(data.wins) === "N/A" || val(data.losses) === "N/A"
         ? "N/A"
         : `${val(data.wins)}/${val(data.losses)}`;
-    el.innerHTML = `<h4>${nick}</h4>
-    <ul>
-      <li>Last on: ${val(data.lastOn)}</li>
-      <li>Matches: ${val(data.matches)}</li>
-      <li>Rounds: ${val(data.rounds)}</li>
-      <li>Wins/Losses: ${winsLosses}</li>
-      <li>K/D: ${val(data.kd)}</li>
-      <li>Accuracy: ${val(data.accuracy)}</li>
-    </ul>
-    <button id="qs-open">Profile</button>`;
-    document.getElementById("qs-open").addEventListener("click", () => {
+
+    const h4 = document.createElement('h4');
+    h4.textContent = nick;
+    el.appendChild(h4);
+
+    const ul = document.createElement('ul');
+    [
+      `Last on: ${val(data.lastOn)}`,
+      `Matches: ${val(data.matches)}`,
+      `Rounds: ${val(data.rounds)}`,
+      `Wins/Losses: ${winsLosses}`,
+      `K/D: ${val(data.kd)}`,
+      `Accuracy: ${val(data.accuracy)}`,
+    ].forEach(text => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      ul.appendChild(li);
+    });
+    el.appendChild(ul);
+
+    const btn = document.createElement('button');
+    btn.id = 'qs-open';
+    btn.textContent = 'Profile';
+    btn.addEventListener('click', () => {
       window.location.href = `profile.html?nick=${encodeURIComponent(nick)}`;
     });
+    el.appendChild(btn);
   };
 
   const key = `quickStats:${nick}`;

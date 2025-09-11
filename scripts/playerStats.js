@@ -15,18 +15,36 @@ function init(){
     body.textContent = 'Loading...';
     try{
       const rows = await fetchPlayerStats(nick);
-      body.innerHTML = `<h3 style="text-align:center">${nick}</h3>`;
+      body.replaceChildren();
+      const h3 = document.createElement('h3');
+      h3.style.textAlign = 'center';
+      h3.textContent = nick;
+      body.appendChild(h3);
       if(!rows.length){
-        body.innerHTML += '<p>Статистика відсутня</p>';
+        const p = document.createElement('p');
+        p.textContent = 'Статистика відсутня';
+        body.appendChild(p);
         return;
       }
       const table = document.createElement('table');
       table.style.width='100%';
-      table.innerHTML='<thead><tr><th>Match</th><th>Kills</th><th>Deaths</th><th>Shots</th><th>Hits</th><th>Acc</th></tr></thead>';
+      const thead = document.createElement('thead');
+      const trHead = document.createElement('tr');
+      ['Match','Kills','Deaths','Shots','Hits','Acc'].forEach(text=>{
+        const th = document.createElement('th');
+        th.textContent = text;
+        trHead.appendChild(th);
+      });
+      thead.appendChild(trHead);
+      table.appendChild(thead);
       const tb = document.createElement('tbody');
       rows.forEach(r=>{
         const tr=document.createElement('tr');
-        [0,2,3,4,5,6].forEach(i=>{const td=document.createElement('td');td.textContent=r[i];tr.appendChild(td);});
+        [0,2,3,4,5,6].forEach(i=>{
+          const td=document.createElement('td');
+          td.textContent=r[i];
+          tr.appendChild(td);
+        });
         tb.appendChild(tr);
       });
       table.appendChild(tb);

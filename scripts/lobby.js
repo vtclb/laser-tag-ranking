@@ -19,7 +19,12 @@ const AVATAR_TTL = 6 * 60 * 60 * 1000;
 function updatePlayersDatalist() {
   const dl = document.getElementById('players-datalist');
   if (dl) {
-    dl.innerHTML = lobby.map(p => `<option value="${p.nick}"></option>`).join('');
+    dl.replaceChildren();
+    lobby.forEach(p => {
+      const option = document.createElement('option');
+      option.value = p.nick;
+      dl.appendChild(option);
+    });
   }
 }
 
@@ -143,19 +148,20 @@ export function updateLobbyState(updates){
 function renderSelect(arr) {
   document.getElementById('select-area').classList.remove('hidden');
   const ul = document.getElementById('select-list');
-  ul.innerHTML = arr.map((p, i) => `
-    <li>
-      <label>
-        <input
-          type="checkbox"
-          data-i="${i}"
-          ${selected.includes(p) ? 'checked' : ''}
-          ${lobby.includes(p) || Object.values(teams).flat().includes(p) ? 'disabled' : ''}
-        >
-        ${p.nick} (${p.pts}) – ${p.rank}
-      </label>
-    </li>
-  `).join('');
+  ul.replaceChildren();
+  arr.forEach((p, i) => {
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.dataset.i = i;
+    if (selected.includes(p)) input.checked = true;
+    if (lobby.includes(p) || Object.values(teams).flat().includes(p)) input.disabled = true;
+    label.appendChild(input);
+    label.append(` ${p.nick} (${p.pts}) – ${p.rank}`);
+    li.appendChild(label);
+    ul.appendChild(li);
+  });
 
   ul.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.onchange = () => {
@@ -297,25 +303,43 @@ function updateSummary() {
   if (avgEl)   avgEl.textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
 }
 
-function playerHtml(p) {
-  return `
-    <div class="player" data-nick="${p.nick}" draggable="true">
-      <img class="player__avatar" src="${DEFAULT_AVATAR_URL}" alt="avatar">
-      <div class="player__meta">
-        <div class="player__name">${p.nick}</div>
-        <div class="player__points">${p.pts} pts</div>
-      </div>
-      <div class="player__drag">≡</div>
-    </div>
-  `;
-}
-
 function renderPlayerList(el, arr) {
   if (!el) return;
-  el.innerHTML = arr.map(playerHtml).join('');
-  el.querySelectorAll('.player').forEach(div => {
-    const img = div.querySelector('.player__avatar');
-    setAvatar(img, div.dataset.nick);
+  el.replaceChildren();
+  arr.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'player';
+    div.dataset.nick = p.nick;
+    div.draggable = true;
+
+    const img = document.createElement('img');
+    img.className = 'player__avatar';
+    img.alt = 'avatar';
+    setAvatar(img, p.nick);
+
+    const meta = document.createElement('div');
+    meta.className = 'player__meta';
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'player__name';
+    nameDiv.textContent = p.nick;
+
+    const ptsDiv = document.createElement('div');
+    ptsDiv.className = 'player__points';
+    ptsDiv.textContent = `${p.pts} pts`;
+
+    meta.appendChild(nameDiv);
+    meta.appendChild(ptsDiv);
+
+    const dragDiv = document.createElement('div');
+    dragDiv.className = 'player__drag';
+    dragDiv.textContent = '≡';
+
+    div.appendChild(img);
+    div.appendChild(meta);
+    div.appendChild(dragDiv);
+
+    el.appendChild(div);
   });
 }
 
@@ -379,26 +403,66 @@ function renderLobby() {
   }
 
   const tbody = lobbyEl;
-  tbody.innerHTML = lobby.map((p, i) => `
-    <tr>
-      <td>${p.nick}</td>
-      <td>${p.pts}</td>
-      <td>${p.rank}</td>
-      <td>
-        <select class="abonement-select" data-i="${i}">
-          ${ABONEMENT_TYPES.map(t => `<option value="${t}"${p.abonement === t ? ' selected' : ''}>${t}</option>`).join('')}
-        </select>
-      </td>
-      <td><button class="btn-issue-key" data-nick="${p.nick}">Видати ключ</button></td>
-      <td class="access-key"></td>
-      <td>
-        ${[...Array(manualCount)].map((_, k) =>
-          `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
-        ).join('')}
-        <button class="remove-lobby" data-i="${i}">✕</button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.replaceChildren();
+  lobby.forEach((p, i) => {
+    const tr = document.createElement('tr');
+
+    const tdNick = document.createElement('td');
+    tdNick.textContent = p.nick;
+    tr.appendChild(tdNick);
+
+    const tdPts = document.createElement('td');
+    tdPts.textContent = p.pts;
+    tr.appendChild(tdPts);
+
+    const tdRank = document.createElement('td');
+    tdRank.textContent = p.rank;
+    tr.appendChild(tdRank);
+
+    const tdAbon = document.createElement('td');
+    const sel = document.createElement('select');
+    sel.className = 'abonement-select';
+    sel.dataset.i = i;
+    ABONEMENT_TYPES.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      if (p.abonement === t) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    tdAbon.appendChild(sel);
+    tr.appendChild(tdAbon);
+
+    const tdBtn = document.createElement('td');
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'btn-issue-key';
+    issueBtn.dataset.nick = p.nick;
+    issueBtn.textContent = 'Видати ключ';
+    tdBtn.appendChild(issueBtn);
+    tr.appendChild(tdBtn);
+
+    const tdKey = document.createElement('td');
+    tdKey.className = 'access-key';
+    tr.appendChild(tdKey);
+
+    const tdActions = document.createElement('td');
+    for (let k = 0; k < manualCount; k++) {
+      const btn = document.createElement('button');
+      btn.className = 'assign';
+      btn.dataset.i = i;
+      btn.dataset.team = k + 1;
+      btn.textContent = `→${k+1}`;
+      tdActions.appendChild(btn);
+    }
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-lobby';
+    removeBtn.dataset.i = i;
+    removeBtn.textContent = '✕';
+    tdActions.appendChild(removeBtn);
+    tr.appendChild(tdActions);
+
+    tbody.appendChild(tr);
+  });
 
   const total = lobby.reduce((s, p) => s + p.pts, 0);
   document.getElementById('lobby-count').textContent = lobby.length;
@@ -420,21 +484,64 @@ function renderLobbyCards() {
     }
   }
   if (!cards) return;
-  cards.innerHTML = lobby.map((p, i) => `
-      <div class="player">
-        <div class="row"><span class="nick">${p.nick}</span><span class="pts">${p.pts}</span></div>
-        <div class="row"><span class="rank">${p.rank}</span><span class="season">${p.abonement || ''}</span></div>
-        <div class="row">
-          <span class="key"><button class="btn-issue-key" data-nick="${p.nick}">Видати ключ</button><span class="access-key"></span></span>
-          <span class="actions">
-            ${[...Array(manualCount)].map((_, k) =>
-              `<button class="assign" data-i="${i}" data-team="${k+1}">→${k+1}</button>`
-            ).join('')}
-            <button class="remove-lobby" data-i="${i}">✕</button>
-          </span>
-        </div>
-      </div>
-    `).join('');
+  cards.replaceChildren();
+  lobby.forEach((p, i) => {
+    const player = document.createElement('div');
+    player.className = 'player';
+
+    const row1 = document.createElement('div');
+    row1.className = 'row';
+    const nickSpan = document.createElement('span');
+    nickSpan.className = 'nick';
+    nickSpan.textContent = p.nick;
+    const ptsSpan = document.createElement('span');
+    ptsSpan.className = 'pts';
+    ptsSpan.textContent = p.pts;
+    row1.append(nickSpan, ptsSpan);
+
+    const row2 = document.createElement('div');
+    row2.className = 'row';
+    const rankSpan = document.createElement('span');
+    rankSpan.className = 'rank';
+    rankSpan.textContent = p.rank;
+    const seasonSpan = document.createElement('span');
+    seasonSpan.className = 'season';
+    seasonSpan.textContent = p.abonement || '';
+    row2.append(rankSpan, seasonSpan);
+
+    const row3 = document.createElement('div');
+    row3.className = 'row';
+    const keySpan = document.createElement('span');
+    keySpan.className = 'key';
+    const issueBtn = document.createElement('button');
+    issueBtn.className = 'btn-issue-key';
+    issueBtn.dataset.nick = p.nick;
+    issueBtn.textContent = 'Видати ключ';
+    const accessSpan = document.createElement('span');
+    accessSpan.className = 'access-key';
+    keySpan.append(issueBtn, accessSpan);
+
+    const actionsSpan = document.createElement('span');
+    actionsSpan.className = 'actions';
+    for (let k = 0; k < manualCount; k++) {
+      const btn = document.createElement('button');
+      btn.className = 'assign';
+      btn.dataset.i = i;
+      btn.dataset.team = k + 1;
+      btn.textContent = `→${k+1}`;
+      actionsSpan.appendChild(btn);
+    }
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-lobby';
+    removeBtn.dataset.i = i;
+    removeBtn.textContent = '✕';
+    actionsSpan.appendChild(removeBtn);
+
+    row3.append(keySpan, actionsSpan);
+
+    player.append(row1, row2, row3);
+    cards.appendChild(player);
+  });
 }
 
 function onLobbyAction(e) {

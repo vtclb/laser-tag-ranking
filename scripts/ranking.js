@@ -91,8 +91,8 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
       stats[n].games++;
     });
     winT.forEach((n) => stats[n].wins++);
-    const mvpList = String(g.MVP || '')
-      .split(/[;,]/)
+    const mvpList = [g.MVP, g.mvp2, g.mvp3]
+      .flatMap((v) => String(v || '').split(/[;,]/))
       .map((s) => alias[s.trim()] || s.trim())
       .filter(Boolean);
     mvpList.forEach((m) => {

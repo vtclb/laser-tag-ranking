@@ -108,9 +108,19 @@
 
     <section id="arena-area" class="bal__card card hidden">
       <h2>Арена: <span id="arena-vs"></span></h2>
-      <label for="mvp">MVP:</label>
-      <select id="mvp"></select>
-      <div class="field"></div>
+      <datalist id="players-datalist"></datalist>
+      <div class="field">
+        <label for="mvp1">MVP:</label>
+        <input id="mvp1" list="players-datalist" required>
+      </div>
+      <div class="field">
+        <label for="mvp2">Срібна зірка:</label>
+        <input id="mvp2" list="players-datalist">
+      </div>
+      <div class="field">
+        <label for="mvp3">Бронзова зірка:</label>
+        <input id="mvp3" list="players-datalist">
+      </div>
       <div class="field">
         <label for="penalty">Штраф:</label>
         <input type="text" id="penalty" placeholder="нік1:-10, нік2:-5">

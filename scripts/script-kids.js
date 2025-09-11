@@ -1,14 +1,21 @@
 import { log } from './logger.js';
 import { CSV_URLS } from "./api.js";
+import { rankLetterForPoints } from './rankUtils.js';
 
 const csvUrl = CSV_URLS.kids.ranking;
 
 function getRank(points) {
-    if (points >= 1200) return { rank: "S-ранг", class: "rank-S", icon: "🟣" };
-    if (points >= 800) return { rank: "A-ранг", class: "rank-A", icon: "🔴" };
-    if (points >= 500) return { rank: "B-ранг", class: "rank-B", icon: "🟡" };
-    if (points >= 200) return { rank: "C-ранг", class: "rank-C", icon: "🔵" };
-    return { rank: "D-ранг", class: "rank-D", icon: "🟢" };
+    const letter = rankLetterForPoints(points);
+    const map = {
+        F: { rank: "F-ранг", class: "rank-F", icon: "⚪" },
+        E: { rank: "E-ранг", class: "rank-E", icon: "🟢" },
+        D: { rank: "D-ранг", class: "rank-D", icon: "🔵" },
+        C: { rank: "C-ранг", class: "rank-C", icon: "🟡" },
+        B: { rank: "B-ранг", class: "rank-B", icon: "🟠" },
+        A: { rank: "A-ранг", class: "rank-A", icon: "🔴" },
+        S: { rank: "S-ранг", class: "rank-S", icon: "🟣" }
+    };
+    return map[letter];
 }
 
 function loadRanking() {

@@ -26,10 +26,10 @@ import { rankLetterForPoints } from './rankUtils.js';
         }
       }
     }
-    img.src = url || DEFAULT_AVATAR_URL;
+    img.src = (url || DEFAULT_AVATAR_URL) + '?t=' + Date.now();
     img.onerror = () => {
       img.onerror = null;
-      img.src = DEFAULT_AVATAR_URL;
+      img.src = DEFAULT_AVATAR_URL + '?t=' + Date.now();
     };
   }
 

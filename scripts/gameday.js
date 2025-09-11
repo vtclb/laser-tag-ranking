@@ -1,37 +1,9 @@
 import { log } from './logger.js';
-import { getAvatarUrl, avatarSrcFromRecord, getPdfLinks, fetchOnce, CSV_URLS, safeDel, clearFetchCache } from "./api.js";
+import { getPdfLinks, fetchOnce, CSV_URLS, avatarCache, safeDel } from "./api.js";
 import { rankLetterForPoints } from './rankUtils.js';
+import { setAvatar } from './avatar.js';
 (function () {
   const CSV_TTL = 60 * 1000;
-  const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
-
-  async function fetchAvatar(nick){
-    return getAvatarUrl(nick);
-  }
-
-  const avatarFailures = new Set();
-
-  async function setAvatar(img, nick){
-    img.dataset.nick = nick;
-    let rec;
-    for(let attempt=0; attempt<2 && !rec; attempt++){
-      try{
-        rec = await fetchAvatar(nick);
-        avatarFailures.delete(nick);
-      }catch(err){
-        if(!avatarFailures.has(nick)){
-          log('[ranking]', err);
-          avatarFailures.add(nick);
-        }
-      }
-    }
-    const src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
-    img.src = src;
-    img.onerror = () => {
-      img.onerror = null;
-      img.src = DEFAULT_AVATAR_URL;
-    };
-  }
 
   function refreshAvatars(nick){
     const sel = nick ? `img.avatar-img[data-nick="${nick}"]` : 'img.avatar-img[data-nick]';
@@ -65,7 +37,7 @@ import { rankLetterForPoints } from './rankUtils.js';
     if(e.key === 'avatarRefresh') {
       const [nick] = (e.newValue || '').split(':');
       if(nick){
-        clearFetchCache(`avatar:${nick}`);
+        avatarCache.delete(nick);
         safeDel(sessionStorage, `avatar:${nick}`);
       }
       refreshAvatars(nick);

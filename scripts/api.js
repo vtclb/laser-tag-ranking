@@ -84,7 +84,7 @@ const rankFromPoints = (p) => (p < 200 ? 'D' : p < 500 ? 'C' : p < 800 ? 'B' : p
 
 // ---------------------- Cached fetch ----------------------
 const _fetchCache = {};
-const avatarCache = new Map();
+export const avatarCache = new Map();
 
 export function clearFetchCache(key) {
   delete _fetchCache[key];

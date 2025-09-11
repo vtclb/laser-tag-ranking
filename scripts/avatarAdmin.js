@@ -1,7 +1,9 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js';
-import { uploadAvatar, clearFetchCache } from './api.js';
+import { uploadAvatar, clearFetchCache, getAvatarUrl, avatarSrcFromRecord } from './api.js';
 import { setAvatar } from './avatar.js';
+
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 let defaultAvatars = [];
 async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
@@ -45,6 +47,7 @@ export async function initAvatarAdmin(players = [], league = '') {
     const img = document.createElement('img');
     img.className = 'avatar-img';
     img.alt = p.nick;
+    img.dataset.nick = p.nick;
     setAvatar(img, p.nick);
     imgTd.appendChild(img);
 
@@ -154,11 +157,17 @@ export async function initAvatarAdmin(players = [], league = '') {
   };
 }
 
-function refreshAvatars(nick){
-  const sel = nick ? `#avatar-list img.avatar-img[data-nick="${nick}"]` : '#avatar-list img.avatar-img[data-nick]';
-  document.querySelectorAll(sel).forEach(img => {
-    setAvatar(img, img.dataset.nick);
-  });
+async function refreshAvatars(nick){
+  const sel = nick ? `#avatar-list img[data-nick="${nick}"]` : '#avatar-list img[data-nick]';
+  const imgs = document.querySelectorAll(sel);
+  for(const img of imgs){
+    try{
+      const rec = await getAvatarUrl(img.dataset.nick);
+      img.src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
+    }catch{
+      img.src = DEFAULT_AVATAR_URL;
+    }
+  }
 }
 
 window.addEventListener('storage', e => {

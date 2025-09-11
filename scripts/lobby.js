@@ -17,6 +17,8 @@ import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 import { refreshArenaTeams } from './scenario.js';
 import { setAvatar } from './avatar.js';
 
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
@@ -35,9 +37,17 @@ function updatePlayersDatalist() {
   }
 }
 
-function refreshAvatars(nick) {
-  const sel = nick ? `img.avatar-img[data-nick="${nick}"]` : 'img.avatar-img[data-nick]';
-  document.querySelectorAll(sel).forEach(img => setAvatar(img, img.dataset.nick));
+async function refreshAvatars(nick) {
+  const sel = nick ? `img[data-nick="${nick}"]` : 'img[data-nick]';
+  const imgs = document.querySelectorAll(sel);
+  for (const img of imgs) {
+    try {
+      const rec = await getAvatarUrl(img.dataset.nick);
+      img.src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
+    } catch {
+      img.src = DEFAULT_AVATAR_URL;
+    }
+  }
 }
 
 window.addEventListener('storage', e => {
@@ -296,6 +306,7 @@ function renderPlayerList(el, arr) {
     img.loading = 'lazy';
     img.width = 40;
     img.height = 40;
+    img.dataset.nick = p.nick;
     setAvatar(img, p.nick, 40);
 
     const meta = document.createElement('div');

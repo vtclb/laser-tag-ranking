@@ -12,7 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const arenaArea   = document.getElementById('arena-area');
   const arenaVS     = document.getElementById('arena-vs');
   const arenaRounds = document.getElementById('arena-rounds');
-  const mvpSelect   = document.getElementById('mvp');
+  const mvpInputs   = [
+    document.getElementById('mvp1'),
+    document.getElementById('mvp2'),
+    document.getElementById('mvp3')
+  ];
   const penaltyInput= document.getElementById('penalty');
   const btnSave     = document.getElementById('btn-save-match');
   const btnClear    = document.getElementById('btn-clear-arena');
@@ -75,15 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     arenaVS.textContent = `Команда ${a} ✕ Команда ${b}`;
     arenaRounds.innerHTML = '';
-    mvpSelect.innerHTML   = '';
+    mvpInputs.forEach(inp => inp.value = '');
     penaltyInput.value    = '';
-
-    // Заповнюємо MVP
-    [...teams[a], ...teams[b]].forEach(player => {
-      mvpSelect.insertAdjacentHTML('beforeend',
-        `<option value="${player.nick}">${player.nick}</option>`
-      );
-    });
 
     // Створюємо блоки раундів для кожної команди
     [a, b].forEach((teamId, idx) => {
@@ -120,13 +117,17 @@ document.addEventListener('DOMContentLoaded', () => {
                    : 'tie';
 
       const league = normalizeLeague(leagueSel.value);
+      const mvp = mvpInputs
+        .map(inp => inp.value.trim())
+        .filter(Boolean)
+        .join(', ');
 
       const data = {
         league,
         team1: teams[vs[0]].map(p => p.nick).join(', '),
         team2: teams[vs[1]].map(p => p.nick).join(', '),
         winner,
-        mvp: mvpSelect.value,
+        mvp,
         series,
         penalties: penaltyInput.value.trim()
       };
@@ -162,5 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
     arenaRounds.innerHTML = '';
     btnSave.disabled = true;
     document.querySelectorAll('.arena-team').forEach(cb => cb.checked = false);
+    mvpInputs.forEach(inp => inp.value = '');
   });
 });

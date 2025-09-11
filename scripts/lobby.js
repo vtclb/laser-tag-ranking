@@ -16,6 +16,13 @@ const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 const AVATAR_TTL = 6 * 60 * 60 * 1000;
 
+function updatePlayersDatalist() {
+  const dl = document.getElementById('players-datalist');
+  if (dl) {
+    dl.innerHTML = lobby.map(p => `<option value="${p.nick}"></option>`).join('');
+  }
+}
+
 async function fetchAvatar(nick) {
   return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
 }
@@ -363,6 +370,7 @@ function renderLobby() {
     setupDnD([lobbyEl, teamAEl, teamBEl].filter(Boolean));
     updateSummary();
     saveLobbyState({ lobby, teams, manualCount, league: uiLeague });
+    updatePlayersDatalist();
     return;
   }
 
@@ -393,6 +401,7 @@ function renderLobby() {
   document.getElementById('lobby-sum').textContent   = total;
   document.getElementById('lobby-avg').textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
 
+  updatePlayersDatalist();
   saveLobbyState({lobby, teams, manualCount, league: uiLeague});
 }
 

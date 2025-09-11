@@ -34,7 +34,7 @@ export function safeDel(storage, key) {
 // Google Apps Script backend (веб-апп)
 export const WEB_APP_URL =
   window.WEB_APP_URL ||
-  'https://script.google.com/macros/s/AKfycbwubiypVk99U_BJnV3aWLeXDAVTgNsq3IiEE20QECnSKHPf7yLZdcMx0bZMWL_jsF4gcw/exec';
+  'https://laser-proxy.vartaclub.workers.dev/';
 window.WEB_APP_URL = WEB_APP_URL;
 // back-compat
 export const PROXY_URL = WEB_APP_URL;

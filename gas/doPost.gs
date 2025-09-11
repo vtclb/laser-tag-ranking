@@ -90,6 +90,12 @@ function doPost(e) {
     if (!gamesSheet) throw new Error('games not found');
     const hdrGames = gamesSheet.getRange(1, 1, 1, gamesSheet.getLastColumn()).getValues()[0]
       .map(h => h.toString().trim().toLowerCase());
+    ['mvp2', 'mvp3'].forEach(col => {
+      if (!hdrGames.includes(col)) {
+        gamesSheet.getRange(1, gamesSheet.getLastColumn() + 1, 1, 1).setValue(col);
+        hdrGames.push(col);
+      }
+    });
     const rowGames = hdrGames.map(h => {
       switch (h) {
         case 'timestamp': return now;
@@ -99,7 +105,9 @@ function doPost(e) {
         case 'team3':     return params.team3  || '';
         case 'team4':     return params.team4  || '';
         case 'winner':    return params.winner || '';
-        case 'mvp':       return params.mvp    || '';
+        case 'mvp':       return params.mvp1 || params.mvp || '';
+        case 'mvp2':      return params.mvp2 || '';
+        case 'mvp3':      return params.mvp3 || '';
         case 'series':    return params.series || '';
         case 'penalties': return params.penalties || '';
         default:          return '';
@@ -145,13 +153,11 @@ function doPost(e) {
     }
 
     const winnerKey = params.winner;
-    // Розпарсити список MVP (допускаємо коми/крапки з комою та пробіли)
-    const mvpList = String(params.mvp || '')
-      .split(/[;,]/)
-      .map(s => s.trim())
-      .filter(Boolean);
-    // Розклад бонусів за позицією у списку: 1-й, 2-й, 3-й
-    const MVP_BONUSES = [12, 7, 3];
+    let mvp1 = (params.mvp1 || params.mvp || '').trim();
+    let mvp2 = (params.mvp2 || params.mvp || '').trim();
+    let mvp3 = (params.mvp3 || params.mvp || '').trim();
+    if (mvp2 && mvp2 === mvp1) mvp2 = '';
+    if (mvp3 && (mvp3 === mvp1 || mvp3 === mvp2)) mvp3 = '';
 
     const updatedPlayers = [];
 
@@ -166,16 +172,10 @@ function doPost(e) {
       const rl = rankLetterForPoints(cur);
       const partScore = ({F:0, E:-4, D:-6, C:-8, B:-10, A:-12, S:-14})[rl] || 0;
       const winScore  = (winnerKey !== 'tie' && teams[winnerKey]?.includes(nick)) ? 20 : 0;
-
-      let mvpScore = 0;
-      for (let i = 0; i < mvpList.length && i < 3; i++) {
-        if (mvpList[i] === nick) {
-          mvpScore += MVP_BONUSES[i];
-        }
-      }
+      const mvpBonus = (nick === mvp1 ? 12 : 0) + (nick === mvp2 ? 7 : 0) + (nick === mvp3 ? 3 : 0);
       const penScore  = penaltyMap[nick] || 0;
 
-      const delta   = partScore + winScore + mvpScore + penScore;
+      const delta   = partScore + winScore + mvpBonus + penScore;
       const updated = cur + delta;
 
       rankSheet.getRange(row, ptsCol).setValue(updated);

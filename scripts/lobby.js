@@ -3,7 +3,16 @@ import { log } from './logger.js';
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, adminCreatePlayer, issueAccessKey, getProfile, avatarCache, safeDel } from './api.js';
+import {
+  updateAbonement,
+  adminCreatePlayer,
+  issueAccessKey,
+  getProfile,
+  avatarCache,
+  safeDel,
+  getAvatarUrl,
+  avatarSrcFromRecord,
+} from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 import { refreshArenaTeams } from './scenario.js';
 import { setAvatar } from './avatar.js';
@@ -69,6 +78,7 @@ async function addPlayer(nick){
     return;
   }
   lobby.push({ ...res, team: null });
+  getAvatarUrl(nick).then(rec => avatarSrcFromRecord(rec)).catch(() => {});
   renderLobby();
   renderLobbyCards();
   renderSelect(filtered);
@@ -286,7 +296,10 @@ function renderPlayerList(el, arr) {
     const img = document.createElement('img');
     img.className = 'player__avatar';
     img.alt = 'avatar';
-    setAvatar(img, p.nick);
+    img.loading = 'lazy';
+    img.width = 40;
+    img.height = 40;
+    setAvatar(img, p.nick, 40);
 
     const meta = document.createElement('div');
     meta.className = 'player__meta';

@@ -32,6 +32,12 @@
   gap: 8px;
 }
 
+.player__avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
 .btn--danger {
   background: var(--danger);
   color: #fff;

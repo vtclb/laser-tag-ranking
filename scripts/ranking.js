@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { fetchOnce, CSV_URLS, avatarCache, safeDel } from "./api.js";
+import { fetchOnce, CSV_URLS, clearFetchCache } from "./api.js";
 import { LEAGUE } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';
 import { setAvatar } from './avatar.js';
@@ -16,10 +16,7 @@ function refreshAvatars(nick) {
 window.addEventListener("storage", (e) => {
   if (e.key === "avatarRefresh") {
     const [nick] = (e.newValue || "").split(":");
-    if (nick) {
-      avatarCache.delete(nick);
-      safeDel(sessionStorage, `avatar:${nick}`);
-    }
+    if (nick) clearFetchCache(`avatar:${nick}`);
     refreshAvatars(nick);
   }
 });

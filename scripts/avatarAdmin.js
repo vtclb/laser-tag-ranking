@@ -1,6 +1,6 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js';
-import { uploadAvatar, avatarCache, safeSet, safeDel } from './api.js';
+import { uploadAvatar, clearFetchCache } from './api.js';
 import { setAvatar } from './avatar.js';
 
 let defaultAvatars = [];
@@ -133,7 +133,8 @@ export async function initAvatarAdmin(players = [], league = '') {
         const url = await uploadAvatar(nick, file);
         img.src = url + '?t=' + Date.now();
         avatarFailures.delete(nick);
-        safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
+        clearFetchCache(`avatar:${nick}`);
+        localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
         row.querySelector('input[type="file"]').value = '';
       } catch (err) {
         log('[ranking]', err);
@@ -163,10 +164,7 @@ function refreshAvatars(nick){
 window.addEventListener('storage', e => {
   if(e.key === 'avatarRefresh') {
     const [nick] = (e.newValue || '').split(':');
-    if(nick){
-      avatarCache.delete(nick);
-      safeDel(sessionStorage, `avatar:${nick}`);
-    }
+    if(nick) clearFetchCache(`avatar:${nick}`);
     refreshAvatars(nick);
   }
 });

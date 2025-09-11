@@ -8,10 +8,10 @@ import {
   adminCreatePlayer,
   issueAccessKey,
   getProfile,
-  avatarCache,
   safeDel,
   getAvatarUrl,
   avatarSrcFromRecord,
+  clearFetchCache,
 } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 import { refreshArenaTeams } from './scenario.js';
@@ -43,10 +43,7 @@ function refreshAvatars(nick) {
 window.addEventListener('storage', e => {
   if (e.key === 'avatarRefresh') {
     const [nick] = (e.newValue || '').split(':');
-    if (nick) {
-      avatarCache.delete(nick);
-      safeDel(sessionStorage, `avatar:${nick}`);
-    }
+    if (nick) clearFetchCache(`avatar:${nick}`);
     refreshAvatars(nick);
   }
 });

@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, avatarCache, safeSet, safeGet, safeDel } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
 import { setAvatar } from './avatar.js';
 
@@ -181,7 +181,8 @@ async function loadProfile(nick, key = '') {
       const url = await uploadAvatar(nick, file);
       avatarUrl = url;
       document.getElementById('avatar').src = url + '?t=' + Date.now();
-      safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
+      clearFetchCache(`avatar:${nick}`);
+      localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
       log('[ranking]', err);
       const msg = 'Помилка завантаження';
@@ -209,8 +210,7 @@ window.addEventListener('storage', e => {
   if (e.key === 'avatarRefresh') {
     const [nick] = (e.newValue || '').split(':');
     if (nick) {
-      avatarCache.delete(nick);
-      safeDel(sessionStorage, `avatar:${nick}`);
+      clearFetchCache(`avatar:${nick}`);
       if (nick === currentNick) updateAvatar(nick);
     }
   }

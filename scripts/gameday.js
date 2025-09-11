@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getPdfLinks, fetchOnce, CSV_URLS, avatarCache, safeDel } from "./api.js";
+import { getPdfLinks, fetchOnce, CSV_URLS, clearFetchCache } from "./api.js";
 import { rankLetterForPoints } from './rankUtils.js';
 import { setAvatar } from './avatar.js';
 (function () {
@@ -36,10 +36,7 @@ import { setAvatar } from './avatar.js';
     if(e.key === 'gamedayRefresh') loadData();
     if(e.key === 'avatarRefresh') {
       const [nick] = (e.newValue || '').split(':');
-      if(nick){
-        avatarCache.delete(nick);
-        safeDel(sessionStorage, `avatar:${nick}`);
-      }
+      if(nick) clearFetchCache(`avatar:${nick}`);
       refreshAvatars(nick);
     }
   });

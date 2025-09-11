@@ -3,7 +3,7 @@ import { log } from './logger.js';
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, getProfile, fetchOnce, safeDel, clearFetchCache } from './api.js';
+import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, avatarSrcFromRecord, getProfile, safeDel, clearFetchCache } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 import { refreshArenaTeams } from './scenario.js';
 
@@ -14,7 +14,6 @@ const ABONEMENT_TYPES = ['none', 'lite', 'full'];
   let uiLeague = 'sundaygames';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
-const AVATAR_TTL = 6 * 60 * 60 * 1000;
 
 function updatePlayersDatalist() {
   const dl = document.getElementById('players-datalist');
@@ -29,17 +28,17 @@ function updatePlayersDatalist() {
 }
 
 async function fetchAvatar(nick) {
-  return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
+  return getAvatarUrl(nick);
 }
 
 const avatarFailures = new Set();
 
 async function setAvatar(img, nick) {
   img.dataset.nick = nick;
-  let url;
-  for (let attempt = 0; attempt < 2 && !url; attempt++) {
+  let rec;
+  for (let attempt = 0; attempt < 2 && !rec; attempt++) {
     try {
-      url = await fetchAvatar(nick);
+      rec = await fetchAvatar(nick);
       avatarFailures.delete(nick);
     } catch (err) {
       if (!avatarFailures.has(nick)) {
@@ -48,10 +47,11 @@ async function setAvatar(img, nick) {
       }
     }
   }
-  img.src = (url || DEFAULT_AVATAR_URL) + '?t=' + Date.now();
+  const src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
+  img.src = src;
   img.onerror = () => {
     img.onerror = null;
-    img.src = DEFAULT_AVATAR_URL + '?t=' + Date.now();
+    img.src = DEFAULT_AVATAR_URL;
   };
 }
 

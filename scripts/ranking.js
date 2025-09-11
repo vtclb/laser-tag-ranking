@@ -1,25 +1,24 @@
 import { log } from './logger.js';
-import { getAvatarUrl, fetchOnce, CSV_URLS, clearFetchCache, safeDel } from "./api.js";
+import { getAvatarUrl, avatarSrcFromRecord, fetchOnce, CSV_URLS, clearFetchCache, safeDel } from "./api.js";
 import { LEAGUE } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';
 
 const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
 
-const AVATAR_TTL = 6 * 60 * 60 * 1000;
 const CSV_TTL = 60 * 1000;
 
 async function fetchAvatar(nick) {
-  return fetchOnce(`avatar:${nick}`, AVATAR_TTL, () => getAvatarUrl(nick));
+  return getAvatarUrl(nick);
 }
 
 const avatarFailLog = new Set();
 
 async function setAvatar(img, nick) {
   img.dataset.nick = nick;
-  let url;
-  for (let attempt = 0; attempt < 2 && !url; attempt++) {
+  let rec;
+  for (let attempt = 0; attempt < 2 && !rec; attempt++) {
     try {
-      url = await fetchAvatar(nick);
+      rec = await fetchAvatar(nick);
       avatarFailLog.delete(nick);
     } catch (err) {
       if (!avatarFailLog.has(nick)) {
@@ -28,10 +27,11 @@ async function setAvatar(img, nick) {
       }
     }
   }
-  img.src = (url || DEFAULT_AVATAR_URL) + '?t=' + Date.now();
+  const src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
+  img.src = src;
   img.onerror = () => {
     img.onerror = null;
-    img.src = DEFAULT_AVATAR_URL + '?t=' + Date.now();
+    img.src = DEFAULT_AVATAR_URL;
   };
 }
 

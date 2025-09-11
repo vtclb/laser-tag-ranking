@@ -1,6 +1,7 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, getAvatarUrl, avatarSrcFromRecord, safeSet, safeGet, clearFetchCache, safeDel } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, avatarCache, safeSet, safeGet, safeDel } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
+import { setAvatar } from './avatar.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
@@ -8,36 +9,9 @@ let avatarUrl = '';
 let currentNick = '';
 const pdfCache = {};
 
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
-
-async function fetchAvatar(nick){
-  return getAvatarUrl(nick);
-}
-
-const avatarFailures = new Set();
-
 async function updateAvatar(nick) {
-  let rec;
-  for (let attempt = 0; attempt < 2 && !rec; attempt++) {
-    try {
-      rec = await fetchAvatar(nick);
-      avatarFailures.delete(nick);
-    } catch (err) {
-      if (!avatarFailures.has(nick)) {
-        log('[ranking]', err);
-        avatarFailures.add(nick);
-      }
-    }
-  }
-  avatarUrl = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
   const avatarEl = document.getElementById('avatar');
-  if (avatarEl) {
-    avatarEl.src = avatarUrl;
-    avatarEl.onerror = () => {
-      avatarEl.onerror = null;
-      avatarEl.src = DEFAULT_AVATAR_URL;
-    };
-  }
+  avatarUrl = await setAvatar(avatarEl, nick, 120);
 }
 
 
@@ -207,7 +181,6 @@ async function loadProfile(nick, key = '') {
       const url = await uploadAvatar(nick, file);
       avatarUrl = url;
       document.getElementById('avatar').src = url + '?t=' + Date.now();
-      avatarFailures.delete(nick);
       safeSet(localStorage, 'avatarRefresh', nick + ':' + Date.now());
     } catch (err) {
       log('[ranking]', err);
@@ -236,7 +209,7 @@ window.addEventListener('storage', e => {
   if (e.key === 'avatarRefresh') {
     const [nick] = (e.newValue || '').split(':');
     if (nick) {
-      clearFetchCache(`avatar:${nick}`);
+      avatarCache.delete(nick);
       safeDel(sessionStorage, `avatar:${nick}`);
       if (nick === currentNick) updateAvatar(nick);
     }

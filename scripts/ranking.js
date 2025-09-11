@@ -1,33 +1,10 @@
 import { log } from './logger.js';
-import {
-  getAvatarUrl,
-  avatarSrcFromRecord,
-  fetchOnce,
-  CSV_URLS,
-  clearFetchCache,
-  safeDel,
-} from "./api.js";
+import { fetchOnce, CSV_URLS, avatarCache, safeDel } from "./api.js";
 import { LEAGUE } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';
-
-const DEFAULT_AVATAR_URL = "assets/default_avatars/av0.png";
+import { setAvatar } from './avatar.js';
 
 const CSV_TTL = 60 * 1000;
-
-async function setAvatar(img, nick) {
-  img.dataset.nick = nick;
-  try {
-    const rec = await getAvatarUrl(nick);
-    img.src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
-  } catch (err) {
-    log('[ranking]', err);
-    img.src = DEFAULT_AVATAR_URL;
-  }
-  img.onerror = () => {
-    img.onerror = null;
-    img.src = DEFAULT_AVATAR_URL;
-  };
-}
 
 function refreshAvatars(nick) {
   const sel = nick
@@ -40,7 +17,7 @@ window.addEventListener("storage", (e) => {
   if (e.key === "avatarRefresh") {
     const [nick] = (e.newValue || "").split(":");
     if (nick) {
-      clearFetchCache(`avatar:${nick}`);
+      avatarCache.delete(nick);
       safeDel(sessionStorage, `avatar:${nick}`);
     }
     refreshAvatars(nick);

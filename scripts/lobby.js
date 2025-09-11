@@ -3,17 +3,16 @@ import { log } from './logger.js';
 
 import { initTeams, teams } from './teams.js';
 import { sortByName, sortByPtsDesc } from './sortUtils.js';
-import { updateAbonement, adminCreatePlayer, issueAccessKey, getAvatarUrl, avatarSrcFromRecord, getProfile, safeDel, clearFetchCache } from './api.js';
+import { updateAbonement, adminCreatePlayer, issueAccessKey, getProfile, avatarCache, safeDel } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 import { refreshArenaTeams } from './scenario.js';
+import { setAvatar } from './avatar.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
   let uiLeague = 'sundaygames';
-
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 function updatePlayersDatalist() {
   const dl = document.getElementById('players-datalist');
@@ -27,34 +26,6 @@ function updatePlayersDatalist() {
   }
 }
 
-async function fetchAvatar(nick) {
-  return getAvatarUrl(nick);
-}
-
-const avatarFailures = new Set();
-
-async function setAvatar(img, nick) {
-  img.dataset.nick = nick;
-  let rec;
-  for (let attempt = 0; attempt < 2 && !rec; attempt++) {
-    try {
-      rec = await fetchAvatar(nick);
-      avatarFailures.delete(nick);
-    } catch (err) {
-      if (!avatarFailures.has(nick)) {
-        log('[ranking]', err);
-        avatarFailures.add(nick);
-      }
-    }
-  }
-  const src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
-  img.src = src;
-  img.onerror = () => {
-    img.onerror = null;
-    img.src = DEFAULT_AVATAR_URL;
-  };
-}
-
 function refreshAvatars(nick) {
   const sel = nick ? `img.avatar-img[data-nick="${nick}"]` : 'img.avatar-img[data-nick]';
   document.querySelectorAll(sel).forEach(img => setAvatar(img, img.dataset.nick));
@@ -64,7 +35,7 @@ window.addEventListener('storage', e => {
   if (e.key === 'avatarRefresh') {
     const [nick] = (e.newValue || '').split(':');
     if (nick) {
-      clearFetchCache(`avatar:${nick}`);
+      avatarCache.delete(nick);
       safeDel(sessionStorage, `avatar:${nick}`);
     }
     refreshAvatars(nick);

@@ -1,16 +1,24 @@
 import { log } from './logger.js';
-import { fetchOnce, CSV_URLS, clearFetchCache } from "./api.js";
+import { fetchOnce, CSV_URLS, clearFetchCache, getAvatarUrl, avatarSrcFromRecord } from "./api.js";
 import { LEAGUE } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';
 import { setAvatar } from './avatar.js';
 
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+
 const CSV_TTL = 60 * 1000;
 
-function refreshAvatars(nick) {
-  const sel = nick
-    ? `img.avatar-img[data-nick="${nick}"]`
-    : "img.avatar-img[data-nick]";
-  document.querySelectorAll(sel).forEach((img) => setAvatar(img, img.dataset.nick));
+async function refreshAvatars(nick) {
+  const sel = nick ? `img[data-nick="${nick}"]` : 'img[data-nick]';
+  const imgs = document.querySelectorAll(sel);
+  for (const img of imgs) {
+    try {
+      const rec = await getAvatarUrl(img.dataset.nick);
+      img.src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
+    } catch {
+      img.src = DEFAULT_AVATAR_URL;
+    }
+  }
 }
 
 window.addEventListener("storage", (e) => {
@@ -223,6 +231,7 @@ function createRow(p, i) {
   img.alt = p.nickname;
   img.loading = "lazy";
   img.width = img.height = 32;
+  img.dataset.nick = p.nickname;
   setAvatar(img, p.nickname);
   tdAvatar.appendChild(img);
   tr.appendChild(tdAvatar);

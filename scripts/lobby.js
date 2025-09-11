@@ -228,7 +228,11 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const status = await adminCreatePlayer({ league: uiLeague, nick, age });
         if (status === 'DUPLICATE') {
-          alert('Такий нік вже існує');
+          if (typeof showToast === 'function') {
+            showToast('Такий нік вже існує');
+          } else {
+            alert('Такий нік вже існує');
+          }
           return;
         }
         if (status === 'OK') {

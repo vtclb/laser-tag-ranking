@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mvp2'),
     document.getElementById('mvp3')
   ];
+  const playersDatalist = document.getElementById('players-datalist');
   const penaltyInput= document.getElementById('penalty');
   const btnSave     = document.getElementById('btn-save-match');
   const btnClear    = document.getElementById('btn-clear-arena');
@@ -79,6 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     arenaVS.textContent = `Команда ${a} ✕ Команда ${b}`;
     arenaRounds.innerHTML = '';
+    const playerNicks = new Set([...teams[a], ...teams[b]].map(p => p.nick));
+    playersDatalist.innerHTML = Array.from(playerNicks)
+      .map(n => `<option value="${n}"></option>`)
+      .join('');
     mvpInputs.forEach(inp => inp.value = '');
     penaltyInput.value    = '';
 
@@ -117,17 +122,36 @@ document.addEventListener('DOMContentLoaded', () => {
                    : 'tie';
 
       const league = normalizeLeague(leagueSel.value);
-      const mvp = mvpInputs
-        .map(inp => inp.value.trim())
-        .filter(Boolean)
-        .join(', ');
+      const mvpValues = mvpInputs.map(inp => inp.value.trim());
+      if (!mvpValues[0]) {
+        alert('Вкажіть MVP');
+        return;
+      }
+      const allowedNicks = new Set([...teams[vs[0]], ...teams[vs[1]]].map(p => p.nick));
+      const seen = new Set();
+      for (const nick of mvpValues.filter(Boolean)) {
+        if (!allowedNicks.has(nick)) {
+          alert(`Гравець ${nick} не бере участі у цьому матчі`);
+          return;
+        }
+        if (seen.has(nick)) {
+          alert('Гравці для нагород мають бути різними');
+          return;
+        }
+        seen.add(nick);
+      }
+
+      const [mvp1, mvp2, mvp3] = mvpValues;
 
       const data = {
         league,
         team1: teams[vs[0]].map(p => p.nick).join(', '),
         team2: teams[vs[1]].map(p => p.nick).join(', '),
         winner,
-        mvp,
+        mvp1,
+        mvp2,
+        mvp3,
+        mvp: mvp1,
         series,
         penalties: penaltyInput.value.trim()
       };
@@ -164,5 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSave.disabled = true;
     document.querySelectorAll('.arena-team').forEach(cb => cb.checked = false);
     mvpInputs.forEach(inp => inp.value = '');
+    penaltyInput.value = '';
+    playersDatalist.innerHTML = '';
   });
 });

@@ -1,7 +1,7 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js';
-import { uploadAvatar } from './api.js';
-import { loadAvatarsMap, renderAllAvatars } from './avatars.js';
+import { uploadAvatar, clearFetchCache, getAvatarUrl } from './api.js';
+import { setAvatar } from './avatar.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
@@ -77,7 +77,6 @@ export async function initAvatarAdmin(players = [], league = '') {
     statusEl.classList.add('hidden');
   }
   await loadDefaultAvatars();
-  await loadAvatarsMap();
 
   // create rows for players
   players.forEach(p => {
@@ -90,6 +89,7 @@ export async function initAvatarAdmin(players = [], league = '') {
     img.className = 'avatar-img';
     img.alt = p.nick;
     img.dataset.nick = p.nick;
+    setAvatar(img, p.nick);
     imgTd.appendChild(img);
 
     const nickTd = document.createElement('td');
@@ -151,7 +151,6 @@ export async function initAvatarAdmin(players = [], league = '') {
     tr.appendChild(thumbsTd);
     listEl.appendChild(tr);
   });
-  renderAllAvatars();
 
   const rows = () => Array.from(document.querySelectorAll('#avatar-list .avatar-row'));
 
@@ -176,6 +175,7 @@ export async function initAvatarAdmin(players = [], league = '') {
       try {
         const url = await uploadAvatar(nick, file);
         applyAvatarToUI(nick, url);
+        clearFetchCache(`avatar:${nick}`);
         localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
         row.querySelector('input[type="file"]').value = '';
       } catch (err) {
@@ -197,13 +197,25 @@ export async function initAvatarAdmin(players = [], league = '') {
   };
 }
 
-async function refreshAvatars(){
-  await loadAvatarsMap();
-  renderAllAvatars();
+async function refreshAvatars(nick){
+  const sel = nick ? `#avatar-list img[data-nick="${nick}"]` : '#avatar-list img[data-nick]';
+  const imgs = document.querySelectorAll(sel);
+  for (const img of imgs) {
+    let url = DEFAULT_AVATAR_URL;
+    try {
+      const rec = await getAvatarUrl(img.dataset.nick);
+      if (rec && rec.url) url = rec.url;
+    } catch {
+      // ignore and use default
+    }
+    setImgSafe(img, url);
+  }
 }
 
 window.addEventListener('storage', e => {
   if(e.key === 'avatarRefresh') {
-    refreshAvatars();
+    const [nick] = (e.newValue || '').split(':');
+    if(nick) clearFetchCache(`avatar:${nick}`);
+    refreshAvatars(nick);
   }
 });

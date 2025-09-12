@@ -1,14 +1,34 @@
 import { log } from './logger.js';
-import { fetchOnce, CSV_URLS } from "./api.js";
+import { fetchOnce, CSV_URLS, clearFetchCache, getAvatarUrl } from "./api.js";
 import { LEAGUE } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';
-import { loadAvatarsMap, renderAllAvatars } from './avatars.js';
+import { setAvatar } from './avatar.js';
+
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 const CSV_TTL = 60 * 1000;
 
+async function refreshAvatars(nick) {
+  const sel = nick ? `img[data-nick="${nick}"]` : 'img[data-nick]';
+  const imgs = document.querySelectorAll(sel);
+  for (const img of imgs) {
+    try {
+      const rec = await getAvatarUrl(img.dataset.nick);
+      const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
+      img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+      img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+    } catch {
+      img.onerror = null;
+      img.src = DEFAULT_AVATAR_URL;
+    }
+  }
+}
+
 window.addEventListener("storage", (e) => {
   if (e.key === "avatarRefresh") {
-    loadAvatarsMap().then(renderAllAvatars);
+    const [nick] = (e.newValue || "").split(":");
+    if (nick) clearFetchCache(`avatar:${nick}`);
+    refreshAvatars(nick);
   }
 });
 export async function loadData(rankingURL, gamesURL) {
@@ -215,6 +235,7 @@ function createRow(p, i) {
   img.loading = "lazy";
   img.width = img.height = 32;
   img.dataset.nick = p.nickname;
+  setAvatar(img, p.nickname);
   tdAvatar.appendChild(img);
   tr.appendChild(tdAvatar);
 
@@ -313,7 +334,6 @@ export function renderTable(list, tbodyEl) {
         });
     });
   }
-  renderAllAvatars();
 }
 
 export function renderTopMVP(list, container) {
@@ -422,7 +442,6 @@ const CONFIG = {
 async function init() {
   const cfg = CONFIG[LEAGUE];
   if (!cfg) return;
-  await loadAvatarsMap();
   const { rank, games } = await loadData(
     CSV_URLS[LEAGUE].ranking,
     CSV_URLS[LEAGUE].games

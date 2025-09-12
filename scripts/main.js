@@ -8,6 +8,20 @@ import { initAvatarAdmin } from './avatarAdmin.js';
 
 const CACHE_VERSION = window.CACHE_VERSION || '1';
 
+function safeSessionStorage() {
+  try {
+    if (!('sessionStorage' in window)) return null;
+    const test = '__test__';
+    window.sessionStorage.setItem(test, '1');
+    window.sessionStorage.removeItem(test);
+    return window.sessionStorage;
+  } catch (err) {
+    return null;
+  }
+}
+
+window.__SESS = window.__SESS || safeSessionStorage();
+
 document.addEventListener('DOMContentLoaded', () => {
   const btnLoad   = document.getElementById('btn-load');
   const selLeague = document.getElementById('league');
@@ -30,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cacheKey = csvLeague + CACHE_VERSION;
 
       let players;
-      const cached = safeGet(sessionStorage, cacheKey);
+      const cached = safeGet(window.__SESS, cacheKey);
       if (cached) {
         try {
           players = JSON.parse(cached);
@@ -40,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (!players) {
         players = await loadPlayers(csvLeague);
-        safeSet(sessionStorage, cacheKey, JSON.stringify(players));
+        safeSet(window.__SESS, cacheKey, JSON.stringify(players));
       }
 
       initLobby(players, csvLeague);          // Рендер лоббі

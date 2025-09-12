@@ -1,9 +1,7 @@
-import { log } from './logger.js';
 import { getAvatarUrl } from './api.js';
+import { noteAvatarFailure } from './avatarAdmin.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
-const avatarFailures = new Set();
-
 export async function setAvatar(img, nick, size = 40) {
   if (!img) return '';
   img.dataset.nick = nick;
@@ -14,12 +12,8 @@ export async function setAvatar(img, nick, size = 40) {
   for (let attempt = 0; attempt < 2 && !rec; attempt++) {
     try {
       rec = await getAvatarUrl(nick);
-      avatarFailures.delete(nick);
     } catch (err) {
-      if (!avatarFailures.has(nick)) {
-        log('[ranking]', err);
-        avatarFailures.add(nick);
-      }
+      noteAvatarFailure(nick, err);
     }
   }
   const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;

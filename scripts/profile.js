@@ -1,7 +1,8 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet, getAvatarUrl } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
-import { setAvatar } from './avatar.js';
+
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
@@ -11,7 +12,11 @@ const pdfCache = {};
 
 async function updateAvatar(nick) {
   const avatarEl = document.getElementById('avatar');
-  avatarUrl = await setAvatar(avatarEl, nick, 120);
+  const rec = await getAvatarUrl(nick);
+  const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
+  avatarEl.onerror = () => { avatarEl.onerror = null; avatarEl.src = DEFAULT_AVATAR_URL; };
+  avatarEl.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  avatarUrl = avatarEl.src;
 }
 
 
@@ -179,8 +184,10 @@ async function loadProfile(nick, key = '') {
     }
     try {
       const url = await uploadAvatar(nick, file);
-      avatarUrl = url;
-      document.getElementById('avatar').src = url + '?t=' + Date.now();
+      const avatarEl = document.getElementById('avatar');
+      avatarEl.onerror = () => { avatarEl.onerror = null; avatarEl.src = DEFAULT_AVATAR_URL; };
+      avatarEl.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      avatarUrl = avatarEl.src;
       clearFetchCache(`avatar:${nick}`);
       localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
     } catch (err) {

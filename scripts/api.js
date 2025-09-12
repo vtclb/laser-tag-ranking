@@ -1,6 +1,9 @@
 // scripts/api.js
 import { log } from './logger.js';
 
+// Toggle network diagnostics
+const DEBUG_NETWORK = false;
+
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 // ---------------------- Safe storage helpers ----------------------
@@ -40,6 +43,7 @@ export const WEB_APP_URL =
 window.WEB_APP_URL = WEB_APP_URL;
 // back-compat
 export const PROXY_URL = WEB_APP_URL;
+export const PROXY_ORIGIN = WEB_APP_URL.replace(/\/$/, '');
 
 // Допоміжний POST JSON запит
 window.postJson = window.postJson || async function postJson(url, body) {
@@ -217,11 +221,23 @@ export async function saveDetailedStats(matchId, statsArray) {
 export async function uploadAvatar(nick, file) {
   const data = await toBase64NoPrefix(file);
   const mime = file.type || 'image/jpeg';
-  const resp = await gasPost({ action: 'uploadAvatar', nick, mime, data });
+  const res = await fetch(PROXY_ORIGIN + '/json', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'uploadAvatar', nick, mime, data })
+  });
+  const text = await res.text();
+  if (DEBUG_NETWORK) log('[ranking]', text);
+  let resp;
+  try {
+    resp = JSON.parse(text);
+  } catch {
+    resp = { status: 'ERR', raw: text };
+  }
   if (resp && typeof resp === 'object' && resp.status && resp.status !== 'OK') {
     throw new Error(resp.status);
   }
-  return (resp && resp.url) ? resp.url : null;
+  return resp && resp.url ? resp.url : null;
 }
 
 // ---------------------- Реєстрація/статистика ----------------------

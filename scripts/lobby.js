@@ -10,7 +10,6 @@ import {
   getProfile,
   safeDel,
   getAvatarUrl,
-  avatarSrcFromRecord,
   clearFetchCache,
 } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
@@ -43,8 +42,11 @@ async function refreshAvatars(nick) {
   for (const img of imgs) {
     try {
       const rec = await getAvatarUrl(img.dataset.nick);
-      img.src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
+      const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
+      img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+      img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
     } catch {
+      img.onerror = null;
       img.src = DEFAULT_AVATAR_URL;
     }
   }
@@ -85,7 +87,6 @@ async function addPlayer(nick){
     return;
   }
   lobby.push({ ...res, team: null });
-  getAvatarUrl(nick).then(rec => avatarSrcFromRecord(rec)).catch(() => {});
   renderLobby();
   renderLobbyCards();
   renderSelect(filtered);

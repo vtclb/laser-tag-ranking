@@ -14,6 +14,38 @@ export function noteAvatarFailure(nick, reason) {
   if (typeof showToast === 'function') showToast(msg);
 }
 
+export function normalizeAvatarUrl(url = '') {
+  if (!url) return DEFAULT_AVATAR_URL;
+  if (url.includes('drive.google.com')) {
+    const idMatch = url.match(/[?&]id=([^&]+)/) || url.match(/\/d\/([^/]+)/);
+    if (idMatch) {
+      return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w512`;
+    }
+  }
+  return url;
+}
+
+export function setImgSafe(img, url) {
+  if (!img) return;
+  const src = normalizeAvatarUrl(url);
+  img.referrerPolicy = 'no-referrer';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+  const cacheSafe = src.startsWith('data:') || src.startsWith('blob:');
+  const finalSrc = cacheSafe ? src : src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+  img.src = finalSrc;
+}
+
+export function applyAvatarToUI(nick, imageUrl) {
+  const url = imageUrl || DEFAULT_AVATAR_URL;
+  const preview = document.querySelector(`#avatar-list .avatar-row[data-nick="${nick}"] img.avatar-img`);
+  if (preview) setImgSafe(preview, url);
+  document.querySelectorAll(`img[data-nick="${nick}"]`).forEach(img => {
+    if (img !== preview) setImgSafe(img, url);
+  });
+}
+
 let defaultAvatars = [];
 async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
   if(defaultAvatars.length) return;
@@ -76,7 +108,7 @@ export async function initAvatarAdmin(players = [], league = '') {
         input.value = '';
         return updateSaveBtn();
       }
-      img.src = URL.createObjectURL(file);
+      setImgSafe(img, URL.createObjectURL(file));
       updateSaveBtn();
     });
     inputTd.appendChild(input);
@@ -101,9 +133,7 @@ export async function initAvatarAdmin(players = [], league = '') {
           const dt = new DataTransfer();
           dt.items.add(new File([blob], 'avatar.png', { type: blob.type }));
           input.files = dt.files;
-          img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
-          const imgSrc = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
-          img.src = imgSrc;
+          setImgSafe(img, src);
           updateSaveBtn();
         } catch (err) {
           log('[ranking]', err);
@@ -142,12 +172,9 @@ export async function initAvatarAdmin(players = [], league = '') {
         continue;
       }
       const nick = row.dataset.nick;
-      const img = row.querySelector('img.avatar-img');
       try {
         const url = await uploadAvatar(nick, file);
-        img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
-        const src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-        img.src = src;
+        applyAvatarToUI(nick, url);
         clearFetchCache(`avatar:${nick}`);
         localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
         row.querySelector('input[type="file"]').value = '';
@@ -181,9 +208,7 @@ async function refreshAvatars(nick){
     } catch {
       // ignore and use default
     }
-    img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
-    const src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-    img.src = src;
+    setImgSafe(img, url);
   }
 }
 

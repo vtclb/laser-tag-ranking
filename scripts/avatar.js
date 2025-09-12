@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getAvatarUrl, avatarSrcFromRecord } from './api.js';
+import { getAvatarUrl } from './api.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 const avatarFailures = new Set();
@@ -22,11 +22,9 @@ export async function setAvatar(img, nick, size = 40) {
       }
     }
   }
-  const src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
+  const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
+  img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+  const src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
   img.src = src;
-  img.onerror = () => {
-    img.onerror = null;
-    img.src = DEFAULT_AVATAR_URL;
-  };
   return src;
 }

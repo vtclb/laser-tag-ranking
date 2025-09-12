@@ -1,6 +1,8 @@
 // scripts/api.js
 import { log } from './logger.js';
 
+const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+
 // ---------------------- Safe storage helpers ----------------------
 export function safeGet(storage, key) {
   if (!storage) return null;
@@ -409,9 +411,8 @@ export async function getPdfLinks(params) {
 }
 
 export function avatarSrcFromRecord(rec) {
-  if (!rec || !rec.url) return '';
-  const v = rec.updatedAt ? Number(rec.updatedAt) : Date.now();
-  return `${rec.url}?v=${v}`;
+  const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
+  return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
 }
 
 export function toBase64NoPrefix(file) {

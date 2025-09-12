@@ -1,26 +1,9 @@
 import { log } from './logger.js';
-import { getPdfLinks, fetchOnce, CSV_URLS, clearFetchCache, getAvatarUrl } from "./api.js";
+import { getPdfLinks, fetchOnce, CSV_URLS } from "./api.js";
 import { rankLetterForPoints } from './rankUtils.js';
-import { setAvatar } from './avatar.js';
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+import { loadAvatarsMap, renderAllAvatars } from './avatars.js';
 (function () {
   const CSV_TTL = 60 * 1000;
-
-  async function refreshAvatars(nick) {
-    const sel = nick ? `img[data-nick="${nick}"]` : 'img[data-nick]';
-    const imgs = document.querySelectorAll(sel);
-    for (const img of imgs) {
-      try {
-        const rec = await getAvatarUrl(img.dataset.nick);
-        const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
-        img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
-        img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-      } catch {
-        img.onerror = null;
-        img.src = DEFAULT_AVATAR_URL;
-      }
-    }
-  }
 
 
   const alias = {
@@ -40,16 +23,15 @@ const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
   leagueSel.addEventListener('change', loadData);
   dateInput.addEventListener('change', loadData);
   if(loadBtn) loadBtn.addEventListener('click', loadData);
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     dateInput.value = new Date().toISOString().slice(0,10);
+    await loadAvatarsMap();
     loadData();
   });
   window.addEventListener('storage', e => {
     if(e.key === 'gamedayRefresh') loadData();
     if(e.key === 'avatarRefresh') {
-      const [nick] = (e.newValue || '').split(':');
-      if(nick) clearFetchCache(`avatar:${nick}`);
-      refreshAvatars(nick);
+      loadAvatarsMap().then(renderAllAvatars);
     }
   });
   if(fullscreenBtn){
@@ -249,7 +231,6 @@ const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
       img.className='avatar-img';
       img.alt=p.nick;
       img.dataset.nick = p.nick;
-      setAvatar(img,p.nick);
       tdAvatar.appendChild(img);
 
       const nick=document.createElement('td');
@@ -352,5 +333,6 @@ const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
       [td1,tdScore,td2,tdMvp,pdfTd].forEach(td=>tr.appendChild(td));
       matchesTb.appendChild(tr);
     });
+    renderAllAvatars();
   }
 })();

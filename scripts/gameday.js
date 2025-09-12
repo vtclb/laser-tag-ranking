@@ -1,19 +1,22 @@
 import { log } from './logger.js';
-import { getPdfLinks, fetchOnce, CSV_URLS, clearFetchCache, getAvatarUrl, avatarSrcFromRecord } from "./api.js";
+import { getPdfLinks, fetchOnce, CSV_URLS, clearFetchCache, getAvatarUrl } from "./api.js";
 import { rankLetterForPoints } from './rankUtils.js';
 import { setAvatar } from './avatar.js';
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 (function () {
   const CSV_TTL = 60 * 1000;
 
-  async function refreshAvatars(nick){
+  async function refreshAvatars(nick) {
     const sel = nick ? `img[data-nick="${nick}"]` : 'img[data-nick]';
     const imgs = document.querySelectorAll(sel);
-    for(const img of imgs){
-      try{
+    for (const img of imgs) {
+      try {
         const rec = await getAvatarUrl(img.dataset.nick);
-        img.src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
-      }catch{
+        const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
+        img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+        img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      } catch {
+        img.onerror = null;
         img.src = DEFAULT_AVATAR_URL;
       }
     }

@@ -94,7 +94,7 @@ export const avatarCache = new Map();
 
 export function clearFetchCache(key) {
   delete _fetchCache[key];
-  safeDel(sessionStorage, key);
+  safeDel(window.__SESS, key);
   if (key.startsWith('avatar:')) avatarCache.delete(key.slice(7));
 }
 
@@ -103,7 +103,7 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
   const cached = _fetchCache[url];
   if (cached && now - cached.time < ttlMs) return cached.data;
 
-  const raw = safeGet(sessionStorage, url);
+  const raw = safeGet(window.__SESS, url);
   if (raw) {
     try {
       const obj = JSON.parse(raw);
@@ -120,7 +120,7 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
 
   const info = { data, time: now };
   _fetchCache[url] = info;
-  safeSet(sessionStorage, url, JSON.stringify(info));
+  safeSet(window.__SESS, url, JSON.stringify(info));
   return data;
 }
 
@@ -398,13 +398,13 @@ export async function getAvatarUrl(nick) {
   const key = `avatar:${nick}`;
   let rec = avatarCache.get(nick);
   if (!rec) {
-    const raw = safeGet(sessionStorage, key);
+    const raw = safeGet(window.__SESS, key);
     if (raw) {
       try {
         rec = JSON.parse(raw);
         avatarCache.set(nick, rec);
       } catch (err) {
-        safeDel(sessionStorage, key);
+        safeDel(window.__SESS, key);
       }
     }
   }
@@ -414,7 +414,7 @@ export async function getAvatarUrl(nick) {
   if (resp && resp.status && resp.status !== 'OK') throw new Error(resp.status);
   rec = { url: resp.url || null, updatedAt: resp.updatedAt || Date.now() };
   avatarCache.set(nick, rec);
-  safeSet(sessionStorage, key, JSON.stringify(rec));
+    safeSet(window.__SESS, key, JSON.stringify(rec));
   return rec;
 }
 

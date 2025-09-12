@@ -1,6 +1,6 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js';
-import { uploadAvatar, clearFetchCache, getAvatarUrl, avatarSrcFromRecord } from './api.js';
+import { uploadAvatar, clearFetchCache, getAvatarUrl } from './api.js';
 import { setAvatar } from './avatar.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
@@ -92,7 +92,9 @@ export async function initAvatarAdmin(players = [], league = '') {
           const dt = new DataTransfer();
           dt.items.add(new File([blob], 'avatar.png', { type: blob.type }));
           input.files = dt.files;
-          img.src = src + '?t=' + Date.now();
+          img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+          const imgSrc = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+          img.src = imgSrc;
           updateSaveBtn();
         } catch (err) {
           log('[ranking]', err);
@@ -134,7 +136,9 @@ export async function initAvatarAdmin(players = [], league = '') {
       const img = row.querySelector('img.avatar-img');
       try {
         const url = await uploadAvatar(nick, file);
-        img.src = url + '?t=' + Date.now();
+        img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+        const src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+        img.src = src;
         avatarFailures.delete(nick);
         clearFetchCache(`avatar:${nick}`);
         localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
@@ -160,13 +164,17 @@ export async function initAvatarAdmin(players = [], league = '') {
 async function refreshAvatars(nick){
   const sel = nick ? `#avatar-list img[data-nick="${nick}"]` : '#avatar-list img[data-nick]';
   const imgs = document.querySelectorAll(sel);
-  for(const img of imgs){
-    try{
+  for (const img of imgs) {
+    let url = DEFAULT_AVATAR_URL;
+    try {
       const rec = await getAvatarUrl(img.dataset.nick);
-      img.src = rec ? avatarSrcFromRecord(rec) : DEFAULT_AVATAR_URL;
-    }catch{
-      img.src = DEFAULT_AVATAR_URL;
+      if (rec && rec.url) url = rec.url;
+    } catch {
+      // ignore and use default
     }
+    img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+    const src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+    img.src = src;
   }
 }
 

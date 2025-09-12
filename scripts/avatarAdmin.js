@@ -5,6 +5,15 @@ import { setAvatar } from './avatar.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
+export let avatarFailures = 0;
+
+export function noteAvatarFailure(nick, reason) {
+  avatarFailures++;
+  const msg = `Avatar issue for ${nick}: ${reason}`;
+  console.warn(msg);
+  if (typeof showToast === 'function') showToast(msg);
+}
+
 let defaultAvatars = [];
 async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
   if(defaultAvatars.length) return;
@@ -139,13 +148,13 @@ export async function initAvatarAdmin(players = [], league = '') {
         img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
         const src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
         img.src = src;
-        avatarFailures.delete(nick);
         clearFetchCache(`avatar:${nick}`);
         localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
         row.querySelector('input[type="file"]').value = '';
       } catch (err) {
         log('[ranking]', err);
         failed.push(nick);
+        noteAvatarFailure(nick, err?.message || err);
       }
     }
     updateSaveBtn();

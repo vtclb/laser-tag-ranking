@@ -1,12 +1,10 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet, getAvatarUrl } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
-
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+import { renderAllAvatars } from './avatars.readonly.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
-let avatarUrl = '';
 let currentNick = '';
 const pdfCache = {};
 
@@ -14,11 +12,7 @@ async function updateAvatar(nick) {
   const avatarEl = document.getElementById('avatar');
   avatarEl.dataset.nick = nick;
   avatarEl.alt = nick;
-  const rec = await getAvatarUrl(nick);
-  const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
-  avatarEl.onerror = () => { avatarEl.onerror = null; avatarEl.src = DEFAULT_AVATAR_URL; };
-  avatarEl.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-  avatarUrl = avatarEl.src;
+  await renderAllAvatars();
 }
 
 
@@ -185,13 +179,10 @@ async function loadProfile(nick, key = '') {
       return;
     }
     try {
-      const url = await uploadAvatar(nick, file);
-      const avatarEl = document.getElementById('avatar');
-      avatarEl.onerror = () => { avatarEl.onerror = null; avatarEl.src = DEFAULT_AVATAR_URL; };
-      avatarEl.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-      avatarUrl = avatarEl.src;
+      await uploadAvatar(nick, file);
       clearFetchCache(`avatar:${nick}`);
       localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
+      await renderAllAvatars({ bust: Date.now() });
     } catch (err) {
       log('[ranking]', err);
       const msg = 'Помилка завантаження';

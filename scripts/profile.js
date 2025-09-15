@@ -1,7 +1,7 @@
 import { log } from './logger.js';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
-import { renderAllAvatars } from './avatars.readonly.js';
+import { renderAllAvatars } from './avatars.client.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;

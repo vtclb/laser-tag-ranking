@@ -2,7 +2,7 @@
 import { log } from './logger.js';
 import { uploadAvatar } from './api.js';
 import { setAvatar } from './avatar.js';
-import { renderAllAvatars } from './avatars.readonly.js';
+import { renderAllAvatars } from './avatars.client.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 

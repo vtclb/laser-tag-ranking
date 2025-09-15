@@ -37,7 +37,7 @@
     <a href="about.html">Про клуб</a>
   </nav>
   <div class="profile" id="profile">
-    <div class="avatar-wrap"><img id="avatar" data-nick="" alt="avatar" loading="lazy" width="120" height="120"></div>
+    <div class="avatar-wrap"><img id="avatar" data-nick="" alt="" loading="lazy" width="120" height="120"></div>
     <button id="change-avatar" style="margin-top:0.5rem;">Змінити аватарку</button>
     <input type="file" id="avatar-input" accept="image/*" style="display:none;">
     <div id="rating" style="margin-top:1rem;"></div>
@@ -52,14 +52,8 @@
   <script src="scripts/toast.js"></script>
   <script type="module" src="scripts/profile.js"></script>
   <script type="module">
-    import { renderAllAvatars } from "./scripts/avatars.readonly.js";
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const rerender = () => renderAllAvatars();
-      rerender();
-      const observer = new MutationObserver(rerender);
-      observer.observe(document.body, { childList: true, subtree: true });
-    });
+    import { renderAllAvatars } from './scripts/avatars.client.js';
+    document.addEventListener('DOMContentLoaded', () => renderAllAvatars());
   </script>
 </body>
 </html>

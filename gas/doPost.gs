@@ -70,7 +70,7 @@ function doPost(e) {
         if (action === 'getPdfLinks') return handleGetPdfLinks_(payload);
 
         // Unknown
-        return JsonOK({status:'ERROR', reason:'Unknown action'});
+        return JsonErr(new Error('Unknown action'));
       }
     }
 
@@ -201,7 +201,7 @@ function doPost(e) {
     return JsonOK({status:'OK', players: updatedPlayers});
   } catch (err) {
     log('[ranking]', err);
-    return TextPlain('Error: ' + err.message);
+    return JsonErr(err);
   }
 }
 
@@ -420,10 +420,11 @@ function handleUploadAvatar_(payload) {
   const blob  = Utilities.newBlob(bytes, mime, nick + '.jpg');
 
   const url = saveAvatarBlob_(nick, blob); // save to Drive/avatars
-  if (!url) return JsonOK({status:'ERROR', reason: 'Missing Script Property ' + PKEY_AVATARS_FOLDER_ID});
-  upsertAvatarUrl_(nick, url);
+  if (!url) return JsonErr(new Error('Missing Script Property ' + PKEY_AVATARS_FOLDER_ID));
+  const isoTime = Utilities.formatDate(new Date(), 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  upsertAvatarUrl_(nick, url, isoTime);
 
-  return JsonOK({status:'OK', url});
+  return JsonOK({status:'OK', url, updatedAt: isoTime});
 }
 
 function handleGetAvatarUrl_(payload) {
@@ -442,11 +443,11 @@ function saveAvatarBlob_(nick, blob) {
   while (it.hasNext()) it.next().setTrashed(true);
   const file = folder.createFile(blob.setName(name));
   file.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
-  return publicFileUrl_(file.getId());
+  return thumbnailUrl_(file.getId());
 }
 
 // мапа Nickname → URL у листі 'avatars'
-function upsertAvatarUrl_(nick, url) {
+function upsertAvatarUrl_(nick, url, isoTime) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sh = ss.getSheetByName('avatars');
   if (!sh) {
@@ -466,9 +467,9 @@ function upsertAvatarUrl_(nick, url) {
   }
   if (rowIndex > -1) {
     sh.getRange(rowIndex, urlIdx+1).setValue(url);
-    sh.getRange(rowIndex, updIdx+1).setValue(new Date());
+    sh.getRange(rowIndex, updIdx+1).setValue(isoTime);
   } else {
-    sh.appendRow([nick, url, new Date()]);
+    sh.appendRow([nick, url, isoTime]);
   }
 }
 
@@ -541,6 +542,10 @@ function getFolderByPropKey_(key) {
 function publicFileUrl_(fileId) {
   return 'https://drive.google.com/uc?export=view&id=' + fileId;
 }
+
+function thumbnailUrl_(fileId) {
+  return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w512';
+}
 function makeKey_(len) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
@@ -549,6 +554,14 @@ function makeKey_(len) {
 }
 function JsonOK(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function JsonErr(err, code) {
+  const payload = {status: 'ERR', message: err && err.message ? err.message : String(err)};
+  const c = code || (err && err.code);
+  if (c) payload.code = c;
+  return ContentService.createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);
 }
 function TextPlain(msg) {

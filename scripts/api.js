@@ -352,44 +352,49 @@ export async function fetchPlayerGames(nick, league = '') {
 }
 
 // ---------------------- Новий JSON API ----------------------
-async function gasPost(payload = {}) {
-  const res = await fetch(WEB_APP_URL, {
+async function gasPost(path = '', payload = {}) {
+  const resp = await fetch(WEB_APP_URL + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  const text = await res.text();
-  if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
+  const text = await resp.text();
+  const ctype = resp.headers.get('content-type') || '';
+  if (!ctype.includes('application/json')) {
+    return { status: 'ERR_NOT_JSON', code: resp.status, body: text };
+  }
   try {
     return JSON.parse(text);
   } catch (err) {
     log('[ranking]', err);
-    return { status: 'TEXT', text };
+    return { status: 'ERR_JSON_PARSE', body: text };
   }
 }
 
 export async function adminCreatePlayer(data) {
   const payload = { action: 'adminCreatePlayer', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost(payload);
-  if (resp.status && resp.status !== 'OK' && resp.status !== 'DUPLICATE') throw new Error(resp.status);
+  const resp = await gasPost('', payload);
+  if (resp.status !== 'OK' && resp.status !== 'DUPLICATE') {
+    throw new Error(resp.status || 'ERR_STATUS');
+  }
   return resp.status || '';
 }
 
 export async function issueAccessKey(data) {
   const payload = { action: 'issueAccessKey', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost(payload);
-  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  const resp = await gasPost('', payload);
+  if (resp.status !== 'OK') throw new Error(resp.status || 'ERR_STATUS');
   return resp.key || resp.accessKey || null;
 }
 
 export async function getProfile(data) {
   const payload = { action: 'getProfile', ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost(payload);
-  if (resp.status && resp.status !== 'OK' && resp.status !== 'DENIED') {
-    throw new Error(resp.status);
+  const resp = await gasPost('', payload);
+  if (resp.status !== 'OK' && resp.status !== 'DENIED') {
+    throw new Error(resp.status || 'ERR_STATUS');
   }
   return resp;
 }
@@ -410,8 +415,8 @@ export async function getAvatarUrl(nick) {
   }
   if (rec) return rec;
 
-  const resp = await gasPost({ action: 'getAvatarUrl', nick });
-  if (resp && resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  const resp = await gasPost('', { action: 'getAvatarUrl', nick });
+  if (resp.status !== 'OK') throw new Error(resp.status || 'ERR_STATUS');
   rec = { url: resp.url || null, updatedAt: resp.updatedAt || Date.now() };
   avatarCache.set(nick, rec);
     safeSet(window.__SESS, key, JSON.stringify(rec));
@@ -421,8 +426,8 @@ export async function getAvatarUrl(nick) {
 export async function getPdfLinks(params) {
   const payload = { action: 'getPdfLinks', ...(params || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const resp = await gasPost(payload);
-  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
+  const resp = await gasPost('', payload);
+  if (resp.status !== 'OK') throw new Error(resp.status || 'ERR_STATUS');
   return resp.links || {};
 }
 

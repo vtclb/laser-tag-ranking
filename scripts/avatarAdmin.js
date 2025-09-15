@@ -2,7 +2,7 @@
 import { log } from './logger.js';
 import { uploadAvatar } from './api.js';
 import { setAvatar } from './avatar.js';
-import { renderAllAvatars } from './avatars.client.js';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
@@ -177,7 +177,7 @@ export async function initAvatarAdmin(players = [], league = '') {
         const resp = await uploadAvatar(nick, file);
         if (resp.status !== 'OK') throw new Error(resp.status);
         applyAvatarToUI(nick, resp.url);
-        renderAllAvatars({ bust: resp.updatedAt });
+        reloadAvatars({ bust: resp.updatedAt });
         localStorage.setItem('avatarRefresh', nick + ':' + resp.updatedAt);
         row.querySelector('input[type="file"]').value = '';
       } catch (err) {

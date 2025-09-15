@@ -12,6 +12,8 @@ const pdfCache = {};
 
 async function updateAvatar(nick) {
   const avatarEl = document.getElementById('avatar');
+  avatarEl.dataset.nick = nick;
+  avatarEl.alt = nick;
   const rec = await getAvatarUrl(nick);
   const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
   avatarEl.onerror = () => { avatarEl.onerror = null; avatarEl.src = DEFAULT_AVATAR_URL; };

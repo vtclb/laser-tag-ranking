@@ -2,6 +2,7 @@ import { log } from './logger.js';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
+import { noteAvatarFailure } from './avatarAdmin.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
@@ -191,8 +192,16 @@ async function loadProfile(nick, key = '') {
       await reloadAvatars();
     } catch (err) {
       log('[ranking]', err);
-      const msg = 'Помилка завантаження';
-      if (typeof showToast === 'function') showToast(msg); else alert(msg);
+      const reason = err?.message || err;
+      if (reason === 'Proxy unreachable') {
+        noteAvatarFailure(nick, reason);
+        if (typeof showToast !== 'function') {
+          alert('Не вдалося зв\'язатися з проксі');
+        }
+      } else {
+        const msg = 'Помилка завантаження';
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
+      }
     }
   });
 

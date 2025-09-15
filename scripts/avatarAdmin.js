@@ -174,10 +174,11 @@ export async function initAvatarAdmin(players = [], league = '') {
       }
       const nick = row.dataset.nick;
       try {
-        const url = await uploadAvatar(nick, file);
-        applyAvatarToUI(nick, url);
-        renderAllAvatars({ bust: Date.now() });
-        localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
+        const resp = await uploadAvatar(nick, file);
+        if (resp.status !== 'OK') throw new Error(resp.status);
+        applyAvatarToUI(nick, resp.url);
+        renderAllAvatars({ bust: resp.updatedAt });
+        localStorage.setItem('avatarRefresh', nick + ':' + resp.updatedAt);
         row.querySelector('input[type="file"]').value = '';
       } catch (err) {
         log('[ranking]', err);

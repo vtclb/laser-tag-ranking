@@ -179,10 +179,17 @@ async function loadProfile(nick, key = '') {
       return;
     }
     try {
-      await uploadAvatar(nick, file);
+      const resp = await uploadAvatar(nick, file);
+      if (resp.status !== 'OK') throw new Error(resp.status);
       clearFetchCache(`avatar:${nick}`);
-      localStorage.setItem('avatarRefresh', nick + ':' + Date.now());
-      await renderAllAvatars({ bust: Date.now() });
+      localStorage.setItem('avatarRefresh', nick + ':' + resp.updatedAt);
+      const avatarEl = document.getElementById('avatar');
+      if (avatarEl && resp.url) {
+        const bust = resp.updatedAt;
+        const src = resp.url + (resp.url.includes('?') ? '&' : '?') + 't=' + bust;
+        avatarEl.src = src;
+      }
+      await renderAllAvatars({ bust: resp.updatedAt });
     } catch (err) {
       log('[ranking]', err);
       const msg = 'Помилка завантаження';

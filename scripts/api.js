@@ -234,10 +234,13 @@ export async function uploadAvatar(nick, file) {
   } catch {
     resp = { status: 'ERR', raw: text };
   }
-  if (resp && typeof resp === 'object' && resp.status && resp.status !== 'OK') {
+  if (!resp || typeof resp !== 'object') {
+    resp = { status: 'ERR', raw: text };
+  }
+  if (resp.status && resp.status !== 'OK') {
     throw new Error(resp.status);
   }
-  return resp && resp.url ? resp.url : null;
+  return resp;
 }
 
 // ---------------------- Реєстрація/статистика ----------------------

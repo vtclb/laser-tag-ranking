@@ -51,5 +51,15 @@
   </div>
   <script src="scripts/toast.js"></script>
   <script type="module" src="scripts/profile.js"></script>
+  <script type="module">
+    import { renderAllAvatars } from "./scripts/avatars.readonly.js";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const rerender = () => renderAllAvatars();
+      rerender();
+      const observer = new MutationObserver(rerender);
+      observer.observe(document.body, { childList: true, subtree: true });
+    });
+  </script>
 </body>
 </html>

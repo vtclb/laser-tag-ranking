@@ -65,6 +65,7 @@ async function addPlayer(nick){
   lobby.push({ ...res, team: null });
   renderLobby();
   renderLobbyCards();
+  renderAllAvatars();
   renderSelect(filtered);
 }
 
@@ -85,6 +86,7 @@ async function addPlayer(nick){
   renderSelect(filtered);
   renderLobby();
   renderLobbyCards();
+  renderAllAvatars();
 }
 
 export function updateLobbyState(updates){
@@ -107,6 +109,7 @@ export function updateLobbyState(updates){
   if(teamCount) initTeams(teamCount, teams);
   renderLobby();
   renderLobbyCards();
+  renderAllAvatars();
 }
 
 // Рендер списку доступних гравців
@@ -165,15 +168,16 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSelect(filtered);
   };
 
-  document.getElementById('btn-add-selected').onclick = () => {
-    selected.forEach(p => {
-      if (!lobby.includes(p)) lobby.push(p);
-    });
-    selected = [];
-    renderLobby();
-    renderLobbyCards();
-    renderSelect(filtered);
-  };
+    document.getElementById('btn-add-selected').onclick = () => {
+      selected.forEach(p => {
+        if (!lobby.includes(p)) lobby.push(p);
+      });
+      selected = [];
+      renderLobby();
+      renderLobbyCards();
+      renderAllAvatars();
+      renderSelect(filtered);
+    };
 
   document.getElementById('btn-clear-selected').onclick = () => {
     selected = [];
@@ -237,6 +241,7 @@ export function setManualCount(n) {
   manualCount = n;
   renderLobby();
   renderLobbyCards();
+  renderAllAvatars();
 }
 
 export function clearLobby() {
@@ -248,6 +253,7 @@ export function clearLobby() {
 
   renderLobby();
   renderLobbyCards();
+  renderAllAvatars();
   renderTeams();
   updateSummary();
   renderSelect(filtered);
@@ -309,7 +315,6 @@ function renderPlayerList(el, arr) {
 
     el.appendChild(div);
   });
-  renderAllAvatars();
 }
 
 function setupDnD(containers) {
@@ -347,11 +352,12 @@ function movePlayer(nick, targetId) {
   const p = takePlayer(nick);
   if (!p) return;
   if (targetId === 'lobby-list') lobby.push(p);
-  else if (targetId === 'team-a') teams[1].push(p);
-  else if (targetId === 'team-b') teams[2].push(p);
-  renderLobby();
-  renderLobbyCards();
-}
+    else if (targetId === 'team-a') teams[1].push(p);
+    else if (targetId === 'team-b') teams[2].push(p);
+    renderLobby();
+    renderLobbyCards();
+    renderAllAvatars();
+  }
 
 // Рендер лоббі
 function renderLobby() {
@@ -527,24 +533,26 @@ function onLobbyAction(e) {
     preset[teamNo] = preset[teamNo] || [];
     preset[teamNo].push(p);
 
-    initTeams(manualCount, preset);
-    refreshArenaTeams();
-    renderLobby();
-    renderLobbyCards();
-    renderSelect(filtered);
-    return;
-  }
+      initTeams(manualCount, preset);
+      refreshArenaTeams();
+      renderLobby();
+      renderLobbyCards();
+      renderAllAvatars();
+      renderSelect(filtered);
+      return;
+    }
 
   const remove = e.target.closest('.remove-lobby');
   if (remove) {
     const idx = +remove.dataset.i;
-    lobby.splice(idx, 1);
-    renderLobby();
-    renderLobbyCards();
-    renderSelect(filtered);
-    refreshArenaTeams();
-    return;
-  }
+      lobby.splice(idx, 1);
+      renderLobby();
+      renderLobbyCards();
+      renderAllAvatars();
+      renderSelect(filtered);
+      refreshArenaTeams();
+      return;
+    }
 
   const sel = e.target.closest('.abonement-select');
   if (sel && e.type === 'change') {

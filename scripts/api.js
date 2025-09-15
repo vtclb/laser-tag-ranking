@@ -1,10 +1,9 @@
 // scripts/api.js
 import { log } from './logger.js';
+import { AVATAR_PLACEHOLDER } from './config.js';
 
 // Toggle network diagnostics
 const DEBUG_NETWORK = false;
-
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
 
 // ---------------------- Safe storage helpers ----------------------
 export function safeGet(storage, key) {
@@ -422,7 +421,7 @@ export async function getAvatarUrl(nick) {
   if (resp.status !== 'OK') throw new Error(resp.status || 'ERR_STATUS');
   rec = { url: resp.url || null, updatedAt: resp.updatedAt || Date.now() };
   avatarCache.set(nick, rec);
-    safeSet(window.__SESS, key, JSON.stringify(rec));
+  safeSet(window.__SESS, key, JSON.stringify(rec));
   return rec;
 }
 
@@ -435,7 +434,7 @@ export async function getPdfLinks(params) {
 }
 
 export function avatarSrcFromRecord(rec) {
-  const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
+  const url = rec && rec.url ? rec.url : AVATAR_PLACEHOLDER;
   return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
 }
 

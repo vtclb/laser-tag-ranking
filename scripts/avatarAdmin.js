@@ -2,8 +2,9 @@
 import { log } from './logger.js';
 import { uploadAvatar } from './api.js';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
+import { AVATAR_PLACEHOLDER } from './config.js';
 
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+const DEFAULT_AVATAR_DIR = AVATAR_PLACEHOLDER.replace(/\/[^/]*$/, '');
 
 export let avatarFailures = 0;
 
@@ -15,7 +16,7 @@ export function noteAvatarFailure(nick, reason) {
 }
 
 export function normalizeAvatarUrl(url = '') {
-  if (!url) return DEFAULT_AVATAR_URL;
+  if (!url) return AVATAR_PLACEHOLDER;
   if (url.includes('drive.google.com')) {
     const idMatch = url.match(/[?&]id=([^&]+)/) || url.match(/\/d\/([^/]+)/);
     if (idMatch) {
@@ -31,14 +32,14 @@ export function setImgSafe(img, url) {
   img.referrerPolicy = 'no-referrer';
   img.loading = 'lazy';
   img.decoding = 'async';
-  img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
+  img.onerror = () => { img.onerror = null; img.src = AVATAR_PLACEHOLDER; };
   const cacheSafe = src.startsWith('data:') || src.startsWith('blob:');
   const finalSrc = cacheSafe ? src : src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
   img.src = finalSrc;
 }
 
 export function applyAvatarToUI(nick, imageUrl) {
-  const url = imageUrl || DEFAULT_AVATAR_URL;
+  const url = imageUrl || AVATAR_PLACEHOLDER;
   const preview = document.querySelector(`#avatar-list .avatar-row[data-nick="${nick}"] img.avatar-img`);
   if (preview) setImgSafe(preview, url);
   document.querySelectorAll(`img[data-nick="${nick}"]`).forEach(img => {
@@ -47,13 +48,13 @@ export function applyAvatarToUI(nick, imageUrl) {
 }
 
 let defaultAvatars = [];
-async function loadDefaultAvatars(path = 'assets/default_avatars/list.json'){
+async function loadDefaultAvatars(path = `${DEFAULT_AVATAR_DIR}/list.json`){
   if(defaultAvatars.length) return;
   try{
     const res = await fetch(path);
     if(res.ok){
       const list = await res.json();
-      defaultAvatars = list.map(f => `assets/default_avatars/${f}`);
+      defaultAvatars = list.map(f => `${DEFAULT_AVATAR_DIR}/${f}`);
     }
   }catch(err){
     log('[ranking]', err);

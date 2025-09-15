@@ -1,7 +1,6 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js';
 import { uploadAvatar } from './api.js';
-import { setAvatar } from './avatar.js';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
 const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
@@ -90,7 +89,6 @@ export async function initAvatarAdmin(players = [], league = '') {
     img.className = 'avatar-img';
     img.alt = p.nick;
     img.dataset.nick = p.nick;
-    setAvatar(img, p.nick);
     imgTd.appendChild(img);
 
     const nickTd = document.createElement('td');
@@ -153,6 +151,8 @@ export async function initAvatarAdmin(players = [], league = '') {
     listEl.appendChild(tr);
   });
 
+  await renderAllAvatars();
+
   const rows = () => Array.from(document.querySelectorAll('#avatar-list .avatar-row'));
 
   function updateSaveBtn() {
@@ -201,6 +201,6 @@ export async function initAvatarAdmin(players = [], league = '') {
 
 window.addEventListener('storage', e => {
   if(e.key === 'avatarRefresh') {
-    renderAllAvatars({ bust: Date.now() });
+    reloadAvatars();
   }
 });

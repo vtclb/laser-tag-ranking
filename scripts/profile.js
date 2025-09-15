@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet } from './api.js';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
@@ -181,7 +181,6 @@ async function loadProfile(nick, key = '') {
     try {
       const resp = await uploadAvatar(nick, file);
       if (resp.status !== 'OK') throw new Error(resp.status);
-      clearFetchCache(`avatar:${nick}`);
       localStorage.setItem('avatarRefresh', nick + ':' + resp.updatedAt);
       const avatarEl = document.getElementById('avatar');
       if (avatarEl && resp.url) {
@@ -217,8 +216,8 @@ window.addEventListener('storage', e => {
   if (e.key === 'avatarRefresh') {
     const [nick] = (e.newValue || '').split(':');
     if (nick) {
-      clearFetchCache(`avatar:${nick}`);
       if (nick === currentNick) updateAvatar(nick);
+      reloadAvatars();
     }
   }
 });

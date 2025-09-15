@@ -9,14 +9,10 @@ import {
   issueAccessKey,
   getProfile,
   safeDel,
-  getAvatarUrl,
-  clearFetchCache,
 } from './api.js';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js';
 import { refreshArenaTeams } from './scenario.js';
-import { setAvatar } from './avatar.js';
-
-const DEFAULT_AVATAR_URL = 'assets/default_avatars/av0.png';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
@@ -36,28 +32,8 @@ function updatePlayersDatalist() {
   }
 }
 
-async function refreshAvatars(nick) {
-  const sel = nick ? `img[data-nick="${nick}"]` : 'img[data-nick]';
-  const imgs = document.querySelectorAll(sel);
-  for (const img of imgs) {
-    try {
-      const rec = await getAvatarUrl(img.dataset.nick);
-      const url = rec && rec.url ? rec.url : DEFAULT_AVATAR_URL;
-      img.onerror = () => { img.onerror = null; img.src = DEFAULT_AVATAR_URL; };
-      img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-    } catch {
-      img.onerror = null;
-      img.src = DEFAULT_AVATAR_URL;
-    }
-  }
-}
-
 window.addEventListener('storage', e => {
-  if (e.key === 'avatarRefresh') {
-    const [nick] = (e.newValue || '').split(':');
-    if (nick) clearFetchCache(`avatar:${nick}`);
-    refreshAvatars(nick);
-  }
+  if (e.key === 'avatarRefresh') reloadAvatars();
 });
 
 async function addPlayer(nick){
@@ -308,7 +284,6 @@ function renderPlayerList(el, arr) {
     img.width = 40;
     img.height = 40;
     img.dataset.nick = p.nick;
-    setAvatar(img, p.nick, 40);
 
     const meta = document.createElement('div');
     meta.className = 'player__meta';
@@ -334,6 +309,7 @@ function renderPlayerList(el, arr) {
 
     el.appendChild(div);
   });
+  renderAllAvatars();
 }
 
 function setupDnD(containers) {

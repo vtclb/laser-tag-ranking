@@ -36,9 +36,24 @@ export function safeDel(storage, key) {
 
 // ---------------------- Глобальні утиліти ----------------------
 // Google Apps Script backend (веб-апп)
-export const WEB_APP_URL =
-  window.WEB_APP_URL ||
-  'https://laser-proxy.vartaclub.workers.dev/';
+const PROD_PROXY_URL = 'https://laser-proxy.vartaclub.workers.dev/';
+const LOCAL_PROXY_URL = 'http://localhost:8787/';
+const rawConfiguredProxy =
+  (typeof window !== 'undefined' && window.WEB_APP_URL ? String(window.WEB_APP_URL).trim() : '') || '';
+const hostname =
+  typeof window !== 'undefined' && window.location ? window.location.hostname : '';
+const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(hostname);
+const fallbackProxy = isLocalHost ? LOCAL_PROXY_URL : PROD_PROXY_URL;
+
+let resolvedProxy = rawConfiguredProxy || fallbackProxy;
+if (!/^https?:\/\//i.test(resolvedProxy)) {
+  resolvedProxy = fallbackProxy;
+}
+if (!resolvedProxy.endsWith('/')) {
+  resolvedProxy += '/';
+}
+
+export const WEB_APP_URL = resolvedProxy;
 window.WEB_APP_URL = WEB_APP_URL;
 // back-compat
 export const PROXY_URL = WEB_APP_URL;
@@ -220,11 +235,19 @@ export async function saveDetailedStats(matchId, statsArray) {
 export async function uploadAvatar(nick, file) {
   const data = await toBase64NoPrefix(file);
   const mime = file.type || 'image/jpeg';
-  const res = await fetch(PROXY_ORIGIN + '/json', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'uploadAvatar', nick, mime, data })
-  });
+  let res;
+  try {
+    res = await fetch(PROXY_ORIGIN + '/json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'uploadAvatar', nick, mime, data })
+    });
+  } catch (err) {
+    log('[ranking]', err);
+    const networkErr = new Error('Proxy unreachable');
+    networkErr.cause = err;
+    throw networkErr;
+  }
   const text = await res.text();
   if (DEBUG_NETWORK) log('[ranking]', text);
   let resp;

@@ -1,7 +1,7 @@
 import { log } from './logger.js';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, clearFetchCache, safeSet, safeGet } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
-import { renderAllAvatars } from './avatars.client.js';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
 let gameLimit = 0;
 let gamesLeftEl = null;
@@ -189,7 +189,7 @@ async function loadProfile(nick, key = '') {
         const src = resp.url + (resp.url.includes('?') ? '&' : '?') + 't=' + bust;
         avatarEl.src = src;
       }
-      await renderAllAvatars({ bust: resp.updatedAt });
+      await reloadAvatars();
     } catch (err) {
       log('[ranking]', err);
       const msg = 'Помилка завантаження';

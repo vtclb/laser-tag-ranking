@@ -157,29 +157,14 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       const res = await saveResult(data);
-      if (res.status !== 'OK') {
-        let message;
-        if (res && typeof res === 'object') {
-          message = res.message || res.error || res.details || (res.status && res.status !== 'OK' ? res.status : undefined);
-        } else if (typeof res === 'string') {
-          message = res;
-        }
-        if (!message && res && typeof res === 'object' && res.status) {
-          message = res.status;
-        }
-        if (!message) {
-          try {
-            message = JSON.stringify(res);
-          } catch {
-            message = String(res);
-          }
-        }
-        if (!message) {
-          message = 'Невідома помилка';
-        }
-
-        console.error('Save game error: ' + message);
-        const msg = 'Помилка збереження: ' + message;
+      const ok = !!(res && res.ok);
+      const message = res && typeof res === 'object' && 'message' in res
+        ? res.message
+        : undefined;
+      if (!ok) {
+        const errorMessage = message || 'Невідома помилка';
+        console.error('Save game error: ' + errorMessage);
+        const msg = 'Помилка збереження: ' + errorMessage;
         if (typeof showToast === 'function') showToast(msg); else alert(msg);
         return;
       }
@@ -191,7 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLobbyState(res.players);
       }
 
-      alert('Гру успішно збережено та рейтинги оновлено');
+      const successMessage = message || 'Гру успішно збережено та рейтинги оновлено';
+      if (typeof showToast === 'function') showToast(successMessage); else alert(successMessage);
       safeSet(localStorage, 'gamedayRefresh', Date.now());
       btnClear.click();
     } catch (err) {

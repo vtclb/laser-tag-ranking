@@ -1,8 +1,8 @@
 // scripts/avatarAdmin.js
-import { log } from './logger.js?v=2025-09-18-2';
-import { uploadAvatar } from './api.js?v=2025-09-18-2';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-2';
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-18-2';
+import { log } from './logger.js?v=2025-09-18-3';
+import { uploadAvatar } from './api.js?v=2025-09-18-3';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-3';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-18-3';
 
 const DEFAULT_AVATAR_DIR = AVATAR_PLACEHOLDER.replace(/\/[^/]*$/, '');
 

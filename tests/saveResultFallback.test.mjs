@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 const FALLBACK_URL =
-  'https://script.google.com/macros/s/AKfycbyusB7-h9LsA3f2IHdgz6VQjSfrBqi-sm0itCpABPdJVJXN-6wUFU_vSFrFofqHS7lvaA/exec';
+  'https://script.google.com/macros/s/AKfycbzhQgbHauvk-ekGVHGRMUnEk-Rt-9M3QI_Jw-bjkRF4jAqpPtXQSDw3BsmivTHdvUY7Gw/exec';
 
 const sessionStore = new Map();
 const fakeWindow = {

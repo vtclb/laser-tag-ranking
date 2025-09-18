@@ -158,7 +158,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const res = await saveResult(data);
       if (res.status !== 'OK') {
-        const message = res.status || res;
+        let message;
+        if (res && typeof res === 'object') {
+          message = res.message || res.error || res.details || (res.status && res.status !== 'OK' ? res.status : undefined);
+        } else if (typeof res === 'string') {
+          message = res;
+        }
+        if (!message && res && typeof res === 'object' && res.status) {
+          message = res.status;
+        }
+        if (!message) {
+          try {
+            message = JSON.stringify(res);
+          } catch {
+            message = String(res);
+          }
+        }
+        if (!message) {
+          message = 'Невідома помилка';
+        }
+
         console.error('Save game error: ' + message);
         const msg = 'Помилка збереження: ' + message;
         if (typeof showToast === 'function') showToast(msg); else alert(msg);

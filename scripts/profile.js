@@ -9,6 +9,32 @@ let gamesLeftEl = null;
 let currentNick = '';
 const pdfCache = {};
 
+function parseQuery(search) {
+  const result = {};
+  if (typeof search !== 'string' || !search) return result;
+  const questionIndex = search.indexOf('?');
+  let query = questionIndex >= 0 ? search.slice(questionIndex + 1) : search;
+  const hashIndex = query.indexOf('#');
+  if (hashIndex >= 0) query = query.slice(0, hashIndex);
+  if (!query) return result;
+  const decodePart = part => {
+    try {
+      return decodeURIComponent(String(part).replace(/\+/g, ' '));
+    } catch (err) {
+      return String(part);
+    }
+  };
+  for (const piece of query.split('&')) {
+    if (!piece) continue;
+    const [rawKey, ...rawValParts] = piece.split('=');
+    if (!rawKey) continue;
+    const key = decodePart(rawKey);
+    const rawValue = rawValParts.length ? rawValParts.join('=') : '';
+    result[key] = decodePart(rawValue);
+  }
+  return result;
+}
+
 async function updateAvatar(nick) {
   const avatarEl = document.getElementById('avatar');
   avatarEl.dataset.nick = nick;
@@ -210,8 +236,8 @@ async function loadProfile(nick, key = '') {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(location.search);
-  const nick = params.get('nick');
+  const params = parseQuery(location.search);
+  const nick = params.nick;
   if (!nick) {
     showError('Нік не вказано');
     return;

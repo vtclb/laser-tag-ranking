@@ -260,6 +260,7 @@ export async function saveResult(data) {
   const body = toFormUrlEncoded(payload);
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
 
+  console.log('[saveResult] using toFormUrlEncoded, ver=2025-09-18-2');
   const attempt = async (targetUrl) => {
     try {
       const res = await fetch(targetUrl, { method: 'POST', headers, body });

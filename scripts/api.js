@@ -111,15 +111,10 @@ export async function parseProxyResponse(response) {
 }
 
 // Ручний form-urlencoded (замість URLSearchParams для сумісності зі старими/вбудованими оточеннями)
-function toFormUrlEncoded(obj) {
-  const pairs = [];
-  for (const k in obj) {
-    if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
-    const v = obj[k];
-    if (v === undefined || v === null) continue;
-    pairs.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
-  }
-  return pairs.join('&');
+export function toFormUrlEncoded(obj = {}) {
+  return Object.entries(obj)
+    .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v ?? ''))
+    .join('&');
 }
 
 // ==================== CSV FEEDS ====================

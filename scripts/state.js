@@ -1,5 +1,5 @@
-import { log } from './logger.js?v=2025-09-18-2';
-import { safeSet, safeGet } from './api.js?v=2025-09-18-2';
+import { log } from './logger.js?v=2025-09-18-3';
+import { safeSet, safeGet } from './api.js?v=2025-09-18-3';
 export function getLobbyStorageKey(date, league){
   const d = date || document.getElementById('date')?.value || new Date().toISOString().slice(0,10);
   const sel = document.getElementById('league');

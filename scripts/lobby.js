@@ -13,12 +13,19 @@ import {
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-18-9';
 import { refreshArenaTeams } from './scenario.js?v=2025-09-18-9';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-9';
+import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-18-9';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
   let uiLeague = 'sundaygames';
+
+function maybeAutoRebalance() {
+  if (balanceMode === 'auto') {
+    recomputeAutoBalance();
+  }
+}
 
 function updatePlayersDatalist() {
   const dl = document.getElementById('players-datalist');
@@ -67,6 +74,7 @@ async function addPlayer(nick){
   renderLobbyCards();
   renderAllAvatars();
   renderSelect(filtered);
+  maybeAutoRebalance();
 }
 
 // Ініціалізує лоббі новим набором гравців
@@ -87,6 +95,7 @@ async function addPlayer(nick){
   renderLobby();
   renderLobbyCards();
   renderAllAvatars();
+  maybeAutoRebalance();
 }
 
 export function updateLobbyState(updates){
@@ -110,6 +119,7 @@ export function updateLobbyState(updates){
   renderLobby();
   renderLobbyCards();
   renderAllAvatars();
+  maybeAutoRebalance();
 }
 
 // Рендер списку доступних гравців
@@ -539,6 +549,7 @@ function onLobbyAction(e) {
       renderLobbyCards();
       renderAllAvatars();
       renderSelect(filtered);
+      maybeAutoRebalance();
       return;
     }
 
@@ -551,6 +562,7 @@ function onLobbyAction(e) {
       renderAllAvatars();
       renderSelect(filtered);
       refreshArenaTeams();
+      maybeAutoRebalance();
       return;
     }
 

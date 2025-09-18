@@ -3,6 +3,11 @@
 import { teams, initTeams }          from './teams.js?v=2025-09-18-9';
 import { autoBalance2, autoBalanceN } from './balanceUtils.js?v=2025-09-18-9';
 import { lobby, setManualCount }      from './lobby.js?v=2025-09-18-9';
+import {
+  balanceMode,
+  registerRecomputeAutoBalance,
+  recomputeAutoBalance as triggerRecomputeAutoBalance,
+} from './balance.js?v=2025-09-18-9';
 
 let scenarioArea, btnAuto, btnManual, teamSizeSel;
 let arenaSelect, arenaCheckboxes, btnStart;
@@ -36,8 +41,13 @@ function updateStartButton() {
 }
 
 /** Авто-баланс: N=2 чи N>2 */
-function handleAuto() {
+export function recomputeAutoBalance() {
+  if (balanceMode !== 'auto') return;
+  if (!teamSizeSel || !arenaSelect || !arenaCheckboxes || !btnStart) return;
+
   const n = +teamSizeSel.value;
+  if (!Number.isInteger(n) || n <= 0) return;
+
   setManualCount(n);    // сповіщаємо lobby.js, скільки кнопок “→…” малювати
   let data;
   if (n === 2) {
@@ -50,6 +60,10 @@ function handleAuto() {
   arenaSelect.classList.remove('hidden');
   renderArenaCheckboxes();
   updateStartButton();
+}
+
+function handleAuto() {
+  triggerRecomputeAutoBalance();
 }
 
 /** Ручне формування команд */
@@ -83,6 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('scenario.js: не знайдено обовʼязкові елементи');
     return;
   }
+
+  registerRecomputeAutoBalance(recomputeAutoBalance);
 
   btnAuto.addEventListener('click',   handleAuto);
   btnManual.addEventListener('click', handleManual);

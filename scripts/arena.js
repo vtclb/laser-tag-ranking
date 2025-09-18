@@ -1,10 +1,10 @@
 // scripts/arena.js
-import { log } from './logger.js?v=2025-09-18-3';
+import { log } from './logger.js?v=2025-09-18-8';
 
-import { saveResult, saveDetailedStats, normalizeLeague, safeSet } from './api.js?v=2025-09-18-3';
-import { parseGamePdf }                   from './pdfParser.js?v=2025-09-18-3';
-import { updateLobbyState }               from './lobby.js?v=2025-09-18-3';
-import { teams }                          from './teams.js?v=2025-09-18-3';
+import { saveResult, saveDetailedStats, normalizeLeague, safeSet } from './api.js?v=2025-09-18-8';
+import { parseGamePdf }                   from './pdfParser.js?v=2025-09-18-8';
+import { updateLobbyState }               from './lobby.js?v=2025-09-18-8';
+import { teams }                          from './teams.js?v=2025-09-18-8';
 
 // Дочекаємося, поки DOM завантажиться
 document.addEventListener('DOMContentLoaded', () => {

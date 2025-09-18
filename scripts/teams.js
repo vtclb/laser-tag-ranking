@@ -1,5 +1,5 @@
-import { saveLobbyState } from './state.js';
-import { lobby } from './lobby.js';
+import { saveLobbyState } from './state.js?v=2025-09-12-1';
+import { lobby } from './lobby.js?v=2025-09-12-1';
 
 export let teams = {};
 

@@ -1,8 +1,8 @@
-import { log } from './logger.js';
-import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js";
-import { LEAGUE } from "./constants.js";
-import { rankLetterForPoints } from './rankUtils.js';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
+import { log } from './logger.js?v=2025-09-12-1';
+import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js?v=2025-09-12-1";
+import { LEAGUE } from "./constants.js?v=2025-09-12-1";
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-12-1';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-12-1';
 
 const CSV_TTL = 60 * 1000;
 

@@ -1,5 +1,6 @@
 const DEFAULT_PROXY_ORIGIN = 'https://laser-proxy.vartaclub.workers.dev';
-const DEFAULT_GAS_FALLBACK_URL = '';
+const DEFAULT_GAS_FALLBACK_URL =
+  'https://script.google.com/macros/s/AKfycbyusB7-h9LsA3f2IHdgz6VQjSfrBqi-sm0itCpABPdJVJXN-6wUFU_vSFrFofqHS7lvaA/exec';
 
 const root = typeof window !== 'undefined' ? window : globalThis;
 

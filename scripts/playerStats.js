@@ -1,5 +1,5 @@
-import { log } from './logger.js?v=2025-09-12-1';
-import { fetchPlayerStats } from './api.js?v=2025-09-12-1';
+import { log } from './logger.js?v=2025-09-18-2';
+import { fetchPlayerStats } from './api.js?v=2025-09-18-2';
 
 function init(){
   const modal = document.getElementById('stats-modal');

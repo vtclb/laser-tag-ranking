@@ -282,12 +282,17 @@ export async function saveResult(data) {
 
   // 2) опційний прямий fallback на GAS
   const fallbackRaw = (typeof window !== 'undefined' ? window.GAS_FALLBACK_URL : '');
-  const needRetry = !result.ok && ['ERR_PROXY','ERR_NETWORK','ERR_JSON_PARSE','ERR_HTML'].includes(result.status);
+  const needRetry = !result.ok && ['ERR_PROXY', 'ERR_NETWORK', 'ERR_JSON_PARSE', 'ERR_HTML'].includes(result.status);
   if (needRetry && fallbackRaw) {
-    try {
-      const fb = normalizeProxyBase(String(fallbackRaw).trim(), { name: 'GAS_FALLBACK_URL' });
-      result = await attempt(fb.proxyOrigin); // у GAS кореневий exec без '/'
-    } catch (e) { /* ignore */ }
+    const trimmed = String(fallbackRaw).trim();
+    if (trimmed) {
+      let targetUrl = trimmed;
+      try {
+        const fb = normalizeProxyBase(trimmed, { name: 'GAS_FALLBACK_URL' });
+        targetUrl = fb.proxyOrigin; // у GAS кореневий exec без '/'
+      } catch (e) { /* ignore */ }
+      result = await attempt(targetUrl);
+    }
   }
   return result;
 }

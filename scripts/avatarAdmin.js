@@ -1,10 +1,10 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js?v=2025-09-18-9';
-import { uploadAvatar } from './api.js?v=2025-09-18-9';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-9';
+import { uploadAvatar, gasPost, toBase64NoPrefix } from './api.js?v=2025-09-18-9';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-18-9';
 
-const DEFAULT_AVATAR_DIR = AVATAR_PLACEHOLDER.replace(/\/[^/]*$/, '');
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const UPLOAD_ACTION = 'uploadAvatar';
 
 export let avatarFailures = 0;
 
@@ -40,168 +40,241 @@ export function setImgSafe(img, url) {
 
 export function applyAvatarToUI(nick, imageUrl) {
   const url = imageUrl || AVATAR_PLACEHOLDER;
-  const preview = document.querySelector(`#avatar-list .avatar-row[data-nick="${nick}"] img.avatar-img`);
-  if (preview) setImgSafe(preview, url);
-  document.querySelectorAll(`img[data-nick="${nick}"]`).forEach(img => {
-    if (img !== preview) setImgSafe(img, url);
-  });
+  document.querySelectorAll(`img[data-nick="${nick}"]`).forEach(img => setImgSafe(img, url));
 }
 
-let defaultAvatars = [];
-async function loadDefaultAvatars(path = `${DEFAULT_AVATAR_DIR}/list.json`){
-  if(defaultAvatars.length) return;
-  try{
-    const res = await fetch(path);
-    if(res.ok){
-      const list = await res.json();
-      defaultAvatars = list.map(f => `${DEFAULT_AVATAR_DIR}/${f}`);
-    }
-  }catch(err){
-    log('[ranking]', err);
-    const msg = 'Failed to load default avatars';
-    if (typeof showToast === 'function') showToast(msg); else alert(msg);
-  }
+const state = {
+  nickInput: null,
+  fileInput: null,
+  uploadBtn: null,
+  refreshBtn: null,
+  previewImg: null
+};
+
+let formReady = false;
+let avatarModulePromise = null;
+
+function showMessage(msg) {
+  if (typeof showToast === 'function') showToast(msg);
+  else alert(msg);
 }
 
-let currentLeague = '';
-export async function initAvatarAdmin(players = [], league = '') {
-  currentLeague = league;
-  const section = document.getElementById('avatar-admin');
-  if (!section) return;
-  const listEl = document.getElementById('avatar-list');
-  const saveAvBtn = document.getElementById('save-avatars');
-  const statusEl = document.getElementById('avatar-status');
-  if (!listEl || !saveAvBtn) return;
-  listEl.innerHTML = '';
-  if (statusEl) {
-    statusEl.textContent = '';
-    statusEl.classList.add('hidden');
+function queryFormElements() {
+  const nickInput = document.getElementById('avatar-nick');
+  const fileInput = document.getElementById('avatar-file');
+  const uploadBtn = document.getElementById('avatar-upload');
+  const refreshBtn = document.getElementById('avatars-refresh');
+  const previewImg = document.getElementById('avatar-preview');
+
+  if (!nickInput || !fileInput || !uploadBtn) return false;
+
+  state.nickInput = nickInput;
+  state.fileInput = fileInput;
+  state.uploadBtn = uploadBtn;
+  state.refreshBtn = refreshBtn;
+  state.previewImg = previewImg;
+  return true;
+}
+
+function resetPreview() {
+  const { previewImg } = state;
+  if (!previewImg) return;
+  setImgSafe(previewImg, AVATAR_PLACEHOLDER);
+  previewImg.hidden = true;
+}
+
+function updateUploadButtonState() {
+  const { nickInput, fileInput, uploadBtn } = state;
+  if (!uploadBtn) return;
+  const hasNick = Boolean(nickInput?.value?.trim());
+  const hasFile = Boolean(fileInput?.files && fileInput.files[0]);
+  uploadBtn.disabled = !(hasNick && hasFile);
+}
+
+function clearFileSelection(options = {}) {
+  const { fileInput } = state;
+  if (fileInput) fileInput.value = '';
+  if (!options.keepPreview) resetPreview();
+  updateUploadButtonState();
+}
+
+function handleFileChange() {
+  const { fileInput, previewImg } = state;
+  const file = fileInput?.files && fileInput.files[0];
+
+  if (!file) {
+    resetPreview();
+    updateUploadButtonState();
+    return;
   }
-  await loadDefaultAvatars();
 
-  // create rows for players
-  players.forEach(p => {
-    const tr = document.createElement('tr');
-    tr.className = 'avatar-row';
-    tr.dataset.nick = p.nick;
-
-    const imgTd = document.createElement('td');
-    const img = document.createElement('img');
-    img.className = 'avatar-img';
-    img.alt = p.nick;
-    img.dataset.nick = p.nick;
-    imgTd.appendChild(img);
-
-    const nickTd = document.createElement('td');
-    nickTd.textContent = p.nick;
-
-    const inputTd = document.createElement('td');
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.addEventListener('change', () => {
-      const file = input.files[0];
-      if (!file) return updateSaveBtn();
-      if (file.size > 2 * 1024 * 1024) {
-        const msg = 'File too large (max 2MB)';
-        if (typeof showToast === 'function') showToast(msg); else alert(msg);
-        input.value = '';
-        return updateSaveBtn();
-      }
-      setImgSafe(img, URL.createObjectURL(file));
-      updateSaveBtn();
-    });
-    inputTd.appendChild(input);
-
-    const thumbsTd = document.createElement('td');
-    const thumbs = document.createElement('div');
-    thumbs.className = 'avatar-thumbs';
-    defaultAvatars.forEach(src => {
-      const t = document.createElement('img');
-      t.className = 'avatar-thumb';
-      t.alt = 'avatar';
-      t.loading = 'lazy';
-      t.width = 40;
-      t.height = 40;
-      t.src = src;
-      t.addEventListener('click', async () => {
-        thumbs.querySelectorAll('.avatar-thumb').forEach(el => el.classList.remove('selected'));
-        t.classList.add('selected');
-        try {
-          const resp = await fetch(src);
-          const blob = await resp.blob();
-          const dt = new DataTransfer();
-          dt.items.add(new File([blob], 'avatar.png', { type: blob.type }));
-          input.files = dt.files;
-          setImgSafe(img, src);
-          updateSaveBtn();
-        } catch (err) {
-          log('[ranking]', err);
-          const msg = 'Failed to fetch avatar';
-          if (typeof showToast === 'function') showToast(msg); else alert(msg);
-        }
-      });
-      thumbs.appendChild(t);
-    });
-    thumbsTd.appendChild(thumbs);
-
-    tr.appendChild(imgTd);
-    tr.appendChild(nickTd);
-    tr.appendChild(inputTd);
-    tr.appendChild(thumbsTd);
-    listEl.appendChild(tr);
-  });
-
-  await renderAllAvatars();
-
-  const rows = () => Array.from(document.querySelectorAll('#avatar-list .avatar-row'));
-
-  function updateSaveBtn() {
-    const hasFile = rows().some(r => r.querySelector('input[type="file"]').files[0]);
-    saveAvBtn.disabled = !hasFile;
+  if (file.size > MAX_FILE_SIZE) {
+    showMessage('Файл завеликий (макс. 2 МБ)');
+    clearFileSelection();
+    return;
   }
-  updateSaveBtn();
 
-  saveAvBtn.onclick = async () => {
-    const failed = [];
-    for (const row of rows()) {
-      const file = row.querySelector('input[type="file"]').files[0];
-      if (!file) continue;
-      if (file.size > 2 * 1024 * 1024) {
-        const msg = 'File too large (max 2MB)';
-        if (typeof showToast === 'function') showToast(msg); else alert(msg);
-        failed.push(row.dataset.nick);
-        continue;
-      }
-      const nick = row.dataset.nick;
-      try {
-        const resp = await uploadAvatar(nick, file);
-        if (resp.status !== 'OK') throw new Error(resp.status);
-        applyAvatarToUI(nick, resp.url);
-        reloadAvatars({ bust: resp.updatedAt });
-        localStorage.setItem('avatarRefresh', nick + ':' + resp.updatedAt);
-        row.querySelector('input[type="file"]').value = '';
-      } catch (err) {
-        log('[ranking]', err);
-        failed.push(nick);
-        noteAvatarFailure(nick, err?.message || err);
-      }
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (previewImg && typeof reader.result === 'string') {
+      previewImg.src = reader.result;
+      previewImg.hidden = false;
     }
-    updateSaveBtn();
-    if (failed.length) {
-      const msg = 'Failed to upload avatars for: ' + failed.join(', ');
-      if (typeof showToast === 'function') showToast(msg); else alert(msg);
-    }
-    if (statusEl) {
-      statusEl.textContent = 'Аватари оновлено';
-      statusEl.classList.remove('hidden');
-      setTimeout(() => statusEl.classList.add('hidden'), 2000);
-    }
+    updateUploadButtonState();
   };
+  reader.onerror = () => {
+    showMessage('Не вдалося прочитати файл аватара');
+    clearFileSelection();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function ensureAvatarsModule() {
+  if (!avatarModulePromise) {
+    avatarModulePromise = import('./avatars.client.js?v=2025-09-18-9');
+  }
+  return avatarModulePromise;
+}
+
+async function reloadAvatarsSafe(options) {
+  try {
+    const mod = await ensureAvatarsModule();
+    if (mod && typeof mod.reloadAvatars === 'function') {
+      await mod.reloadAvatars(options);
+    }
+  } catch (err) {
+    log('[ranking]', err);
+    throw err;
+  }
+}
+
+async function handleUploadClick() {
+  const { nickInput, fileInput, uploadBtn, previewImg } = state;
+  const nick = nickInput?.value?.trim();
+  const file = fileInput?.files && fileInput.files[0];
+
+  if (!nick) {
+    showMessage('Вкажи нік гравця');
+    nickInput?.focus();
+    return;
+  }
+  if (!file) {
+    showMessage('Додай файл аватара');
+    fileInput?.focus();
+    return;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    showMessage('Файл завеликий (макс. 2 МБ)');
+    clearFileSelection();
+    return;
+  }
+
+  uploadBtn.disabled = true;
+
+  try {
+    const mime = file.type || 'image/jpeg';
+    const base64 = await toBase64NoPrefix(file);
+    let resp;
+
+    try {
+      resp = await uploadAvatar(nick, file);
+    } catch (err) {
+      log('[ranking]', err);
+      const fallback = await gasPost('', { action: UPLOAD_ACTION, nick, mime, data: base64 });
+      if (!fallback || fallback.status !== 'OK') {
+        const message = fallback?.message || fallback?.status || err?.message || 'Не вдалося завантажити аватар';
+        throw new Error(message);
+      }
+      resp = fallback;
+    }
+
+    const imageUrl = resp?.url || AVATAR_PLACEHOLDER;
+    const updatedAt = resp?.updatedAt || Date.now();
+
+    applyAvatarToUI(nick, imageUrl);
+
+    if (previewImg) {
+      previewImg.hidden = false;
+      setImgSafe(previewImg, imageUrl);
+    }
+
+    try {
+      localStorage.setItem('avatarRefresh', `${nick}:${updatedAt}`);
+    } catch (err) {
+      log('[ranking]', err);
+    }
+
+    let reloadFailed = false;
+    try {
+      await reloadAvatarsSafe({ bust: updatedAt });
+    } catch (err) {
+      reloadFailed = true;
+      showMessage('Аватар оновлено, але не вдалося перезавантажити список аватарів');
+    }
+
+    if (!reloadFailed) {
+      showMessage('Аватар успішно завантажено');
+    }
+    clearFileSelection({ keepPreview: true });
+  } catch (err) {
+    log('[ranking]', err);
+    const message = err?.message || 'Не вдалося завантажити аватар';
+    showMessage(message);
+    noteAvatarFailure(nick || 'невідомо', message);
+  } finally {
+    updateUploadButtonState();
+  }
+}
+
+async function handleRefreshClick(event) {
+  event?.preventDefault?.();
+  const { refreshBtn } = state;
+  if (refreshBtn) refreshBtn.disabled = true;
+  try {
+    await reloadAvatarsSafe({ bust: Date.now() });
+  } catch (err) {
+    showMessage('Не вдалося оновити список аватарів');
+  } finally {
+    if (refreshBtn) refreshBtn.disabled = false;
+  }
+}
+
+function setupAvatarAdminForm() {
+  if (formReady) return true;
+  if (!queryFormElements()) return false;
+
+  resetPreview();
+  updateUploadButtonState();
+
+  state.nickInput?.addEventListener('input', updateUploadButtonState);
+  state.fileInput?.addEventListener('change', handleFileChange);
+  state.uploadBtn?.addEventListener('click', handleUploadClick);
+  state.refreshBtn?.addEventListener('click', handleRefreshClick);
+
+  formReady = true;
+  return true;
+}
+
+function onDomReady() {
+  setupAvatarAdminForm();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', onDomReady, { once: true });
+} else {
+  onDomReady();
+}
+
+export async function initAvatarAdmin() {
+  if (formReady) return;
+  if (document.readyState === 'loading') {
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+  }
+  setupAvatarAdminForm();
 }
 
 window.addEventListener('storage', e => {
-  if(e.key === 'avatarRefresh') {
-    reloadAvatars();
+  if (e.key === 'avatarRefresh') {
+    reloadAvatarsSafe().catch(() => {});
   }
 });

@@ -35,6 +35,38 @@ export function safeDel(storage, key) {
 }
 
 // ---------------------- Глобальні утиліти ----------------------
+export function requireUrl(value, { name = 'URL', allowRelative = false } = {}) {
+  const raw = typeof value === 'string' ? value.trim() : String(value || '').trim();
+  if (!raw) {
+    throw new Error(`${name} is required`);
+  }
+  let parsed;
+  try {
+    parsed = allowRelative
+      ? new URL(raw, typeof window !== 'undefined' && window.location ? window.location.origin : undefined)
+      : new URL(raw);
+  } catch (err) {
+    throw new Error(`${name} must be a valid URL`);
+  }
+  if (!/^https?:$/i.test(parsed.protocol)) {
+    throw new Error(`${name} must use http(s)`);
+  }
+  parsed.hash = '';
+  return parsed;
+}
+
+function normalizeProxyBase(rawUrl, { name } = {}) {
+  const parsed = requireUrl(rawUrl, { name });
+  parsed.search = '';
+  let path = parsed.pathname || '/';
+  if (!path.endsWith('/')) path += '/';
+  const proxyUrl = parsed.origin + path;
+  return {
+    proxyUrl,
+    proxyOrigin: proxyUrl.replace(/\/$/, '')
+  };
+}
+
 // Google Apps Script backend (веб-апп)
 const PROD_PROXY_URL = 'https://laser-proxy.vartaclub.workers.dev/';
 const LOCAL_PROXY_URL = 'http://localhost:8787/';
@@ -45,19 +77,18 @@ const hostname =
 const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(hostname);
 const fallbackProxy = isLocalHost ? LOCAL_PROXY_URL : PROD_PROXY_URL;
 
-let resolvedProxy = rawConfiguredProxy || fallbackProxy;
-if (!/^https?:\/\//i.test(resolvedProxy)) {
-  resolvedProxy = fallbackProxy;
-}
-if (!resolvedProxy.endsWith('/')) {
-  resolvedProxy += '/';
+let proxyConfig;
+if (rawConfiguredProxy) {
+  proxyConfig = normalizeProxyBase(rawConfiguredProxy, { name: 'WEB_APP_URL' });
+} else {
+  proxyConfig = normalizeProxyBase(fallbackProxy, { name: 'Fallback proxy URL' });
 }
 
-export const WEB_APP_URL = resolvedProxy;
+export const WEB_APP_URL = proxyConfig.proxyUrl;
 window.WEB_APP_URL = WEB_APP_URL;
 // back-compat
 export const PROXY_URL = WEB_APP_URL;
-export const PROXY_ORIGIN = WEB_APP_URL.replace(/\/$/, '');
+export const PROXY_ORIGIN = proxyConfig.proxyOrigin;
 
 // Допоміжний POST JSON запит
 window.postJson = window.postJson || async function postJson(url, body) {
@@ -202,22 +233,111 @@ export async function fetchPlayerData(league) {
   return loadPlayers(league);
 }
 
+export async function parseProxyResponse(response) {
+  if (!response) {
+    return { ok: false, status: 'ERR_PROXY', message: 'No response', players: null };
+  }
+
+  const statusCode = response.status;
+  const contentType =
+    response.headers && typeof response.headers.get === 'function'
+      ? response.headers.get('content-type') || ''
+      : '';
+  let text = '';
+  try {
+    text = await response.text();
+  } catch (err) {
+    const message = err && typeof err.message === 'string' ? err.message : 'Failed to read response body';
+    return { ok: false, status: 'ERR_PROXY', message, players: null };
+  }
+
+  if (!response.ok) {
+    const message = text.trim() || `HTTP ${statusCode}`;
+    return { ok: false, status: 'ERR_PROXY', message, players: null };
+  }
+
+  if (!contentType.toLowerCase().includes('application/json')) {
+    const snippet = text.trim().slice(0, 2048);
+    const message = snippet || `Unexpected response (${contentType || 'unknown'})`;
+    return { ok: false, status: 'ERR_HTML', message, players: null };
+  }
+
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (err) {
+    const message = err && typeof err.message === 'string' ? err.message : 'JSON parse error';
+    return { ok: false, status: 'ERR_JSON_PARSE', message, players: null };
+  }
+
+  if (!data || typeof data !== 'object') {
+    return { ok: false, status: 'ERR_JSON_PARSE', message: 'Empty JSON payload', players: null };
+  }
+
+  const rawStatus = typeof data.status === 'string' ? data.status : response.ok ? 'OK' : 'ERR_PROXY';
+  const normalizedStatus = String(rawStatus || '');
+  const ok = response.ok && normalizedStatus.toUpperCase() === 'OK';
+  const message =
+    typeof data.message === 'string'
+      ? data.message
+      : typeof data.error === 'string'
+        ? data.error
+        : ok
+          ? 'OK'
+          : `HTTP ${statusCode}`;
+  const players = Array.isArray(data.players) ? data.players : null;
+
+  const result = { ...data };
+  result.ok = ok;
+  result.status = ok ? 'OK' : normalizedStatus || 'ERR_PROXY';
+  result.message = message;
+  result.players = players;
+  return result;
+}
+
 // ---------------------- Збереження результату ----------------------
 export async function saveResult(data) {
   const payload = { ...(data || {}) };
   if (payload.league) payload.league = normalizeLeague(payload.league);
-  const body = new URLSearchParams(payload);
-  const res = await fetch(PROXY_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || ('HTTP ' + res.status));
+  const body = new URLSearchParams(payload).toString();
+  const headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
+
+  const attempt = async (targetUrl) => {
+    try {
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers,
+        body
+      });
+      const parsed = await parseProxyResponse(res);
+      if (DEBUG_NETWORK) log('[ranking]', 'saveResult', targetUrl, parsed);
+      return parsed;
+    } catch (err) {
+      if (DEBUG_NETWORK) log('[ranking]', err);
+      const message = err && typeof err.message === 'string' ? err.message : 'Network error';
+      return { ok: false, status: 'ERR_NETWORK', message, players: null };
+    }
+  };
+
+  let result = await attempt(PROXY_ORIGIN);
+  const canRetry =
+    !result.ok &&
+    (result.status === 'ERR_PROXY' ||
+      result.status === 'ERR_NETWORK' ||
+      result.status === 'ERR_JSON_PARSE' ||
+      result.status === 'ERR_HTML');
+
+  const fallbackRaw = typeof window !== 'undefined' ? window.GAS_FALLBACK_URL : '';
+  if (canRetry && fallbackRaw) {
+    try {
+      const fallback = normalizeProxyBase(String(fallbackRaw).trim(), { name: 'GAS_FALLBACK_URL' });
+      result = await attempt(fallback.proxyOrigin);
+    } catch (err) {
+      if (DEBUG_NETWORK) log('[ranking]', err);
+    }
   }
-  // бек повертає JSON {status:'OK', players:[...]}
-  return res.json();
+
+  return result;
 }
 
 // ---------------------- Детальна статистика (PDF імпорт) ----------------------

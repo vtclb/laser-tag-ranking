@@ -54,9 +54,9 @@
     </section>
 
     <section class="panel">
-      <div class="panel__controls">
-        <button type="button" id="mode-auto">Авто-баланс</button>
-        <button type="button" id="mode-manual">Ручне формування</button>
+      <div class="panel__controls mode-switch">
+        <button type="button" id="mode-auto" class="btn btn-primary">Авто-баланс</button>
+        <button type="button" id="mode-manual" class="btn">Ручне формування</button>
       </div>
       <small>Оберіть автоматичний режим для швидкого розподілу або ручний, щоб налаштувати склади команд самостійно.</small>
     </section>
@@ -152,20 +152,24 @@
         <div class="bal__acc-body">
           <p class="text-muted">Обери гравця, завантаж його новий аватар та переглянь результат перед збереженням.</p>
           <form class="avatar-form" id="avatar-admin-form">
-            <div class="form-field">
-              <label for="avatar-nick">Нік гравця</label>
-              <input type="text" id="avatar-nick" name="avatar-nick" placeholder="Введи нік або ID" autocomplete="off">
-            </div>
-            <div class="form-field">
-              <label for="avatar-file">Файл аватара</label>
-              <input type="file" id="avatar-file" name="avatar-file" accept="image/*">
-            </div>
-            <div class="form-actions">
-              <button type="button" id="avatar-upload" disabled>Завантажити аватар</button>
-              <button type="button" id="avatars-refresh">Оновити аватари</button>
-            </div>
-            <div class="avatar-preview" aria-live="polite">
-              <img id="avatar-preview" src="assets/default_avatars/av0.png" alt="Попередній перегляд аватара" hidden>
+            <div class="row">
+              <div class="form-fields">
+                <div class="form-field">
+                  <label for="avatar-nick">Нік гравця</label>
+                  <input type="text" id="avatar-nick" name="avatar-nick" placeholder="Введи нік або ID" autocomplete="off">
+                </div>
+                <div class="form-field">
+                  <label for="avatar-file">Файл аватара</label>
+                  <input type="file" id="avatar-file" name="avatar-file" accept="image/*">
+                </div>
+                <div class="form-actions">
+                  <button type="button" id="avatar-upload" disabled>Завантажити аватар</button>
+                  <button type="button" id="avatars-refresh">Оновити аватари</button>
+                </div>
+              </div>
+              <div class="avatar-preview" aria-live="polite">
+                <img id="avatar-preview" src="assets/default_avatars/av0.png" alt="Попередній перегляд аватара" hidden>
+              </div>
             </div>
           </form>
         </div>

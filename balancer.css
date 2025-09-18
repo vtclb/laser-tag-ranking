@@ -42,6 +42,19 @@ body{background:var(--bg);color:var(--text);font-family:sans-serif;line-height:1
 .rounds-grid div{background:var(--bg);padding:0.5rem;border-radius:4px;text-align:center;}
 button{cursor:pointer;border:none;background:var(--accent);color:#fff;border-radius:4px;padding:0.5rem 1rem;transition:background .2s;}
 button:hover{background:var(--accent-dark);}button:disabled{background:var(--text-muted);cursor:default;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent-dark);}
+.mode-switch{display:flex;flex-wrap:wrap;margin:0 -0.5rem 0 0;row-gap:0.5rem;}
+.mode-switch .btn{display:inline-flex;align-items:center;justify-content:center;background:var(--surface);color:var(--text);border:1px solid #2e2e2e;border-radius:4px;padding:0.5rem 1rem;margin:0 0.5rem 0.5rem 0;transition:background .2s,border-color .2s;}
+.mode-switch .btn:last-child{margin-right:0;}
+.mode-switch .btn:hover{background:#2a2a2a;}
+.mode-switch .btn.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.mode-switch .btn.btn-primary:hover{background:var(--accent-dark);}
+#avatar-admin .row{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;}
+#avatar-admin .form-fields{flex:1 1 260px;display:flex;flex-direction:column;gap:0.75rem;}
+#avatar-admin .form-actions{display:flex;flex-wrap:wrap;gap:0.5rem;}
+#avatar-admin .avatar-preview{flex:0 0 180px;display:flex;align-items:center;justify-content:center;border:1px dashed #2e2e2e;border-radius:12px;min-height:180px;padding:0.75rem;background:rgba(255,255,255,0.02);}
+#avatar-admin .avatar-preview img{width:160px;height:160px;object-fit:cover;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.35);}
 .header .nav {
   position: relative;
   width: 100%;
@@ -65,56 +78,6 @@ button:hover{background:var(--accent-dark);}button:disabled{background:var(--tex
 }
 
 /* Avatar admin */
-.avatar-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-#avatar-list {
-  max-height: 200px;
-  overflow-y: auto;
-  display: block;
-  padding: 0;
-}
-#avatar-list .avatar-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-  border-bottom: 1px solid #2e2e2e;
-}
-#avatar-list .avatar-row td {
-  border: none;
-  padding: 0;
-}
-.avatar-img {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-}
-
-#save-avatars {
-  margin-top: 0.5rem;
-}
-
-.avatar-thumbs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.25rem;
-}
-.avatar-thumb {
-  width: 32px;
-  height: 32px;
-  object-fit: cover;
-  cursor: pointer;
-  border: 1px solid #444;
-  border-radius: 4px;
-}
-.avatar-thumb.selected {
-  border-color: var(--accent);
-}
-
-
 .modal {
   position: fixed;
   top: 0;

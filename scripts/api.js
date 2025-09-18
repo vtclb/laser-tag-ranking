@@ -1,6 +1,6 @@
 // scripts/api.js
 import { log } from './logger.js?v=2025-09-18-8';
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-18-8';
+import { AVATAR_PLACEHOLDER, DEFAULT_GAS_FALLBACK_URL } from './config.js?v=2025-09-18-8';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -368,19 +368,61 @@ export function toBase64NoPrefix(file) {
 }
 
 // ==================== JSON API (general) ====================
-async function gasPost(path = '', payload = {}) {
-  const resp = await fetch(WEB_APP_URL + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const text = await resp.text();
-  const ctype = resp.headers.get('content-type') || '';
-  if (!/\bapplication\/json\b/i.test(ctype)) {
-    return { status: 'ERR_NOT_JSON', code: resp.status, body: text };
+export async function gasPost(path = '', json = {}) {
+  const payload = (json && typeof json === 'object') ? json : {};
+  const root = typeof window !== 'undefined' ? window : globalThis;
+  const rawFallback = root && typeof root.GAS_FALLBACK_URL === 'string'
+    ? root.GAS_FALLBACK_URL.trim()
+    : '';
+  const baseUrl = rawFallback || DEFAULT_GAS_FALLBACK_URL || '';
+  if (!baseUrl) {
+    return { status: 'ERR', message: 'GAS fallback URL not configured' };
   }
-  try { return JSON.parse(text); }
-  catch (err) { log('[ranking]', err); return { status: 'ERR_JSON_PARSE', body: text }; }
+
+  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const cleanPath = typeof path === 'string' ? path.trim() : String(path || '');
+  const targetUrl = cleanPath
+    ? `${normalizedBase}${(cleanPath.startsWith('/') || cleanPath.startsWith('?')) ? '' : '/'}${cleanPath}`
+    : baseUrl;
+
+  let response;
+  try {
+    response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    const message = err?.message || 'Network error';
+    return { status: 'ERR', message };
+  }
+
+  const contentType = response.headers && response.headers.get
+    ? (response.headers.get('content-type') || '')
+    : '';
+  const text = await parseTextSafely(response);
+  const shouldParseJson = !contentType
+    || /\bjson\b/i.test(contentType)
+    || /\btext\/plain\b/i.test(contentType);
+
+  if (!shouldParseJson) {
+    const message = text.trim() || response.statusText || `HTTP ${response.status}`;
+    return { status: 'ERR', message, code: response.status, body: text };
+  }
+
+  try {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return { status: 'ERR', message: 'Empty response', body: text };
+    }
+    const data = JSON.parse(trimmed);
+    if (data && typeof data === 'object') return data;
+    return { status: 'ERR', message: 'Invalid JSON payload', body: text };
+  } catch (err) {
+    log('[ranking]', err);
+    const message = err?.message ? `JSON parse error: ${err.message}` : 'JSON parse error';
+    return { status: 'ERR', message, body: text };
+  }
 }
 
 // ==================== OTHER JSON ACTIONS ====================

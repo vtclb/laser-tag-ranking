@@ -230,6 +230,33 @@ export async function loadPlayers(league) {
 }
 export async function fetchPlayerData(league) { return loadPlayers(league); }
 
+export async function fetchPlayerGames(nick, league) {
+  const target = String(nick || '').trim().toLowerCase();
+  if (!target) return [];
+
+  const normalizedLeague = normalizeLeague(league);
+  const rows = await fetchCsv(getGamesFeedUrl(normalizedLeague));
+
+  const teamFields = ['Team1', 'Team 1', 'team1', 'team 1', 'Team2', 'Team 2', 'team2', 'team 2'];
+  const mvpFields = ['MVP', 'Mvp', 'mvp', 'MVP2', 'mvp2', 'MVP 2', 'mvp 2', 'MVP3', 'mvp3', 'MVP 3', 'mvp 3'];
+  const fieldsToCheck = [...teamFields, ...mvpFields];
+
+  const containsNick = (value) => {
+    if (!value) return false;
+    return String(value)
+      .split(/[;,]/)
+      .map(part => part.trim().toLowerCase())
+      .filter(Boolean)
+      .some(name => name === target);
+  };
+
+  return rows.filter(row => {
+    const rowLeague = row.League ? normalizeLeague(row.League) : '';
+    if (rowLeague && rowLeague !== normalizedLeague) return false;
+    return fieldsToCheck.some(field => containsNick(row[field]));
+  });
+}
+
 // ==================== SAVE GAME (FORM-URLENCODED) ====================
 export async function saveResult(data) {
   // GAS doPost(e) чекає form-urlencoded
@@ -251,7 +278,7 @@ export async function saveResult(data) {
   };
 
   // 1) через воркер
-  let result = await attempt(PROXY_URL); // (!) кореневий URL воркера, БЕЗ /json
+  let result = await attempt(PROXY_ORIGIN); // (!) кореневий URL воркера, БЕЗ /json
 
   // 2) опційний прямий fallback на GAS
   const fallbackRaw = (typeof window !== 'undefined' ? window.GAS_FALLBACK_URL : '');

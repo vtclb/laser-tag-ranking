@@ -385,6 +385,37 @@ export async function getPdfLinks(params) {
   return resp.links || {};
 }
 
+export async function updateAbonement({ nick, league, type }) {
+  const payload = {
+    action: 'updateAbonement',
+    nick,
+    league: normalizeLeague(league),
+    type: String(type || '').toLowerCase()
+  };
+
+  let res;
+  try {
+    res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    log('[ranking]', err);
+    const e = new Error('Proxy unreachable');
+    e.cause = err;
+    throw e;
+  }
+
+  if (!res.ok) {
+    const err = new Error(res.statusText || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+
+  return res.json ? res.json() : res.text();
+}
+
 // ===== Optional small helpers (UI aliases) =====
 window.uiLeagueToCsv = window.uiLeagueToCsv || function(v){ return String(v).toLowerCase()==='kids' ? 'kids' : 'sundaygames'; };
 window.uiLeagueToGas = window.uiLeagueToGas || function(v){ return String(v).toLowerCase()==='kids' ? 'kids' : 'sundaygames'; };

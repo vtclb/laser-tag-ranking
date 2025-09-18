@@ -17,6 +17,14 @@
     padding: 8px;
   }
 
+  .panel__controls {
+    flex-direction: column;
+  }
+
+  .panel__controls button {
+    width: 100%;
+  }
+
   #btn-load,
   #ui-clear-lobby,
   #btn-clear-lobby {

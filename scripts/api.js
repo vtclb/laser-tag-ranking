@@ -1,6 +1,6 @@
 // scripts/api.js
-import { log } from './logger.js';
-import { AVATAR_PLACEHOLDER } from './config.js';
+import { log } from './logger.js?v=2025-09-12-1';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-12-1';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;

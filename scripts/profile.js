@@ -1,8 +1,8 @@
-import { log } from './logger.js';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet } from './api.js';
-import { rankLetterForPoints } from './rankUtils.js';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
-import { noteAvatarFailure } from './avatarAdmin.js';
+import { log } from './logger.js?v=2025-09-12-1';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet } from './api.js?v=2025-09-12-1';
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-12-1';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-12-1';
+import { noteAvatarFailure } from './avatarAdmin.js?v=2025-09-12-1';
 
 let gameLimit = 0;
 let gamesLeftEl = null;

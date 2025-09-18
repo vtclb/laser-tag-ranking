@@ -1,6 +1,6 @@
-import { getAvatarUrl } from './api.js';
-import { noteAvatarFailure } from './avatarAdmin.js';
-import { AVATAR_PLACEHOLDER } from './config.js';
+import { getAvatarUrl } from './api.js?v=2025-09-12-1';
+import { noteAvatarFailure } from './avatarAdmin.js?v=2025-09-12-1';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-12-1';
 export async function setAvatar(img, nick, size = 40) {
   if (!img) return '';
   img.dataset.nick = nick;

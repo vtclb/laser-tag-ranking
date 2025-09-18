@@ -1,6 +1,6 @@
 // Quick stats popover
-import { log } from './logger.js';
-import { safeGet, safeSet } from './api.js';
+import { log } from './logger.js?v=2025-09-12-1';
+import { safeGet, safeSet } from './api.js?v=2025-09-12-1';
 const STYLE_ID = "quick-stats-style";
 if (!document.getElementById(STYLE_ID)) {
   const style = document.createElement("style");

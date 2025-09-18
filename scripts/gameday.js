@@ -1,7 +1,7 @@
-import { log } from './logger.js';
-import { getPdfLinks, fetchOnce, CSV_URLS } from "./api.js";
-import { rankLetterForPoints } from './rankUtils.js';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
+import { log } from './logger.js?v=2025-09-12-1';
+import { getPdfLinks, fetchOnce, CSV_URLS } from "./api.js?v=2025-09-12-1";
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-12-1';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-12-1';
 (function () {
   const CSV_TTL = 60 * 1000;
 

@@ -1,8 +1,8 @@
 // scripts/scenario.js
 
-import { teams, initTeams }          from './teams.js';
-import { autoBalance2, autoBalanceN } from './balanceUtils.js';
-import { lobby, setManualCount }      from './lobby.js';
+import { teams, initTeams }          from './teams.js?v=2025-09-12-1';
+import { autoBalance2, autoBalanceN } from './balanceUtils.js?v=2025-09-12-1';
+import { lobby, setManualCount }      from './lobby.js?v=2025-09-12-1';
 
 let scenarioArea, btnAuto, btnManual, teamSizeSel;
 let arenaSelect, arenaCheckboxes, btnStart;

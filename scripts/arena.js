@@ -158,7 +158,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const res = await saveResult(data);
       if (res.status !== 'OK') {
-        const msg = 'Помилка збереження: ' + (res.status || res);
+        const message = res.status || res;
+        console.error('Save game error: ' + message);
+        const msg = 'Помилка збереження: ' + message;
         if (typeof showToast === 'function') showToast(msg); else alert(msg);
         return;
       }

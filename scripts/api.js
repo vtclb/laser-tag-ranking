@@ -282,7 +282,7 @@ export async function saveResult(data) {
 
   // 2) опційний прямий fallback на GAS
   const fallbackRaw = (typeof window !== 'undefined' ? window.GAS_FALLBACK_URL : '');
-  const needRetry = !result.ok && ['ERR_PROXY', 'ERR_NETWORK', 'ERR_JSON_PARSE', 'ERR_HTML'].includes(result.status);
+  const needRetry = !result.ok && ['ERR', 'ERR_PROXY', 'ERR_NETWORK', 'ERR_JSON_PARSE', 'ERR_HTML'].includes(result.status);
   if (needRetry && fallbackRaw) {
     const trimmed = String(fallbackRaw).trim();
     if (trimmed) {

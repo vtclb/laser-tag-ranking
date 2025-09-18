@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { fetchOnce, CSV_URLS } from "./api.js";
+import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js";
 import { LEAGUE } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
@@ -34,9 +34,13 @@ export async function loadData(rankingURL, gamesURL) {
 export function computeStats(rank, games, { alias = {}, league } = {}) {
   const stats = {};
   let totalRounds = 0;
-  const validLeagues = ["kids", "olds"];
-  const filtered = validLeagues.includes(league)
-    ? games.filter((g) => g.League === league)
+  const leagueKey = league ? normalizeLeague(league) : "";
+  const validLeagues = ["kids", "olds", "sundaygames"];
+  const filtered = validLeagues.includes(leagueKey)
+    ? games.filter((g) => {
+        const gameLeague = g.League ? normalizeLeague(g.League) : "";
+        return gameLeague === leagueKey;
+      })
     : games;
   filtered.forEach((g) => {
     const t1 = g.Team1.split(",").map((n) => alias[n.trim()] || n.trim());

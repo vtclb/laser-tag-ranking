@@ -1,5 +1,5 @@
 import { AVATARS_SHEET_ID, AVATARS_GID, AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-3';
-import { getAvatarUrl } from './api.js?v=2025-09-19-3';
+import { getAvatarUrl } from './api.js';
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const WHITESPACE_RE = /\s+/g;
@@ -69,69 +69,34 @@ async function fetchMapFromCsv() {
   return map;
 }
 
-async function fetchMapFromFallback(baseMap = new Map()) {
-  const map = baseMap instanceof Map ? baseMap : new Map();
-  const imgs = Array.from(document.querySelectorAll('img[data-nick]'));
-  const seen = new Set();
-  const entries = [];
-
-  for (const img of imgs) {
-    const nick = img.dataset.nick || '';
-    const key = nickKey(nick);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    entries.push({ nick, key });
-  }
-
-  let index = 0;
-  const workerCount = Math.min(6, entries.length);
-  if (!workerCount) return map;
-
-  const workers = Array.from({ length: workerCount }, () => (async function worker() {
-    while (index < entries.length) {
-      const current = index++;
-      const { nick, key } = entries[current];
-      try {
-        const rec = await getAvatarUrl(nick);
-        const url = rec && typeof rec.url === 'string' ? rec.url.trim() : '';
-        if (key && url) map.set(key, url);
-      } catch (err) {
-        console.warn('[avatars] fallback', nick, err);
-      }
-    }
-  })());
-
-  await Promise.all(workers);
-  return map;
-}
-
 async function fetchMap() {
-  let map = null;
   try {
-    map = await fetchMapFromJson();
+    const map = await fetchMapFromJson();
     if (map.size) {
       lastSource = 'json';
+      console.log(`[avatars] source=json size=${map.size}`);
       return map;
     }
+    console.warn('[avatars] avatar JSON feed returned no rows');
   } catch (err) {
-    console.warn('[avatars]', err);
+    console.warn('[avatars] avatar JSON feed failed', err);
   }
 
   try {
     const csvMap = await fetchMapFromCsv();
     if (csvMap.size) {
       lastSource = 'csv';
+      console.log(`[avatars] source=csv size=${csvMap.size}`);
       return csvMap;
     }
-    map = map ?? csvMap;
+    console.warn('[avatars] avatar CSV feed returned no rows');
   } catch (csvErr) {
-    console.error('[avatars]', csvErr);
+    console.error('[avatars] avatar CSV feed failed', csvErr);
   }
 
-  const fallbackBase = map ?? new Map();
-  const fallbackMap = await fetchMapFromFallback(fallbackBase);
-  lastSource = 'gas-fallback';
-  return fallbackMap;
+  lastSource = 'none';
+  console.warn('[avatars] WARN: avatar sheet unavailable; using placeholders only');
+  return new Map();
 }
 
 function withBust(src, bust) {
@@ -169,26 +134,95 @@ function isVisible(el) {
   return !!(el.offsetParent || el.getClientRects().length);
 }
 
+async function resolveMissingAvatars(map, entries, { bust } = {}) {
+  if (!(map instanceof Map) || !Array.isArray(entries) || !entries.length) return;
+
+  const items = entries
+    .map(entry => {
+      const nick = entry && typeof entry.nick === 'string' ? entry.nick : '';
+      const key = entry && entry.key ? entry.key : nickKey(nick);
+      const imgs = entry && Array.isArray(entry.imgs)
+        ? entry.imgs.filter(img => !!img)
+        : [];
+      if (!nick || !key || !imgs.length) return null;
+      return { nick, key, imgs };
+    })
+    .filter(Boolean);
+
+  if (!items.length) return;
+
+  let index = 0;
+  const workerCount = Math.min(6, items.length);
+  const hasBust = bust !== undefined && bust !== null && bust !== '';
+  const bustValue = hasBust ? bust : Date.now();
+  let anySuccess = false;
+
+  const workers = Array.from({ length: workerCount }, () => (async function worker() {
+    while (true) {
+      const currentIndex = index++;
+      if (currentIndex >= items.length) break;
+      const { nick, key, imgs } = items[currentIndex];
+      try {
+        const rec = await getAvatarUrl(nick);
+        const url = rec && typeof rec.url === 'string' ? rec.url.trim() : '';
+        if (!url) continue;
+        const storeKey = nickKey(nick) || key;
+        if (!storeKey) continue;
+        map.set(storeKey, url);
+        anySuccess = true;
+        imgs.forEach(img => {
+          if (img && !img.dataset.nick) img.dataset.nick = nick;
+          applyAvatar(img, url, bustValue);
+        });
+      } catch (err) {
+        console.warn('[avatars] fallback', nick, err);
+      }
+    }
+  })());
+
+  await Promise.all(workers);
+
+  if (anySuccess) {
+    if (lastSource === 'none') lastSource = 'gas-fallback';
+    mapPromise = Promise.resolve(map);
+  }
+}
+
 export async function renderAllAvatars({ bust } = {}) {
   const map = await (mapPromise ??= fetchMap());
   const imgs = Array.from(document.querySelectorAll('img[data-nick]'));
-  console.log(`[avatars] source=${lastSource} size=${map.size} imgs=${imgs.length}`);
+  const missingByKey = new Map();
+  let mapped = 0;
 
-  const misses = [];
-  const missKeys = new Set();
   imgs.forEach(img => {
-    const key = nickKey(img.dataset.nick);
+    const nick = img.dataset.nick || '';
+    const key = nickKey(nick);
     const src = key ? map.get(key) : '';
-    if (!src && key && isVisible(img) && !missKeys.has(key)) {
-      missKeys.add(key);
-      misses.push(img.dataset.nick || '');
+
+    if (src) {
+      mapped += 1;
+    } else if (key) {
+      let entry = missingByKey.get(key);
+      if (!entry) {
+        entry = { key, nick, imgs: [], visible: false };
+        missingByKey.set(key, entry);
+      }
+      entry.imgs.push(img);
+      if (isVisible(img)) entry.visible = true;
     }
+
     applyAvatar(img, src, bust);
   });
 
-  if (misses.length) {
-    const list = misses.slice(0, 5).join(',');
-    console.warn(`[avatars] miss=[${list}]`);
+  const missEntries = Array.from(missingByKey.values()).filter(entry => entry.visible);
+  const missList = missEntries.slice(0, 5)
+    .map(entry => entry.nick || '')
+    .filter(Boolean);
+  const missSummary = missList.length ? missList.join(',') : '-';
+  console.log(`[avatars] imgs=${imgs.length} mapped=${mapped} miss=${missSummary}`);
+
+  if (missEntries.length) {
+    await resolveMissingAvatars(map, missEntries, { bust });
   }
 }
 

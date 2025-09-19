@@ -50,7 +50,7 @@ button:hover{background:var(--accent-dark);}button:disabled{background:var(--tex
 .mode-switch .btn:hover{background:#2a2a2a;}
 .mode-switch .btn.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
 .mode-switch .btn.btn-primary:hover{background:var(--accent-dark);}
-#avatar-admin .form-grid{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;}
+#avatar-admin .form-grid{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:1.5rem;align-items:flex-start;}
 #avatar-admin .col{display:flex;flex-direction:column;gap:0.75rem;}
 #avatar-admin .col--controls{flex:1 1 260px;}
 #avatar-admin .col--preview{flex:0 0 200px;}

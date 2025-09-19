@@ -1,6 +1,6 @@
 :root {
   --bal-gap: 10px;
-  --bal-panel-width: 360px;
+  --bal-panel-width: 380px;
   --bal-card-bg: var(--card-bg, #242424);
 }
 
@@ -65,6 +65,24 @@
   padding: var(--bal-gap);
   width: 100%;
   max-width: var(--bal-panel-width);
+}
+
+.page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--bal-gap), 2vw, 24px);
+  width: 100%;
+}
+
+.left-col {
+  width: 100%;
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bal-gap);
+  width: 100%;
 }
 
 .bal__card {
@@ -152,6 +170,58 @@
 .bal__players { display: none; }
 .only-mobile { display: none; }
 .only-desktop { display: inline-block; }
+
+@media (min-width: 1100px) {
+  .page-wrap {
+    display: grid;
+    grid-template-columns: minmax(280px, var(--bal-panel-width)) minmax(0, 1fr);
+    align-items: flex-start;
+    gap: clamp(24px, 3vw, 40px);
+  }
+
+  .left-col {
+    position: sticky;
+    top: 72px;
+    align-self: flex-start;
+    max-width: var(--bal-panel-width);
+    width: 100%;
+  }
+
+  .left-col .bal__panel {
+    max-width: 100%;
+  }
+
+  .right-col {
+    padding-inline-start: clamp(0px, 1vw, 16px);
+  }
+
+  #avatar-admin-form {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+    align-items: flex-start;
+  }
+
+  .debug-badge,
+  .brand-dot {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1099px) {
+  .page-wrap {
+    flex-direction: column;
+    gap: var(--bal-gap);
+  }
+
+  .left-col {
+    position: static;
+    max-width: none;
+  }
+
+  .right-col {
+    padding-inline-start: 0;
+    min-height: auto;
+  }
+}
 
 @media (max-width: 1023px) {
   .form-grid {

@@ -294,10 +294,11 @@ async function handleUploadClick() {
     }
 
     const imageUrl = resp?.url || AVATAR_PLACEHOLDER;
-    const updatedAt = resp?.updatedAt || Date.now();
-    const bustValue = resolveBustValue(updatedAt);
 
     console.debug('[avatarAdmin] uploaded', { nick, url: imageUrl });
+
+    const updatedAt = resp?.updatedAt || Date.now();
+    const bustValue = resolveBustValue(updatedAt);
 
     if (previewImg) {
       previewImg.hidden = false;

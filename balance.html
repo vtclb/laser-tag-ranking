@@ -150,25 +150,31 @@
       <p class="text-muted">Оберіть лігу та гравця, щоб завантажити новий аватар. Підтримуються PNG і JPG до 2&nbsp;МБ.</p>
       <form id="avatar-admin-form" class="form-grid" autocomplete="off">
         <div class="col col--controls">
-          <label for="league-select-lg">Ліга</label>
-          <select id="league-select-lg">
-            <option value="kids">Молодша ліга</option>
-            <option value="sundaygames">Старша ліга</option>
-          </select>
+          <div class="row-inline">
+            <label for="league-select-lg">Ліга</label>
+            <select id="league-select-lg" class="select-lg">
+              <option value="kids">Молодша ліга</option>
+              <option value="sundaygames">Старша ліга</option>
+            </select>
+          </div>
 
-          <label for="avatar-nick">Гравець</label>
-          <input
-            type="text"
-            id="avatar-nick"
-            name="avatar-nick"
-            placeholder="Введіть нік або ID"
-            list="players-datalist"
-            autocomplete="off"
-          >
+          <div class="row-inline">
+            <label for="avatar-nick">Гравець</label>
+            <input
+              type="text"
+              id="avatar-nick"
+              name="avatar-nick"
+              placeholder="Введіть нік або ID"
+              list="players-datalist"
+              autocomplete="off"
+            >
+          </div>
           <datalist id="players-datalist"></datalist>
 
-          <label for="avatar-file">Файл аватара</label>
-          <input type="file" id="avatar-file" name="avatar-file" accept="image/*">
+          <div class="row-inline">
+            <label for="avatar-file">Файл аватара</label>
+            <input type="file" id="avatar-file" name="avatar-file" accept="image/*">
+          </div>
 
           <div class="form-actions">
             <button type="button" id="avatar-upload" disabled>Завантажити аватар</button>

@@ -1,5 +1,5 @@
-import { AVATAR_PLACEHOLDER, AVATARS_SHEET_ID, AVATARS_GID } from './config.js?v=2025-09-18-9';
-import { gasPost } from './api.js?v=2025-09-18-9';
+import { AVATAR_PLACEHOLDER, AVATARS_SHEET_ID, AVATARS_GID } from './config.js?v=2025-09-18-12';
+import { gasPost } from './api.js?v=2025-09-18-12';
 
 let mapPromise;
 
@@ -93,7 +93,7 @@ async function fetchMapFromCsv(bust) {
 }
 
 async function fetchMapFromGas(bust) {
-  const payload = { action: 'listAvatars', ver: '2025-09-18-9' };
+  const payload = { action: 'listAvatars', ver: '2025-09-18-12' };
   if (bust) payload.bust = bust;
   const resp = await gasPost('', payload);
   if (!resp || (resp.status && resp.status !== 'OK')) {
@@ -184,7 +184,7 @@ async function fetchMap(bust) {
   } catch (err) {
     console.error('Avatar CSV fetch failed', err);
   }
-  console.log('[avatars] using fallback GAS, ver=2025-09-18-9');
+  console.log('[avatars] using fallback GAS, ver=2025-09-18-12');
   try {
     const map = await fetchMapFromGas(bust);
     if (map.size) return map;

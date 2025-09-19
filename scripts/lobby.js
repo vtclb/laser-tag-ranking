@@ -1,19 +1,19 @@
 // scripts/lobby.js
-import { log } from './logger.js?v=2025-09-18-9';
+import { log } from './logger.js?v=2025-09-18-12';
 
-import { initTeams, teams } from './teams.js?v=2025-09-18-9';
-import { sortByName, sortByPtsDesc } from './sortUtils.js?v=2025-09-18-9';
+import { initTeams, teams } from './teams.js?v=2025-09-18-12';
+import { sortByName, sortByPtsDesc } from './sortUtils.js?v=2025-09-18-12';
 import {
   updateAbonement,
   adminCreatePlayer,
   issueAccessKey,
   getProfile,
   safeDel,
-} from './api.js?v=2025-09-18-9';
-import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-18-9';
-import { refreshArenaTeams } from './scenario.js?v=2025-09-18-9';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-9';
-import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-18-9';
+} from './api.js?v=2025-09-18-12';
+import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-18-12';
+import { refreshArenaTeams } from './scenario.js?v=2025-09-18-12';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-12';
+import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-18-12';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;

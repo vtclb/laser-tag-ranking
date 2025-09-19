@@ -1,13 +1,13 @@
 // scripts/scenario.js
 
-import { teams, initTeams }          from './teams.js?v=2025-09-30-01';
-import { autoBalance2, autoBalanceN } from './balanceUtils.js?v=2025-09-30-01';
-import { lobby, setManualCount }      from './lobby.js?v=2025-09-30-01';
+import { teams, initTeams }          from './teams.js?v=2025-09-19-3';
+import { autoBalance2, autoBalanceN } from './balanceUtils.js?v=2025-09-19-3';
+import { lobby, setManualCount }      from './lobby.js?v=2025-09-19-3';
 import {
   balanceMode,
   registerRecomputeAutoBalance,
   recomputeAutoBalance as triggerRecomputeAutoBalance,
-} from './balance.js?v=2025-09-30-01';
+} from './balance.js?v=2025-09-19-3';
 
 let scenarioArea, btnAuto, btnManual, teamSizeSel;
 let arenaSelect, arenaCheckboxes, btnStart;

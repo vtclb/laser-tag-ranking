@@ -2,7 +2,7 @@ import { log } from './logger.js?v=2025-09-19-4';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-4';
 import { getPdfLinks, fetchOnce, CSV_URLS } from "./api.js?v=2025-09-19-4";
 import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-4';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-4';
+import { renderAllAvatars, reloadAvatars, nickKey } from './avatars.client.js?v=2025-09-19-4';
 (function () {
   const CSV_TTL = 60 * 1000;
 
@@ -229,6 +229,7 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-1
       img.className='avatar-img';
       img.alt=p.nick;
       img.dataset.nick = p.nick;
+      img.dataset.nickKey = nickKey(p.nick);
       img.src = AVATAR_PLACEHOLDER;
       img.onerror = () => {
         img.onerror = null;

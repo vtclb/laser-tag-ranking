@@ -1,5 +1,5 @@
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-3';
-import { renderAllAvatars } from './avatars.client.js?v=2025-09-19-3';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-4';
+import { renderAllAvatars } from './avatars.client.js?v=2025-09-19-4';
 
 export async function setAvatar(img, nick, { width, height } = {}) {
   if (!img) return;

@@ -1,6 +1,6 @@
 // scripts/api.js
-import { log } from './logger.js?v=2025-09-30-01';
-import { AVATAR_PLACEHOLDER, DEFAULT_GAS_FALLBACK_URL } from './config.js?v=2025-09-30-01';
+import { log } from './logger.js?v=2025-09-19-3';
+import { AVATAR_PLACEHOLDER, DEFAULT_GAS_FALLBACK_URL } from './config.js?v=2025-09-19-3';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -260,7 +260,7 @@ export async function saveResult(data) {
   const body = toFormUrlEncoded(payload);
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
 
-  console.log('[saveResult] v=2025-09-30-01');
+  console.log('[saveResult] v=2025-09-19-3');
   const attempt = async (targetUrl) => {
     try {
       const res = await fetch(targetUrl, { method: 'POST', headers, body });

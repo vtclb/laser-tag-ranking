@@ -1,6 +1,6 @@
-import { log } from './logger.js?v=2025-09-30-01';
-import { CSV_URLS } from "./api.js?v=2025-09-30-01";
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-30-01';
+import { log } from './logger.js?v=2025-09-19-3';
+import { CSV_URLS } from "./api.js?v=2025-09-19-3";
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-3';
 
 const csvUrl = CSV_URLS.kids.ranking;
 

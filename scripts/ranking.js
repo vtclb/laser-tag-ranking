@@ -1,9 +1,9 @@
-import { log } from './logger.js?v=2025-09-30-01';
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
-import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js?v=2025-09-30-01";
-import { LEAGUE } from "./constants.js?v=2025-09-30-01";
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-30-01';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-30-01';
+import { log } from './logger.js?v=2025-09-19-3';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-3';
+import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js?v=2025-09-19-3";
+import { LEAGUE } from "./constants.js?v=2025-09-19-3";
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-3';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-3';
 
 const CSV_TTL = 60 * 1000;
 

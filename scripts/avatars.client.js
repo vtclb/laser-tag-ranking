@@ -1,5 +1,5 @@
-import { AVATARS_SHEET_ID, AVATARS_GID, AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
-import { getAvatarUrl } from './api.js?v=2025-09-30-01';
+import { AVATARS_SHEET_ID, AVATARS_GID, AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-3';
+import { getAvatarUrl } from './api.js?v=2025-09-19-3';
 
 export const nickKey = value => String(value || '').trim().toLowerCase();
 

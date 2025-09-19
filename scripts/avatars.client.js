@@ -1,5 +1,4 @@
 import { AVATAR_PLACEHOLDER, AVATARS_SHEET_ID, AVATARS_GID } from './config.js?v=2025-09-18-12';
-import { gasPost } from './api.js?v=2025-09-18-12';
 
 let mapPromise;
 const AVMAP = new Map();
@@ -105,85 +104,6 @@ async function fetchMapFromCsv(bust) {
   return map;
 }
 
-async function fetchMapFromGas(bust) {
-  const payload = { action: 'listAvatars', ver: '2025-09-18-12' };
-  if (bust) payload.bust = bust;
-  const resp = await gasPost('', payload);
-  if (!resp || (resp.status && resp.status !== 'OK')) {
-    const status = resp && resp.status ? resp.status : 'ERR_STATUS';
-    const message = resp && resp.message ? `: ${resp.message}` : '';
-    throw new Error(`GAS fetch failed ${status}${message}`);
-  }
-
-  const map = new Map();
-
-  const addEntry = (nick, url) => {
-    const key = nickKey(nick || '');
-    if (!key) return;
-    const raw = typeof url === 'string' ? url : (url == null ? '' : String(url));
-    const trimmed = raw.trim();
-    if (!trimmed || trimmed === '[object Object]') return;
-    const thumb = driveThumbnail(trimmed);
-    if (!thumb) return;
-    map.set(key, thumb);
-  };
-
-  const addFromRecord = rec => {
-    if (!rec) return;
-    if (Array.isArray(rec)) {
-      const [nick, url] = rec;
-      if (nick && String(nick).toLowerCase() === 'nickname') return;
-      addEntry(nick, url);
-      return;
-    }
-    if (typeof rec === 'object') {
-      const nick = rec.nick ?? rec.nickname ?? rec.Nickname ?? rec.name ?? rec.Name ?? rec.player ?? rec.Player ?? rec[0];
-      const url = rec.url ?? rec.URL ?? rec.avatarUrl ?? rec.avatarURL ?? rec.AvatarURL ?? rec.avatar ?? rec[1];
-      if (nick && typeof url === 'undefined' && typeof rec.link === 'string') {
-        addEntry(nick, rec.link);
-        return;
-      }
-      addEntry(nick, url);
-      return;
-    }
-  };
-
-  const pushObjectEntries = obj => {
-    if (!obj || typeof obj !== 'object') return;
-    if (Array.isArray(obj)) {
-      obj.forEach(addFromRecord);
-      return;
-    }
-    Object.entries(obj).forEach(([nick, value]) => {
-      const resolved = (value && typeof value === 'object' && !Array.isArray(value))
-        ? (value.url ?? value.URL ?? value.avatar ?? value.link ?? '')
-        : value;
-      addEntry(nick, resolved);
-    });
-  };
-
-  pushObjectEntries(resp.map);
-  pushObjectEntries(resp.avatars);
-  pushObjectEntries(resp.items);
-  pushObjectEntries(resp.records);
-  pushObjectEntries(resp.list);
-  pushObjectEntries(resp.values);
-  pushObjectEntries(resp.data);
-  pushObjectEntries(resp.rows);
-  pushObjectEntries(resp.entries);
-
-  const lists = [resp.avatars, resp.items, resp.records, resp.list, resp.values, resp.data, resp.rows, resp.entries];
-  lists.forEach(list => {
-    if (Array.isArray(list)) list.forEach(addFromRecord);
-  });
-
-  if (!map.size && Array.isArray(resp)) {
-    resp.forEach(addFromRecord);
-  }
-
-  return map;
-}
-
 async function fetchMap(bust) {
   try {
     const map = await fetchMapFromJson(bust);
@@ -196,14 +116,6 @@ async function fetchMap(bust) {
     if (map.size) return map;
   } catch (err) {
     console.error('Avatar CSV fetch failed', err);
-  }
-  console.log('[avatars] using fallback GAS, ver=2025-09-18-12');
-  try {
-    const map = await fetchMapFromGas(bust);
-    if (map.size) return map;
-    return map;
-  } catch (err) {
-    console.error('Avatar GAS fetch failed', err);
   }
   return new Map();
 }

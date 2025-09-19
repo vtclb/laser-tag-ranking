@@ -1,7 +1,8 @@
-import { log } from './logger.js?v=2025-09-18-12';
-import { getPdfLinks, fetchOnce, CSV_URLS } from "./api.js?v=2025-09-18-12";
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-18-12';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-12';
+import { log } from './logger.js?v=2025-09-30-01';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
+import { getPdfLinks, fetchOnce, CSV_URLS } from "./api.js?v=2025-09-30-01";
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-30-01';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-30-01';
 (function () {
   const CSV_TTL = 60 * 1000;
 
@@ -228,6 +229,11 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-1
       img.className='avatar-img';
       img.alt=p.nick;
       img.dataset.nick = p.nick;
+      img.src = AVATAR_PLACEHOLDER;
+      img.onerror = () => {
+        img.onerror = null;
+        img.src = AVATAR_PLACEHOLDER;
+      };
       tdAvatar.appendChild(img);
 
       const nick=document.createElement('td');

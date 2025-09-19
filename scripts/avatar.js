@@ -1,45 +1,25 @@
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-18-12';
-import { ensureAvatarMap, getAvatarUrlFromMap, nickKey } from './avatars.client.js?v=2025-09-18-12';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
+import { renderAllAvatars } from './avatars.client.js?v=2025-09-30-01';
 
-function appendBust(url, bust) {
-  const base = (url || '').trim();
-  if (!base) return base;
-  const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}t=${bust}`;
-}
+export async function setAvatar(img, nick, { width, height } = {}) {
+  if (!img) return;
 
-export async function setAvatar(img, nick, size = 40) {
-  if (!img) return '';
-  const label = nick || '';
-  const key = nickKey(label);
-  img.dataset.nick = label;
-  if (key) img.dataset.nickKey = key;
-  else delete img.dataset.nickKey;
-  img.loading = 'lazy';
-  img.decoding = 'async';
+  const label = typeof nick === 'string' ? nick : '';
+  if (label) img.dataset.nick = label;
+  else delete img.dataset.nick;
+
   img.referrerPolicy = 'no-referrer';
-  img.width = size;
-  img.height = size;
+  img.decoding = 'async';
+  img.loading = 'lazy';
+  if (typeof width === 'number') img.width = width;
+  if (typeof height === 'number') img.height = height;
   if (!img.alt) img.alt = label || 'avatar';
 
-  const bust = Date.now();
-  const fallbackSrc = appendBust(AVATAR_PLACEHOLDER, bust) || AVATAR_PLACEHOLDER;
   img.onerror = () => {
     img.onerror = null;
-    img.src = fallbackSrc;
+    img.src = AVATAR_PLACEHOLDER;
   };
+  img.src = AVATAR_PLACEHOLDER;
 
-  let url = key ? getAvatarUrlFromMap(label) : '';
-  if (!url && key) {
-    try {
-      await ensureAvatarMap();
-      url = getAvatarUrlFromMap(label);
-    } catch (err) {
-      url = '';
-    }
-  }
-
-  const src = url ? appendBust(url, bust) : fallbackSrc;
-  img.src = src;
-  return src;
+  await renderAllAvatars();
 }

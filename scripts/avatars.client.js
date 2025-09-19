@@ -1,233 +1,127 @@
-import { AVATAR_PLACEHOLDER, AVATARS_SHEET_ID, AVATARS_GID } from './config.js?v=2025-09-18-12';
+import { AVATARS_SHEET_ID, AVATARS_GID, AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
 
-let mapPromise;
-const AVMAP = new Map();
+export const nickKey = value => String(value || '').trim().toLowerCase();
 
-/**
- * Avatar map helpers for other modules.
- *
- * `ensureAvatarMap` wraps the internal fetch lifecycle so callers can await a
- * populated avatar map. `getAvatarUrlFromMap` provides safe lookups from the
- * cached map using a nickname key.
- */
-let loadSeq = 0;
+const jsonUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:json&gid=${AVATARS_GID}`;
+const csvUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${AVATARS_GID}`;
 
-function gvizJsonUrl() {
-  return `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:json&gid=${AVATARS_GID}`;
-}
+let mapPromise = null; // Promise<Map<string, string>>
 
-function gvizCsvUrl() {
-  return `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${AVATARS_GID}`;
-}
-
-export function nickKey(nick = '') {
-  return nick.trim().toLowerCase();
-}
-
-function driveThumbnail(url = '') {
-  const u = url.trim();
-  if (!u) return '';
-  const m = u.match(/(?:file\/d\/|id=|open\?id=|uc\?id=)([\w-]{10,})/);
-  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w512` : u;
-}
-
-function appendBust(url, bust) {
-  const base = url || '';
-  if (!base) return base;
-  const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}t=${bust}`;
-}
-
-function resolveBustValue(value) {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const numeric = Number(value);
-  if (Number.isFinite(numeric)) return numeric;
-  if (typeof value === 'string') {
-    const parsed = Date.parse(value);
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-  return Date.now();
-}
-
-function parseCsv(text) {
-  const rows = [];
-  let row = [];
-  let col = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { col += '"'; i++; } else { inQuotes = false; }
-      } else {
-        col += ch;
-      }
-    } else {
-      if (ch === '"') { inQuotes = true; }
-      else if (ch === ',') { row.push(col); col = ''; }
-      else if (ch === '\n') { row.push(col); rows.push(row); row = []; col = ''; }
-      else if (ch !== '\r') { col += ch; }
-    }
-  }
-  row.push(col);
-  rows.push(row);
-  return rows;
-}
-
-async function fetchMapFromJson(bust) {
-  const res = await fetch(gvizJsonUrl() + (bust ? `&t=${bust}` : ''));
-  if (!res.ok) throw new Error('JSON fetch failed: ' + res.status);
+async function fetchMapFromJson() {
+  const res = await fetch(jsonUrl, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Avatar JSON HTTP ${res.status}`);
   const text = await res.text();
   const json = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
-  const cols = json.table.cols.map(c => c.label);
+  const cols = json.table.cols.map(col => col.label);
   const map = new Map();
-  for (const r of json.table.rows) {
+
+  for (const row of json.table.rows) {
     const obj = {};
-    cols.forEach((label, i) => {
-      obj[label] = r.c[i] ? r.c[i].v : '';
+    cols.forEach((label, idx) => {
+      obj[label] = row.c[idx] ? row.c[idx].v : '';
     });
-    const nick = obj.nick || obj.Nickname || obj[cols[0]] || '';
-    const url = driveThumbnail(obj.url || obj.URL || obj[cols[1]] || '');
+    const nick = (obj.Nickname || obj.nick || obj[cols[0]] || '').trim();
+    const url = (obj.AvatarURL || obj.url || obj[cols[1]] || '').trim();
     if (nick && url) map.set(nickKey(nick), url);
   }
   return map;
 }
 
-async function fetchMapFromCsv(bust) {
-  const res = await fetch(gvizCsvUrl() + (bust ? `&t=${bust}` : ''));
-  if (!res.ok) throw new Error('CSV fetch failed: ' + res.status);
+function parseCsvLine(line) {
+  return line
+    .match(/(".*?"|[^,]+)/g)
+    ?.map(cell => cell.replace(/^"|"$/g, '').trim()) || [];
+}
+
+async function fetchMapFromCsv() {
+  const res = await fetch(csvUrl, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Avatar CSV HTTP ${res.status}`);
   const text = await res.text();
-  const rows = parseCsv(text.trim());
-  const header = rows.shift().map(h => h.trim());
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return new Map();
+
+  const headers = parseCsvLine(lines[0]);
+  const iNick = headers.findIndex(header => /nick/i.test(header));
+  const iUrl = headers.findIndex(header => /url/i.test(header));
+  const nickIndex = iNick >= 0 ? iNick : 0;
+  const urlIndex = iUrl >= 0 ? iUrl : 1;
   const map = new Map();
-  for (const cols of rows) {
-    const row = {};
-    header.forEach((h, i) => {
-      row[h] = (cols[i] || '').trim();
-    });
-    const nick = row.nick || row.Nickname || row[header[0]] || '';
-    const url = driveThumbnail(row.url || row.URL || row[header[1]] || '');
+
+  lines.slice(1).forEach(line => {
+    const cells = parseCsvLine(line);
+    const nick = cells[nickIndex] || '';
+    const url = cells[urlIndex] || '';
     if (nick && url) map.set(nickKey(nick), url);
-  }
+  });
+
   return map;
 }
 
-async function fetchMap(bust) {
+async function fetchMap() {
   try {
-    const map = await fetchMapFromJson(bust);
-    if (map.size) return map;
+    return await fetchMapFromJson();
   } catch (err) {
-    console.warn('Avatar JSON fetch failed', err);
+    console.warn('[avatars]', err);
+    try {
+      return await fetchMapFromCsv();
+    } catch (csvErr) {
+      console.error('[avatars]', csvErr);
+      return new Map();
+    }
   }
-  try {
-    const map = await fetchMapFromCsv(bust);
-    if (map.size) return map;
-  } catch (err) {
-    console.error('Avatar CSV fetch failed', err);
-  }
-  return new Map();
 }
 
-function storeFetchedMap(map) {
-  AVMAP.clear();
-  if (map && typeof map.forEach === 'function') {
-    map.forEach((value, key) => {
-      if (typeof key === 'string') {
-        AVMAP.set(key, value);
-      }
-    });
-  }
-  return AVMAP;
+function withBust(src, bust) {
+  if (!src) return src;
+  if (/^(?:data|blob):/i.test(src)) return src;
+  if (bust === undefined || bust === null || bust === '') return src;
+  const numeric = typeof bust === 'number' ? bust : Number(bust);
+  const value = Number.isFinite(numeric)
+    ? numeric
+    : encodeURIComponent(String(bust));
+  return `${src}${src.includes('?') ? '&' : '?'}t=${value}`;
 }
 
-function loadMap({ bust } = {}) {
-  const seq = ++loadSeq;
-  const promise = fetchMap(bust)
-    .then(map => {
-      if (seq !== loadSeq) {
-        return AVMAP;
-      }
-      return storeFetchedMap(map);
-    })
-    .catch(err => {
-      if (seq === loadSeq) {
-        mapPromise = null;
-      }
-      throw err;
-    });
-  mapPromise = promise;
-  return promise;
-}
-
-function ensureMap({ bust } = {}) {
-  if (!mapPromise) {
-    return loadMap({ bust });
-  }
-  if (typeof bust !== 'undefined' && bust !== null) {
-    return loadMap({ bust });
-  }
-  return mapPromise;
-}
-
-export function ensureAvatarMap(options) {
-  return ensureMap(options || {});
-}
-
-export function getAvatarUrlFromMap(nick) {
-  const key = nickKey(nick || '');
-  if (!key) return '';
-  return AVMAP.get(key) || '';
-}
-
-function paintAvatarImage(img, baseUrl, bust, nickLabel) {
-  const effectiveBust = resolveBustValue(bust);
-  const fallbackUrl = appendBust(AVATAR_PLACEHOLDER, effectiveBust);
-  const finalBase = baseUrl || '';
-  const finalUrl = finalBase ? appendBust(finalBase, effectiveBust) : fallbackUrl;
+function applyAvatar(img, baseSrc, bust) {
+  const fallback = withBust(AVATAR_PLACEHOLDER, bust) || AVATAR_PLACEHOLDER;
+  const src = withBust(baseSrc || AVATAR_PLACEHOLDER, bust) || AVATAR_PLACEHOLDER;
 
   img.referrerPolicy = 'no-referrer';
-  img.loading = 'lazy';
   img.decoding = 'async';
+  if (!img.loading) img.loading = 'lazy';
+  if (!img.alt) img.alt = img.dataset.nick || 'avatar';
   img.onerror = () => {
     img.onerror = null;
-    img.src = fallbackUrl;
+    img.src = fallback;
   };
-  if (!img.alt) img.alt = nickLabel || 'avatar';
-  img.src = finalUrl;
+  img.src = src;
 }
 
 export async function renderAllAvatars({ bust } = {}) {
-  const shouldBustFetch = typeof bust !== 'undefined';
-  await ensureMap({ bust: shouldBustFetch ? bust : undefined });
-  const effectiveBust = resolveBustValue(bust);
+  const map = await (mapPromise ??= fetchMap());
   document.querySelectorAll('img[data-nick]').forEach(img => {
-    const nick = img.dataset.nick || '';
-    const key = nickKey(nick);
-    const url = AVMAP.get(key) || '';
-    paintAvatarImage(img, url, effectiveBust, nick);
+    const key = nickKey(img.dataset.nick);
+    const src = key ? map.get(key) : '';
+    applyAvatar(img, src, bust);
   });
 }
 
-export function updateOneAvatar(nick, url, updatedAt = Date.now()) {
-  const key = nickKey(nick || '');
-  if (!key) return;
-  const normalized = driveThumbnail(url || '');
-  if (normalized) {
-    AVMAP.set(key, normalized);
-  } else {
-    AVMAP.delete(key);
-  }
-  const bust = resolveBustValue(updatedAt);
-  document.querySelectorAll('img[data-nick]').forEach(img => {
-    if (nickKey(img.dataset.nick || '') !== key) return;
-    const label = img.dataset.nick || nick || '';
-    const baseUrl = normalized || '';
-    paintAvatarImage(img, baseUrl, bust, label);
-  });
-}
-
-export function reloadAvatars({ bust } = {}) {
+export async function reloadAvatars({ bust = Date.now() } = {}) {
   mapPromise = null;
-  return renderAllAvatars({ bust });
+  await renderAllAvatars({ bust });
 }
 
+export function updateOneAvatar(nick, url, bust = Date.now()) {
+  const key = nickKey(nick);
+  if (!key) return;
+
+  mapPromise ??= Promise.resolve(new Map());
+  mapPromise = mapPromise.then(map => {
+    map.set(key, url || '');
+    document.querySelectorAll(`img[data-nick="${nick}"]`).forEach(img => {
+      if (!img.dataset.nick) img.dataset.nick = nick;
+      applyAvatar(img, url || '', bust);
+    });
+    return map;
+  });
+}

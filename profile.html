@@ -7,9 +7,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <script
     type="module"
-    src="scripts/polyfills.js?v=2025-09-18-12"
+    src="scripts/polyfills.js?v=2025-09-30-01"
   ></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js?v=2025-09-18-12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js?v=2025-09-30-01"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{
@@ -41,7 +41,7 @@
     <a href="about.html">Про клуб</a>
   </nav>
   <div class="profile" id="profile">
-    <div class="avatar-wrap"><img id="avatar" data-nick="" alt="" loading="lazy" width="120" height="120"></div>
+    <div class="avatar-wrap"><img id="avatar" data-nick="" src="assets/default_avatars/av0.png" alt="" loading="lazy" width="120" height="120"></div>
     <button id="change-avatar" style="margin-top:0.5rem;">Змінити аватарку</button>
     <input type="file" id="avatar-input" accept="image/*" style="display:none;">
     <div id="rating" style="margin-top:1rem;"></div>
@@ -53,10 +53,10 @@
       <tbody id="games-body"></tbody>
     </table>
   </div>
-  <script src="scripts/toast.js?v=2025-09-18-12"></script>
-  <script type="module" src="scripts/profile.js?v=2025-09-18-12"></script>
+  <script src="scripts/toast.js?v=2025-09-30-01"></script>
+  <script type="module" src="scripts/profile.js?v=2025-09-30-01"></script>
   <script type="module">
-    import { renderAllAvatars } from './scripts/avatars.client.js?v=2025-09-18-12';
+    import { renderAllAvatars } from './scripts/avatars.client.js?v=2025-09-30-01';
     document.addEventListener('DOMContentLoaded', () => renderAllAvatars());
   </script>
 </body>

@@ -1,8 +1,9 @@
-import { log } from './logger.js?v=2025-09-18-12';
-import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js?v=2025-09-18-12";
-import { LEAGUE } from "./constants.js?v=2025-09-18-12";
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-18-12';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-12';
+import { log } from './logger.js?v=2025-09-30-01';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
+import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js?v=2025-09-30-01";
+import { LEAGUE } from "./constants.js?v=2025-09-30-01";
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-30-01';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-30-01';
 
 const CSV_TTL = 60 * 1000;
 
@@ -217,6 +218,11 @@ function createRow(p, i) {
   img.loading = "lazy";
   img.width = img.height = 32;
   img.dataset.nick = p.nickname;
+  img.src = AVATAR_PLACEHOLDER;
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = AVATAR_PLACEHOLDER;
+  };
   tdAvatar.appendChild(img);
   tr.appendChild(tdAvatar);
 

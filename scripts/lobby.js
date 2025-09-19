@@ -1,19 +1,20 @@
 // scripts/lobby.js
-import { log } from './logger.js?v=2025-09-18-12';
+import { log } from './logger.js?v=2025-09-30-01';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
 
-import { initTeams, teams } from './teams.js?v=2025-09-18-12';
-import { sortByName, sortByPtsDesc } from './sortUtils.js?v=2025-09-18-12';
+import { initTeams, teams } from './teams.js?v=2025-09-30-01';
+import { sortByName, sortByPtsDesc } from './sortUtils.js?v=2025-09-30-01';
 import {
   updateAbonement,
   adminCreatePlayer,
   issueAccessKey,
   getProfile,
   safeDel,
-} from './api.js?v=2025-09-18-12';
-import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-18-12';
-import { refreshArenaTeams } from './scenario.js?v=2025-09-18-12';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-18-12';
-import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-18-12';
+} from './api.js?v=2025-09-30-01';
+import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-30-01';
+import { refreshArenaTeams } from './scenario.js?v=2025-09-30-01';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-30-01';
+import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-30-01';
 
 export let lobby = [];
 let players = [], filtered = [], selected = [], manualCount = 0;
@@ -300,6 +301,11 @@ function renderPlayerList(el, arr) {
     img.width = 40;
     img.height = 40;
     img.dataset.nick = p.nick;
+    img.src = AVATAR_PLACEHOLDER;
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = AVATAR_PLACEHOLDER;
+    };
 
     const meta = document.createElement('div');
     meta.className = 'player__meta';

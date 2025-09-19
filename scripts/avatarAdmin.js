@@ -297,6 +297,8 @@ async function handleUploadClick() {
     const updatedAt = resp?.updatedAt || Date.now();
     const bustValue = resolveBustValue(updatedAt);
 
+    console.debug('[avatarAdmin] uploaded', { nick, url: imageUrl });
+
     if (previewImg) {
       previewImg.hidden = false;
       setImgSafe(previewImg, imageUrl, bustValue);

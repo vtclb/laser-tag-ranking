@@ -1,7 +1,17 @@
 import { AVATARS_SHEET_ID, AVATARS_GID, AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-3';
 import { getAvatarUrl } from './api.js?v=2025-09-19-3';
 
-export const nickKey = value => String(value || '').trim().toLowerCase();
+const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
+const WHITESPACE_RE = /\s+/g;
+
+export const nickKey = value => (
+  String(value || '')
+    .replace(ZERO_WIDTH_CHARS_RE, '')
+    .normalize('NFKC')
+    .trim()
+    .replace(WHITESPACE_RE, ' ')
+    .toLowerCase()
+);
 
 const jsonUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:json&gid=${AVATARS_GID}`;
 const csvUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${AVATARS_GID}`;

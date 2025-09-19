@@ -120,7 +120,6 @@
 
     <section id="arena-area" class="bal__card card hidden">
       <h2>Арена: <span id="arena-vs"></span></h2>
-      <datalist id="players-datalist"></datalist>
       <div class="field">
         <label for="mvp1">MVP:</label>
         <input id="mvp1" list="players-datalist" required>
@@ -146,34 +145,44 @@
       </div>
     </section>
 
-    <section class="bal__card blc-accordion" id="sec-avatar-admin">
-      <h2 class="bal__acc-head">Керування аватарами</h2>
-      <section id="avatar-admin" class="card">
-        <div class="bal__acc-body">
-          <p class="text-muted">Обери гравця, завантаж його новий аватар та переглянь результат перед збереженням.</p>
-          <form class="avatar-form" id="avatar-admin-form">
-            <div class="row">
-              <div class="form-fields">
-                <div class="form-field">
-                  <label for="avatar-nick">Нік гравця</label>
-                  <input type="text" id="avatar-nick" name="avatar-nick" placeholder="Введи нік або ID" autocomplete="off">
-                </div>
-                <div class="form-field">
-                  <label for="avatar-file">Файл аватара</label>
-                  <input type="file" id="avatar-file" name="avatar-file" accept="image/*">
-                </div>
-                <div class="form-actions">
-                  <button type="button" id="avatar-upload" disabled>Завантажити аватар</button>
-                  <button type="button" id="avatars-refresh">Оновити аватари</button>
-                </div>
-              </div>
-              <div class="avatar-preview" aria-live="polite">
-                <img id="avatar-preview" src="assets/default_avatars/av0.png" alt="Попередній перегляд аватара" hidden>
-              </div>
-            </div>
-          </form>
+    <section class="panel" id="avatar-admin">
+      <h2>Керування аватарами</h2>
+      <p class="text-muted">Оберіть лігу та гравця, щоб завантажити новий аватар. Підтримуються PNG і JPG до 2&nbsp;МБ.</p>
+      <form id="avatar-admin-form" class="form-grid" autocomplete="off">
+        <div class="col col--controls">
+          <label for="league-select-lg">Ліга</label>
+          <select id="league-select-lg">
+            <option value="kids">Молодша ліга</option>
+            <option value="sundaygames">Старша ліга</option>
+          </select>
+
+          <label for="avatar-nick">Гравець</label>
+          <input
+            type="text"
+            id="avatar-nick"
+            name="avatar-nick"
+            placeholder="Введіть нік або ID"
+            list="players-datalist"
+            autocomplete="off"
+          >
+          <datalist id="players-datalist"></datalist>
+
+          <label for="avatar-file">Файл аватара</label>
+          <input type="file" id="avatar-file" name="avatar-file" accept="image/*">
+
+          <div class="form-actions">
+            <button type="button" id="avatar-upload" disabled>Завантажити аватар</button>
+            <button type="button" id="avatars-refresh">Оновити аватари</button>
+          </div>
+
+          <p id="avatar-status" class="text-muted" role="status" aria-live="polite"></p>
         </div>
-      </section>
+        <div class="col col--preview" aria-live="polite">
+          <div class="preview-box">
+            <img id="avatar-preview" alt="Попередній перегляд аватара" hidden>
+          </div>
+        </div>
+      </form>
     </section>
   </div>
 

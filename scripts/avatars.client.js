@@ -1,4 +1,5 @@
 import { AVATARS_SHEET_ID, AVATARS_GID, AVATAR_PLACEHOLDER } from './config.js?v=2025-09-30-01';
+import { getAvatarUrl } from './api.js?v=2025-09-30-01';
 
 export const nickKey = value => String(value || '').trim().toLowerCase();
 
@@ -6,6 +7,7 @@ const jsonUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz
 const csvUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${AVATARS_GID}`;
 
 let mapPromise = null; // Promise<Map<string, string>>
+let lastSource = 'json';
 
 async function fetchMapFromJson() {
   const res = await fetch(jsonUrl, { cache: 'no-store' });
@@ -57,18 +59,69 @@ async function fetchMapFromCsv() {
   return map;
 }
 
+async function fetchMapFromFallback(baseMap = new Map()) {
+  const map = baseMap instanceof Map ? baseMap : new Map();
+  const imgs = Array.from(document.querySelectorAll('img[data-nick]'));
+  const seen = new Set();
+  const entries = [];
+
+  for (const img of imgs) {
+    const nick = img.dataset.nick || '';
+    const key = nickKey(nick);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    entries.push({ nick, key });
+  }
+
+  let index = 0;
+  const workerCount = Math.min(6, entries.length);
+  if (!workerCount) return map;
+
+  const workers = Array.from({ length: workerCount }, () => (async function worker() {
+    while (index < entries.length) {
+      const current = index++;
+      const { nick, key } = entries[current];
+      try {
+        const rec = await getAvatarUrl(nick);
+        const url = rec && typeof rec.url === 'string' ? rec.url.trim() : '';
+        if (key && url) map.set(key, url);
+      } catch (err) {
+        console.warn('[avatars] fallback', nick, err);
+      }
+    }
+  })());
+
+  await Promise.all(workers);
+  return map;
+}
+
 async function fetchMap() {
+  let map = null;
   try {
-    return await fetchMapFromJson();
+    map = await fetchMapFromJson();
+    if (map.size) {
+      lastSource = 'json';
+      return map;
+    }
   } catch (err) {
     console.warn('[avatars]', err);
-    try {
-      return await fetchMapFromCsv();
-    } catch (csvErr) {
-      console.error('[avatars]', csvErr);
-      return new Map();
-    }
   }
+
+  try {
+    const csvMap = await fetchMapFromCsv();
+    if (csvMap.size) {
+      lastSource = 'csv';
+      return csvMap;
+    }
+    map = map ?? csvMap;
+  } catch (csvErr) {
+    console.error('[avatars]', csvErr);
+  }
+
+  const fallbackBase = map ?? new Map();
+  const fallbackMap = await fetchMapFromFallback(fallbackBase);
+  lastSource = 'gas-fallback';
+  return fallbackMap;
 }
 
 function withBust(src, bust) {
@@ -97,13 +150,36 @@ function applyAvatar(img, baseSrc, bust) {
   img.src = src;
 }
 
+function isVisible(el) {
+  if (!el) return false;
+  if (typeof el.checkVisibility === 'function') {
+    try { return el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }); }
+    catch { /* fallback */ }
+  }
+  return !!(el.offsetParent || el.getClientRects().length);
+}
+
 export async function renderAllAvatars({ bust } = {}) {
   const map = await (mapPromise ??= fetchMap());
-  document.querySelectorAll('img[data-nick]').forEach(img => {
+  const imgs = Array.from(document.querySelectorAll('img[data-nick]'));
+  console.log(`[avatars] source=${lastSource} size=${map.size} imgs=${imgs.length}`);
+
+  const misses = [];
+  const missKeys = new Set();
+  imgs.forEach(img => {
     const key = nickKey(img.dataset.nick);
     const src = key ? map.get(key) : '';
+    if (!src && key && isVisible(img) && !missKeys.has(key)) {
+      missKeys.add(key);
+      misses.push(img.dataset.nick || '');
+    }
     applyAvatar(img, src, bust);
   });
+
+  if (misses.length) {
+    const list = misses.slice(0, 5).join(',');
+    console.warn(`[avatars] miss=[${list}]`);
+  }
 }
 
 export async function reloadAvatars({ bust = Date.now() } = {}) {

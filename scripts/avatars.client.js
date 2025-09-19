@@ -4,14 +4,16 @@ import { getAvatarUrl } from './api.js';
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const WHITESPACE_RE = /\s+/g;
 
-export const nickKey = value => (
-  String(value || '')
+export const nickKey = value => {
+  const input = value == null ? '' : String(value);
+
+  return input
     .replace(ZERO_WIDTH_CHARS_RE, '')
     .normalize('NFKC')
     .trim()
     .replace(WHITESPACE_RE, ' ')
-    .toLowerCase()
-);
+    .toLowerCase();
+};
 
 const jsonUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:json&gid=${AVATARS_GID}`;
 const csvUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${AVATARS_GID}`;

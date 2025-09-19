@@ -26,15 +26,37 @@ export function normalizeAvatarUrl(url = '') {
   return url;
 }
 
-export function setImgSafe(img, url) {
+function resolveBustValue(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric;
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return Date.now();
+}
+
+function cacheBustUrl(src, bust) {
+  const base = src || '';
+  if (!base) return base;
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}t=${bust}`;
+}
+
+export function setImgSafe(img, url, bust) {
   if (!img) return;
   const src = normalizeAvatarUrl(url);
   img.referrerPolicy = 'no-referrer';
   img.loading = 'lazy';
   img.decoding = 'async';
-  img.onerror = () => { img.onerror = null; img.src = AVATAR_PLACEHOLDER; };
+  const effectiveBust = resolveBustValue(bust);
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = cacheBustUrl(AVATAR_PLACEHOLDER, effectiveBust);
+  };
   const cacheSafe = src.startsWith('data:') || src.startsWith('blob:');
-  const finalSrc = cacheSafe ? src : src + (src.includes('?') ? '&' : '?') + 't=' + Date.now();
+  const finalSrc = cacheSafe ? src : cacheBustUrl(src, effectiveBust);
   img.src = finalSrc;
 }
 
@@ -219,6 +241,17 @@ async function reloadAvatarsSafe(options) {
   }
 }
 
+async function updateAvatarSafe(nick, url, bust) {
+  try {
+    const mod = await ensureAvatarsModule();
+    if (mod && typeof mod.updateOneAvatar === 'function') {
+      mod.updateOneAvatar(nick, url, bust);
+    }
+  } catch (err) {
+    log('[avatarAdmin]', err);
+  }
+}
+
 async function handleUploadClick() {
   const { nickInput, fileInput, uploadBtn, previewImg } = state;
   const nick = nickInput?.value?.trim();
@@ -262,11 +295,14 @@ async function handleUploadClick() {
 
     const imageUrl = resp?.url || AVATAR_PLACEHOLDER;
     const updatedAt = resp?.updatedAt || Date.now();
+    const bustValue = resolveBustValue(updatedAt);
 
     if (previewImg) {
       previewImg.hidden = false;
-      setImgSafe(previewImg, imageUrl);
+      setImgSafe(previewImg, imageUrl, bustValue);
     }
+
+    await updateAvatarSafe(nick, imageUrl, bustValue);
 
     try {
       localStorage.setItem('avatarRefresh', `${nick}:${updatedAt}`);
@@ -276,7 +312,7 @@ async function handleUploadClick() {
 
     let reloadFailed = false;
     try {
-      await reloadAvatarsSafe({ bust: updatedAt });
+      await reloadAvatarsSafe({ bust: bustValue });
     } catch (err) {
       reloadFailed = true;
       showMessage('Аватар оновлено, але не вдалося перезавантажити список аватарів');

@@ -15,6 +15,34 @@ export const nickKey = value => {
     .toLowerCase();
 };
 
+function ensureNodeNickKey(img) {
+  if (!img || !img.dataset) return { nick: '', key: '' };
+  const datasetNick = typeof img.dataset.nick === 'string' ? img.dataset.nick : '';
+  const datasetKey = typeof img.dataset.nickKey === 'string' ? img.dataset.nickKey : '';
+  const candidate = datasetKey || datasetNick;
+  const key = candidate ? nickKey(candidate) : '';
+  if (key) img.dataset.nickKey = key;
+  else delete img.dataset.nickKey;
+  return { nick: datasetNick, key };
+}
+
+function syncNodeNick(img, nick) {
+  if (!img || !img.dataset) return { nick: '', key: '' };
+  const label = typeof nick === 'string' ? nick : '';
+  if (label) img.dataset.nick = label;
+  const datasetNick = typeof img.dataset.nick === 'string' ? img.dataset.nick : '';
+  const datasetKey = typeof img.dataset.nickKey === 'string' ? img.dataset.nickKey : '';
+  const candidate = datasetKey || datasetNick;
+  const key = candidate ? nickKey(candidate) : '';
+  if (key) img.dataset.nickKey = key;
+  else delete img.dataset.nickKey;
+  return { nick: datasetNick, key };
+}
+
+function getAvatarElements() {
+  return Array.from(document.querySelectorAll('img[data-nick], img[data-nick-key]'));
+}
+
 const jsonUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:json&gid=${AVATARS_GID}`;
 const csvUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${AVATARS_GID}`;
 
@@ -142,12 +170,13 @@ async function resolveMissingAvatars(map, entries, { bust } = {}) {
   const items = entries
     .map(entry => {
       const nick = entry && typeof entry.nick === 'string' ? entry.nick : '';
-      const key = entry && entry.key ? entry.key : nickKey(nick);
+      const key = entry && entry.key ? nickKey(entry.key) : nickKey(nick);
       const imgs = entry && Array.isArray(entry.imgs)
         ? entry.imgs.filter(img => !!img)
         : [];
-      if (!nick || !key || !imgs.length) return null;
-      return { nick, key, imgs };
+      const canonicalKey = key || nickKey(nick);
+      if (!canonicalKey || !imgs.length) return null;
+      return { nick, key: canonicalKey, imgs };
     })
     .filter(Boolean);
 
@@ -165,7 +194,8 @@ async function resolveMissingAvatars(map, entries, { bust } = {}) {
       if (currentIndex >= items.length) break;
       const { nick, key, imgs } = items[currentIndex];
       try {
-        const rec = await getAvatarUrl(nick);
+        const lookupNick = nick || key;
+        const rec = await getAvatarUrl(lookupNick);
         const url = rec && typeof rec.url === 'string' ? rec.url.trim() : '';
         if (!url) continue;
         const storeKey = nickKey(nick) || key;
@@ -173,7 +203,9 @@ async function resolveMissingAvatars(map, entries, { bust } = {}) {
         map.set(storeKey, url);
         anySuccess = true;
         imgs.forEach(img => {
-          if (img && !img.dataset.nick) img.dataset.nick = nick;
+          if (!img) return;
+          const { key: nodeKey } = syncNodeNick(img, nick);
+          if (nodeKey !== storeKey) img.dataset.nickKey = storeKey;
           applyAvatar(img, url, bustValue);
         });
       } catch (err) {
@@ -192,13 +224,12 @@ async function resolveMissingAvatars(map, entries, { bust } = {}) {
 
 export async function renderAllAvatars({ bust } = {}) {
   const map = await (mapPromise ??= fetchMap());
-  const imgs = Array.from(document.querySelectorAll('img[data-nick]'));
+  const imgs = getAvatarElements();
   const missingByKey = new Map();
   let mapped = 0;
 
   imgs.forEach(img => {
-    const nick = img.dataset.nick || '';
-    const key = nickKey(nick);
+    const { nick, key } = ensureNodeNickKey(img);
     const src = key ? map.get(key) : '';
 
     if (src) {
@@ -206,7 +237,8 @@ export async function renderAllAvatars({ bust } = {}) {
     } else if (key) {
       let entry = missingByKey.get(key);
       if (!entry) {
-        entry = { key, nick, imgs: [], visible: false };
+        const fallbackNick = nick || key;
+        entry = { key, nick: fallbackNick, imgs: [], visible: false };
         missingByKey.set(key, entry);
       }
       entry.imgs.push(img);
@@ -240,8 +272,11 @@ export function updateOneAvatar(nick, url, bust = Date.now()) {
   mapPromise ??= Promise.resolve(new Map());
   mapPromise = mapPromise.then(map => {
     map.set(key, url || '');
-    document.querySelectorAll(`img[data-nick="${nick}"]`).forEach(img => {
-      if (!img.dataset.nick) img.dataset.nick = nick;
+    getAvatarElements().forEach(img => {
+      const { key: nodeKey } = ensureNodeNickKey(img);
+      if (nodeKey !== key) return;
+      const { key: syncedKey } = syncNodeNick(img, nick);
+      if (syncedKey !== key) img.dataset.nickKey = key;
       applyAvatar(img, url || '', bust);
     });
     return map;

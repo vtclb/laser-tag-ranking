@@ -3,7 +3,7 @@ import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-4';
 import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js?v=2025-09-19-4";
 import { LEAGUE } from "./constants.js?v=2025-09-19-4";
 import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-4';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-4';
+import { renderAllAvatars, reloadAvatars, nickKey } from './avatars.client.js?v=2025-09-19-4';
 
 const CSV_TTL = 60 * 1000;
 
@@ -218,6 +218,7 @@ function createRow(p, i) {
   img.loading = "lazy";
   img.width = img.height = 32;
   img.dataset.nick = p.nickname;
+  img.dataset.nickKey = nickKey(p.nickname);
   img.src = AVATAR_PLACEHOLDER;
   img.onerror = () => {
     img.onerror = null;

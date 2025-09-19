@@ -1,7 +1,7 @@
 import { log } from './logger.js?v=2025-09-19-4';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet } from './api.js?v=2025-09-19-4';
 import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-4';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-4';
+import { renderAllAvatars, reloadAvatars, nickKey } from './avatars.client.js?v=2025-09-19-4';
 import { noteAvatarFailure } from './avatarAdmin.js?v=2025-09-19-4';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-4';
 
@@ -39,6 +39,7 @@ function parseQuery(search) {
 async function updateAvatar(nick) {
   const avatarEl = document.getElementById('avatar');
   avatarEl.dataset.nick = nick;
+  avatarEl.dataset.nickKey = nickKey(nick);
   avatarEl.alt = nick;
   avatarEl.referrerPolicy = 'no-referrer';
   avatarEl.decoding = 'async';

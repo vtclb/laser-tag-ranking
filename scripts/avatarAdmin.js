@@ -2,6 +2,7 @@
 import { log } from './logger.js?v=2025-09-19-4';
 import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers } from './api.js?v=2025-09-19-4';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-4';
+import { nickKey } from './avatars.client.js?v=2025-09-19-4';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const UPLOAD_ACTION = 'uploadAvatar';
@@ -62,7 +63,17 @@ export function setImgSafe(img, url, bust) {
 
 export function applyAvatarToUI(nick, imageUrl) {
   const url = imageUrl || AVATAR_PLACEHOLDER;
-  document.querySelectorAll(`img[data-nick="${nick}"]`).forEach(img => setImgSafe(img, url));
+  const key = nickKey(nick);
+  if (!key) return;
+  document.querySelectorAll('img[data-nick], img[data-nick-key]').forEach(img => {
+    if (!img) return;
+    const candidate = img.dataset.nickKey || img.dataset.nick || '';
+    const currentKey = nickKey(candidate);
+    if (!currentKey || currentKey !== key) return;
+    img.dataset.nickKey = currentKey;
+    if (nick && !img.dataset.nick) img.dataset.nick = nick;
+    setImgSafe(img, url);
+  });
 }
 
 const state = {

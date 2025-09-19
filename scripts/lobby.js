@@ -13,7 +13,7 @@ import {
 } from './api.js?v=2025-09-19-4';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-19-4';
 import { refreshArenaTeams } from './scenario.js?v=2025-09-19-4';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-4';
+import { renderAllAvatars, reloadAvatars, nickKey } from './avatars.client.js?v=2025-09-19-4';
 import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-19-4';
 
 export let lobby = [];
@@ -292,6 +292,7 @@ function renderPlayerList(el, arr) {
     const div = document.createElement('div');
     div.className = 'player';
     div.dataset.nick = p.nick;
+    div.dataset.nickKey = nickKey(p.nick);
     div.draggable = true;
 
     const img = document.createElement('img');
@@ -301,6 +302,7 @@ function renderPlayerList(el, arr) {
     img.width = 40;
     img.height = 40;
     img.dataset.nick = p.nick;
+    img.dataset.nickKey = nickKey(p.nick);
     img.src = AVATAR_PLACEHOLDER;
     img.onerror = () => {
       img.onerror = null;
@@ -428,6 +430,7 @@ function renderLobby() {
     const issueBtn = document.createElement('button');
     issueBtn.className = 'btn-issue-key';
     issueBtn.dataset.nick = p.nick;
+    issueBtn.dataset.nickKey = nickKey(p.nick);
     issueBtn.textContent = 'Видати ключ';
     tdBtn.appendChild(issueBtn);
     tr.appendChild(tdBtn);
@@ -507,6 +510,7 @@ function renderLobbyCards() {
     const issueBtn = document.createElement('button');
     issueBtn.className = 'btn-issue-key';
     issueBtn.dataset.nick = p.nick;
+    issueBtn.dataset.nickKey = nickKey(p.nick);
     issueBtn.textContent = 'Видати ключ';
     const accessSpan = document.createElement('span');
     accessSpan.className = 'access-key';

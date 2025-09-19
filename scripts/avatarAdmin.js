@@ -1,6 +1,6 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js?v=2025-09-18-9';
-import { uploadAvatar, gasPost, toBase64NoPrefix } from './api.js?v=2025-09-18-9';
+import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers } from './api.js?v=2025-09-18-9';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-18-9';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
@@ -44,15 +44,47 @@ export function applyAvatarToUI(nick, imageUrl) {
 }
 
 const state = {
+  leagueSelect: null,
   nickInput: null,
+  playersDatalist: null,
   fileInput: null,
   uploadBtn: null,
   refreshBtn: null,
-  previewImg: null
+  previewImg: null,
+  statusEl: null
 };
 
 let formReady = false;
 let avatarModulePromise = null;
+let statusHideTimer = null;
+
+function setStatus(message, options = {}) {
+  const { statusEl } = state;
+  if (!statusEl) return;
+
+  if (statusHideTimer) {
+    clearTimeout(statusHideTimer);
+    statusHideTimer = null;
+  }
+
+  if (!message) {
+    statusEl.textContent = '';
+    statusEl.hidden = true;
+    return;
+  }
+
+  statusEl.textContent = message;
+  statusEl.hidden = false;
+
+  if (options.autoHide) {
+    const delay = typeof options.delay === 'number' ? options.delay : 2500;
+    statusHideTimer = setTimeout(() => {
+      statusHideTimer = null;
+      statusEl.textContent = '';
+      statusEl.hidden = true;
+    }, delay);
+  }
+}
 
 function showMessage(msg) {
   if (typeof showToast === 'function') showToast(msg);
@@ -60,19 +92,30 @@ function showMessage(msg) {
 }
 
 function queryFormElements() {
+  const leagueSelect = document.getElementById('league-select-lg');
   const nickInput = document.getElementById('avatar-nick');
+  const playersDatalist = document.getElementById('players-datalist');
   const fileInput = document.getElementById('avatar-file');
   const uploadBtn = document.getElementById('avatar-upload');
   const refreshBtn = document.getElementById('avatars-refresh');
   const previewImg = document.getElementById('avatar-preview');
+  const statusEl = document.getElementById('avatar-status');
 
   if (!nickInput || !fileInput || !uploadBtn) return false;
 
+  state.leagueSelect = leagueSelect;
   state.nickInput = nickInput;
+  state.playersDatalist = playersDatalist;
   state.fileInput = fileInput;
   state.uploadBtn = uploadBtn;
   state.refreshBtn = refreshBtn;
   state.previewImg = previewImg;
+  state.statusEl = statusEl;
+
+  if (statusEl) {
+    statusEl.textContent = '';
+    statusEl.hidden = true;
+  }
   return true;
 }
 
@@ -129,6 +172,34 @@ function handleFileChange() {
   reader.readAsDataURL(file);
 }
 
+let playersLoadToken = 0;
+
+async function populatePlayersDatalist(league) {
+  const { playersDatalist } = state;
+  if (!playersDatalist) return;
+
+  playersDatalist.innerHTML = '';
+  if (!league) return;
+
+  const token = ++playersLoadToken;
+
+  try {
+    const players = await loadPlayers(league);
+    if (token !== playersLoadToken) return;
+
+    const fragment = document.createDocumentFragment();
+    players.forEach(p => {
+      if (!p || !p.nick) return;
+      const option = document.createElement('option');
+      option.value = p.nick;
+      fragment.appendChild(option);
+    });
+    playersDatalist.appendChild(fragment);
+  } catch (err) {
+    log('[avatarAdmin]', err);
+  }
+}
+
 async function ensureAvatarsModule() {
   if (!avatarModulePromise) {
     avatarModulePromise = import('./avatars.client.js?v=2025-09-18-9');
@@ -143,7 +214,7 @@ async function reloadAvatarsSafe(options) {
       await mod.reloadAvatars(options);
     }
   } catch (err) {
-    log('[ranking]', err);
+    log('[avatarAdmin]', err);
     throw err;
   }
 }
@@ -169,7 +240,8 @@ async function handleUploadClick() {
     return;
   }
 
-  uploadBtn.disabled = true;
+  if (uploadBtn) uploadBtn.disabled = true;
+  setStatus('Завантаження…');
 
   try {
     const mime = file.type || 'image/jpeg';
@@ -179,7 +251,7 @@ async function handleUploadClick() {
     try {
       resp = await uploadAvatar(nick, file);
     } catch (err) {
-      log('[ranking]', err);
+      log('[avatarAdmin]', err);
       const fallback = await gasPost('', { action: UPLOAD_ACTION, nick, mime, data: base64 });
       if (!fallback || fallback.status !== 'OK') {
         const message = fallback?.message || fallback?.status || err?.message || 'Не вдалося завантажити аватар';
@@ -191,8 +263,6 @@ async function handleUploadClick() {
     const imageUrl = resp?.url || AVATAR_PLACEHOLDER;
     const updatedAt = resp?.updatedAt || Date.now();
 
-    applyAvatarToUI(nick, imageUrl);
-
     if (previewImg) {
       previewImg.hidden = false;
       setImgSafe(previewImg, imageUrl);
@@ -201,7 +271,7 @@ async function handleUploadClick() {
     try {
       localStorage.setItem('avatarRefresh', `${nick}:${updatedAt}`);
     } catch (err) {
-      log('[ranking]', err);
+      log('[avatarAdmin]', err);
     }
 
     let reloadFailed = false;
@@ -216,11 +286,13 @@ async function handleUploadClick() {
       showMessage('Аватар успішно завантажено');
     }
     clearFileSelection({ keepPreview: true });
+    setStatus('Готово', { autoHide: true });
   } catch (err) {
-    log('[ranking]', err);
+    log('[avatarAdmin]', err);
     const message = err?.message || 'Не вдалося завантажити аватар';
     showMessage(message);
     noteAvatarFailure(nick || 'невідомо', message);
+    setStatus('Помилка завантаження');
   } finally {
     updateUploadButtonState();
   }
@@ -250,13 +322,23 @@ function setupAvatarAdminForm() {
   state.fileInput?.addEventListener('change', handleFileChange);
   state.uploadBtn?.addEventListener('click', handleUploadClick);
   state.refreshBtn?.addEventListener('click', handleRefreshClick);
+  state.leagueSelect?.addEventListener('change', () => {
+    const league = state.leagueSelect?.value;
+    populatePlayersDatalist(league).catch(err => {
+      log('[avatarAdmin]', err);
+    });
+  });
 
   formReady = true;
   return true;
 }
 
 function onDomReady() {
-  setupAvatarAdminForm();
+  if (!setupAvatarAdminForm()) return;
+  const league = state.leagueSelect?.value;
+  populatePlayersDatalist(league).catch(err => {
+    log('[avatarAdmin]', err);
+  });
 }
 
 if (document.readyState === 'loading') {

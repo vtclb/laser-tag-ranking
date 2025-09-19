@@ -2,6 +2,14 @@ import { AVATAR_PLACEHOLDER, AVATARS_SHEET_ID, AVATARS_GID } from './config.js?v
 
 let mapPromise;
 const AVMAP = new Map();
+
+/**
+ * Avatar map helpers for other modules.
+ *
+ * `ensureAvatarMap` wraps the internal fetch lifecycle so callers can await a
+ * populated avatar map. `getAvatarUrlFromMap` provides safe lookups from the
+ * cached map using a nickname key.
+ */
 let loadSeq = 0;
 
 function gvizJsonUrl() {
@@ -159,6 +167,16 @@ function ensureMap({ bust } = {}) {
     return loadMap({ bust });
   }
   return mapPromise;
+}
+
+export function ensureAvatarMap(options) {
+  return ensureMap(options || {});
+}
+
+export function getAvatarUrlFromMap(nick) {
+  const key = nickKey(nick || '');
+  if (!key) return '';
+  return AVMAP.get(key) || '';
 }
 
 function paintAvatarImage(img, baseUrl, bust, nickLabel) {

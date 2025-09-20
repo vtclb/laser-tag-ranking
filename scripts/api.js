@@ -1,5 +1,5 @@
 // scripts/api.js
-import { log } from './logger.js?v=2025-09-19-4';
+import { log } from './logger.js?v=2025-09-19-avatars-1';
 import { AVATAR_PLACEHOLDER, AVATAR_PROXY_BASE, DEFAULT_GAS_FALLBACK_URL, VERSION } from './config.js';
 
 // ==================== DIAGNOSTICS ====================
@@ -545,7 +545,7 @@ export async function saveResult(data) {
   const body = toFormUrlEncoded(payload);
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
 
-  console.log('[saveResult] v=2025-09-19-4');
+  console.log('[saveResult] v=2025-09-19-avatars-1');
   const attempt = async (targetUrl) => {
     try {
       const res = await fetch(targetUrl, { method: 'POST', headers, body });

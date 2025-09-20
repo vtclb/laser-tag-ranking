@@ -145,7 +145,37 @@ const AVATAR_MAP_CACHE_KEY = 'avatar:map';
 const AVATAR_MAP_TTL = 5 * 60 * 1000; // 5 хвилин достатньо для кешу
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
+const COMBINING_MARKS_RE = /[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\uFE20-\uFE2F]/g;
 const WHITESPACE_RE = /\s+/g;
+
+const HOMOGRAPH_MAP = Object.freeze({
+  '\u0131': 'i',
+  '\u03b1': 'a',
+  '\u03b5': 'e',
+  '\u03ba': 'k',
+  '\u03bf': 'o',
+  '\u03c1': 'p',
+  '\u03c5': 'y',
+  '\u03c7': 'x',
+  '\u0430': 'a',
+  '\u0435': 'e',
+  '\u043a': 'k',
+  '\u043e': 'o',
+  '\u0440': 'p',
+  '\u0441': 'c',
+  '\u0443': 'y',
+  '\u0445': 'x',
+  '\u0454': 'e',
+  '\u0456': 'i',
+  '\u0457': 'i'
+});
+
+const HOMOGRAPH_PATTERN = (() => {
+  const chars = Object.keys(HOMOGRAPH_MAP);
+  if (!chars.length) return null;
+  const escaped = chars.map(ch => ch.replace(/[\\\]\[\-]/g, '\\$&')).join('');
+  return new RegExp(`[${escaped}]`, 'gu');
+})();
 
 const runtimeRoot = typeof window !== 'undefined' ? window : globalThis;
 const headerTemplate = {};
@@ -171,13 +201,18 @@ function avatarProxyBase() {
 }
 
 export function avatarNickKey(value) {
-  const input = value == null ? '' : String(value);
-  return input
-    .replace(ZERO_WIDTH_CHARS_RE, '')
-    .normalize('NFKC')
-    .trim()
-    .replace(WHITESPACE_RE, ' ')
-    .toLowerCase();
+  if (value == null) return '';
+  const trimmed = String(value).trim().toLowerCase();
+  if (!trimmed) return '';
+  const decomposed = trimmed.normalize('NFKD');
+  const withoutMarks = decomposed.replace(COMBINING_MARKS_RE, '');
+  const withoutZeroWidth = withoutMarks.replace(ZERO_WIDTH_CHARS_RE, '');
+  const collapsed = withoutZeroWidth.replace(WHITESPACE_RE, ' ').trim();
+  if (!collapsed) return '';
+  const replaced = HOMOGRAPH_PATTERN
+    ? collapsed.replace(HOMOGRAPH_PATTERN, ch => HOMOGRAPH_MAP[ch] || '')
+    : collapsed;
+  return replaced;
 }
 
 function resolveUpdatedAt(headers) {

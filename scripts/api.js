@@ -1,6 +1,6 @@
 // scripts/api.js
 import { log } from './logger.js?v=2025-09-19-4';
-import { AVATAR_PLACEHOLDER, DEFAULT_GAS_FALLBACK_URL } from './config.js?v=2025-09-19-avatars-1';
+import { AVATAR_PLACEHOLDER, AVATAR_PROXY_BASE, DEFAULT_GAS_FALLBACK_URL, VERSION } from './config.js';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -142,10 +142,295 @@ function rankFromPoints(p) {
 const _fetchCache = {};
 export const avatarCache = new Map();
 
+const AVATAR_JSON_ENDPOINTS = ['map.json', 'index.json', 'avatars.json'];
+const AVATAR_CSV_ENDPOINTS = ['map.csv', 'index.csv', 'avatars.csv'];
+const AVATAR_MAP_CACHE_KEY = 'avatar:map';
+const AVATAR_MAP_TTL = 5 * 60 * 1000; // 5 хвилин достатньо для кешу
+
+const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
+const WHITESPACE_RE = /\s+/g;
+const KNOWN_AVATAR_FIELDS = new Set([
+  'nick', 'nickname', 'name', 'player', 'key',
+  'url', 'avatar', 'avatarurl', 'image', 'href', 'src'
+]);
+
+const runtimeRoot = typeof window !== 'undefined' ? window : globalThis;
+const headerTemplate = {};
+if (runtimeRoot && runtimeRoot.AVATAR_HEADERS && typeof runtimeRoot.AVATAR_HEADERS === 'object') {
+  Object.assign(headerTemplate, runtimeRoot.AVATAR_HEADERS);
+}
+const originHeader = runtimeRoot && runtimeRoot.location && runtimeRoot.location.origin
+  ? String(runtimeRoot.location.origin)
+  : '';
+if (originHeader && !headerTemplate['x-avatar-origin']) {
+  headerTemplate['x-avatar-origin'] = originHeader;
+}
+if (VERSION && !headerTemplate['x-avatar-version']) {
+  headerTemplate['x-avatar-version'] = VERSION;
+}
+if (!headerTemplate['x-avatar-proxy']) headerTemplate['x-avatar-proxy'] = 'laser-tag-ranking';
+export const AV_HEADERS = Object.freeze(headerTemplate);
+
+function avatarProxyBase() {
+  const base = typeof AVATAR_PROXY_BASE === 'string' ? AVATAR_PROXY_BASE.trim() : '';
+  if (!base) return '';
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
+function buildAvatarProxyUrl(path) {
+  const base = avatarProxyBase();
+  const cleanPath = typeof path === 'string' ? path.replace(/^\/+/, '').trim() : '';
+  if (!base || !cleanPath) return '';
+  const url = base + cleanPath;
+  if (!VERSION) return url;
+  const query = `v=${encodeURIComponent(VERSION)}`;
+  return url + (url.includes('?') ? '&' : '?') + query;
+}
+
+function nickKey(value) {
+  const input = value == null ? '' : String(value);
+  return input
+    .replace(ZERO_WIDTH_CHARS_RE, '')
+    .normalize('NFKC')
+    .trim()
+    .replace(WHITESPACE_RE, ' ')
+    .toLowerCase();
+}
+
+function isLikelyAvatarUrl(url) {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  return /^(?:https?:|data:|blob:)/i.test(trimmed);
+}
+
+function addAvatarRecord(map, nick, url) {
+  if (!nick || !url) return;
+  const key = nickKey(nick);
+  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
+  if (!key || !isLikelyAvatarUrl(trimmedUrl)) return;
+  if (!map.has(key)) map.set(key, trimmedUrl);
+}
+
+function harvestJsonValue(map, value) {
+  if (!value) return;
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (!entry) continue;
+      if (Array.isArray(entry)) {
+        if (entry.length >= 2) addAvatarRecord(map, entry[0], entry[1]);
+        else harvestJsonValue(map, entry);
+      } else {
+        harvestJsonValue(map, entry);
+      }
+    }
+    return;
+  }
+
+  if (typeof value === 'object') {
+    const obj = value;
+    const candidateNick =
+      obj.nick ?? obj.Nick ?? obj.nickname ?? obj.Nickname ?? obj.name ?? obj.Name ?? obj.player ?? obj.key;
+    const candidateUrl =
+      obj.url ?? obj.URL ?? obj.Url ?? obj.avatar ?? obj.avatarUrl ?? obj.image ?? obj.href ?? obj.src;
+    addAvatarRecord(map, candidateNick, candidateUrl);
+
+    for (const [k, v] of Object.entries(obj)) {
+      if (!v) continue;
+      if (typeof v === 'string') {
+        const lower = k.toLowerCase();
+        if (!KNOWN_AVATAR_FIELDS.has(lower) && isLikelyAvatarUrl(v)) {
+          addAvatarRecord(map, k, v);
+        }
+      } else if (typeof v === 'object') {
+        harvestJsonValue(map, v);
+      }
+    }
+    return;
+  }
+
+  if (typeof value === 'string') {
+    const parts = value.split(',');
+    if (parts.length >= 2) addAvatarRecord(map, parts[0], parts[1]);
+  }
+}
+
+function parseCsvLine(line) {
+  return line
+    .match(/(".*?"|[^,]+)/g)
+    ?.map(cell => cell.replace(/^"|"$/g, '').trim()) || [];
+}
+
+function findColumnIndex(headers, patterns, fallbackIndex = -1) {
+  const idx = headers.findIndex(header => patterns.some(re => re.test(header)));
+  return idx >= 0 ? idx : fallbackIndex;
+}
+
+function resolveUpdatedAt(headers) {
+  if (!headers || typeof headers.get !== 'function') return Date.now();
+  const rawHeader = headers.get('x-avatar-updated-at') || headers.get('x-updated-at');
+  if (rawHeader) {
+    const numeric = Number(rawHeader);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    const parsed = Date.parse(rawHeader);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  const lastModified = headers.get('last-modified');
+  if (lastModified) {
+    const parsed = Date.parse(lastModified);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return Date.now();
+}
+
+async function fetchAvatarJsonFeed(endpoint) {
+  const url = buildAvatarProxyUrl(endpoint);
+  if (!url) return null;
+  let response;
+  try {
+    response = await fetch(url, { headers: AV_HEADERS, cache: 'no-store' });
+  } catch {
+    return null;
+  }
+  if (!response || !response.ok) return null;
+
+  let data;
+  try { data = await response.json(); }
+  catch { return null; }
+
+  const map = new Map();
+  harvestJsonValue(map, data);
+  const source = `proxy-json:${endpoint}`;
+  const updatedAt = resolveUpdatedAt(response.headers);
+  return { entries: Array.from(map.entries()), source, updatedAt };
+}
+
+async function fetchAvatarCsvFeed(endpoint) {
+  const url = buildAvatarProxyUrl(endpoint);
+  if (!url) return null;
+  let response;
+  try {
+    response = await fetch(url, { headers: AV_HEADERS, cache: 'no-store' });
+  } catch {
+    return null;
+  }
+  if (!response || !response.ok) return null;
+
+  const text = await parseTextSafely(response);
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return null;
+
+  const headers = parseCsvLine(lines[0]);
+  const nickIndex = findColumnIndex(headers, [/key/i, /nick/i, /name/i, /player/i], 0);
+  const urlIndex = findColumnIndex(headers, [/url/i, /avatar/i, /image/i, /href/i, /src/i], 1);
+  const map = new Map();
+
+  lines.slice(1).forEach(line => {
+    const cells = parseCsvLine(line);
+    const nick = cells[nickIndex] || '';
+    const urlValue = cells[urlIndex] || '';
+    addAvatarRecord(map, nick, urlValue);
+  });
+
+  const source = `proxy-csv:${endpoint}`;
+  const updatedAt = resolveUpdatedAt(response.headers);
+  return { entries: Array.from(map.entries()), source, updatedAt };
+}
+
+async function loadAvatarMapFromProxy() {
+  for (const endpoint of AVATAR_JSON_ENDPOINTS) {
+    const result = await fetchAvatarJsonFeed(endpoint);
+    if (result && result.entries.length) return result;
+  }
+
+  for (const endpoint of AVATAR_CSV_ENDPOINTS) {
+    const result = await fetchAvatarCsvFeed(endpoint);
+    if (result && result.entries.length) return result;
+  }
+
+  return { entries: [], source: 'none', updatedAt: Date.now() };
+}
+
+function serialiseAvatarMap(result) {
+  const entries = Array.isArray(result?.entries) ? result.entries : [];
+  const source = typeof result?.source === 'string' ? result.source : 'none';
+  const updatedAt = Number.isFinite(result?.updatedAt) ? result.updatedAt : null;
+  return { entries, source, updatedAt };
+}
+
+function deserialiseAvatarMap(obj) {
+  const entries = Array.isArray(obj?.entries) ? obj.entries : [];
+  const source = typeof obj?.source === 'string' ? obj.source : 'none';
+  const updatedAt = Number.isFinite(obj?.updatedAt) ? obj.updatedAt : null;
+  const map = new Map();
+  entries.forEach(entry => {
+    if (!entry || entry.length < 2) return;
+    const [key, url] = entry;
+    if (typeof key === 'string' && typeof url === 'string' && key && url) {
+      map.set(key, url);
+    }
+  });
+  return { map, source, updatedAt };
+}
+
+function restoreAvatarRecordFromStorage(rawValue) {
+  if (!rawValue) return null;
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (parsed && typeof parsed === 'object') {
+      const url = typeof parsed.url === 'string' ? parsed.url : null;
+      const updatedAt = Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : Date.now();
+      return { url, updatedAt };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function storeAvatarRecord(key, record, { legacyKey } = {}) {
+  if (!key || !record) return;
+  const payload = JSON.stringify(record);
+  avatarCache.set(key, record);
+  safeSet(window.__SESS, `avatar:${key}`, payload);
+  if (legacyKey && legacyKey !== key) {
+    safeSet(window.__SESS, `avatar:${legacyKey}`, payload);
+  }
+}
+
+function readAvatarRecord(key, legacyKey) {
+  if (!key) return null;
+  let record = avatarCache.get(key);
+  if (record) return record;
+  const direct = restoreAvatarRecordFromStorage(safeGet(window.__SESS, `avatar:${key}`));
+  if (direct) {
+    avatarCache.set(key, direct);
+    return direct;
+  }
+  if (legacyKey && legacyKey !== key) {
+    const legacy = restoreAvatarRecordFromStorage(safeGet(window.__SESS, `avatar:${legacyKey}`));
+    if (legacy) {
+      storeAvatarRecord(key, legacy, { legacyKey });
+      return legacy;
+    }
+  }
+  return null;
+}
+
 export function clearFetchCache(key) {
   delete _fetchCache[key];
   safeDel(window.__SESS, key);
-  if (key.startsWith('avatar:')) avatarCache.delete(key.slice(7));
+  if (key.startsWith('avatar:')) {
+    const raw = key.slice(7);
+    if (raw === 'map') {
+      avatarCache.clear();
+    } else {
+      avatarCache.delete(raw);
+      const canonical = nickKey(raw);
+      if (canonical && canonical !== raw) avatarCache.delete(canonical);
+    }
+  }
 }
 
 export async function fetchOnce(url, ttlMs = 0, fetchFn) {
@@ -301,6 +586,87 @@ export async function saveDetailedStats(matchId, statsArray) {
 }
 
 // ==================== AVATARS ====================
+export async function fetchAvatarsMap({ force = false } = {}) {
+  const now = Date.now();
+  if (force) {
+    delete _fetchCache[AVATAR_MAP_CACHE_KEY];
+    safeDel(window.__SESS, AVATAR_MAP_CACHE_KEY);
+  } else {
+    const cached = _fetchCache[AVATAR_MAP_CACHE_KEY];
+    if (cached && now - cached.time < AVATAR_MAP_TTL) {
+      return deserialiseAvatarMap(cached.data);
+    }
+
+    const raw = safeGet(window.__SESS, AVATAR_MAP_CACHE_KEY);
+    if (raw) {
+      try {
+        const stored = JSON.parse(raw);
+        if (stored && typeof stored === 'object' && now - stored.time < AVATAR_MAP_TTL) {
+          _fetchCache[AVATAR_MAP_CACHE_KEY] = stored;
+          return deserialiseAvatarMap(stored.data);
+        }
+      } catch {
+        safeDel(window.__SESS, AVATAR_MAP_CACHE_KEY);
+      }
+    }
+  }
+
+  const fresh = serialiseAvatarMap(await loadAvatarMapFromProxy());
+  const info = { data: fresh, time: now };
+  _fetchCache[AVATAR_MAP_CACHE_KEY] = info;
+  safeSet(window.__SESS, AVATAR_MAP_CACHE_KEY, JSON.stringify(info));
+  return deserialiseAvatarMap(fresh);
+}
+
+export async function fetchAvatarForNick(nick, { force = false } = {}) {
+  const originalNick = typeof nick === 'string' ? nick.trim() : '';
+  const key = nickKey(originalNick);
+  if (!key) {
+    return { url: null, updatedAt: Date.now() };
+  }
+
+  if (force) {
+    avatarCache.delete(key);
+    if (originalNick && originalNick !== key) {
+      avatarCache.delete(originalNick);
+    }
+  } else {
+    const cached = readAvatarRecord(key, originalNick);
+    if (cached) return cached;
+  }
+
+  const { map, updatedAt: mapUpdatedAt } = await fetchAvatarsMap({ force });
+  const resolvedUrl = map.get(key) || null;
+  const record = { url: resolvedUrl, updatedAt: mapUpdatedAt ?? Date.now() };
+  storeAvatarRecord(key, record, { legacyKey: originalNick });
+  if (resolvedUrl) return record;
+
+  if (!originalNick) return record;
+
+  try {
+    const resp = await gasPost('', { action: 'getAvatarUrl', nick: originalNick });
+    if (resp && resp.status === 'OK') {
+      const fallback = {
+        url: resp.url || null,
+        updatedAt: resp.updatedAt || Date.now()
+      };
+      storeAvatarRecord(key, fallback, { legacyKey: originalNick });
+      return fallback;
+    }
+  } catch (err) {
+    if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarForNick fallback', err);
+  }
+
+  return record;
+}
+
+/**
+ * @deprecated Use fetchAvatarForNick() замість цього
+ */
+export async function getAvatarUrl(nick, options) {
+  return fetchAvatarForNick(nick, options);
+}
+
 export async function uploadAvatar(nick, file) {
   // JSON → воркер (корінь), БЕЗ /json
   const mime = file.type || 'image/jpeg';
@@ -327,30 +693,10 @@ export async function uploadAvatar(nick, file) {
   return resp; // {status:'OK', url, updatedAt}
 }
 
-export async function getAvatarUrl(nick) {
-  const key = `avatar:${nick}`;
-  let rec = avatarCache.get(nick);
-  if (!rec) {
-    const raw = safeGet(window.__SESS, key);
-    if (raw) {
-      try { rec = JSON.parse(raw); avatarCache.set(nick, rec); }
-      catch { safeDel(window.__SESS, key); }
-    }
-  }
-  if (rec) return rec;
-
-  // JSON lookup через воркер
-  const resp = await gasPost('', { action: 'getAvatarUrl', nick });
-  if (resp.status !== 'OK') throw new Error(resp.status || 'ERR_STATUS');
-  rec = { url: resp.url || null, updatedAt: resp.updatedAt || Date.now() };
-  avatarCache.set(nick, rec);
-  safeSet(window.__SESS, key, JSON.stringify(rec));
-  return rec;
-}
-
 export function avatarSrcFromRecord(rec) {
   const url = rec && rec.url ? rec.url : AVATAR_PLACEHOLDER;
-  return url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+  const bust = Number.isFinite(rec?.updatedAt) ? rec.updatedAt : Date.now();
+  return url + (url.includes('?') ? '&' : '?') + 't=' + bust;
 }
 
 export function toBase64NoPrefix(file) {

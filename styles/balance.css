@@ -130,6 +130,16 @@
   object-fit: cover;
 }
 
+img.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #111;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
 .btn--danger {
   background: var(--danger);
   color: #fff;
@@ -179,7 +189,8 @@
     gap: clamp(24px, 3vw, 40px);
   }
 
-  .left-col {
+  .left-col,
+  .left-panel {
     position: sticky;
     top: 72px;
     align-self: flex-start;
@@ -187,8 +198,16 @@
     width: 100%;
   }
 
-  .left-col .bal__panel {
+  .left-col .bal__panel,
+  .left-panel .bal__panel {
     max-width: 100%;
+  }
+
+  .mode-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(12px, 1vw, 16px);
+    margin: 0;
   }
 
   .right-col {

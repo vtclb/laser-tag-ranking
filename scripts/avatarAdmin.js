@@ -1,11 +1,10 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
+import { uploadAvatar, loadPlayers, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
-import { reloadAvatars, updateOneAvatar } from './avatars.client.js?v=2025-09-19-avatars-2';
+import * as Avatars from './avatars.client.js?v=2025-09-19-avatars-2';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const UPLOAD_ACTION = 'uploadAvatar';
 
 export let avatarFailures = 0;
 
@@ -38,26 +37,28 @@ function resolveBustValue(value) {
   return Date.now();
 }
 
-function cacheBustUrl(src, bust) {
+function cacheBustUrl(src, bust, param = 't') {
   const base = src || '';
   if (!base) return base;
   const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}t=${bust}`;
+  const key = typeof param === 'string' && param.trim() ? param.trim() : 't';
+  return `${base}${sep}${key}=${bust}`;
 }
 
-export function setImgSafe(img, url, bust) {
+export function setImgSafe(img, url, bust, options = {}) {
   if (!img) return;
   const src = normalizeAvatarUrl(url);
   img.referrerPolicy = 'no-referrer';
   img.loading = 'lazy';
   img.decoding = 'async';
   const effectiveBust = resolveBustValue(bust);
+  const param = typeof options?.param === 'string' && options.param.trim() ? options.param.trim() : 't';
   img.onerror = () => {
     img.onerror = null;
-    img.src = cacheBustUrl(AVATAR_PLACEHOLDER, effectiveBust);
+    img.src = cacheBustUrl(AVATAR_PLACEHOLDER, effectiveBust, param);
   };
   const cacheSafe = src.startsWith('data:') || src.startsWith('blob:');
-  const finalSrc = cacheSafe ? src : cacheBustUrl(src, effectiveBust);
+  const finalSrc = cacheSafe ? src : cacheBustUrl(src, effectiveBust, param);
   img.src = finalSrc;
 }
 
@@ -76,30 +77,50 @@ export function applyAvatarToUI(nick, imageUrl) {
   });
 }
 
-function updateInlineAvatarImages(nick, imageUrl, bust) {
-  const key = avatarNickKey(nick);
-  if (!key) return false;
+function escapeNickForSelector(nick) {
+  if (typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function') {
+    return window.CSS.escape(nick);
+  }
+  return String(nick).replace(/['"\\]/g, '\\$&');
+}
+
+export function updateInlineAvatarImages(nick, imageUrl, bust) {
+  const trimmed = typeof nick === 'string' ? nick.trim() : '';
+  const key = avatarNickKey(trimmed);
+  if (!trimmed || !key) return false;
 
   const bustValue = resolveBustValue(bust);
-  let updated = false;
+  const safeUrl = imageUrl || AVATAR_PLACEHOLDER;
+  const nodes = new Set();
 
-  document
-    .querySelectorAll('[data-nick] img.avatar, img.avatar[data-nick]')
-    .forEach(img => {
-      if (!img) return;
+  const escaped = escapeNickForSelector(trimmed);
+  [`[data-nick="${escaped}"] img.avatar`, `img.avatar[data-nick="${escaped}"]`].forEach(selector => {
+    document.querySelectorAll(selector).forEach(img => nodes.add(img));
+  });
 
-      const container = img.closest('[data-nick]');
-      const containerNick = img.dataset?.nick || container?.dataset?.nick || '';
-      if (!containerNick) return;
-      if (avatarNickKey(containerNick) !== key) return;
+  document.querySelectorAll('[data-nick] img.avatar, img.avatar[data-nick]').forEach(img => {
+    const container = img.closest('[data-nick]');
+    const containerNick = img.dataset?.nick || container?.dataset?.nick || '';
+    if (!containerNick) return;
+    if (avatarNickKey(containerNick) !== key) return;
+    nodes.add(img);
+  });
 
-      if (!img.dataset.nick) img.dataset.nick = nick;
-      img.dataset.nickKey = key;
-      setImgSafe(img, imageUrl, bustValue);
-      updated = true;
-    });
+  document.querySelectorAll('img.avatar[data-nick-key]').forEach(img => {
+    const currentKey = typeof img.dataset.nickKey === 'string' ? img.dataset.nickKey : '';
+    if (currentKey === key) nodes.add(img);
+  });
 
-  return updated;
+  if (!nodes.size) return false;
+
+  nodes.forEach(img => {
+    if (!img) return;
+    img.dataset.nick = trimmed;
+    img.dataset.nickKey = key;
+    setImgSafe(img, safeUrl, bustValue, { param: 'ts' });
+  });
+
+  return true;
 }
 
 const state = {
@@ -110,7 +131,8 @@ const state = {
   uploadBtn: null,
   refreshBtn: null,
   previewImg: null,
-  statusEl: null
+  statusEl: null,
+  isUploading: false
 };
 
 let formReady = false;
@@ -185,8 +207,12 @@ function resetPreview() {
 }
 
 function updateUploadButtonState() {
-  const { nickInput, fileInput, uploadBtn } = state;
+  const { nickInput, fileInput, uploadBtn, isUploading } = state;
   if (!uploadBtn) return;
+  if (isUploading) {
+    uploadBtn.disabled = true;
+    return;
+  }
   const hasNick = Boolean(nickInput?.value?.trim());
   const hasFile = Boolean(fileInput?.files && fileInput.files[0]);
   uploadBtn.disabled = !(hasNick && hasFile);
@@ -258,26 +284,6 @@ async function populatePlayersDatalist(league) {
   }
 }
 
-async function reloadAvatarsSafe(options) {
-  try {
-    const fresh = Boolean(options?.fresh ?? options?.bust);
-    await reloadAvatars({ fresh });
-  } catch (err) {
-    log('[avatarAdmin]', err);
-    throw err;
-  }
-}
-
-async function updateAvatarSafe(nick, url, bust) {
-  try {
-    if (typeof updateOneAvatar === 'function') {
-      updateOneAvatar(nick, url, bust);
-    }
-  } catch (err) {
-    log('[avatarAdmin]', err);
-  }
-}
-
 async function handleUploadClick() {
   const { nickInput, fileInput, uploadBtn, previewImg } = state;
   const nick = nickInput?.value?.trim();
@@ -299,73 +305,51 @@ async function handleUploadClick() {
     return;
   }
 
+  state.isUploading = true;
   if (uploadBtn) uploadBtn.disabled = true;
+  if (fileInput) fileInput.disabled = true;
   setStatus('Завантаження…');
 
   try {
-    const mime = file.type || 'image/jpeg';
-    const base64 = await toBase64NoPrefix(file);
-    let resp;
-
-    try {
-      resp = await uploadAvatar(nick, file);
-    } catch (err) {
-      log('[avatarAdmin]', err);
-      const fallback = await gasPost('', { action: UPLOAD_ACTION, nick, mime, data: base64 });
-      if (!fallback || fallback.status !== 'OK') {
-        const message = fallback?.message || fallback?.status || err?.message || 'Не вдалося завантажити аватар';
-        throw new Error(message);
-      }
-      resp = fallback;
-    }
+    const resp = await uploadAvatar(nick, file);
 
     const uploadedUrl = resp?.url || AVATAR_PLACEHOLDER;
-
     console.debug('[avatarAdmin] uploaded', { nick, url: uploadedUrl });
 
-    const uploadedAt = resp?.updatedAt || Date.now();
-
     let latestRecord = null;
-    let fetchFailed = false;
     try {
       latestRecord = await fetchAvatarForNick(nick, { force: true });
     } catch (err) {
-      fetchFailed = true;
       log('[avatarAdmin]', err);
     }
 
+    const timestamp = Date.now();
     const latestUrl = latestRecord?.url || uploadedUrl;
-    const latestUpdatedAt = latestRecord?.updatedAt || uploadedAt;
-    const bustValue = resolveBustValue(latestUpdatedAt);
 
     if (previewImg) {
       previewImg.hidden = false;
-      setImgSafe(previewImg, latestUrl, bustValue);
+      setImgSafe(previewImg, latestUrl, timestamp, { param: 'ts' });
     }
 
-    await updateAvatarSafe(nick, latestUrl, bustValue);
-    const inlineUpdated = updateInlineAvatarImages(nick, latestUrl, bustValue);
+    updateInlineAvatarImages(nick, latestUrl, timestamp);
 
+    let reloadError = null;
     try {
-      localStorage.setItem('avatarRefresh', `${nick}:${latestUpdatedAt}`);
-    } catch (err) {
-      log('[avatarAdmin]', err);
-    }
-
-    let reloadFailed = false;
-    if (fetchFailed || !inlineUpdated) {
-      try {
-        await reloadAvatarsSafe({ fresh: true });
-      } catch (err) {
-        reloadFailed = true;
-        log('[avatarAdmin]', err);
+      if (typeof Avatars.reloadAvatars === 'function') {
+        await Avatars.reloadAvatars({ fresh: true });
       }
+      if (typeof Avatars.renderAllAvatars === 'function') {
+        await Avatars.renderAllAvatars();
+      }
+    } catch (err) {
+      reloadError = err;
+      log('[avatarAdmin]', err);
     }
 
     showMessage('Аватар збережено');
     clearFileSelection({ keepPreview: true });
 
-    if (reloadFailed) {
+    if (reloadError) {
       setStatus('Аватар збережено, але не вдалося оновити список аватарів');
     } else {
       setStatus('Готово', { autoHide: true });
@@ -377,6 +361,8 @@ async function handleUploadClick() {
     noteAvatarFailure(nick || 'невідомо', message);
     setStatus('Помилка завантаження');
   } finally {
+    state.isUploading = false;
+    if (fileInput) fileInput.disabled = false;
     updateUploadButtonState();
   }
 }
@@ -386,8 +372,14 @@ async function handleRefreshClick(event) {
   const { refreshBtn } = state;
   if (refreshBtn) refreshBtn.disabled = true;
   try {
-    await reloadAvatarsSafe({ fresh: true });
+    if (typeof Avatars.reloadAvatars === 'function') {
+      await Avatars.reloadAvatars({ fresh: true });
+    }
+    if (typeof Avatars.renderAllAvatars === 'function') {
+      await Avatars.renderAllAvatars();
+    }
   } catch (err) {
+    log('[avatarAdmin]', err);
     showMessage('Не вдалося оновити список аватарів');
   } finally {
     if (refreshBtn) refreshBtn.disabled = false;
@@ -437,9 +429,3 @@ export async function initAvatarAdmin() {
   }
   setupAvatarAdminForm();
 }
-
-window.addEventListener('storage', e => {
-  if (e.key === 'avatarRefresh') {
-    reloadAvatarsSafe().catch(() => {});
-  }
-});

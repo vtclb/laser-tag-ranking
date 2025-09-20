@@ -1,8 +1,8 @@
 import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet, avatarNickKey } from './api.js?v=2025-09-19-avatars-2';
+import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
 import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
-import { noteAvatarFailure } from './avatarAdmin.js?v=2025-09-19-avatars-2';
+import * as Avatars from './avatars.client.js?v=2025-09-19-avatars-2';
+import { noteAvatarFailure, setImgSafe, updateInlineAvatarImages } from './avatarAdmin.js?v=2025-09-19-avatars-2';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
 
 let gameLimit = 0;
@@ -49,7 +49,9 @@ async function updateAvatar(nick) {
     avatarEl.src = AVATAR_PLACEHOLDER;
   };
   avatarEl.src = AVATAR_PLACEHOLDER;
-  await renderAllAvatars();
+  if (typeof Avatars.renderAllAvatars === 'function') {
+    await Avatars.renderAllAvatars();
+  }
 }
 
 
@@ -205,8 +207,9 @@ async function loadProfile(nick, key = '') {
   }
 
   const fileInput = document.getElementById('avatar-input');
-  document.getElementById('change-avatar').addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', async () => {
+  const changeBtn = document.getElementById('change-avatar');
+  changeBtn?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -215,29 +218,62 @@ async function loadProfile(nick, key = '') {
       fileInput.value = '';
       return;
     }
+
+    fileInput.disabled = true;
+    if (changeBtn) changeBtn.disabled = true;
+
     try {
       const resp = await uploadAvatar(nick, file);
-      if (resp.status !== 'OK') throw new Error(resp.status);
-      localStorage.setItem('avatarRefresh', nick + ':' + resp.updatedAt);
-      const avatarEl = document.getElementById('avatar');
-      if (avatarEl && resp.url) {
-        const bust = resp.updatedAt;
-        const src = resp.url + (resp.url.includes('?') ? '&' : '?') + 't=' + bust;
-        avatarEl.src = src;
+      if (!resp || resp.status !== 'OK') {
+        const status = resp?.status || 'ERR_UPLOAD';
+        throw new Error(status);
       }
-      await reloadAvatars();
+
+      let latestRecord = null;
+      try {
+        latestRecord = await fetchAvatarForNick(nick, { force: true });
+      } catch (err) {
+        log('[ranking]', err);
+      }
+
+      const timestamp = Date.now();
+      const latestUrl = latestRecord?.url || resp?.url || AVATAR_PLACEHOLDER;
+      const avatarEl = document.getElementById('avatar');
+      if (avatarEl) {
+        avatarEl.dataset.nick = nick;
+        avatarEl.dataset.nickKey = avatarNickKey(nick);
+        setImgSafe(avatarEl, latestUrl, timestamp, { param: 'ts' });
+      }
+
+      updateInlineAvatarImages(nick, latestUrl, timestamp);
+
+      try {
+        if (typeof Avatars.reloadAvatars === 'function') {
+          await Avatars.reloadAvatars({ fresh: true });
+        }
+        if (typeof Avatars.renderAllAvatars === 'function') {
+          await Avatars.renderAllAvatars();
+        }
+      } catch (err) {
+        log('[ranking]', err);
+      }
+
+      if (typeof showToast === 'function') showToast('Аватар збережено');
+      else alert('Аватар збережено');
     } catch (err) {
       log('[ranking]', err);
-      const reason = err?.message || err;
-      if (reason === 'Proxy unreachable') {
-        noteAvatarFailure(nick, reason);
-        if (typeof showToast !== 'function') {
-          alert('Не вдалося зв\'язатися з проксі');
-        }
-      } else {
-        const msg = 'Помилка завантаження';
-        if (typeof showToast === 'function') showToast(msg); else alert(msg);
-      }
+      const fallback = 'Помилка завантаження';
+      const reason = err?.message || fallback;
+      noteAvatarFailure(nick, reason);
+      const message = (typeof reason === 'string' && reason && !/^ERR_/i.test(reason) && !/^INVALID_/i.test(reason))
+        ? reason
+        : fallback;
+      if (typeof showToast === 'function') showToast(message);
+      else alert(message);
+    } finally {
+      fileInput.disabled = false;
+      if (changeBtn) changeBtn.disabled = false;
+      fileInput.value = '';
     }
   });
 
@@ -255,15 +291,5 @@ document.addEventListener('DOMContentLoaded', () => {
   const key = safeGet(localStorage, `profileKey:${nick}`) || '';
   currentNick = nick;
   loadProfile(nick, key);
-});
-
-window.addEventListener('storage', e => {
-  if (e.key === 'avatarRefresh') {
-    const [nick] = (e.newValue || '').split(':');
-    if (nick) {
-      if (nick === currentNick) updateAvatar(nick);
-      reloadAvatars();
-    }
-  }
 });
 

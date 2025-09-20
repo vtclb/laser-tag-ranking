@@ -1,6 +1,6 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js?v=2025-09-19-avatars-1';
-import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey } from './api.js?v=2025-09-19-avatars-1';
+import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-1';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-1';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
@@ -73,6 +73,32 @@ export function applyAvatarToUI(nick, imageUrl) {
     if (nick && !img.dataset.nick) img.dataset.nick = nick;
     setImgSafe(img, url);
   });
+}
+
+function updateInlineAvatarImages(nick, imageUrl, bust) {
+  const key = avatarNickKey(nick);
+  if (!key) return false;
+
+  const bustValue = resolveBustValue(bust);
+  let updated = false;
+
+  document
+    .querySelectorAll('[data-nick] img.avatar, img.avatar[data-nick]')
+    .forEach(img => {
+      if (!img) return;
+
+      const container = img.closest('[data-nick]');
+      const containerNick = img.dataset?.nick || container?.dataset?.nick || '';
+      if (!containerNick) return;
+      if (avatarNickKey(containerNick) !== key) return;
+
+      if (!img.dataset.nick) img.dataset.nick = nick;
+      img.dataset.nickKey = key;
+      setImgSafe(img, imageUrl, bustValue);
+      updated = true;
+    });
+
+  return updated;
 }
 
 const state = {
@@ -303,39 +329,57 @@ async function handleUploadClick() {
       resp = fallback;
     }
 
-    const imageUrl = resp?.url || AVATAR_PLACEHOLDER;
+    const uploadedUrl = resp?.url || AVATAR_PLACEHOLDER;
 
-    console.debug('[avatarAdmin] uploaded', { nick, url: imageUrl });
+    console.debug('[avatarAdmin] uploaded', { nick, url: uploadedUrl });
 
-    const updatedAt = resp?.updatedAt || Date.now();
-    const bustValue = resolveBustValue(updatedAt);
+    const uploadedAt = resp?.updatedAt || Date.now();
+
+    let latestRecord = null;
+    let fetchFailed = false;
+    try {
+      latestRecord = await fetchAvatarForNick(nick, { force: true });
+    } catch (err) {
+      fetchFailed = true;
+      log('[avatarAdmin]', err);
+    }
+
+    const latestUrl = latestRecord?.url || uploadedUrl;
+    const latestUpdatedAt = latestRecord?.updatedAt || uploadedAt;
+    const bustValue = resolveBustValue(latestUpdatedAt);
 
     if (previewImg) {
       previewImg.hidden = false;
-      setImgSafe(previewImg, imageUrl, bustValue);
+      setImgSafe(previewImg, latestUrl, bustValue);
     }
 
-    await updateAvatarSafe(nick, imageUrl, bustValue);
+    await updateAvatarSafe(nick, latestUrl, bustValue);
+    const inlineUpdated = updateInlineAvatarImages(nick, latestUrl, bustValue);
 
     try {
-      localStorage.setItem('avatarRefresh', `${nick}:${updatedAt}`);
+      localStorage.setItem('avatarRefresh', `${nick}:${latestUpdatedAt}`);
     } catch (err) {
       log('[avatarAdmin]', err);
     }
 
     let reloadFailed = false;
-    try {
-      await reloadAvatarsSafe({ bust: bustValue });
-    } catch (err) {
-      reloadFailed = true;
-      showMessage('Аватар оновлено, але не вдалося перезавантажити список аватарів');
+    if (fetchFailed || !inlineUpdated) {
+      try {
+        await reloadAvatarsSafe({ bust: bustValue });
+      } catch (err) {
+        reloadFailed = true;
+        log('[avatarAdmin]', err);
+      }
     }
 
-    if (!reloadFailed) {
-      showMessage('Аватар успішно завантажено');
-    }
+    showMessage('Аватар збережено');
     clearFileSelection({ keepPreview: true });
-    setStatus('Готово', { autoHide: true });
+
+    if (reloadFailed) {
+      setStatus('Аватар збережено, але не вдалося оновити список аватарів');
+    } else {
+      setStatus('Готово', { autoHide: true });
+    }
   } catch (err) {
     log('[avatarAdmin]', err);
     const message = err?.message || 'Не вдалося завантажити аватар';

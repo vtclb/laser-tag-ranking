@@ -1,8 +1,15 @@
-import { AVATARS_SHEET_ID, AVATARS_GID, AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-4';
+import { AVATAR_PLACEHOLDER, AVATAR_PROXY_BASE, VERSION } from './config.js?v=2025-09-19-avatars-1';
 import { getAvatarUrl } from './api.js';
+
+const JSON_ENDPOINTS = ['index.json', 'map.json', 'avatars.json'];
+const CSV_ENDPOINTS = ['index.csv', 'map.csv', 'avatars.csv'];
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const WHITESPACE_RE = /\s+/g;
+const KNOWN_AVATAR_FIELDS = new Set([
+  'nick', 'nickname', 'name', 'player', 'key',
+  'url', 'avatar', 'avatarurl', 'image', 'href', 'src'
+]);
 
 export const nickKey = value => {
   const input = value == null ? '' : String(value);
@@ -14,6 +21,76 @@ export const nickKey = value => {
     .replace(WHITESPACE_RE, ' ')
     .toLowerCase();
 };
+
+const VERSION_QUERY = VERSION ? `v=${encodeURIComponent(VERSION)}` : '';
+
+function buildProxyUrl(path) {
+  const base = typeof AVATAR_PROXY_BASE === 'string' ? AVATAR_PROXY_BASE : '';
+  const safeBase = base.endsWith('/') ? base : `${base}/`;
+  const cleanPath = String(path || '').replace(/^\/+/, '');
+  if (!safeBase || !cleanPath) return '';
+  const url = safeBase + cleanPath;
+  return VERSION_QUERY ? `${url}${url.includes('?') ? '&' : '?'}${VERSION_QUERY}` : url;
+}
+
+function isLikelyAvatarUrl(url) {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  return /^(?:https?:|data:|blob:)/i.test(trimmed);
+}
+
+function addAvatarRecord(map, nick, url) {
+  if (!nick || !url) return;
+  const key = nickKey(nick);
+  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
+  if (!key || !isLikelyAvatarUrl(trimmedUrl)) return;
+  if (!map.has(key)) map.set(key, trimmedUrl);
+}
+
+function harvestJsonValue(map, value) {
+  if (!value) return;
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (!entry) continue;
+      if (Array.isArray(entry)) {
+        if (entry.length >= 2) addAvatarRecord(map, entry[0], entry[1]);
+        else harvestJsonValue(map, entry);
+      } else {
+        harvestJsonValue(map, entry);
+      }
+    }
+    return;
+  }
+
+  if (typeof value === 'object') {
+    const obj = value;
+    const candidateNick =
+      obj.nick ?? obj.Nick ?? obj.nickname ?? obj.Nickname ?? obj.name ?? obj.Name ?? obj.player ?? obj.key;
+    const candidateUrl =
+      obj.url ?? obj.URL ?? obj.Url ?? obj.avatar ?? obj.avatarUrl ?? obj.image ?? obj.href ?? obj.src;
+    addAvatarRecord(map, candidateNick, candidateUrl);
+
+    for (const [k, v] of Object.entries(obj)) {
+      if (!v) continue;
+      if (typeof v === 'string') {
+        const lower = k.toLowerCase();
+        if (!KNOWN_AVATAR_FIELDS.has(lower) && isLikelyAvatarUrl(v)) {
+          addAvatarRecord(map, k, v);
+        }
+      } else if (typeof v === 'object') {
+        harvestJsonValue(map, v);
+      }
+    }
+    return;
+  }
+
+  if (typeof value === 'string') {
+    const parts = value.split(',');
+    if (parts.length >= 2) addAvatarRecord(map, parts[0], parts[1]);
+  }
+}
 
 function ensureNodeNickKey(img) {
   if (!img || !img.dataset) return { nick: '', key: '' };
@@ -43,31 +120,8 @@ function getAvatarElements() {
   return Array.from(document.querySelectorAll('img[data-nick], img[data-nick-key]'));
 }
 
-const jsonUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:json&gid=${AVATARS_GID}`;
-const csvUrl = `https://docs.google.com/spreadsheets/d/${AVATARS_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${AVATARS_GID}`;
-
 let mapPromise = null; // Promise<Map<string, string>>
 let lastSource = 'json';
-
-async function fetchMapFromJson() {
-  const res = await fetch(jsonUrl, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`Avatar JSON HTTP ${res.status}`);
-  const text = await res.text();
-  const json = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
-  const cols = json.table.cols.map(col => col.label);
-  const map = new Map();
-
-  for (const row of json.table.rows) {
-    const obj = {};
-    cols.forEach((label, idx) => {
-      obj[label] = row.c[idx] ? row.c[idx].v : '';
-    });
-    const nick = (obj.Nickname || obj.nick || obj[cols[0]] || '').trim();
-    const url = (obj.AvatarURL || obj.url || obj[cols[1]] || '').trim();
-    if (nick && url) map.set(nickKey(nick), url);
-  }
-  return map;
-}
 
 function parseCsvLine(line) {
   return line
@@ -75,36 +129,77 @@ function parseCsvLine(line) {
     ?.map(cell => cell.replace(/^"|"$/g, '').trim()) || [];
 }
 
+function findColumnIndex(headers, patterns, fallbackIndex = -1) {
+  const idx = headers.findIndex(header => patterns.some(re => re.test(header)));
+  return idx >= 0 ? idx : fallbackIndex;
+}
+
+async function fetchMapFromJson() {
+  for (const endpoint of JSON_ENDPOINTS) {
+    const url = buildProxyUrl(endpoint);
+    if (!url) continue;
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) {
+        console.warn(`[avatars] proxy JSON ${endpoint} HTTP ${res.status}`);
+        continue;
+      }
+      const data = await res.json();
+      const map = new Map();
+      harvestJsonValue(map, data);
+      if (map.size) return { map, endpoint };
+      console.warn(`[avatars] proxy JSON ${endpoint} empty`);
+    } catch (err) {
+      console.warn(`[avatars] proxy JSON ${endpoint} failed`, err);
+    }
+  }
+  return { map: new Map(), endpoint: null };
+}
+
 async function fetchMapFromCsv() {
-  const res = await fetch(csvUrl, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`Avatar CSV HTTP ${res.status}`);
-  const text = await res.text();
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  if (!lines.length) return new Map();
+  for (const endpoint of CSV_ENDPOINTS) {
+    const url = buildProxyUrl(endpoint);
+    if (!url) continue;
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) {
+        console.warn(`[avatars] proxy CSV ${endpoint} HTTP ${res.status}`);
+        continue;
+      }
+      const text = await res.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (!lines.length) {
+        console.warn(`[avatars] proxy CSV ${endpoint} empty`);
+        continue;
+      }
 
-  const headers = parseCsvLine(lines[0]);
-  const iNick = headers.findIndex(header => /nick/i.test(header));
-  const iUrl = headers.findIndex(header => /url/i.test(header));
-  const nickIndex = iNick >= 0 ? iNick : 0;
-  const urlIndex = iUrl >= 0 ? iUrl : 1;
-  const map = new Map();
+      const headers = parseCsvLine(lines[0]);
+      const nickIndex = findColumnIndex(headers, [/key/i, /nick/i, /name/i, /player/i], 0);
+      const urlIndex = findColumnIndex(headers, [/url/i, /avatar/i, /image/i, /href/i, /src/i], 1);
+      const map = new Map();
 
-  lines.slice(1).forEach(line => {
-    const cells = parseCsvLine(line);
-    const nick = cells[nickIndex] || '';
-    const url = cells[urlIndex] || '';
-    if (nick && url) map.set(nickKey(nick), url);
-  });
+      lines.slice(1).forEach(line => {
+        const cells = parseCsvLine(line);
+        const nick = cells[nickIndex] || '';
+        const url = cells[urlIndex] || '';
+        addAvatarRecord(map, nick, url);
+      });
 
-  return map;
+      if (map.size) return { map, endpoint };
+      console.warn(`[avatars] proxy CSV ${endpoint} empty`);
+    } catch (err) {
+      console.warn(`[avatars] proxy CSV ${endpoint} failed`, err);
+    }
+  }
+  return { map: new Map(), endpoint: null };
 }
 
 async function fetchMap() {
   try {
-    const map = await fetchMapFromJson();
+    const { map, endpoint } = await fetchMapFromJson();
     if (map.size) {
-      lastSource = 'json';
-      console.log(`[avatars] source=json size=${map.size}`);
+      lastSource = endpoint ? `proxy-json:${endpoint}` : 'proxy-json';
+      console.log(`[avatars] source=${lastSource} size=${map.size}`);
       return map;
     }
     console.warn('[avatars] avatar JSON feed returned no rows');
@@ -113,10 +208,10 @@ async function fetchMap() {
   }
 
   try {
-    const csvMap = await fetchMapFromCsv();
+    const { map: csvMap, endpoint } = await fetchMapFromCsv();
     if (csvMap.size) {
-      lastSource = 'csv';
-      console.log(`[avatars] source=csv size=${csvMap.size}`);
+      lastSource = endpoint ? `proxy-csv:${endpoint}` : 'proxy-csv';
+      console.log(`[avatars] source=${lastSource} size=${csvMap.size}`);
       return csvMap;
     }
     console.warn('[avatars] avatar CSV feed returned no rows');

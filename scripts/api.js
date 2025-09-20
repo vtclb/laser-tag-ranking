@@ -1,6 +1,6 @@
 // scripts/api.js
 import { log } from './logger.js?v=2025-09-19-4';
-import { AVATAR_PLACEHOLDER, DEFAULT_GAS_FALLBACK_URL } from './config.js?v=2025-09-19-4';
+import { AVATAR_PLACEHOLDER, DEFAULT_GAS_FALLBACK_URL } from './config.js?v=2025-09-19-avatars-1';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;

@@ -2,6 +2,7 @@
 import { log } from './logger.js?v=2025-09-19-avatars-2';
 import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
+import { reloadAvatars, updateOneAvatar } from './avatars.client.js?v=2025-09-19-avatars-2';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const UPLOAD_ACTION = 'uploadAvatar';
@@ -113,7 +114,6 @@ const state = {
 };
 
 let formReady = false;
-let avatarModulePromise = null;
 let statusHideTimer = null;
 
 function setStatus(message, options = {}) {
@@ -258,20 +258,10 @@ async function populatePlayersDatalist(league) {
   }
 }
 
-async function ensureAvatarsModule() {
-  if (!avatarModulePromise) {
-    avatarModulePromise = import('./avatars.client.js?v=2025-09-19-avatars-2');
-  }
-  return avatarModulePromise;
-}
-
 async function reloadAvatarsSafe(options) {
   try {
-    const mod = await ensureAvatarsModule();
-    if (mod && typeof mod.reloadAvatars === 'function') {
-      const fresh = Boolean(options?.fresh ?? options?.bust);
-      await mod.reloadAvatars({ fresh });
-    }
+    const fresh = Boolean(options?.fresh ?? options?.bust);
+    await reloadAvatars({ fresh });
   } catch (err) {
     log('[avatarAdmin]', err);
     throw err;
@@ -280,9 +270,8 @@ async function reloadAvatarsSafe(options) {
 
 async function updateAvatarSafe(nick, url, bust) {
   try {
-    const mod = await ensureAvatarsModule();
-    if (mod && typeof mod.updateOneAvatar === 'function') {
-      mod.updateOneAvatar(nick, url, bust);
+    if (typeof updateOneAvatar === 'function') {
+      updateOneAvatar(nick, url, bust);
     }
   } catch (err) {
     log('[avatarAdmin]', err);

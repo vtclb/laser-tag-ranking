@@ -100,20 +100,21 @@ function isVisible(el) {
 async function fetchMap(force = false) {
   try {
     const result = await fetchAvatarsMap({ force });
-    const map = result?.map instanceof Map ? result.map : new Map();
-    lastSource = result?.source || (map.size ? 'proxy' : 'none');
+    const mapping = (result && typeof result.mapping === 'object') ? result.mapping : Object.create(null);
+    const size = Object.keys(mapping).length;
+    lastSource = result?.source || (size ? 'proxy' : 'none');
     lastUpdatedAt = Number.isFinite(result?.updatedAt) ? result.updatedAt : null;
-    if (map.size) {
-      console.log(`[avatars] source=${lastSource} size=${map.size}`);
+    if (size) {
+      console.log(`[avatars] source=${lastSource} size=${size}`);
     } else {
       console.warn('[avatars] WARN: avatar feed returned no rows; using placeholders only');
     }
-    return map;
+    return mapping;
   } catch (err) {
     lastSource = 'error';
     lastUpdatedAt = null;
     console.warn('[avatars] avatar feed failed', err);
-    return new Map();
+    return Object.create(null);
   }
 }
 
@@ -126,14 +127,14 @@ export async function renderAllAvatars(rootOrOptions, maybeOptions) {
   const entries = imgs.map(ensureAvatarEntry);
   entries.forEach(entry => applyAvatar(entry.img, '', bustOption));
 
-  const map = await (mapPromise ??= fetchMap());
+  const mapping = await (mapPromise ??= fetchMap());
   const baseBust = bustOption ?? lastUpdatedAt ?? Date.now();
 
   let directMatches = 0;
   const missing = [];
 
   for (const entry of entries) {
-    const src = entry.key ? map.get(entry.key) : '';
+    const src = entry.key ? mapping[entry.key] : '';
     if (src) {
       directMatches += 1;
       applyAvatar(entry.img, src, baseBust);
@@ -160,7 +161,7 @@ export async function renderAllAvatars(rootOrOptions, maybeOptions) {
       const canonicalKey = entry.key || avatarNickKey(entry.nick || lookupNick);
       if (canonicalKey) {
         entry.img.dataset.nickKey = canonicalKey;
-        map.set(canonicalKey, url);
+        mapping[canonicalKey] = url;
       }
       applyAvatar(entry.img, url, recordBust);
       lookupMatches += 1;
@@ -172,7 +173,7 @@ export async function renderAllAvatars(rootOrOptions, maybeOptions) {
   const unresolved = visibleMissing
     .filter(entry => {
       const key = entry.key || avatarNickKey(entry.nick);
-      return !(key && map.get(key));
+      return !(key && mapping[key]);
     })
     .slice(0, 5)
     .map(entry => entry.nick || entry.key || '')

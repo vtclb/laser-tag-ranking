@@ -141,17 +141,11 @@ function rankFromPoints(p) {
 const _fetchCache = {};
 export const avatarCache = new Map();
 
-const AVATAR_JSON_ENDPOINTS = ['map.json', 'index.json', 'avatars.json'];
-const AVATAR_CSV_ENDPOINTS = ['map.csv', 'index.csv', 'avatars.csv'];
 const AVATAR_MAP_CACHE_KEY = 'avatar:map';
 const AVATAR_MAP_TTL = 5 * 60 * 1000; // 5 хвилин достатньо для кешу
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const WHITESPACE_RE = /\s+/g;
-const KNOWN_AVATAR_FIELDS = new Set([
-  'nick', 'nickname', 'name', 'player', 'key',
-  'url', 'avatar', 'avatarurl', 'image', 'href', 'src'
-]);
 
 const runtimeRoot = typeof window !== 'undefined' ? window : globalThis;
 const headerTemplate = {};
@@ -176,16 +170,6 @@ function avatarProxyBase() {
   return base.endsWith('/') ? base : `${base}/`;
 }
 
-function buildAvatarProxyUrl(path) {
-  const base = avatarProxyBase();
-  const cleanPath = typeof path === 'string' ? path.replace(/^\/+/, '').trim() : '';
-  if (!base || !cleanPath) return '';
-  const url = base + cleanPath;
-  if (!ASSETS_VER) return url;
-  const query = `v=${encodeURIComponent(ASSETS_VER)}`;
-  return url + (url.includes('?') ? '&' : '?') + query;
-}
-
 export function avatarNickKey(value) {
   const input = value == null ? '' : String(value);
   return input
@@ -194,76 +178,6 @@ export function avatarNickKey(value) {
     .trim()
     .replace(WHITESPACE_RE, ' ')
     .toLowerCase();
-}
-
-function isLikelyAvatarUrl(url) {
-  if (typeof url !== 'string') return false;
-  const trimmed = url.trim();
-  if (!trimmed) return false;
-  return /^(?:https?:|data:|blob:)/i.test(trimmed);
-}
-
-function addAvatarRecord(map, nick, url) {
-  if (!nick || !url) return;
-  const key = avatarNickKey(nick);
-  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
-  if (!key || !isLikelyAvatarUrl(trimmedUrl)) return;
-  if (!map.has(key)) map.set(key, trimmedUrl);
-}
-
-function harvestJsonValue(map, value) {
-  if (!value) return;
-
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      if (!entry) continue;
-      if (Array.isArray(entry)) {
-        if (entry.length >= 2) addAvatarRecord(map, entry[0], entry[1]);
-        else harvestJsonValue(map, entry);
-      } else {
-        harvestJsonValue(map, entry);
-      }
-    }
-    return;
-  }
-
-  if (typeof value === 'object') {
-    const obj = value;
-    const candidateNick =
-      obj.nick ?? obj.Nick ?? obj.nickname ?? obj.Nickname ?? obj.name ?? obj.Name ?? obj.player ?? obj.key;
-    const candidateUrl =
-      obj.url ?? obj.URL ?? obj.Url ?? obj.avatar ?? obj.avatarUrl ?? obj.image ?? obj.href ?? obj.src;
-    addAvatarRecord(map, candidateNick, candidateUrl);
-
-    for (const [k, v] of Object.entries(obj)) {
-      if (!v) continue;
-      if (typeof v === 'string') {
-        const lower = k.toLowerCase();
-        if (!KNOWN_AVATAR_FIELDS.has(lower) && isLikelyAvatarUrl(v)) {
-          addAvatarRecord(map, k, v);
-        }
-      } else if (typeof v === 'object') {
-        harvestJsonValue(map, v);
-      }
-    }
-    return;
-  }
-
-  if (typeof value === 'string') {
-    const parts = value.split(',');
-    if (parts.length >= 2) addAvatarRecord(map, parts[0], parts[1]);
-  }
-}
-
-function parseCsvLine(line) {
-  return line
-    .match(/(".*?"|[^,]+)/g)
-    ?.map(cell => cell.replace(/^"|"$/g, '').trim()) || [];
-}
-
-function findColumnIndex(headers, patterns, fallbackIndex = -1) {
-  const idx = headers.findIndex(header => patterns.some(re => re.test(header)));
-  return idx >= 0 ? idx : fallbackIndex;
 }
 
 function resolveUpdatedAt(headers) {
@@ -283,94 +197,61 @@ function resolveUpdatedAt(headers) {
   return Date.now();
 }
 
-async function fetchAvatarJsonFeed(endpoint) {
-  const url = buildAvatarProxyUrl(endpoint);
-  if (!url) return null;
-  let response;
-  try {
-    response = await fetch(url, { headers: AV_HEADERS, cache: 'no-store' });
-  } catch {
-    return null;
+function sanitizeAvatarMapping(rawMapping) {
+  const mapping = Object.create(null);
+  if (!rawMapping || typeof rawMapping !== 'object') return mapping;
+  for (const [rawKey, rawUrl] of Object.entries(rawMapping)) {
+    const key = avatarNickKey(rawKey);
+    const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+    if (key && url) mapping[key] = url;
   }
-  if (!response || !response.ok) return null;
-
-  let data;
-  try { data = await response.json(); }
-  catch { return null; }
-
-  const map = new Map();
-  harvestJsonValue(map, data);
-  const source = `proxy-json:${endpoint}`;
-  const updatedAt = resolveUpdatedAt(response.headers);
-  return { entries: Array.from(map.entries()), source, updatedAt };
+  return mapping;
 }
 
-async function fetchAvatarCsvFeed(endpoint) {
-  const url = buildAvatarProxyUrl(endpoint);
-  if (!url) return null;
-  let response;
-  try {
-    response = await fetch(url, { headers: AV_HEADERS, cache: 'no-store' });
-  } catch {
-    return null;
-  }
-  if (!response || !response.ok) return null;
+function normalizeAvatarMapPayload(raw, { defaultSource = 'worker' } = {}) {
+  if (!raw || typeof raw !== 'object') return null;
 
-  const text = await parseTextSafely(response);
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  if (!lines.length) return null;
-
-  const headers = parseCsvLine(lines[0]);
-  const nickIndex = findColumnIndex(headers, [/key/i, /nick/i, /name/i, /player/i], 0);
-  const urlIndex = findColumnIndex(headers, [/url/i, /avatar/i, /image/i, /href/i, /src/i], 1);
-  const map = new Map();
-
-  lines.slice(1).forEach(line => {
-    const cells = parseCsvLine(line);
-    const nick = cells[nickIndex] || '';
-    const urlValue = cells[urlIndex] || '';
-    addAvatarRecord(map, nick, urlValue);
-  });
-
-  const source = `proxy-csv:${endpoint}`;
-  const updatedAt = resolveUpdatedAt(response.headers);
-  return { entries: Array.from(map.entries()), source, updatedAt };
-}
-
-async function loadAvatarMapFromProxy() {
-  for (const endpoint of AVATAR_JSON_ENDPOINTS) {
-    const result = await fetchAvatarJsonFeed(endpoint);
-    if (result && result.entries.length) return result;
+  if (raw.mapping && typeof raw.mapping === 'object') {
+    return {
+      mapping: sanitizeAvatarMapping(raw.mapping),
+      updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : Date.now(),
+      source: typeof raw.source === 'string' ? raw.source : defaultSource
+    };
   }
 
-  for (const endpoint of AVATAR_CSV_ENDPOINTS) {
-    const result = await fetchAvatarCsvFeed(endpoint);
-    if (result && result.entries.length) return result;
-  }
-
-  return { entries: [], source: 'none', updatedAt: Date.now() };
-}
-
-function serialiseAvatarMap(result) {
-  const entries = Array.isArray(result?.entries) ? result.entries : [];
-  const source = typeof result?.source === 'string' ? result.source : 'none';
-  const updatedAt = Number.isFinite(result?.updatedAt) ? result.updatedAt : null;
-  return { entries, source, updatedAt };
-}
-
-function deserialiseAvatarMap(obj) {
-  const entries = Array.isArray(obj?.entries) ? obj.entries : [];
-  const source = typeof obj?.source === 'string' ? obj.source : 'none';
-  const updatedAt = Number.isFinite(obj?.updatedAt) ? obj.updatedAt : null;
-  const map = new Map();
-  entries.forEach(entry => {
-    if (!entry || entry.length < 2) return;
-    const [key, url] = entry;
-    if (typeof key === 'string' && typeof url === 'string' && key && url) {
-      map.set(key, url);
+  if (Array.isArray(raw.entries)) {
+    const mapping = Object.create(null);
+    for (const entry of raw.entries) {
+      if (!entry || entry.length < 2) continue;
+      const [nick, url] = entry;
+      const key = avatarNickKey(nick);
+      const trimmed = typeof url === 'string' ? url.trim() : '';
+      if (key && trimmed) mapping[key] = trimmed;
     }
-  });
-  return { map, source, updatedAt };
+    return {
+      mapping,
+      updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : Date.now(),
+      source: typeof raw.source === 'string' ? raw.source : defaultSource
+    };
+  }
+
+  return null;
+}
+
+function emptyAvatarMapResult(source = 'none') {
+  return { mapping: {}, updatedAt: Date.now(), source };
+}
+
+function rememberAvatarMap(result, timestamp = Date.now()) {
+  const payload = {
+    mapping: sanitizeAvatarMapping(result?.mapping),
+    updatedAt: Number.isFinite(result?.updatedAt) ? result.updatedAt : Date.now(),
+    source: typeof result?.source === 'string' ? result.source : 'worker'
+  };
+  const info = { data: payload, time: timestamp };
+  _fetchCache[AVATAR_MAP_CACHE_KEY] = info;
+  safeSet(window.__SESS, AVATAR_MAP_CACHE_KEY, JSON.stringify(info));
+  return payload;
 }
 
 function restoreAvatarRecordFromStorage(rawValue) {
@@ -584,7 +465,8 @@ export async function fetchAvatarsMap({ force = false } = {}) {
   } else {
     const cached = _fetchCache[AVATAR_MAP_CACHE_KEY];
     if (cached && now - cached.time < AVATAR_MAP_TTL) {
-      return deserialiseAvatarMap(cached.data);
+      const normalised = normalizeAvatarMapPayload(cached.data, { defaultSource: 'cache' });
+      if (normalised) return normalised;
     }
 
     const raw = safeGet(window.__SESS, AVATAR_MAP_CACHE_KEY);
@@ -593,7 +475,8 @@ export async function fetchAvatarsMap({ force = false } = {}) {
         const stored = JSON.parse(raw);
         if (stored && typeof stored === 'object' && now - stored.time < AVATAR_MAP_TTL) {
           _fetchCache[AVATAR_MAP_CACHE_KEY] = stored;
-          return deserialiseAvatarMap(stored.data);
+          const normalised = normalizeAvatarMapPayload(stored.data, { defaultSource: 'cache' });
+          if (normalised) return normalised;
         }
       } catch {
         safeDel(window.__SESS, AVATAR_MAP_CACHE_KEY);
@@ -601,11 +484,45 @@ export async function fetchAvatarsMap({ force = false } = {}) {
     }
   }
 
-  const fresh = serialiseAvatarMap(await loadAvatarMapFromProxy());
-  const info = { data: fresh, time: now };
-  _fetchCache[AVATAR_MAP_CACHE_KEY] = info;
-  safeSet(window.__SESS, AVATAR_MAP_CACHE_KEY, JSON.stringify(info));
-  return deserialiseAvatarMap(fresh);
+  const base = typeof AVATARS_BASE === 'string' ? AVATARS_BASE.trim() : '';
+  if (!base) {
+    return rememberAvatarMap(emptyAvatarMapResult('unconfigured'), now);
+  }
+
+  const bust = force ? now : '';
+  const targetUrl = bust ? `${base}${base.includes('?') ? '&' : '?'}t=${bust}` : base;
+
+  let response;
+  try {
+    response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: { ...AV_HEADERS, 'Cache-Control': 'no-cache' }
+    });
+  } catch (err) {
+    if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarsMap error', err);
+    return rememberAvatarMap(emptyAvatarMapResult('error'), now);
+  }
+
+  if (!response || !response.ok) {
+    if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarsMap status', response?.status);
+    return rememberAvatarMap(emptyAvatarMapResult('error'), now);
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch (err) {
+    if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarsMap parse', err);
+    data = null;
+  }
+
+  const normalised = normalizeAvatarMapPayload(data) || emptyAvatarMapResult('worker');
+  if (!normalised.updatedAt || !Number.isFinite(normalised.updatedAt)) {
+    normalised.updatedAt = resolveUpdatedAt(response.headers);
+  }
+  if (!normalised.source) normalised.source = typeof data?.source === 'string' ? data.source : 'worker';
+
+  return rememberAvatarMap(normalised, now);
 }
 
 export async function fetchAvatarForNick(nick, { force = false } = {}) {
@@ -625,26 +542,51 @@ export async function fetchAvatarForNick(nick, { force = false } = {}) {
     if (cached) return cached;
   }
 
-  const { map, updatedAt: mapUpdatedAt } = await fetchAvatarsMap({ force });
-  const resolvedUrl = map.get(key) || null;
-  const record = { url: resolvedUrl, updatedAt: mapUpdatedAt ?? Date.now() };
-  storeAvatarRecord(key, record, { legacyKey: originalNick });
-  if (resolvedUrl) return record;
+  const base = avatarProxyBase() || AVATARS_BASE || '';
+  if (!base) {
+    const record = { url: null, updatedAt: Date.now() };
+    storeAvatarRecord(key, record, { legacyKey: originalNick });
+    return record;
+  }
 
-  if (!originalNick) return record;
+  const bust = Date.now();
+  const target = `${base}${encodeURIComponent(originalNick)}?t=${bust}`;
 
+  let response;
   try {
-    const resp = await gasPost('', { action: 'getAvatarUrl', nick: originalNick });
-    if (resp && resp.status === 'OK') {
-      const fallback = {
-        url: resp.url || null,
-        updatedAt: resp.updatedAt || Date.now()
-      };
-      storeAvatarRecord(key, fallback, { legacyKey: originalNick });
-      return fallback;
-    }
+    response = await fetch(target, {
+      method: 'GET',
+      headers: { ...AV_HEADERS, 'Cache-Control': 'no-cache' }
+    });
   } catch (err) {
-    if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarForNick fallback', err);
+    if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarForNick error', err);
+    const record = { url: null, updatedAt: Date.now() };
+    storeAvatarRecord(key, record, { legacyKey: originalNick });
+    return record;
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch (err) {
+    if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarForNick parse', err);
+    data = null;
+  }
+
+  const rawUrl = data && typeof data.url === 'string' ? data.url.trim() : '';
+  const updatedAtCandidate = Number.isFinite(data?.updatedAt) ? data.updatedAt : resolveUpdatedAt(response.headers);
+  const record = {
+    url: rawUrl || null,
+    updatedAt: Number.isFinite(updatedAtCandidate) ? updatedAtCandidate : Date.now()
+  };
+
+  storeAvatarRecord(key, record, { legacyKey: originalNick });
+
+  const cachedMap = _fetchCache[AVATAR_MAP_CACHE_KEY];
+  const normalisedMap = cachedMap ? normalizeAvatarMapPayload(cachedMap.data, { defaultSource: 'cache' }) : null;
+  if (normalisedMap && record.url) {
+    normalisedMap.mapping[key] = record.url;
+    rememberAvatarMap(normalisedMap, Date.now());
   }
 
   return record;

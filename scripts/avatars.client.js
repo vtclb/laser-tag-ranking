@@ -1,4 +1,4 @@
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-1';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
 import { avatarNickKey, fetchAvatarForNick, fetchAvatarsMap } from './api.js';
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;

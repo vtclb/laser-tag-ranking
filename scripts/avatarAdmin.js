@@ -1,7 +1,7 @@
 // scripts/avatarAdmin.js
-import { log } from './logger.js?v=2025-09-19-avatars-1';
-import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-1';
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-1';
+import { log } from './logger.js?v=2025-09-19-avatars-2';
+import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const UPLOAD_ACTION = 'uploadAvatar';
@@ -260,7 +260,7 @@ async function populatePlayersDatalist(league) {
 
 async function ensureAvatarsModule() {
   if (!avatarModulePromise) {
-    avatarModulePromise = import('./avatars.client.js?v=2025-09-19-avatars-1');
+    avatarModulePromise = import('./avatars.client.js?v=2025-09-19-avatars-2');
   }
   return avatarModulePromise;
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
-const FALLBACK_URL =
-  'https://script.google.com/macros/s/AKfycbzhQgbHauvk-ekGVHGRMUnEk-Rt-9M3QI_Jw-bjkRF4jAqpPtXQSDw3BsmivTHdvUY7Gw/exec';
+const { GAS_BASE_URL } = await import('../scripts/config.js');
+const FALLBACK_URL = GAS_BASE_URL;
 
 const sessionStore = new Map();
 const fakeWindow = {
@@ -64,7 +64,7 @@ fakeWindow.fetch = (...args) => globalThis.fetch(...args);
 
 const { saveResult, PROXY_ORIGIN } = await import('../scripts/api.js');
 
-assert.equal(window.GAS_FALLBACK_URL, FALLBACK_URL);
+assert.equal(window.GAS_FALLBACK_URL, undefined);
 
 const result = await saveResult({ action: 'saveResult', league: 'sundaygames' });
 

@@ -1,6 +1,6 @@
 // scripts/api.js
-import { log } from './logger.js?v=2025-09-19-avatars-1';
-import { AVATAR_PLACEHOLDER, AVATAR_PROXY_BASE, DEFAULT_GAS_FALLBACK_URL, VERSION } from './config.js';
+import { log } from './logger.js?v=2025-09-19-avatars-2';
+import { AVATAR_PLACEHOLDER, AVATARS_BASE, GAS_BASE_URL, GAS_JSON_URL, ASSETS_VER } from './config.js';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -68,8 +68,7 @@ window.WEB_APP_URL  = WEB_APP_URL;
 window.PROXY_URL    = PROXY_URL;
 window.PROXY_ORIGIN = PROXY_ORIGIN;
 
-// Додатковий прямий бекап на Apps Script (опційно):
-// <script>window.GAS_FALLBACK_URL='https://script.google.com/macros/s/XXX/exec';</script>
+// Додатковий прямий бекап на Apps Script налаштовується через GAS_BASE_URL у config.js
 
 // ==================== NET HELPERS ====================
 async function parseTextSafely(res) {
@@ -165,14 +164,14 @@ const originHeader = runtimeRoot && runtimeRoot.location && runtimeRoot.location
 if (originHeader && !headerTemplate['x-avatar-origin']) {
   headerTemplate['x-avatar-origin'] = originHeader;
 }
-if (VERSION && !headerTemplate['x-avatar-version']) {
-  headerTemplate['x-avatar-version'] = VERSION;
+if (ASSETS_VER && !headerTemplate['x-avatar-version']) {
+  headerTemplate['x-avatar-version'] = ASSETS_VER;
 }
 if (!headerTemplate['x-avatar-proxy']) headerTemplate['x-avatar-proxy'] = 'laser-tag-ranking';
 export const AV_HEADERS = Object.freeze(headerTemplate);
 
 function avatarProxyBase() {
-  const base = typeof AVATAR_PROXY_BASE === 'string' ? AVATAR_PROXY_BASE.trim() : '';
+  const base = typeof AVATARS_BASE === 'string' ? AVATARS_BASE.trim() : '';
   if (!base) return '';
   return base.endsWith('/') ? base : `${base}/`;
 }
@@ -182,8 +181,8 @@ function buildAvatarProxyUrl(path) {
   const cleanPath = typeof path === 'string' ? path.replace(/^\/+/, '').trim() : '';
   if (!base || !cleanPath) return '';
   const url = base + cleanPath;
-  if (!VERSION) return url;
-  const query = `v=${encodeURIComponent(VERSION)}`;
+  if (!ASSETS_VER) return url;
+  const query = `v=${encodeURIComponent(ASSETS_VER)}`;
   return url + (url.includes('?') ? '&' : '?') + query;
 }
 
@@ -545,7 +544,7 @@ export async function saveResult(data) {
   const body = toFormUrlEncoded(payload);
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
 
-  console.log('[saveResult] v=2025-09-19-avatars-1');
+  console.log(`[saveResult] v=${ASSETS_VER}`);
   const attempt = async (targetUrl) => {
     try {
       const res = await fetch(targetUrl, { method: 'POST', headers, body });
@@ -562,18 +561,9 @@ export async function saveResult(data) {
   let result = await attempt(PROXY_ORIGIN); // (!) кореневий URL воркера, БЕЗ /json
 
   // 2) опційний прямий fallback на GAS
-  const fallbackRaw = (typeof window !== 'undefined' ? window.GAS_FALLBACK_URL : '');
   const needRetry = !result.ok && ['ERR', 'ERR_PROXY', 'ERR_NETWORK', 'ERR_JSON_PARSE', 'ERR_HTML'].includes(result.status);
-  if (needRetry && fallbackRaw) {
-    const trimmed = String(fallbackRaw).trim();
-    if (trimmed) {
-      let targetUrl = trimmed;
-      try {
-        const fb = normalizeProxyBase(trimmed, { name: 'GAS_FALLBACK_URL' });
-        targetUrl = fb.proxyOrigin; // у GAS кореневий exec без '/'
-      } catch (e) { /* ignore */ }
-      result = await attempt(targetUrl);
-    }
+  if (needRetry && GAS_BASE_URL) {
+    result = await attempt(GAS_BASE_URL);
   }
   return result;
 }
@@ -716,11 +706,7 @@ export function toBase64NoPrefix(file) {
 // ==================== JSON API (general) ====================
 export async function gasPost(path = '', json = {}) {
   const payload = (json && typeof json === 'object') ? json : {};
-  const root = typeof window !== 'undefined' ? window : globalThis;
-  const rawFallback = root && typeof root.GAS_FALLBACK_URL === 'string'
-    ? root.GAS_FALLBACK_URL.trim()
-    : '';
-  const baseUrl = rawFallback || DEFAULT_GAS_FALLBACK_URL || '';
+  const baseUrl = GAS_JSON_URL || GAS_BASE_URL || '';
   if (!baseUrl) {
     return { status: 'ERR', message: 'GAS fallback URL not configured' };
   }

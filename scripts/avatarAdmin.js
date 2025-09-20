@@ -1,6 +1,6 @@
 // scripts/avatarAdmin.js
-import { log } from './logger.js?v=2025-09-19-4';
-import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey } from './api.js?v=2025-09-19-4';
+import { log } from './logger.js?v=2025-09-19-avatars-1';
+import { uploadAvatar, gasPost, toBase64NoPrefix, loadPlayers, avatarNickKey } from './api.js?v=2025-09-19-avatars-1';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-1';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;

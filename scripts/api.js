@@ -187,7 +187,7 @@ function buildAvatarProxyUrl(path) {
   return url + (url.includes('?') ? '&' : '?') + query;
 }
 
-function nickKey(value) {
+export function avatarNickKey(value) {
   const input = value == null ? '' : String(value);
   return input
     .replace(ZERO_WIDTH_CHARS_RE, '')
@@ -206,7 +206,7 @@ function isLikelyAvatarUrl(url) {
 
 function addAvatarRecord(map, nick, url) {
   if (!nick || !url) return;
-  const key = nickKey(nick);
+  const key = avatarNickKey(nick);
   const trimmedUrl = typeof url === 'string' ? url.trim() : '';
   if (!key || !isLikelyAvatarUrl(trimmedUrl)) return;
   if (!map.has(key)) map.set(key, trimmedUrl);
@@ -427,7 +427,7 @@ export function clearFetchCache(key) {
       avatarCache.clear();
     } else {
       avatarCache.delete(raw);
-      const canonical = nickKey(raw);
+      const canonical = avatarNickKey(raw);
       if (canonical && canonical !== raw) avatarCache.delete(canonical);
     }
   }
@@ -620,7 +620,7 @@ export async function fetchAvatarsMap({ force = false } = {}) {
 
 export async function fetchAvatarForNick(nick, { force = false } = {}) {
   const originalNick = typeof nick === 'string' ? nick.trim() : '';
-  const key = nickKey(originalNick);
+  const key = avatarNickKey(originalNick);
   if (!key) {
     return { url: null, updatedAt: Date.now() };
   }

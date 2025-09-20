@@ -1,5 +1,6 @@
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-1';
-import { renderAllAvatars, nickKey } from './avatars.client.js?v=2025-09-19-avatars-1';
+import { avatarNickKey } from './api.js?v=2025-09-19-4';
+import { renderAllAvatars } from './avatars.client.js?v=2025-09-19-avatars-1';
 
 export async function setAvatar(img, nick, { width, height } = {}) {
   if (!img) return;
@@ -7,7 +8,7 @@ export async function setAvatar(img, nick, { width, height } = {}) {
   const label = typeof nick === 'string' ? nick : '';
   if (label) img.dataset.nick = label;
   else delete img.dataset.nick;
-  if (label) img.dataset.nickKey = nickKey(label);
+  if (label) img.dataset.nickKey = avatarNickKey(label);
   else delete img.dataset.nickKey;
 
   img.referrerPolicy = 'no-referrer';

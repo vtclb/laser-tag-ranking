@@ -1,15 +1,8 @@
-import { AVATAR_PLACEHOLDER, AVATAR_PROXY_BASE, VERSION } from './config.js?v=2025-09-19-avatars-1';
-import { getAvatarUrl } from './api.js';
-
-const JSON_ENDPOINTS = ['index.json', 'map.json', 'avatars.json'];
-const CSV_ENDPOINTS = ['index.csv', 'map.csv', 'avatars.csv'];
+import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-1';
+import { fetchAvatarForNick, fetchAvatarsMap } from './api.js';
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const WHITESPACE_RE = /\s+/g;
-const KNOWN_AVATAR_FIELDS = new Set([
-  'nick', 'nickname', 'name', 'player', 'key',
-  'url', 'avatar', 'avatarurl', 'image', 'href', 'src'
-]);
 
 export const nickKey = value => {
   const input = value == null ? '' : String(value);
@@ -21,76 +14,6 @@ export const nickKey = value => {
     .replace(WHITESPACE_RE, ' ')
     .toLowerCase();
 };
-
-const VERSION_QUERY = VERSION ? `v=${encodeURIComponent(VERSION)}` : '';
-
-function buildProxyUrl(path) {
-  const base = typeof AVATAR_PROXY_BASE === 'string' ? AVATAR_PROXY_BASE : '';
-  const safeBase = base.endsWith('/') ? base : `${base}/`;
-  const cleanPath = String(path || '').replace(/^\/+/, '');
-  if (!safeBase || !cleanPath) return '';
-  const url = safeBase + cleanPath;
-  return VERSION_QUERY ? `${url}${url.includes('?') ? '&' : '?'}${VERSION_QUERY}` : url;
-}
-
-function isLikelyAvatarUrl(url) {
-  if (typeof url !== 'string') return false;
-  const trimmed = url.trim();
-  if (!trimmed) return false;
-  return /^(?:https?:|data:|blob:)/i.test(trimmed);
-}
-
-function addAvatarRecord(map, nick, url) {
-  if (!nick || !url) return;
-  const key = nickKey(nick);
-  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
-  if (!key || !isLikelyAvatarUrl(trimmedUrl)) return;
-  if (!map.has(key)) map.set(key, trimmedUrl);
-}
-
-function harvestJsonValue(map, value) {
-  if (!value) return;
-
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      if (!entry) continue;
-      if (Array.isArray(entry)) {
-        if (entry.length >= 2) addAvatarRecord(map, entry[0], entry[1]);
-        else harvestJsonValue(map, entry);
-      } else {
-        harvestJsonValue(map, entry);
-      }
-    }
-    return;
-  }
-
-  if (typeof value === 'object') {
-    const obj = value;
-    const candidateNick =
-      obj.nick ?? obj.Nick ?? obj.nickname ?? obj.Nickname ?? obj.name ?? obj.Name ?? obj.player ?? obj.key;
-    const candidateUrl =
-      obj.url ?? obj.URL ?? obj.Url ?? obj.avatar ?? obj.avatarUrl ?? obj.image ?? obj.href ?? obj.src;
-    addAvatarRecord(map, candidateNick, candidateUrl);
-
-    for (const [k, v] of Object.entries(obj)) {
-      if (!v) continue;
-      if (typeof v === 'string') {
-        const lower = k.toLowerCase();
-        if (!KNOWN_AVATAR_FIELDS.has(lower) && isLikelyAvatarUrl(v)) {
-          addAvatarRecord(map, k, v);
-        }
-      } else if (typeof v === 'object') {
-        harvestJsonValue(map, v);
-      }
-    }
-    return;
-  }
-
-  if (typeof value === 'string') {
-    const parts = value.split(',');
-    if (parts.length >= 2) addAvatarRecord(map, parts[0], parts[1]);
-  }
-}
 
 function ensureNodeNickKey(img) {
   if (!img || !img.dataset) return { nick: '', key: '' };
@@ -121,107 +44,28 @@ function getAvatarElements() {
 }
 
 let mapPromise = null; // Promise<Map<string, string>>
-let lastSource = 'json';
+let lastSource = 'proxy';
+let lastUpdatedAt = null;
 
-function parseCsvLine(line) {
-  return line
-    .match(/(".*?"|[^,]+)/g)
-    ?.map(cell => cell.replace(/^"|"$/g, '').trim()) || [];
-}
-
-function findColumnIndex(headers, patterns, fallbackIndex = -1) {
-  const idx = headers.findIndex(header => patterns.some(re => re.test(header)));
-  return idx >= 0 ? idx : fallbackIndex;
-}
-
-async function fetchMapFromJson() {
-  for (const endpoint of JSON_ENDPOINTS) {
-    const url = buildProxyUrl(endpoint);
-    if (!url) continue;
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) {
-        console.warn(`[avatars] proxy JSON ${endpoint} HTTP ${res.status}`);
-        continue;
-      }
-      const data = await res.json();
-      const map = new Map();
-      harvestJsonValue(map, data);
-      if (map.size) return { map, endpoint };
-      console.warn(`[avatars] proxy JSON ${endpoint} empty`);
-    } catch (err) {
-      console.warn(`[avatars] proxy JSON ${endpoint} failed`, err);
-    }
-  }
-  return { map: new Map(), endpoint: null };
-}
-
-async function fetchMapFromCsv() {
-  for (const endpoint of CSV_ENDPOINTS) {
-    const url = buildProxyUrl(endpoint);
-    if (!url) continue;
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) {
-        console.warn(`[avatars] proxy CSV ${endpoint} HTTP ${res.status}`);
-        continue;
-      }
-      const text = await res.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      if (!lines.length) {
-        console.warn(`[avatars] proxy CSV ${endpoint} empty`);
-        continue;
-      }
-
-      const headers = parseCsvLine(lines[0]);
-      const nickIndex = findColumnIndex(headers, [/key/i, /nick/i, /name/i, /player/i], 0);
-      const urlIndex = findColumnIndex(headers, [/url/i, /avatar/i, /image/i, /href/i, /src/i], 1);
-      const map = new Map();
-
-      lines.slice(1).forEach(line => {
-        const cells = parseCsvLine(line);
-        const nick = cells[nickIndex] || '';
-        const url = cells[urlIndex] || '';
-        addAvatarRecord(map, nick, url);
-      });
-
-      if (map.size) return { map, endpoint };
-      console.warn(`[avatars] proxy CSV ${endpoint} empty`);
-    } catch (err) {
-      console.warn(`[avatars] proxy CSV ${endpoint} failed`, err);
-    }
-  }
-  return { map: new Map(), endpoint: null };
-}
-
-async function fetchMap() {
+async function fetchMap(force = false) {
   try {
-    const { map, endpoint } = await fetchMapFromJson();
+    const { map, source, updatedAt } = await fetchAvatarsMap({ force });
+    lastSource = source || (map.size ? 'proxy' : 'none');
+    lastUpdatedAt = Number.isFinite(updatedAt) ? updatedAt : null;
+
     if (map.size) {
-      lastSource = endpoint ? `proxy-json:${endpoint}` : 'proxy-json';
       console.log(`[avatars] source=${lastSource} size=${map.size}`);
       return map;
     }
-    console.warn('[avatars] avatar JSON feed returned no rows');
+
+    console.warn('[avatars] WARN: avatar feed returned no rows; using placeholders only');
+    return map;
   } catch (err) {
-    console.warn('[avatars] avatar JSON feed failed', err);
+    lastSource = 'error';
+    lastUpdatedAt = null;
+    console.warn('[avatars] avatar feed failed', err);
+    return new Map();
   }
-
-  try {
-    const { map: csvMap, endpoint } = await fetchMapFromCsv();
-    if (csvMap.size) {
-      lastSource = endpoint ? `proxy-csv:${endpoint}` : 'proxy-csv';
-      console.log(`[avatars] source=${lastSource} size=${csvMap.size}`);
-      return csvMap;
-    }
-    console.warn('[avatars] avatar CSV feed returned no rows');
-  } catch (csvErr) {
-    console.error('[avatars] avatar CSV feed failed', csvErr);
-  }
-
-  lastSource = 'none';
-  console.warn('[avatars] WARN: avatar sheet unavailable; using placeholders only');
-  return new Map();
 }
 
 function withBust(src, bust) {
@@ -280,7 +124,7 @@ async function resolveMissingAvatars(map, entries, { bust } = {}) {
   let index = 0;
   const workerCount = Math.min(6, items.length);
   const hasBust = bust !== undefined && bust !== null && bust !== '';
-  const bustValue = hasBust ? bust : Date.now();
+  const defaultBust = hasBust ? bust : (lastUpdatedAt ?? Date.now());
   let anySuccess = false;
 
   const workers = Array.from({ length: workerCount }, () => (async function worker() {
@@ -290,7 +134,7 @@ async function resolveMissingAvatars(map, entries, { bust } = {}) {
       const { nick, key, imgs } = items[currentIndex];
       try {
         const lookupNick = nick || key;
-        const rec = await getAvatarUrl(lookupNick);
+        const rec = await fetchAvatarForNick(lookupNick);
         const url = rec && typeof rec.url === 'string' ? rec.url.trim() : '';
         if (!url) continue;
         const storeKey = nickKey(nick) || key;
@@ -301,10 +145,11 @@ async function resolveMissingAvatars(map, entries, { bust } = {}) {
           if (!img) return;
           const { key: nodeKey } = syncNodeNick(img, nick);
           if (nodeKey !== storeKey) img.dataset.nickKey = storeKey;
-          applyAvatar(img, url, bustValue);
+          const recordBust = hasBust ? bust : (Number.isFinite(rec?.updatedAt) ? rec.updatedAt : defaultBust);
+          applyAvatar(img, url, recordBust);
         });
       } catch (err) {
-        console.warn('[avatars] fallback', nick, err);
+        console.warn('[avatars] fallback error', nick, err);
       }
     }
   })());
@@ -356,7 +201,7 @@ export async function renderAllAvatars({ bust } = {}) {
 }
 
 export async function reloadAvatars({ bust = Date.now() } = {}) {
-  mapPromise = null;
+  mapPromise = fetchMap(true);
   await renderAllAvatars({ bust });
 }
 

@@ -635,29 +635,20 @@ export async function getAvatarUrl(nick, options) {
 }
 
 export async function uploadAvatar(nick, file) {
-  // JSON → воркер (корінь), БЕЗ /json
+  const originalNick = typeof nick === 'string' ? nick.trim() : '';
+  if (!originalNick) throw new Error('INVALID_NICK');
+  if (!file) throw new Error('INVALID_FILE');
+
   const mime = file.type || 'image/jpeg';
   const data = await toBase64NoPrefix(file);
-  let res;
-  try {
-    res = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'uploadAvatar', nick, mime, data })
-    });
-  } catch (err) {
-    log('[ranking]', err);
-    const e = new Error('Proxy unreachable');
-    e.cause = err;
-    throw e;
+  const resp = await gasPost('', { action: 'uploadAvatar', nick: originalNick, mime, data });
+
+  if (!resp || typeof resp !== 'object' || resp.status !== 'OK') {
+    const message = resp?.message || resp?.status || 'ERR_UPLOAD';
+    throw new Error(message);
   }
-  const text = await res.text();
-  if (DEBUG_NETWORK) log('[ranking]', 'uploadAvatar', text);
-  let resp;
-  try { resp = JSON.parse(text); } catch { resp = { status: 'ERR', raw: text }; }
-  if (!resp || typeof resp !== 'object') resp = { status: 'ERR', raw: text };
-  if (resp.status && resp.status !== 'OK') throw new Error(resp.status);
-  return resp; // {status:'OK', url, updatedAt}
+
+  return resp;
 }
 
 export function avatarSrcFromRecord(rec) {

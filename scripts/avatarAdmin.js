@@ -269,7 +269,8 @@ async function reloadAvatarsSafe(options) {
   try {
     const mod = await ensureAvatarsModule();
     if (mod && typeof mod.reloadAvatars === 'function') {
-      await mod.reloadAvatars(options);
+      const fresh = Boolean(options?.fresh ?? options?.bust);
+      await mod.reloadAvatars({ fresh });
     }
   } catch (err) {
     log('[avatarAdmin]', err);
@@ -365,7 +366,7 @@ async function handleUploadClick() {
     let reloadFailed = false;
     if (fetchFailed || !inlineUpdated) {
       try {
-        await reloadAvatarsSafe({ bust: bustValue });
+        await reloadAvatarsSafe({ fresh: true });
       } catch (err) {
         reloadFailed = true;
         log('[avatarAdmin]', err);
@@ -396,7 +397,7 @@ async function handleRefreshClick(event) {
   const { refreshBtn } = state;
   if (refreshBtn) refreshBtn.disabled = true;
   try {
-    await reloadAvatarsSafe({ bust: Date.now() });
+    await reloadAvatarsSafe({ fresh: true });
   } catch (err) {
     showMessage('Не вдалося оновити список аватарів');
   } finally {

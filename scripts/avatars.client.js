@@ -1,196 +1,227 @@
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
-import { avatarNickKey, fetchAvatarForNick, fetchAvatarsMap } from './api.js';
+import { fetchAvatarsMap } from './api.js';
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
+const COMBINING_MARKS_RE = /[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\uFE20-\uFE2F]/g;
 const WHITESPACE_RE = /\s+/g;
-const MAX_LOOKUPS = 4;
 
-let mapPromise = null;
-let lastSource = 'proxy';
-let lastUpdatedAt = null;
+const HOMOGRAPH_MAP = Object.freeze({
+  '\u0131': 'i', // dotless i → i
+  '\u03b1': 'a', // greek alpha → a
+  '\u03b5': 'e', // greek epsilon → e
+  '\u03ba': 'k', // greek kappa → k
+  '\u03bf': 'o', // greek omicron → o
+  '\u03c1': 'p', // greek rho → p
+  '\u03c5': 'y', // greek upsilon → y
+  '\u03c7': 'x', // greek chi → x
+  '\u0430': 'a', // cyrillic a → a
+  '\u0435': 'e', // cyrillic ie → e
+  '\u043a': 'k', // cyrillic ka → k
+  '\u043e': 'o', // cyrillic o → o
+  '\u0440': 'p', // cyrillic er → p
+  '\u0441': 'c', // cyrillic es → c
+  '\u0443': 'y', // cyrillic u → y
+  '\u0445': 'x', // cyrillic ha → x
+  '\u0454': 'e', // cyrillic ie → e
+  '\u0456': 'i', // cyrillic i → i
+  '\u0457': 'i'  // cyrillic yi → i
+});
 
-function normalizeNickLabel(value) {
-  const input = value == null ? '' : String(value);
-  return input
-    .replace(ZERO_WIDTH_CHARS_RE, '')
-    .normalize('NFKC')
-    .trim()
-    .replace(WHITESPACE_RE, ' ');
-}
+const HOMOGRAPH_PATTERN = (() => {
+  const chars = Object.keys(HOMOGRAPH_MAP);
+  if (!chars.length) return null;
+  const escaped = chars
+    .map(ch => ch.replace(/[\\\]\[\-]/g, '\\$&'))
+    .join('');
+  return new RegExp(`[${escaped}]`, 'gu');
+})();
 
-function resolveArgs(rootOrOptions, maybeOptions) {
-  const defaultRoot = typeof document !== 'undefined' ? document : null;
-  let root = rootOrOptions;
-  let options = maybeOptions;
+const state = {
+  mapping: Object.create(null),
+  updatedAt: 0,
+  source: 'none'
+};
 
-  if (root && typeof root.querySelectorAll === 'function') {
-    // root provided explicitly
-  } else if (options && typeof options === 'object') {
-    root = defaultRoot;
-  } else if (root && typeof root === 'object') {
-    options = root;
-    root = defaultRoot;
-  } else {
-    root = defaultRoot;
-    options = {};
+let pendingPromise = null;
+let pendingIsFresh = false;
+
+function cloneMapping(rawMapping) {
+  const mapping = Object.create(null);
+  if (!rawMapping || typeof rawMapping !== 'object') return mapping;
+  for (const [key, value] of Object.entries(rawMapping)) {
+    if (typeof value !== 'string') continue;
+    mapping[key] = value;
   }
-
-  if (!options || typeof options !== 'object') options = {};
-  if (!root || typeof root.querySelectorAll !== 'function') root = defaultRoot;
-
-  return { root: root || defaultRoot, options };
+  return mapping;
 }
 
-function ensureAvatarEntry(img) {
-  if (!img || !img.dataset) return { img, nick: '', key: '' };
-
-  const rawNick = typeof img.dataset.nick === 'string' ? img.dataset.nick : '';
-  const normalizedNick = normalizeNickLabel(rawNick);
-  if (normalizedNick) img.dataset.nick = normalizedNick;
-  else delete img.dataset.nick;
-
-  const datasetKey = typeof img.dataset.nickKey === 'string' ? img.dataset.nickKey : '';
-  const canonicalKey = datasetKey ? avatarNickKey(datasetKey) : avatarNickKey(normalizedNick);
-  if (canonicalKey) img.dataset.nickKey = canonicalKey;
-  else delete img.dataset.nickKey;
-
-  return { img, nick: normalizedNick, key: canonicalKey };
+function resolveRoot(root) {
+  if (root && typeof root.querySelectorAll === 'function') return root;
+  if (typeof document !== 'undefined') return document;
+  return null;
 }
 
-function queryAvatarElements(root) {
-  const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
-  return Array.from(scope.querySelectorAll('img[data-nick], img[data-nick-key]'));
+function ensureImageElement(target) {
+  if (!target) return null;
+  if (target.tagName && target.tagName.toLowerCase() === 'img') return target;
+  if (typeof target.querySelector === 'function') {
+    const existing = target.querySelector('img.avatar') || target.querySelector('img');
+    if (existing) return existing;
+    const created = target.ownerDocument?.createElement('img') || document?.createElement?.('img');
+    if (!created) return null;
+    created.classList.add('avatar');
+    target.prepend(created);
+    return created;
+  }
+  return null;
+}
+
+function seedPlaceholder(node) {
+  const img = ensureImageElement(node);
+  if (!img) return null;
+  img.referrerPolicy = 'no-referrer';
+  img.decoding = 'async';
+  if (!img.loading) img.loading = 'lazy';
+  if (!img.alt) img.alt = node?.dataset?.nick || 'avatar';
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = AVATAR_PLACEHOLDER;
+  };
+  if (!img.getAttribute('src')) {
+    img.src = AVATAR_PLACEHOLDER;
+  }
+  return img;
 }
 
 function withBust(src, bust) {
   if (!src) return src;
   if (/^(?:data|blob):/i.test(src)) return src;
-  if (bust === undefined || bust === null || bust === '') return src;
-  const numeric = typeof bust === 'number' ? bust : Number(bust);
-  const value = Number.isFinite(numeric)
-    ? numeric
-    : encodeURIComponent(String(bust));
-  return `${src}${src.includes('?') ? '&' : '?'}t=${value}`;
+  const value = Number.isFinite(bust) ? bust : bust ? Number(bust) : 0;
+  if (!value) return src;
+  const separator = src.includes('?') ? '&' : '?';
+  return `${src}${separator}t=${value}`;
 }
 
-function applyAvatar(img, baseSrc, bust) {
-  const fallback = withBust(AVATAR_PLACEHOLDER, bust) || AVATAR_PLACEHOLDER;
-  const src = withBust(baseSrc || AVATAR_PLACEHOLDER, bust) || AVATAR_PLACEHOLDER;
-
-  img.referrerPolicy = 'no-referrer';
-  img.decoding = 'async';
-  if (!img.loading) img.loading = 'lazy';
-  if (!img.alt) img.alt = img.dataset.nick || 'avatar';
+function applyImage(img, url, bust) {
+  if (!img) return;
+  const base = typeof url === 'string' && url ? url : AVATAR_PLACEHOLDER;
+  const bustValue = Number.isFinite(bust) ? bust : Date.now();
+  const fallback = withBust(AVATAR_PLACEHOLDER, bustValue) || AVATAR_PLACEHOLDER;
+  const nextSrc = withBust(base, bustValue) || AVATAR_PLACEHOLDER;
   img.onerror = () => {
     img.onerror = null;
     img.src = fallback;
   };
-  img.src = src;
+  img.src = nextSrc;
 }
 
-function isVisible(el) {
-  if (!el) return false;
-  if (typeof el.checkVisibility === 'function') {
-    try { return el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }); }
-    catch { /* fallback */ }
-  }
-  return !!(el.offsetParent || el.getClientRects().length);
+export function normalizeNick(value) {
+  if (value == null) return '';
+  const input = String(value);
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return '';
+  const decomposed = trimmed.normalize('NFKD');
+  const withoutMarks = decomposed.replace(COMBINING_MARKS_RE, '');
+  const withoutZeroWidth = withoutMarks.replace(ZERO_WIDTH_CHARS_RE, '');
+  const collapsed = withoutZeroWidth.replace(WHITESPACE_RE, ' ').trim();
+  if (!collapsed) return '';
+  const replaced = HOMOGRAPH_PATTERN
+    ? collapsed.replace(HOMOGRAPH_PATTERN, ch => HOMOGRAPH_MAP[ch] || '')
+    : collapsed;
+  return replaced;
 }
 
-async function fetchMap(force = false) {
-  try {
-    const result = await fetchAvatarsMap({ force });
-    const mapping = (result && typeof result.mapping === 'object') ? result.mapping : Object.create(null);
-    const size = Object.keys(mapping).length;
-    lastSource = result?.source || (size ? 'proxy' : 'none');
-    lastUpdatedAt = Number.isFinite(result?.updatedAt) ? result.updatedAt : null;
-    if (size) {
-      console.log(`[avatars] source=${lastSource} size=${size}`);
-    } else {
-      console.warn('[avatars] WARN: avatar feed returned no rows; using placeholders only');
-    }
-    return mapping;
-  } catch (err) {
-    lastSource = 'error';
-    lastUpdatedAt = null;
-    console.warn('[avatars] avatar feed failed', err);
-    return Object.create(null);
-  }
-}
-
-export async function renderAllAvatars(rootOrOptions, maybeOptions) {
-  const { root, options } = resolveArgs(rootOrOptions, maybeOptions);
-  const bustOption = options?.bust;
-  const imgs = queryAvatarElements(root);
-  if (!imgs.length) return;
-
-  const entries = imgs.map(ensureAvatarEntry);
-  entries.forEach(entry => applyAvatar(entry.img, '', bustOption));
-
-  const mapping = await (mapPromise ??= fetchMap());
-  const baseBust = bustOption ?? lastUpdatedAt ?? Date.now();
-
-  let directMatches = 0;
-  const missing = [];
-
-  for (const entry of entries) {
-    const src = entry.key ? mapping[entry.key] : '';
-    if (src) {
-      directMatches += 1;
-      applyAvatar(entry.img, src, baseBust);
-    } else if (entry.key) {
-      missing.push(entry);
+export async function fetchMap({ fresh = false } = {}) {
+  if (pendingPromise) {
+    if (!fresh || pendingIsFresh) {
+      return pendingPromise;
     }
   }
 
-  const visibleMissing = missing.filter(item => isVisible(item.img));
-  const lookupCandidates = visibleMissing.slice(0, MAX_LOOKUPS);
-  let lookupMatches = 0;
-
-  for (const entry of lookupCandidates) {
-    const lookupNick = entry.nick || entry.key;
-    if (!lookupNick) continue;
+  const request = (async () => {
+    let result;
     try {
-      const record = await fetchAvatarForNick(lookupNick);
-      const url = record && typeof record.url === 'string' ? record.url.trim() : '';
-      if (!url) continue;
-      const recordBust = bustOption
-        ?? (Number.isFinite(record?.updatedAt) ? record.updatedAt : null)
-        ?? lastUpdatedAt
-        ?? Date.now();
-      const canonicalKey = entry.key || avatarNickKey(entry.nick || lookupNick);
-      if (canonicalKey) {
-        entry.img.dataset.nickKey = canonicalKey;
-        mapping[canonicalKey] = url;
-      }
-      applyAvatar(entry.img, url, recordBust);
-      lookupMatches += 1;
+      result = await fetchAvatarsMap({ force: fresh });
     } catch (err) {
-      console.warn('[avatars] fallback error', lookupNick, err);
+      result = null;
+    }
+
+    const mapping = cloneMapping(result?.mapping);
+    state.mapping = mapping;
+    state.updatedAt = Number.isFinite(result?.updatedAt) ? result.updatedAt : Date.now();
+    state.source = typeof result?.source === 'string' && result.source ? result.source : 'proxy';
+
+    if (!result) {
+      state.source = 'error';
+    }
+
+    const size = Object.keys(state.mapping).length;
+    console.log(`[avatars] source=${state.source} size=${size}`);
+
+    return {
+      mapping: state.mapping,
+      updatedAt: state.updatedAt,
+      source: state.source
+    };
+  })();
+
+  pendingPromise = request;
+  pendingIsFresh = fresh;
+
+  try {
+    return await request;
+  } finally {
+    if (pendingPromise === request) {
+      pendingPromise = null;
+      pendingIsFresh = false;
     }
   }
-
-  const unresolved = visibleMissing
-    .filter(entry => {
-      const key = entry.key || avatarNickKey(entry.nick);
-      return !(key && mapping[key]);
-    })
-    .slice(0, 5)
-    .map(entry => entry.nick || entry.key || '')
-    .filter(Boolean);
-
-  const missSummary = unresolved.length ? unresolved.join(',') : '-';
-  console.log(`[avatars] imgs=${imgs.length} map=${directMatches} lookup=${lookupMatches} miss=${missSummary} source=${lastSource}`);
 }
 
-export async function reloadAvatars(rootOrOptions, maybeOptions) {
-  const { root, options } = resolveArgs(rootOrOptions, maybeOptions);
-  const nextOptions = { ...options, bust: options?.bust ?? Date.now() };
-  mapPromise = fetchMap(true);
-  await renderAllAvatars(root, nextOptions);
+export function getLocalAvatarUrl(value) {
+  const key = normalizeNick(value);
+  if (!key) return '';
+  return state.mapping[key] || '';
 }
 
-if (typeof document !== 'undefined' && document?.addEventListener) {
+export async function renderAllAvatars(root) {
+  const scope = resolveRoot(root);
+  if (!scope) return;
+
+  const nodes = Array.from(scope.querySelectorAll('[data-nick]'));
+  if (!nodes.length) return;
+
+  const prepared = nodes.map(node => {
+    const rawNick = typeof node.dataset.nick === 'string' ? node.dataset.nick : '';
+    const trimmedNick = rawNick.trim();
+    if (trimmedNick !== rawNick) node.dataset.nick = trimmedNick;
+    const normalized = normalizeNick(trimmedNick);
+    const img = seedPlaceholder(node);
+    if (img) {
+      if (trimmedNick) img.dataset.nick = trimmedNick;
+      if (normalized) img.dataset.nickKey = normalized;
+      else delete img.dataset.nickKey;
+    }
+    return { node, img, normalized, raw: trimmedNick };
+  });
+
+  const { updatedAt } = await fetchMap({ fresh: false });
+  const bust = Number.isFinite(updatedAt) ? updatedAt : Date.now();
+
+  prepared.forEach(entry => {
+    if (!entry.img) return;
+    const url = entry.normalized ? getLocalAvatarUrl(entry.normalized) : '';
+    applyImage(entry.img, url, bust);
+  });
+}
+
+export async function reloadAvatars(options = {}) {
+  const { root = undefined, fresh = false } = options || {};
+  await fetchMap({ fresh: Boolean(fresh) });
+  await renderAllAvatars(root);
+}
+
+if (typeof document !== 'undefined' && document.addEventListener) {
   document.addEventListener('DOMContentLoaded', () => {
     renderAllAvatars(document).catch(err => {
       console.warn('[avatars] initial render failed', err);

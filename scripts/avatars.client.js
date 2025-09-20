@@ -1,5 +1,5 @@
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
-import { fetchAvatarsMap } from './api.js';
+import { fetchAvatarsMap } from './api.js?v=2025-09-19-avatars-2';
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const COMBINING_MARKS_RE = /[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\uFE20-\uFE2F]/g;
@@ -219,6 +219,44 @@ export async function reloadAvatars(options = {}) {
   const { root = undefined, fresh = false } = options || {};
   await fetchMap({ fresh: Boolean(fresh) });
   await renderAllAvatars(root);
+}
+
+export function updateOneAvatar(nick, url, bust) {
+  const normalized = normalizeNick(nick);
+  if (!normalized) return;
+
+  const safeUrl = typeof url === 'string' ? url : '';
+  state.mapping[normalized] = safeUrl;
+
+  const bustValue = Number.isFinite(bust) ? bust : Date.now();
+  if (Number.isFinite(bust)) {
+    state.updatedAt = Math.max(state.updatedAt, bustValue);
+  }
+
+  const scope = resolveRoot(document);
+  if (!scope) return;
+
+  const nodes = Array.from(scope.querySelectorAll('[data-nick]'));
+  nodes.forEach(node => {
+    const rawNick = typeof node.dataset.nick === 'string' ? node.dataset.nick : '';
+    if (!rawNick) return;
+    const normalizedNick = normalizeNick(rawNick);
+    if (!normalizedNick || normalizedNick !== normalized) return;
+    const img = seedPlaceholder(node);
+    if (!img) return;
+    img.dataset.nick = rawNick;
+    img.dataset.nickKey = normalized;
+    applyImage(img, safeUrl, bustValue);
+  });
+
+  const keyedImages = Array.from(scope.querySelectorAll('img[data-nick-key]'));
+  keyedImages.forEach(img => {
+    const currentKey = typeof img.dataset.nickKey === 'string' ? img.dataset.nickKey : '';
+    if (currentKey !== normalized) return;
+    if (img.closest('[data-nick]')) return;
+    img.dataset.nickKey = normalized;
+    applyImage(img, safeUrl, bustValue);
+  });
 }
 
 if (typeof document !== 'undefined' && document.addEventListener) {

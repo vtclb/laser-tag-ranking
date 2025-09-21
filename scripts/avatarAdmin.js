@@ -268,28 +268,52 @@ function handleFileChange() {
 
 let playersLoadToken = 0;
 
-async function populatePlayersDatalist(league) {
+function fillPlayersDatalist(players) {
   const { playersDatalist } = state;
   if (!playersDatalist) return;
 
   playersDatalist.innerHTML = '';
-  if (!league) return;
+  if (!Array.isArray(players) || !players.length) return;
 
+  const fragment = document.createDocumentFragment();
+  const seen = new Set();
+  const sorted = [...players]
+    .filter(p => p && typeof p.nick === 'string' && p.nick.trim())
+    .sort((a, b) => a.nick.localeCompare(b.nick, 'uk'));
+
+  sorted.forEach(player => {
+    const nick = player.nick.trim();
+    if (seen.has(nick)) return;
+    seen.add(nick);
+    const option = document.createElement('option');
+    option.value = nick;
+    fragment.appendChild(option);
+  });
+
+  playersDatalist.appendChild(fragment);
+}
+
+async function populatePlayersDatalist(league, options = {}) {
+  const providedPlayers = Array.isArray(options?.players) ? options.players : null;
+  const normalizedLeague = typeof league === 'string' ? league.trim() : '';
   const token = ++playersLoadToken;
 
-  try {
-    const players = await loadPlayers(league);
-    if (token !== playersLoadToken) return;
+  fillPlayersDatalist([]);
 
-    const fragment = document.createDocumentFragment();
-    players.forEach(p => {
-      if (!p || !p.nick) return;
-      const option = document.createElement('option');
-      option.value = p.nick;
-      fragment.appendChild(option);
-    });
-    playersDatalist.appendChild(fragment);
+  if (providedPlayers) {
+    fillPlayersDatalist(providedPlayers);
+    return;
+  }
+
+  const targetLeague = normalizedLeague || state.leagueSelect?.value || '';
+  if (!targetLeague) return;
+
+  try {
+    const players = await loadPlayers(targetLeague);
+    if (token !== playersLoadToken) return;
+    fillPlayersDatalist(players);
   } catch (err) {
+    if (token !== playersLoadToken) return;
     log('[avatarAdmin]', err);
   }
 }
@@ -415,10 +439,17 @@ if (document.readyState === 'loading') {
   onDomReady();
 }
 
-export async function initAvatarAdmin() {
-  if (formReady) return;
+export async function initAvatarAdmin(players, league) {
   if (document.readyState === 'loading') {
     await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
   }
-  setupAvatarAdminForm();
+
+  if (!setupAvatarAdminForm()) return;
+
+  const nextLeague = typeof league === 'string' && league.trim() ? league.trim() : state.leagueSelect?.value || '';
+  if (nextLeague && state.leagueSelect) {
+    state.leagueSelect.value = nextLeague;
+  }
+
+  await populatePlayersDatalist(nextLeague, { players });
 }

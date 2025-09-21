@@ -2,6 +2,7 @@
 
 import { loadPlayers, saveResult } from './api.js?v=2025-09-19-avatars-2';
 import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js?v=2025-09-19-avatars-2';
+import { initAvatarAdmin } from './avatarAdmin.js?v=2025-09-19-avatars-2';
 import {
   state,
   setBalanceMode,
@@ -161,9 +162,14 @@ function updatePlayersDatalist() {
   const dl = document.getElementById('players-datalist');
   if (!dl) return;
   dl.innerHTML = '';
-  state.lobbyPlayers.forEach(player => {
+  const source = Array.isArray(allPlayers) && allPlayers.length ? allPlayers : state.lobbyPlayers;
+  const seen = new Set();
+  source.forEach(player => {
     const option = document.createElement('option');
-    option.value = player.nick;
+    const nick = typeof player?.nick === 'string' ? player.nick.trim() : '';
+    if (!nick || seen.has(nick)) return;
+    seen.add(nick);
+    option.value = nick;
     dl.appendChild(option);
   });
 }
@@ -308,11 +314,13 @@ async function handleLeagueChange(selectEl) {
   try {
     allPlayers = await loadPlayers(csvLeague);
     allPlayers.sort((a, b) => a.nick.localeCompare(b.nick, 'uk'));
+    await initAvatarAdmin(allPlayers, league);
   } catch (err) {
     console.error('[balance] load players failed', err);
     allPlayers = [];
     const msg = 'Не вдалося завантажити гравців для обраної ліги';
     if (typeof showToast === 'function') showToast(msg); else alert(msg);
+    await initAvatarAdmin([], league);
   }
 
   selectedCandidates.clear();

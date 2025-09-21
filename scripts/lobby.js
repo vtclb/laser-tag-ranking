@@ -1,6 +1,5 @@
 // scripts/lobby.js
 import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
 
 import { initTeams, teams } from './teams.js?v=2025-09-19-avatars-2';
 import { sortByName, sortByPtsDesc } from './sortUtils.js?v=2025-09-19-avatars-2';
@@ -141,29 +140,48 @@ export async function updateLobbyState(updates){
 
 // Рендер списку доступних гравців
 function renderSelect(arr) {
-  document.getElementById('select-area').classList.remove('hidden');
-  const ul = document.getElementById('select-list');
-  ul.replaceChildren();
-  arr.forEach((p, i) => {
-    const li = document.createElement('li');
-    const label = document.createElement('label');
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.dataset.i = i;
-    if (selected.includes(p)) input.checked = true;
-    if (lobby.includes(p) || Object.values(teams).flat().includes(p)) input.disabled = true;
-    label.appendChild(input);
-    label.append(` ${p.nick} (${p.pts}) – ${p.rank}`);
-    li.appendChild(label);
-    ul.appendChild(li);
+  const area = document.getElementById('select-area');
+  if (area) area.classList.remove('hidden');
+  const list = document.getElementById('player-list');
+  if (!list) return;
+
+  list.replaceChildren();
+  const taken = new Set();
+  lobby.forEach(p => taken.add(p.nick));
+  Object.values(teams).forEach(teamArr => {
+    teamArr.forEach(p => taken.add(p.nick));
   });
 
-  ul.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.onchange = () => {
-      const p = arr[+cb.dataset.i];
-      if (cb.checked) selected.push(p);
-      else selected = selected.filter(x => x !== p);
-    };
+  arr.forEach(p => {
+    const label = document.createElement('label');
+    label.className = 'player-option';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.dataset.nick = p.nick;
+    if (selected.some(sel => sel.nick === p.nick)) checkbox.checked = true;
+    if (taken.has(p.nick)) checkbox.disabled = true;
+
+    const meta = document.createElement('div');
+    meta.className = 'player-meta';
+    const nick = document.createElement('strong');
+    nick.textContent = p.nick;
+    const stats = document.createElement('span');
+    stats.textContent = `${p.pts} pts · ${p.rank}`;
+    meta.append(nick, stats);
+
+    label.append(checkbox, meta);
+    list.appendChild(label);
+
+    checkbox.addEventListener('change', () => {
+      const player = players.find(x => x.nick === checkbox.dataset.nick);
+      if (!player) return;
+      if (checkbox.checked) {
+        if (!selected.some(sel => sel.nick === player.nick)) selected.push(player);
+      } else {
+        selected = selected.filter(sel => sel.nick !== player.nick);
+      }
+    });
   });
 }
 
@@ -177,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       searchTimeout = setTimeout(() => {
         const term = searchInput.value.trim().toLowerCase();
         filtered = players.filter(p => p.nick.toLowerCase().includes(term));
-        selected = selected.filter(p => filtered.includes(p));
+        selected = selected.filter(sel => filtered.some(p => p.nick === sel.nick));
         renderSelect(filtered);
       }, 300);
     });
@@ -185,36 +203,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-sort-name').onclick = () => {
     filtered = sortByName(filtered);
-    selected = selected.filter(p => filtered.includes(p));
+    selected = selected.filter(sel => filtered.some(p => p.nick === sel.nick));
     renderSelect(filtered);
   };
 
   document.getElementById('btn-sort-pts').onclick = () => {
     filtered = sortByPtsDesc(filtered);
-    selected = selected.filter(p => filtered.includes(p));
+    selected = selected.filter(sel => filtered.some(p => p.nick === sel.nick));
     renderSelect(filtered);
   };
 
-    document.getElementById('btn-add-selected').onclick = async () => {
-      selected.forEach(p => {
-        if (!lobby.includes(p)) lobby.push(p);
-      });
-      selected = [];
-      renderLobby();
-      renderLobbyCards();
-      try {
-        await renderAllAvatars(document.getElementById('players') || document);
-      } catch (err) {
-        log('[ranking]', err);
-      }
-      renderSelect(filtered);
-      await maybeAutoRebalance();
-    };
+  const addToLobbyBtn = document.getElementById('add-to-lobby');
+  const legacyAddBtn = document.getElementById('btn-add-selected');
+  const handleAddSelected = async () => {
+    selected.forEach(p => {
+      if (!lobby.some(lp => lp.nick === p.nick)) lobby.push(p);
+    });
+    selected = [];
+    renderLobby();
+    renderLobbyCards();
+    try {
+      await renderAllAvatars(document.getElementById('players') || document);
+    } catch (err) {
+      log('[ranking]', err);
+    }
+    renderSelect(filtered);
+    await maybeAutoRebalance();
+  };
+  if (addToLobbyBtn) {
+    addToLobbyBtn.addEventListener('click', handleAddSelected);
+  }
+  if (legacyAddBtn && legacyAddBtn !== addToLobbyBtn) {
+    legacyAddBtn.addEventListener('click', () => {
+      if (addToLobbyBtn) addToLobbyBtn.click();
+      else handleAddSelected();
+    });
+  }
 
   document.getElementById('btn-clear-selected').onclick = () => {
     selected = [];
     renderSelect(filtered);
   };
+
+  document.querySelectorAll('[data-teams]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const n = parseInt(btn.dataset.teams, 10);
+      if (!Number.isInteger(n)) return;
+      const sizeSelect = document.getElementById('teamsize');
+      if (sizeSelect) sizeSelect.value = String(n);
+      if (balanceMode === 'manual') {
+        try {
+          await setManualCount(n);
+        } catch (err) {
+          log('[ranking]', err);
+        }
+      }
+    });
+  });
 
   const addPlayerInput = document.getElementById('addPlayerInput');
   const addPlayerBtn = document.getElementById('addPlayerBtn');
@@ -271,8 +316,29 @@ document.addEventListener('DOMContentLoaded', () => {
 // Встановлюємо кількість команд для ручного режиму
 export async function setManualCount(n) {
   manualCount = n;
+  if (manualCount <= 0) {
+    Object.keys(teams).forEach(key => {
+      const arr = teams[key] || [];
+      arr.forEach(player => {
+        if (!lobby.some(lp => lp.nick === player.nick)) lobby.push(player);
+      });
+      teams[key] = [];
+    });
+  } else {
+    Object.keys(teams).forEach(key => {
+      const teamNo = parseInt(key, 10);
+      if (Number.isInteger(teamNo) && teamNo > manualCount) {
+        const overflow = teams[key] || [];
+        overflow.forEach(player => {
+          if (!lobby.some(lp => lp.nick === player.nick)) lobby.push(player);
+        });
+        teams[key] = [];
+      }
+    });
+  }
   renderLobby();
   renderLobbyCards();
+  renderSelect(filtered);
   try {
     await renderAllAvatars(document.getElementById('players') || document);
   } catch (err) {
@@ -315,69 +381,136 @@ function updateSummary() {
   if (avgEl)   avgEl.textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
 }
 
-function renderPlayerList(el, arr) {
-  if (!el) return;
-  el.replaceChildren();
-  arr.forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'player';
-    div.dataset.nick = p.nick;
-    div.draggable = true;
+function createLobbyEntry(player, index) {
+  const entry = document.createElement('div');
+  entry.className = 'lobby-player';
+  entry.dataset.nick = player.nick;
+  entry.dataset.i = index;
+  if (manualCount > 0) entry.setAttribute('draggable', 'true');
+  else entry.removeAttribute('draggable');
 
-    const img = document.createElement('img');
-    img.className = 'player__avatar';
-    img.alt = 'avatar';
-    img.loading = 'lazy';
-    img.width = 40;
-    img.height = 40;
-    img.dataset.nick = p.nick;
-    img.src = AVATAR_PLACEHOLDER;
-    img.onerror = () => {
-      img.onerror = null;
-      img.src = AVATAR_PLACEHOLDER;
-    };
+  const main = document.createElement('div');
+  main.className = 'lobby-player__main';
+  const nickSpan = document.createElement('span');
+  nickSpan.className = 'player__nick';
+  nickSpan.textContent = player.nick;
+  const statsWrap = document.createElement('div');
+  statsWrap.className = 'player__stats';
+  const ptsSpan = document.createElement('span');
+  ptsSpan.className = 'player__pts';
+  ptsSpan.textContent = `${player.pts} pts`;
+  const rankSpan = document.createElement('span');
+  rankSpan.className = 'player__rank';
+  rankSpan.textContent = player.rank;
+  statsWrap.append(ptsSpan, rankSpan);
+  main.append(nickSpan, statsWrap);
+  entry.appendChild(main);
 
-    const meta = document.createElement('div');
-    meta.className = 'player__meta';
+  const meta = document.createElement('div');
+  meta.className = 'lobby-player__meta';
 
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'player__name';
-    nameDiv.textContent = p.nick;
-
-    const ptsDiv = document.createElement('div');
-    ptsDiv.className = 'player__points';
-    ptsDiv.textContent = `${p.pts} pts`;
-
-    meta.appendChild(nameDiv);
-    meta.appendChild(ptsDiv);
-
-    const dragDiv = document.createElement('div');
-    dragDiv.className = 'player__drag';
-    dragDiv.textContent = '≡';
-
-    div.appendChild(img);
-    div.appendChild(meta);
-    div.appendChild(dragDiv);
-
-    el.appendChild(div);
+  const abonLabel = document.createElement('label');
+  abonLabel.textContent = 'Абонемент:';
+  const select = document.createElement('select');
+  select.className = 'abonement-select';
+  select.dataset.i = index;
+  ABONEMENT_TYPES.forEach(type => {
+    const opt = document.createElement('option');
+    opt.value = type;
+    opt.textContent = type;
+    if ((player.abonement || 'none') === type) opt.selected = true;
+    select.appendChild(opt);
   });
+  abonLabel.appendChild(select);
+
+  const keyControls = document.createElement('div');
+  keyControls.className = 'key-controls';
+  const issueBtn = document.createElement('button');
+  issueBtn.type = 'button';
+  issueBtn.className = 'btn-issue-key';
+  issueBtn.dataset.nick = player.nick;
+  issueBtn.textContent = 'Видати ключ';
+  const keyDisplay = document.createElement('div');
+  keyDisplay.className = 'access-key';
+  keyControls.append(issueBtn, keyDisplay);
+
+  meta.append(abonLabel, keyControls);
+  entry.appendChild(meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'lobby-player__actions';
+  for (let k = 0; k < manualCount; k++) {
+    const assignBtn = document.createElement('button');
+    assignBtn.type = 'button';
+    assignBtn.className = 'assign';
+    assignBtn.dataset.i = index;
+    assignBtn.dataset.team = k + 1;
+    assignBtn.textContent = `→${k + 1}`;
+    actions.appendChild(assignBtn);
+  }
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'remove-lobby';
+  removeBtn.dataset.i = index;
+  removeBtn.textContent = '✕';
+  actions.appendChild(removeBtn);
+  entry.appendChild(actions);
+
+  return entry;
+}
+
+function createTeamEntry(player) {
+  const li = document.createElement('li');
+  li.className = 'team-player';
+  li.dataset.nick = player.nick;
+  if (manualCount > 0) li.setAttribute('draggable', 'true');
+  else li.removeAttribute('draggable');
+
+  const name = document.createElement('span');
+  name.className = 'player-name';
+  name.textContent = player.nick;
+  const pts = document.createElement('span');
+  pts.className = 'player-points';
+  pts.textContent = player.pts;
+  li.append(name, pts);
+  return li;
 }
 
 function setupDnD(containers) {
-  containers.forEach(c => {
-    c.addEventListener('dragover', e => e.preventDefault());
-    c.addEventListener('drop', async e => {
-      e.preventDefault();
-      const nick = e.dataTransfer.getData('text/plain');
-      await movePlayer(nick, c.id);
-    });
+  const active = containers.filter(Boolean);
+  active.forEach(container => {
+    if (!container.dataset.dndInit) {
+      container.addEventListener('dragover', e => {
+        e.preventDefault();
+        container.classList.add('drag-over');
+      });
+      container.addEventListener('dragleave', () => {
+        container.classList.remove('drag-over');
+      });
+      container.addEventListener('drop', async e => {
+        e.preventDefault();
+        container.classList.remove('drag-over');
+        const nick = e.dataTransfer.getData('text/plain');
+        const targetKey = container.dataset.team || container.id;
+        await movePlayer(nick, targetKey);
+      });
+      container.dataset.dndInit = '1';
+    }
   });
 
-  containers.forEach(c => {
-    c.querySelectorAll('.player').forEach(p => {
-      p.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', p.dataset.nick);
-      });
+  const draggables = [];
+  active.forEach(container => {
+    container.querySelectorAll('[draggable="true"]').forEach(item => {
+      draggables.push(item);
+    });
+  });
+  draggables.forEach(item => {
+    item.addEventListener('dragstart', e => {
+      item.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', item.dataset.nick);
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
     });
   });
 }
@@ -385,21 +518,30 @@ function setupDnD(containers) {
 function takePlayer(nick) {
   let idx = lobby.findIndex(p => p.nick === nick);
   if (idx !== -1) return lobby.splice(idx, 1)[0];
-  if (!teams[1]) teams[1] = [];
-  if (!teams[2]) teams[2] = [];
-  idx = teams[1].findIndex(p => p.nick === nick);
-  if (idx !== -1) return teams[1].splice(idx, 1)[0];
-  idx = teams[2].findIndex(p => p.nick === nick);
-  if (idx !== -1) return teams[2].splice(idx, 1)[0];
+  for (const key of Object.keys(teams)) {
+    const arr = teams[key] || [];
+    idx = arr.findIndex(p => p.nick === nick);
+    if (idx !== -1) return arr.splice(idx, 1)[0];
+  }
   return null;
 }
 
-async function movePlayer(nick, targetId) {
-  const p = takePlayer(nick);
-  if (!p) return;
-  if (targetId === 'lobby-list') lobby.push(p);
-  else if (targetId === 'team-a') teams[1].push(p);
-  else if (targetId === 'team-b') teams[2].push(p);
+async function movePlayer(nick, targetKey) {
+  const player = takePlayer(nick);
+  if (!player) return;
+
+  if (String(targetKey || '').startsWith('team')) {
+    const teamNo = parseInt(String(targetKey).replace('team', ''), 10);
+    if (!Number.isNaN(teamNo)) {
+      teams[teamNo] = teams[teamNo] || [];
+      teams[teamNo].push(player);
+    } else {
+      lobby.push(player);
+    }
+  } else {
+    lobby.push(player);
+  }
+
   renderLobby();
   renderLobbyCards();
   try {
@@ -407,96 +549,67 @@ async function movePlayer(nick, targetId) {
   } catch (err) {
     log('[ranking]', err);
   }
+  renderSelect(filtered);
+  refreshArenaTeams();
   await maybeAutoRebalance();
 }
 
 // Рендер лоббі
 function renderLobby() {
-  const lobbyEl = document.getElementById('lobby-list');
-  const teamAEl = document.getElementById('team-a');
-  const teamBEl = document.getElementById('team-b');
-  if (teamAEl || teamBEl) {
-    teams[1] = teams[1] || [];
-    teams[2] = teams[2] || [];
-    renderPlayerList(lobbyEl, lobby);
-    renderPlayerList(teamAEl, teams[1]);
-    renderPlayerList(teamBEl, teams[2]);
-    setupDnD([lobbyEl, teamAEl, teamBEl].filter(Boolean));
-    updateSummary();
-    saveLobbyState({ lobby, teams, manualCount, league: uiLeague });
-    updatePlayersDatalist();
-    return;
-  }
+  const lobbyContainer = document.getElementById('lobby-list');
+  if (!lobbyContainer) return;
+  if (!lobbyContainer.dataset.team) lobbyContainer.dataset.team = 'lobby';
 
-  const tbody = lobbyEl;
-  tbody.replaceChildren();
-  lobby.forEach((p, i) => {
-    const tr = document.createElement('tr');
-
-    const tdNick = document.createElement('td');
-    tdNick.textContent = p.nick;
-    tr.appendChild(tdNick);
-
-    const tdPts = document.createElement('td');
-    tdPts.textContent = p.pts;
-    tr.appendChild(tdPts);
-
-    const tdRank = document.createElement('td');
-    tdRank.textContent = p.rank;
-    tr.appendChild(tdRank);
-
-    const tdAbon = document.createElement('td');
-    const sel = document.createElement('select');
-    sel.className = 'abonement-select';
-    sel.dataset.i = i;
-    ABONEMENT_TYPES.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t;
-      opt.textContent = t;
-      if (p.abonement === t) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    tdAbon.appendChild(sel);
-    tr.appendChild(tdAbon);
-
-    const tdBtn = document.createElement('td');
-    const issueBtn = document.createElement('button');
-    issueBtn.className = 'btn-issue-key';
-    issueBtn.dataset.nick = p.nick;
-    issueBtn.textContent = 'Видати ключ';
-    tdBtn.appendChild(issueBtn);
-    tr.appendChild(tdBtn);
-
-    const tdKey = document.createElement('td');
-    tdKey.className = 'access-key';
-    tr.appendChild(tdKey);
-
-    const tdActions = document.createElement('td');
-    for (let k = 0; k < manualCount; k++) {
-      const btn = document.createElement('button');
-      btn.className = 'assign';
-      btn.dataset.i = i;
-      btn.dataset.team = k + 1;
-      btn.textContent = `→${k+1}`;
-      tdActions.appendChild(btn);
-    }
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-lobby';
-    removeBtn.dataset.i = i;
-    removeBtn.textContent = '✕';
-    tdActions.appendChild(removeBtn);
-    tr.appendChild(tdActions);
-
-    tbody.appendChild(tr);
+  lobbyContainer.replaceChildren();
+  lobby.forEach((player, index) => {
+    lobbyContainer.appendChild(createLobbyEntry(player, index));
   });
 
-  const total = lobby.reduce((s, p) => s + p.pts, 0);
-  document.getElementById('lobby-count').textContent = lobby.length;
-  document.getElementById('lobby-sum').textContent   = total;
-  document.getElementById('lobby-avg').textContent   = lobby.length ? (total / lobby.length).toFixed(1) : '0';
+  const dropTargets = [lobbyContainer];
+  const teamsContainer = document.getElementById('lobby');
+  if (teamsContainer) {
+    teamsContainer.classList.toggle('hidden', manualCount === 0);
+    Array.from(teamsContainer.querySelectorAll('.team')).forEach(teamDiv => {
+      const key = teamDiv.dataset.team || '';
+      const teamNo = parseInt(key.replace('team', ''), 10);
+      const list = teamDiv.querySelector('.team-list');
+      const sumEl = teamDiv.querySelector('.team-sum');
+      const isActive = manualCount > 0 && Number.isInteger(teamNo) && manualCount >= teamNo;
 
+      if (!Number.isInteger(teamNo)) {
+        teamDiv.classList.add('hidden');
+        if (list) list.replaceChildren();
+        if (sumEl) sumEl.textContent = '∑ 0';
+        return;
+      }
+
+      teams[teamNo] = teams[teamNo] || [];
+      const members = teams[teamNo];
+      if (list) {
+        list.replaceChildren();
+        members.forEach(player => {
+          list.appendChild(createTeamEntry(player));
+        });
+        list.dataset.team = key;
+      }
+      if (sumEl) {
+        const total = members.reduce((sum, p) => sum + (Number(p.pts) || 0), 0);
+        sumEl.textContent = `∑ ${total}`;
+      }
+      teamDiv.classList.toggle('hidden', !isActive);
+      if (isActive && list) {
+        dropTargets.push(list);
+      }
+    });
+  }
+
+  updateSummary();
+  saveLobbyState({ lobby, teams, manualCount, league: uiLeague });
   updatePlayersDatalist();
-  saveLobbyState({lobby, teams, manualCount, league: uiLeague});
+
+  if (manualCount > 0) {
+    setupDnD(dropTargets);
+  }
 }
 
 function renderLobbyCards() {
@@ -646,7 +759,7 @@ document.addEventListener('click', async e => {
   const nick = btn.dataset.nick;
   try {
     const key = await issueAccessKey({ nick, league: uiLeague });
-    const host = btn.closest('tr') || btn.closest('.player');
+    const host = btn.closest('.lobby-player') || btn.closest('.player') || btn.closest('tr');
     const cell = host?.querySelector('.access-key');
     if (cell) {
       cell.innerHTML = `<span class='key'>${key}</span><button class='copy-key'>Copy</button>`;

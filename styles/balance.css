@@ -181,6 +181,60 @@ img.avatar {
 .only-mobile { display: none; }
 .only-desktop { display: inline-block; }
 
+.bal__lobby-layout {
+  display: grid;
+  gap: clamp(12px, 2vw, 20px);
+  grid-template-columns: 1fr;
+  margin-top: var(--bal-gap);
+}
+
+.lobby-pool h3 {
+  font-size: 1rem;
+}
+
+.lobby-teams .team {
+  transition: border-color 0.2s ease;
+}
+
+.lobby-teams .team header h3 {
+  font-size: 0.95rem;
+}
+
+.lobby-teams .team.hidden {
+  display: none;
+}
+
+.lobby-list {
+  min-height: 160px;
+}
+
+.lobby-player__main .player__nick {
+  font-weight: 700;
+}
+
+.lobby-player__main .player__pts,
+.lobby-player__main .player__rank {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.lobby-player__meta .access-key {
+  flex: 1 1 200px;
+}
+
+.lobby-player__meta .btn-issue-key {
+  padding: 0.35rem 0.75rem;
+}
+
+.lobby-player__actions .assign,
+.lobby-player__actions .remove-lobby {
+  padding-block: 0.35rem;
+}
+
+.lobby-extra-controls {
+  margin-top: clamp(12px, 2vw, 18px);
+}
+
 @media (min-width: 1024px) {
   .page-wrap {
     display: grid;
@@ -205,6 +259,15 @@ img.avatar {
   .left-col .bal__panel,
   .left-panel .bal__panel {
     max-width: 100%;
+  }
+
+  .bal__lobby-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: flex-start;
+  }
+
+  .lobby-list {
+    min-height: 220px;
   }
 
   .mode-switch {

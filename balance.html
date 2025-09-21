@@ -42,10 +42,11 @@
                   <button id="btn-sort-pts">За балами ↓</button>
                 </div>
               </div>
-              <ul id="select-list" class="list"></ul>
+              <div id="player-list" class="list"></div>
               <div class="actions">
-                <button id="btn-add-selected">Додати у лоббі</button>
+                <button id="add-to-lobby">Додати у лоббі</button>
                 <button id="btn-clear-selected">Очистити вибір</button>
+                <button id="btn-add-selected" type="button" hidden aria-hidden="true">Додати у лоббі</button>
               </div>
             </section>
           </div>
@@ -67,13 +68,29 @@
                 <input type="text" id="addPlayerInput" placeholder="Нік гравця">
                 <button id="addPlayerBtn">Add</button>
               </div>
-              <div class="bal__table-wrap">
-                <table class="bal__table table">
-                  <thead>
-                    <tr><th>Нік</th><th>Бали</th><th>Ранг</th><th>Абонемент</th><th>Ключ</th><th>→Команда / ✕</th></tr>
-                  </thead>
-                  <tbody id="lobby-list"></tbody>
-                </table>
+              <div class="bal__lobby-layout">
+                <section class="lobby-pool">
+                  <h3>Список лоббі</h3>
+                  <div id="lobby-list" class="lobby-list" data-team="lobby"></div>
+                </section>
+                <section id="lobby" class="lobby-teams">
+                  <div class="team" data-team="team1">
+                    <header><h3>Команда 1</h3><span class="team-sum" data-team-sum="team1">∑ 0</span></header>
+                    <ul class="team-list" data-team="team1"></ul>
+                  </div>
+                  <div class="team" data-team="team2">
+                    <header><h3>Команда 2</h3><span class="team-sum" data-team-sum="team2">∑ 0</span></header>
+                    <ul class="team-list" data-team="team2"></ul>
+                  </div>
+                  <div class="team" data-team="team3">
+                    <header><h3>Команда 3</h3><span class="team-sum" data-team-sum="team3">∑ 0</span></header>
+                    <ul class="team-list" data-team="team3"></ul>
+                  </div>
+                  <div class="team" data-team="team4">
+                    <header><h3>Команда 4</h3><span class="team-sum" data-team-sum="team4">∑ 0</span></header>
+                    <ul class="team-list" data-team="team4"></ul>
+                  </div>
+                </section>
               </div>
               <div class="bal__players only-mobile"></div>
               <p class="text-muted">
@@ -81,6 +98,13 @@
                 Сума: <span id="lobby-sum">0</span> |
                 Середній: <span id="lobby-avg">0</span>
               </p>
+              <div class="lobby-extra-controls">
+                <div class="team-buttons">
+                  <button type="button" class="btn" data-teams="3">3 команди</button>
+                  <button type="button" class="btn" data-teams="4">4 команди</button>
+                </div>
+                <button type="button" id="save-game" class="btn btn-primary">Зберегти гру</button>
+              </div>
               <div class="actions">
                 <button id="btn-clear-lobby" class="btn--danger">Очистити лоббі</button>
               </div>

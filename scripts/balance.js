@@ -14,6 +14,7 @@ import { parseGamePdf } from './pdfParser.js?v=2025-09-19-balance-hotfix-1';
 import {
   state,
   setBalanceMode,
+  clearTeams,
   setLeague,
   setLobbyPlayers,
   setPlayers,
@@ -121,6 +122,28 @@ export function addToLobby(playersToAdd = []) {
   }
 
   renderLobby();
+  return state.lobbyPlayers;
+}
+
+export function clearLobby() {
+  const previousLobbySize = state.lobbyPlayers.length;
+  const teamsBefore = Object.fromEntries(
+    Object.entries(state.teams || {}).map(([key, members]) => [key, Array.isArray(members) ? members.length : 0]),
+  );
+
+  setLobbyPlayers([]);
+  clearTeams();
+  selectedCandidates.clear();
+
+  renderLobby();
+  renderPlayerList();
+
+  console.info('[balance] clearLobby', {
+    previousLobbySize,
+    teamsBefore,
+    lobbySize: state.lobbyPlayers.length,
+  });
+
   return state.lobbyPlayers;
 }
 
@@ -1244,6 +1267,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (addToLobbyBtnEl) {
     addToLobbyBtnEl.addEventListener('click', addSelectedToLobby);
+  }
+
+  const clearLobbyBtn = document.getElementById('btn-clear-lobby');
+  if (clearLobbyBtn) {
+    clearLobbyBtn.addEventListener('click', clearLobby);
   }
 
   const loadBtn = document.getElementById('btn-load');

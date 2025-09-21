@@ -12,15 +12,16 @@
   <header>
     <button id="ui-burger"></button>
   </header>
+
   <div class="page-wrap">
     <aside class="left-col">
       <div id="ui-panel" class="bal__panel">
         <section class="bal__card">
           <div class="bal__row">
             <select id="league">
-                <option value="kids">Молодша ліга</option>
-                <option value="sundaygames">Старша ліга</option>
-              </select>
+              <option value="kids">Молодша ліга</option>
+              <option value="sundaygames">Старша ліга</option>
+            </select>
             <div class="bal__actions">
               <button id="btn-load">Завантажити гравців</button>
               <input type="text" id="new-nick" placeholder="Нік">
@@ -34,7 +35,8 @@
         <section class="bal__card blc-accordion" id="sec-player-picker">
           <h2 class="bal__acc-head">Вибір гравців</h2>
           <div class="bal__acc-body scroll-pane">
-            <section id="select-area" class="card hidden">
+            <!-- РОЗБЛОКОВАНО: без hidden -->
+            <section id="select-area" class="card">
               <div class="bal__row">
                 <input type="text" id="player-search" placeholder="🔍 Пошук гравця..." autocomplete="off">
                 <div class="sort-controls">
@@ -112,7 +114,8 @@
           </div>
         </section>
 
-        <section class="bal__card blc-accordion" id="sec-scenario">
+        <!-- СТАРИЙ сценарій ховаємо, щоб не конфліктував з новими кнопками -->
+        <section class="bal__card blc-accordion" id="sec-scenario" hidden>
           <h2 class="bal__acc-head">Режим гри</h2>
           <div class="bal__acc-body">
             <section id="scenario-area" class="card hidden">
@@ -167,6 +170,7 @@
           </div>
         </section>
 
+        <!-- Аватари не чіпаємо -->
         <section class="panel" id="avatar-admin">
           <h2>Керування аватарами</h2>
           <p class="text-muted">Оберіть лігу та гравця, щоб завантажити новий аватар. Підтримуються PNG і JPG до 2&nbsp;МБ.</p>
@@ -214,35 +218,32 @@
         </section>
       </div>
     </aside>
+
     <main class="bal__main right-col"></main>
   </div>
 
   <div class="bal__overlay" id="ui-overlay" hidden></div>
 
   <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js?v=2025-09-19-avatars-3"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js?v=2025-09-19"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
   </script>
 
-  <script src="scripts/toast.js?v=2025-09-19-avatars-3"></script>
+  <script src="scripts/toast.js?v=2025-09-19"></script>
 
-  <!-- ES-модулі -->
+  <!-- ЄДИНИЙ ланцюжок ES-модулів, правильний порядок -->
   <script type="module">
-    const { VER } = await import('./scripts/config.js');
-    const moduleChain = [
+    const VER = '2025-09-19-balance-hotfix-1';
+    const chain = [
       `./scripts/config.js?v=${VER}`,
       `./scripts/logger.js?v=${VER}`,
-      `./scripts/state.js?v=${VER}`,
       `./scripts/api.js?v=${VER}`,
+      `./scripts/state.js?v=${VER}`,
       `./scripts/balance.js?v=${VER}`,
     ];
-
-    for (const modulePath of moduleChain) {
-      await import(modulePath);
-    }
+    for (const m of chain) { await import(m); }
   </script>
 </body>
 </html>
-

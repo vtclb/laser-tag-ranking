@@ -1,125 +1,125 @@
-import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { safeSet, safeGet } from './api.js?v=2025-09-19-avatars-2';
+const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
 
-const DEFAULT_LEAGUE = 'sundaygames';
-const BALANCE_KEY = 'balancerMode';
+export const state = {
+  league: 'sundaygames',
+  balanceMode: 'auto',
+  teamsCount: 4,
+  players: [],
+  lobbyPlayers: [],
+  teams: {
+    team1: [],
+    team2: [],
+    team3: [],
+    team4: [],
+  },
+};
 
-function normalizeLeague(league) {
-  return String(league || '').toLowerCase() === 'kids' ? 'kids' : DEFAULT_LEAGUE;
-}
-
-function normalizeBalanceMode(mode) {
-  return mode === 'manual' ? 'manual' : 'auto';
-}
-
-function resolveLocalStorage() {
-  try {
-    if (typeof window !== 'undefined' && window && window.localStorage) {
-      return window.localStorage;
-    }
-  } catch (err) {
-    log('[ranking]', err);
+function replaceArrayContents(target, source) {
+  target.length = 0;
+  if (Array.isArray(source) && source.length) {
+    target.push(...source);
   }
-  try {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage;
-    }
-  } catch (err) {
-    log('[ranking]', err);
+  return target;
+}
+
+export function getTeamKeys() {
+  return [...TEAM_KEYS];
+}
+
+export function getTeamKey(team) {
+  if (TEAM_KEYS.includes(team)) {
+    return team;
+  }
+  const asString = String(team ?? '').trim();
+  if (!asString) {
+    return null;
+  }
+  const numeric = Number.parseInt(asString.replace(/^team/, ''), 10);
+  if (Number.isInteger(numeric) && numeric >= 1 && numeric <= TEAM_KEYS.length) {
+    return TEAM_KEYS[numeric - 1];
   }
   return null;
 }
 
-const localStore = resolveLocalStorage();
-
-function readStoredBalanceMode() {
-  const stored = safeGet(localStore, BALANCE_KEY);
-  return normalizeBalanceMode(stored);
+export function getTeamNumber(team) {
+  if (TEAM_KEYS.includes(team)) {
+    return TEAM_KEYS.indexOf(team) + 1;
+  }
+  const asString = String(team ?? '').trim();
+  if (!asString) {
+    return null;
+  }
+  const numeric = Number.parseInt(asString.replace(/^team/, ''), 10);
+  if (Number.isInteger(numeric) && numeric >= 1 && numeric <= TEAM_KEYS.length) {
+    return numeric;
+  }
+  return null;
 }
 
-export const state = {
-  league: DEFAULT_LEAGUE,
-  balanceMode: readStoredBalanceMode(),
-  teamsCount: 0,
-  lobbyPlayers: [],
-  teams: {},
-};
-
 export function setLeague(league) {
-  state.league = normalizeLeague(league ?? state.league);
+  if (typeof league === 'string' && league.trim()) {
+    state.league = league.trim();
+  }
   return state.league;
 }
 
 export function setBalanceMode(mode) {
-  state.balanceMode = normalizeBalanceMode(mode);
-  safeSet(localStore, BALANCE_KEY, state.balanceMode);
+  state.balanceMode = mode === 'manual' ? 'manual' : 'auto';
   return state.balanceMode;
 }
 
 export function setTeamsCount(count) {
   const numeric = Number(count);
-  state.teamsCount = Number.isInteger(numeric) && numeric > 0 ? numeric : 0;
+  if (Number.isInteger(numeric) && numeric >= 0) {
+    state.teamsCount = Math.min(TEAM_KEYS.length, numeric);
+  } else {
+    state.teamsCount = 0;
+  }
   return state.teamsCount;
 }
 
-export function setLobbyPlayers(players) {
-  state.lobbyPlayers.length = 0;
-  if (Array.isArray(players)) {
-    state.lobbyPlayers.push(...players);
-  }
-  return state.lobbyPlayers;
+export function setPlayers(players = []) {
+  return replaceArrayContents(state.players, Array.isArray(players) ? players : []);
 }
 
-export function setTeams(teamsMap = {}) {
-  Object.keys(state.teams).forEach(key => {
-    delete state.teams[key];
+export function setLobbyPlayers(players = []) {
+  return replaceArrayContents(state.lobbyPlayers, Array.isArray(players) ? players : []);
+}
+
+export function clearTeams() {
+  TEAM_KEYS.forEach(key => {
+    state.teams[key] = replaceArrayContents(state.teams[key], []);
   });
-  if (teamsMap && typeof teamsMap === 'object') {
-    Object.entries(teamsMap).forEach(([key, list]) => {
-      state.teams[key] = Array.isArray(list) ? [...list] : [];
-    });
-  }
   return state.teams;
 }
 
-function resolveLeague(value) {
-  return normalizeLeague(value ?? state.league);
-}
-
-export function getLobbyStorageKey(date, league) {
-  const doc = typeof document !== 'undefined' ? document : null;
-  const d = date || doc?.getElementById('date')?.value || new Date().toISOString().slice(0, 10);
-  const sel = doc?.getElementById('league');
-  const l = resolveLeague(league ?? sel?.value);
-  return `lobby::${d}::${l}`;
-}
-
-export function saveLobbyState(snapshot = {}) {
-  const lobbyPlayers = snapshot.lobbyPlayers ?? snapshot.lobby ?? state.lobbyPlayers;
-  const teams = snapshot.teams ?? state.teams;
-  const teamsCount = snapshot.teamsCount ?? snapshot.manualCount ?? state.teamsCount;
-  const league = resolveLeague(snapshot.league);
-  const key = getLobbyStorageKey(snapshot.date, league);
-  safeSet(localStore, key, JSON.stringify({
-    lobby: lobbyPlayers,
-    teams,
-    manualCount: teamsCount,
-  }));
-}
-
-export function loadLobbyState(league) {
-  const key = getLobbyStorageKey(undefined, league);
-  const data = safeGet(localStore, key);
-  if (!data) return null;
-  try {
-    const parsed = JSON.parse(data);
-    return {
-      lobbyPlayers: Array.isArray(parsed?.lobby) ? parsed.lobby : [],
-      teams: parsed?.teams && typeof parsed.teams === 'object' ? parsed.teams : {},
-      teamsCount: Number.isInteger(parsed?.manualCount) ? parsed.manualCount : 0,
-    };
-  } catch (err) {
-    log('[ranking]', err);
-    return null;
+export function setTeamMembers(team, members = []) {
+  const key = getTeamKey(team);
+  if (!key) {
+    return [];
   }
+  return replaceArrayContents(state.teams[key], Array.isArray(members) ? members : []);
+}
+
+export function setTeams(map = {}) {
+  clearTeams();
+  if (!map || typeof map !== 'object') {
+    return state.teams;
+  }
+  TEAM_KEYS.forEach((key, index) => {
+    const source = [
+      map[key],
+      map[index + 1],
+      map[`team${index + 1}`],
+    ].find(Array.isArray);
+    if (source) {
+      replaceArrayContents(state.teams[key], source);
+    }
+  });
+  return state.teams;
+}
+
+export function getTeamMembers(team) {
+  const key = getTeamKey(team);
+  return key ? state.teams[key] : [];
 }

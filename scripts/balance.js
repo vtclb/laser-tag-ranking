@@ -10,6 +10,7 @@ import {
   setLobbyPlayers,
   setTeams,
   setTeamsCount,
+  getTeamMembers,
 } from './state.js?v=2025-09-19-avatars-2';
 
 let recomputeHandler = null;
@@ -192,7 +193,7 @@ function renderTeams() {
     const teamNumber = index + 1;
     const list = teamDiv.querySelector('.team-list');
     const sumEl = teamDiv.querySelector('[data-team-sum]');
-    const members = state.teams[teamNumber] || [];
+    const members = getTeamMembers(teamNumber);
     const shouldShow = state.teamsCount >= teamNumber && state.teamsCount > 0;
 
     if (list) {
@@ -388,9 +389,10 @@ async function handleSaveGame() {
     lobby: state.lobbyPlayers.map(player => player.nick).join(', '),
   };
 
-  Object.entries(state.teams).forEach(([teamId, players]) => {
-    payload[`team${teamId}`] = players.map(player => player.nick).join(', ');
-  });
+  for (let i = 1; i <= state.teamsCount; i++) {
+    const members = getTeamMembers(i);
+    payload[`team${i}`] = members.map(player => player.nick).join(', ');
+  }
   payload.teamsJson = JSON.stringify(state.teams);
 
   let response;

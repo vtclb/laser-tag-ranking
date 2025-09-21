@@ -3,7 +3,7 @@
 import { teams, initTeams }          from './teams.js?v=2025-09-19-avatars-2';
 import { autoBalance2, autoBalanceN } from './balanceUtils.js?v=2025-09-19-avatars-2';
 import { lobby, setManualCount }      from './lobby.js?v=2025-09-19-avatars-2';
-import { state }                      from './state.js?v=2025-09-19-avatars-2';
+import { state, getTeamNumber }       from './state.js?v=2025-09-19-avatars-2';
 import {
   registerRecomputeAutoBalance,
   recomputeAutoBalance as triggerRecomputeAutoBalance,
@@ -21,7 +21,9 @@ export function initScenario() {
 function renderArenaCheckboxes() {
   arenaCheckboxes.innerHTML = '';
   Object.keys(teams).forEach(id => {
-    const sum = teams[id].reduce((s,p)=>s+p.pts, 0);
+    const teamNo = getTeamNumber(id);
+    if (!Number.isInteger(teamNo) || teamNo > state.teamsCount) return;
+    const sum = (teams[id] || []).reduce((s,p)=>s+p.pts, 0);
     const label = document.createElement('label');
     const cb    = document.createElement('input');
     cb.type     = 'checkbox';
@@ -29,7 +31,7 @@ function renderArenaCheckboxes() {
     cb.dataset.team = id;
     cb.addEventListener('change', updateStartButton);
     label.appendChild(cb);
-    label.insertAdjacentText('beforeend', ` Команда ${id} (∑ ${sum})`);
+    label.insertAdjacentText('beforeend', ` Команда ${teamNo} (∑ ${sum})`);
     arenaCheckboxes.appendChild(label);
   });
 }

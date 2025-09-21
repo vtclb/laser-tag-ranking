@@ -744,16 +744,43 @@ export async function uploadAvatar(nick, file) {
   if (!originalNick) throw new Error('INVALID_NICK');
   if (!file) throw new Error('INVALID_FILE');
 
+  const proxyBase = typeof GAS_PROXY_BASE === 'string' ? GAS_PROXY_BASE.trim().replace(/\/+$/, '') : '';
+  if (!proxyBase) throw new Error('GAS proxy URL not configured');
+
   const mime = file.type || 'image/jpeg';
   const data = await toBase64NoPrefix(file);
-  const resp = await gasPost('', { action: 'uploadAvatar', nick: originalNick, mime, data });
+  const response = await fetch(`${proxyBase}/json`, {
+    method: 'POST',
+    mode: 'cors',
+    headers: {
+      'Content-Type': 'application/json;charset=UTF-8',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({ action: 'uploadAvatar', nick: originalNick, mime, data })
+  });
 
-  if (!resp || typeof resp !== 'object' || resp.status !== 'OK') {
-    const message = resp?.message || resp?.status || 'ERR_UPLOAD';
+  const responseText = await parseTextSafely(response);
+  if (!response.ok) {
+    const message = responseText.trim() || response.statusText || `HTTP ${response.status}`;
     throw new Error(message);
   }
 
-  return resp;
+  let payload = null;
+  if (responseText) {
+    try {
+      payload = JSON.parse(responseText);
+    } catch (err) {
+      if (DEBUG_NETWORK) log('[ranking]', 'uploadAvatar invalid JSON', err);
+      throw new Error('Invalid JSON response');
+    }
+  }
+
+  if (!payload || typeof payload !== 'object' || payload.status !== 'OK') {
+    const message = payload?.message || payload?.status || 'ERR_UPLOAD';
+    throw new Error(message);
+  }
+
+  return payload;
 }
 
 export function avatarSrcFromRecord(rec) {

@@ -13,7 +13,7 @@ import {
 } from './api.js?v=2025-09-19-avatars-2';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-19-avatars-2';
 import { refreshArenaTeams } from './scenario.js?v=2025-09-19-avatars-2';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-19-avatars-2';
 
 export let lobby = [];

@@ -1,7 +1,7 @@
 import { log } from './logger.js?v=2025-09-19-avatars-2';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
 import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
-import * as Avatars from './avatars.client.js?v=2025-09-19-avatars-2';
+import * as Avatars from './avatars.client.js';
 import { noteAvatarFailure, setImgSafe, updateInlineAvatarImages } from './avatarAdmin.js?v=2025-09-19-avatars-2';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
 
@@ -249,7 +249,7 @@ async function loadProfile(nick, key = '') {
 
       try {
         if (typeof Avatars.reloadAvatars === 'function') {
-          await Avatars.reloadAvatars({ fresh: true });
+          await Avatars.reloadAvatars();
         }
         if (typeof Avatars.renderAllAvatars === 'function') {
           await Avatars.renderAllAvatars();

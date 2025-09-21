@@ -1,12 +1,16 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { uploadAvatar, loadPlayers, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
+import { uploadAvatar, loadPlayers, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
-import * as Avatars from './avatars.client.js?v=2025-09-19-avatars-2';
+import { reloadAvatars, norm } from './avatars.client.js?v=2025-09-19-avatars-2';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 export let avatarFailures = 0;
+
+function nickKey(value) {
+  return norm(value);
+}
 
 export function noteAvatarFailure(nick, reason) {
   avatarFailures++;
@@ -64,12 +68,12 @@ export function setImgSafe(img, url, bust, options = {}) {
 
 export function applyAvatarToUI(nick, imageUrl) {
   const url = imageUrl || AVATAR_PLACEHOLDER;
-  const key = avatarNickKey(nick);
+  const key = nickKey(nick);
   if (!key) return;
   document.querySelectorAll('img[data-nick], img[data-nick-key]').forEach(img => {
     if (!img) return;
     const candidate = img.dataset.nickKey || img.dataset.nick || '';
-    const currentKey = avatarNickKey(candidate);
+    const currentKey = nickKey(candidate);
     if (!currentKey || currentKey !== key) return;
     img.dataset.nickKey = currentKey;
     if (nick && !img.dataset.nick) img.dataset.nick = nick;
@@ -86,7 +90,7 @@ function escapeNickForSelector(nick) {
 
 export function updateInlineAvatarImages(nick, imageUrl, bust) {
   const trimmed = typeof nick === 'string' ? nick.trim() : '';
-  const key = avatarNickKey(trimmed);
+  const key = nickKey(trimmed);
   if (!trimmed || !key) return false;
 
   const bustValue = resolveBustValue(bust);
@@ -102,7 +106,7 @@ export function updateInlineAvatarImages(nick, imageUrl, bust) {
     const container = img.closest('[data-nick]');
     const containerNick = img.dataset?.nick || container?.dataset?.nick || '';
     if (!containerNick) return;
-    if (avatarNickKey(containerNick) !== key) return;
+    if (nickKey(containerNick) !== key) return;
     nodes.add(img);
   });
 
@@ -335,12 +339,7 @@ async function handleUploadClick() {
 
     let reloadError = null;
     try {
-      if (typeof Avatars.reloadAvatars === 'function') {
-        await Avatars.reloadAvatars({ fresh: true });
-      }
-      if (typeof Avatars.renderAllAvatars === 'function') {
-        await Avatars.renderAllAvatars();
-      }
+      await reloadAvatars(document);
     } catch (err) {
       reloadError = err;
       log('[avatarAdmin]', err);
@@ -372,12 +371,7 @@ async function handleRefreshClick(event) {
   const { refreshBtn } = state;
   if (refreshBtn) refreshBtn.disabled = true;
   try {
-    if (typeof Avatars.reloadAvatars === 'function') {
-      await Avatars.reloadAvatars({ fresh: true });
-    }
-    if (typeof Avatars.renderAllAvatars === 'function') {
-      await Avatars.renderAllAvatars();
-    }
+    await reloadAvatars(document);
   } catch (err) {
     log('[avatarAdmin]', err);
     showMessage('Не вдалося оновити список аватарів');

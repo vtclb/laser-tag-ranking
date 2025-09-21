@@ -1,21 +1,25 @@
 // scripts/balance.js
 
 import { fetchLeagueCsv, parsePlayersFromCsv, saveResult } from './api.js';
-import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js?v=2025-09-19-avatars-2';
-import { initAvatarAdmin } from './avatarAdmin.js?v=2025-09-19-avatars-2';
+import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js';
+import { initAvatarAdmin } from './avatarAdmin.js';
 import {
   state,
   setBalanceMode,
   setLeague,
   setLobbyPlayers,
+  setPlayers,
   setTeams,
   setTeamsCount,
   getTeamMembers,
-} from './state.js?v=2025-09-19-avatars-2';
+} from './state.js';
 
 let recomputeHandler = null;
 let allPlayers = [];
 const selectedCandidates = new Set();
+let leagueSelectEl = null;
+let playerListEl = null;
+let addToLobbyBtnEl = null;
 
 export function getBalanceMode() {
   return state.balanceMode;
@@ -253,11 +257,12 @@ function getPlayersByNicks(nicks) {
     .map(player => ({ ...player }));
 }
 
-function renderPlayerPicker() {
+export function renderPlayerList() {
   const area = document.getElementById('select-area');
-  const list = document.getElementById('player-list');
+  const list = playerListEl || document.getElementById('player-list');
   if (!list) return;
 
+  playerListEl = list;
   if (area) area.classList.remove('hidden');
 
   list.innerHTML = '';
@@ -293,6 +298,11 @@ function renderPlayerPicker() {
   if (searchInput) {
     applySearchFilter(searchInput.value || '');
   }
+
+  console.debug('[balance] renderPlayerList', {
+    total: allPlayers.length,
+    selected: selectedCandidates.size,
+  });
 }
 
 function applySearchFilter(term) {
@@ -305,21 +315,35 @@ function applySearchFilter(term) {
   });
 }
 
-async function handleLeagueChange(selectEl) {
-  const rawValue = selectEl?.value ?? state.league;
+export async function loadPlayersForLeague(source) {
+  const rawValue = typeof source === 'string'
+    ? source
+    : (source && 'value' in source ? source.value : state.league);
   const league = setLeague(rawValue);
   const csvLeague = typeof window !== 'undefined' && typeof window.uiLeagueToCsv === 'function'
     ? window.uiLeagueToCsv(rawValue)
     : league;
 
+  if (leagueSelectEl && leagueSelectEl !== source) {
+    leagueSelectEl.value = league;
+  }
+
+  console.debug('[balance] loadPlayersForLeague', { league, csvLeague });
+
   try {
     const csvText = await fetchLeagueCsv(csvLeague);
     allPlayers = parsePlayersFromCsv(csvText);
     allPlayers.sort((a, b) => a.nick.localeCompare(b.nick, 'uk'));
+    setPlayers(allPlayers);
     await initAvatarAdmin(allPlayers, league);
+    console.debug('[balance] loadPlayersForLeague success', {
+      league,
+      players: allPlayers.length,
+    });
   } catch (err) {
-    console.error('[balance] load players failed', err);
+    console.error('[balance] loadPlayersForLeague error', err);
     allPlayers = [];
+    setPlayers([]);
     const msg = 'Не вдалося завантажити гравців для обраної ліги';
     if (typeof showToast === 'function') showToast(msg); else alert(msg);
     await initAvatarAdmin([], league);
@@ -330,21 +354,25 @@ async function handleLeagueChange(selectEl) {
   setTeamsCount(0);
   setTeams({});
 
-  renderPlayerPicker();
+  renderPlayerList();
   renderLobby();
   applyModeUI();
 }
 
-function handleAddToLobbyClick() {
+export function addSelectedToLobby() {
   const nicks = getSelectedNicksFromList();
-  if (!nicks.length) return;
+  if (!nicks.length) {
+    console.debug('[balance] addSelectedToLobby skipped');
+    return;
+  }
 
   const players = getPlayersByNicks(nicks);
+  console.debug('[balance] addSelectedToLobby', { nicks, players: players.length });
   addToLobby(players);
 
   selectedCandidates.clear();
-  renderPlayerPicker();
-  const list = document.getElementById('player-list');
+  renderPlayerList();
+  const list = playerListEl || document.getElementById('player-list');
   if (list) {
     Array.from(list.querySelectorAll('input[type="checkbox"]')).forEach(input => {
       input.checked = false;
@@ -353,6 +381,7 @@ function handleAddToLobbyClick() {
 }
 
 function handleModeSwitch(mode) {
+  console.debug('[balance] handleModeSwitch', { mode });
   setBalanceMode(mode);
   applyModeUI();
 
@@ -368,10 +397,30 @@ function handleModeSwitch(mode) {
   }
 }
 
+export function bindModeButtons({ autoButton, manualButton } = {}) {
+  const autoBtn = autoButton || document.getElementById('mode-auto');
+  const manualBtn = manualButton || document.getElementById('mode-manual');
+
+  if (autoBtn) {
+    autoBtn.addEventListener('click', () => handleModeSwitch('auto'));
+  }
+  if (manualBtn) {
+    manualBtn.addEventListener('click', () => handleModeSwitch('manual'));
+  }
+
+  console.debug('[balance] bindModeButtons', {
+    auto: !!autoBtn,
+    manual: !!manualBtn,
+  });
+
+  return { autoBtn, manualBtn };
+}
+
 function handleTeamsButton(value) {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric <= 0) return;
 
+  console.debug('[balance] handleTeamsButton', { teams: numeric });
   setTeamsCount(numeric);
   if (state.balanceMode === 'auto') {
     runAutoBalance();
@@ -379,6 +428,17 @@ function handleTeamsButton(value) {
     renderLobby();
   }
   updateTeamButtonsUI();
+}
+
+export function bindTeamsCount(root = document) {
+  const scope = root || document;
+  const buttons = scope.querySelectorAll('[data-teams]');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => handleTeamsButton(btn.dataset.teams));
+  });
+
+  console.debug('[balance] bindTeamsCount', { buttons: buttons.length });
+  return buttons;
 }
 
 async function handleSaveGame() {
@@ -447,32 +507,30 @@ function initSearch() {
   });
 }
 
-function initEventListeners() {
-  const leagueSelect = document.getElementById('league');
-  const addBtn = document.getElementById('add-to-lobby');
-  const autoBtn = document.getElementById('mode-auto');
-  const manualBtn = document.getElementById('mode-manual');
-  const saveBtn = document.getElementById('save-game');
+document.addEventListener('DOMContentLoaded', async () => {
+  leagueSelectEl = document.getElementById('league');
+  playerListEl = document.getElementById('player-list');
+  addToLobbyBtnEl = document.getElementById('add-to-lobby');
+
+  if (leagueSelectEl) {
+    leagueSelectEl.value = state.league;
+    leagueSelectEl.addEventListener('change', () => loadPlayersForLeague(leagueSelectEl));
+  }
+
+  if (addToLobbyBtnEl) {
+    addToLobbyBtnEl.addEventListener('click', addSelectedToLobby);
+  }
+
   const loadBtn = document.getElementById('btn-load');
-
-  if (leagueSelect) {
-    leagueSelect.value = state.league;
-    leagueSelect.addEventListener('change', () => handleLeagueChange(leagueSelect));
-  }
-
-  if (addBtn) {
-    addBtn.addEventListener('click', handleAddToLobbyClick);
-  }
-
   if (loadBtn) {
     const originalText = loadBtn.textContent || '';
     loadBtn.addEventListener('click', async () => {
-      const targetSelect = leagueSelect || document.getElementById('league');
+      const targetSelect = leagueSelectEl || document.getElementById('league');
       loadBtn.disabled = true;
       loadBtn.textContent = 'Завантаження...';
 
       try {
-        await handleLeagueChange(targetSelect || null);
+        await loadPlayersForLeague(targetSelect || state.league);
       } finally {
         loadBtn.disabled = false;
         loadBtn.textContent = originalText || 'Завантажити гравців';
@@ -480,31 +538,22 @@ function initEventListeners() {
     });
   }
 
-  if (autoBtn) {
-    autoBtn.addEventListener('click', () => handleModeSwitch('auto'));
-  }
-
-  if (manualBtn) {
-    manualBtn.addEventListener('click', () => handleModeSwitch('manual'));
-  }
-
-  document.querySelectorAll('[data-teams]').forEach(btn => {
-    btn.addEventListener('click', () => handleTeamsButton(btn.dataset.teams));
-  });
-
+  const saveBtn = document.getElementById('save-game');
   if (saveBtn) {
     saveBtn.addEventListener('click', handleSaveGame);
   }
-}
 
-document.addEventListener('DOMContentLoaded', async () => {
-  initEventListeners();
+  bindModeButtons({
+    autoButton: document.getElementById('mode-auto'),
+    manualButton: document.getElementById('mode-manual'),
+  });
+  bindTeamsCount();
   initSearch();
+
   registerRecomputeAutoBalance(runAutoBalance);
   applyModeUI();
 
-  const leagueSelect = document.getElementById('league');
-  await handleLeagueChange(leagueSelect || null);
-  renderPlayerPicker();
+  const initialLeague = leagueSelectEl || state.league;
+  await loadPlayersForLeague(initialLeague);
   renderLobby();
 });

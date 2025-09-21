@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 
-const { GAS_BASE_URL } = await import('../scripts/config.js');
-const FALLBACK_URL = GAS_BASE_URL;
+let FALLBACK_URL = '';
 
 const sessionStore = new Map();
 const fakeWindow = {
@@ -49,7 +48,7 @@ globalThis.fetch = async (url, options) => {
       body: '<html>Bad Gateway</html>'
     });
   }
-  if (url === FALLBACK_URL) {
+  if (FALLBACK_URL && url === FALLBACK_URL) {
     return createResponse({
       ok: true,
       status: 200,
@@ -62,7 +61,11 @@ globalThis.fetch = async (url, options) => {
 
 fakeWindow.fetch = (...args) => globalThis.fetch(...args);
 
-const { saveResult, PROXY_ORIGIN } = await import('../scripts/api.js');
+const { saveResult, PROXY_ORIGIN, GAS_PROXY_ORIGIN } = await import('../scripts/api.js');
+
+FALLBACK_URL = GAS_PROXY_ORIGIN;
+
+assert.ok(FALLBACK_URL);
 
 assert.equal(window.GAS_FALLBACK_URL, undefined);
 

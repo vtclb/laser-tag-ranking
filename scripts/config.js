@@ -1,6 +1,6 @@
+export const VER = '2025-09-19-balance-hotfix-1';
 export const GAS_PROXY_BASE = 'https://laser-proxy.vartaclub.workers.dev';
-export const AVATAR_WORKER_BASE = 'https://avatarsproxy.vartaclub.workers.dev';
-export const AVATAR_CACHE_BUST = '2025-09-19-avatars-2';
-export const AVATAR_PLACEHOLDER = 'assets/default_avatars/av0.png';
-export const VER = '2025-09-19-balance-1';
-export const ASSETS_VER = VER || AVATAR_CACHE_BUST;
+export const LEAGUE_CSV = {
+  kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
+  sundaygames: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
+};

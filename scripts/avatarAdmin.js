@@ -1,10 +1,14 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { uploadAvatar, loadPlayers, fetchAvatarForNick, avatarNickKey } from './api.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
+import { uploadAvatar, loadPlayers, avatarNickKey } from './api.js?v=2025-09-19-avatars-2';
+import { AVATAR_PLACEHOLDER, AVATAR_WORKER_BASE } from './config.js?v=2025-09-19-avatars-2';
 import { reloadAvatars } from './avatars.client.js';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
+
+const RAW_WORKER_BASE = typeof AVATAR_WORKER_BASE === 'string' ? AVATAR_WORKER_BASE.trim() : '';
+const WORKER_BASE = RAW_WORKER_BASE ? RAW_WORKER_BASE.replace(/\/+$/, '') : '';
+const AVATAR_LOOKUP_BASE = WORKER_BASE ? `${WORKER_BASE}/avatars` : '';
 
 export let avatarFailures = 0;
 
@@ -19,112 +23,114 @@ export function noteAvatarFailure(nick, reason) {
   if (typeof showToast === 'function') showToast(msg);
 }
 
-export function normalizeAvatarUrl(url = '') {
-  if (!url) return AVATAR_PLACEHOLDER;
-  if (url.includes('drive.google.com')) {
-    const idMatch = url.match(/[?&]id=([^&]+)/) || url.match(/\/d\/([^/]+)/);
-    if (idMatch) {
-      return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w512`;
-    }
-  }
-  return url;
-}
-
-function resolveBustValue(value) {
+function toTimestamp(value, fallback = Date.now()) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const numeric = Number(value);
-  if (Number.isFinite(numeric)) return numeric;
   if (typeof value === 'string') {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
     const parsed = Date.parse(value);
     if (!Number.isNaN(parsed)) return parsed;
   }
-  return Date.now();
+  return fallback;
 }
 
-function cacheBustUrl(src, bust, param = 't') {
-  const base = src || '';
-  if (!base) return base;
-  const sep = base.includes('?') ? '&' : '?';
-  const key = typeof param === 'string' && param.trim() ? param.trim() : 't';
-  return `${base}${sep}${key}=${bust}`;
+function bustUrl(url, stamp = Date.now(), param = 'ts') {
+  const base = typeof url === 'string' ? url.trim() : '';
+  if (!base) return '';
+  if (/^(?:data|blob):/i.test(base)) return base;
+  const token = Number.isFinite(stamp) ? stamp : Date.now();
+  try {
+    const parsed = new URL(base, (typeof window !== 'undefined' && window.location) ? window.location.origin : undefined);
+    if (param) parsed.searchParams.set(param, token);
+    return parsed.toString();
+  } catch {
+    const separator = base.includes('?') ? '&' : '?';
+    const key = typeof param === 'string' && param.trim() ? param.trim() : 'ts';
+    return `${base}${separator}${key}=${token}`;
+  }
 }
 
-export function setImgSafe(img, url, bust, options = {}) {
+export function setImgSafe(img, url, stamp, options = {}) {
   if (!img) return;
-  const src = normalizeAvatarUrl(url);
+  const param = typeof options?.param === 'string' && options.param.trim() ? options.param.trim() : 'ts';
+  const cacheStamp = toTimestamp(stamp);
+  const source = typeof url === 'string' && url.trim() ? url.trim() : '';
+  const finalUrl = source ? bustUrl(source, cacheStamp, param) : '';
+  const fallback = bustUrl(AVATAR_PLACEHOLDER, cacheStamp, param) || AVATAR_PLACEHOLDER;
   img.referrerPolicy = 'no-referrer';
   img.loading = 'lazy';
   img.decoding = 'async';
-  const effectiveBust = resolveBustValue(bust);
-  const param = typeof options?.param === 'string' && options.param.trim() ? options.param.trim() : 't';
   img.onerror = () => {
     img.onerror = null;
-    img.src = cacheBustUrl(AVATAR_PLACEHOLDER, effectiveBust, param);
+    img.src = fallback;
   };
-  const cacheSafe = src.startsWith('data:') || src.startsWith('blob:');
-  const finalSrc = cacheSafe ? src : cacheBustUrl(src, effectiveBust, param);
-  img.src = finalSrc;
+  img.src = finalUrl || fallback;
 }
 
-export function applyAvatarToUI(nick, imageUrl) {
-  const url = imageUrl || AVATAR_PLACEHOLDER;
-  const key = nickKey(nick);
-  if (!key) return;
-  document.querySelectorAll('img[data-nick], img[data-nick-key]').forEach(img => {
-    if (!img) return;
-    const candidate = img.dataset.nickKey || img.dataset.nick || '';
-    const currentKey = nickKey(candidate);
-    if (!currentKey || currentKey !== key) return;
-    img.dataset.nickKey = currentKey;
-    if (nick && !img.dataset.nick) img.dataset.nick = nick;
-    setImgSafe(img, url);
-  });
-}
-
-function escapeNickForSelector(nick) {
-  if (typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function') {
-    return window.CSS.escape(nick);
-  }
-  return String(nick).replace(/['"\\]/g, '\\$&');
-}
-
-export function updateInlineAvatarImages(nick, imageUrl, bust) {
+export function updateInlineAvatarImages(nick, imageUrl, stamp) {
   const trimmed = typeof nick === 'string' ? nick.trim() : '';
   const key = nickKey(trimmed);
   if (!trimmed || !key) return false;
 
-  const bustValue = resolveBustValue(bust);
-  const safeUrl = imageUrl || AVATAR_PLACEHOLDER;
   const nodes = new Set();
 
-  const escaped = escapeNickForSelector(trimmed);
-  [`[data-nick="${escaped}"] img.avatar`, `img.avatar[data-nick="${escaped}"]`].forEach(selector => {
-    document.querySelectorAll(selector).forEach(img => nodes.add(img));
-  });
-
-  document.querySelectorAll('[data-nick] img.avatar, img.avatar[data-nick]').forEach(img => {
-    const container = img.closest('[data-nick]');
-    const containerNick = img.dataset?.nick || container?.dataset?.nick || '';
-    if (!containerNick) return;
-    if (nickKey(containerNick) !== key) return;
-    nodes.add(img);
-  });
-
-  document.querySelectorAll('img.avatar[data-nick-key]').forEach(img => {
-    const currentKey = typeof img.dataset.nickKey === 'string' ? img.dataset.nickKey : '';
+  document.querySelectorAll('img[data-nick], img[data-nick-key]').forEach(img => {
+    if (!img) return;
+    const currentKey = typeof img.dataset.nickKey === 'string' && img.dataset.nickKey.trim()
+      ? img.dataset.nickKey.trim()
+      : nickKey(img.dataset.nick || '');
     if (currentKey === key) nodes.add(img);
+  });
+
+  document.querySelectorAll('[data-nick] img').forEach(img => {
+    const container = img.closest('[data-nick]');
+    const containerNick = container?.dataset?.nick || '';
+    if (nickKey(containerNick) === key) nodes.add(img);
   });
 
   if (!nodes.size) return false;
 
+  const targetUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+  const cacheStamp = toTimestamp(stamp);
+
   nodes.forEach(img => {
-    if (!img) return;
     img.dataset.nick = trimmed;
     img.dataset.nickKey = key;
-    setImgSafe(img, safeUrl, bustValue, { param: 'ts' });
+    setImgSafe(img, targetUrl || AVATAR_PLACEHOLDER, cacheStamp, { param: 'ts' });
   });
 
   return true;
+}
+
+async function fetchWorkerAvatarRecord(nick) {
+  const trimmed = typeof nick === 'string' ? nick.trim() : '';
+  const fallbackStamp = Date.now();
+  if (!trimmed || !AVATAR_LOOKUP_BASE) {
+    return { url: '', timestamp: fallbackStamp };
+  }
+
+  const lookupUrl = `${AVATAR_LOOKUP_BASE}/${encodeURIComponent(trimmed)}`;
+  const requestStamp = Date.now();
+  const requestUrl = `${lookupUrl}?ts=${requestStamp}`;
+
+  try {
+    const response = await fetch(requestUrl, { cache: 'no-store' });
+    if (!response || !response.ok) {
+      throw new Error(`HTTP ${response?.status ?? 'ERR'}`);
+    }
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (err) {
+      throw new Error(`Avatar response parse failed: ${err?.message || err}`);
+    }
+    const resolvedUrl = typeof payload?.url === 'string' ? payload.url.trim() : '';
+    const updatedAt = toTimestamp(payload?.updatedAt, requestStamp);
+    return { url: resolvedUrl, timestamp: updatedAt };
+  } catch (err) {
+    log('[avatarAdmin] worker fetch failed', err);
+    return { url: '', timestamp: requestStamp };
+  }
 }
 
 const state = {
@@ -315,27 +321,20 @@ async function handleUploadClick() {
   setStatus('Завантаження…');
 
   try {
-    const resp = await uploadAvatar(nick, file);
-
-    const uploadedUrl = resp?.url || AVATAR_PLACEHOLDER;
+    const response = await uploadAvatar(nick, file);
+    const uploadedUrl = typeof response?.url === 'string' ? response.url.trim() : '';
     console.debug('[avatarAdmin] uploaded', { nick, url: uploadedUrl });
 
-    let latestRecord = null;
-    try {
-      latestRecord = await fetchAvatarForNick(nick, { force: true });
-    } catch (err) {
-      log('[avatarAdmin]', err);
-    }
-
-    const timestamp = Date.now();
-    const latestUrl = latestRecord?.url || uploadedUrl;
+    const workerRecord = await fetchWorkerAvatarRecord(nick);
+    const timestamp = toTimestamp(workerRecord?.timestamp, Date.now());
+    const latestUrl = workerRecord?.url?.trim() || uploadedUrl;
 
     if (previewImg) {
       previewImg.hidden = false;
-      setImgSafe(previewImg, latestUrl, timestamp, { param: 'ts' });
+      setImgSafe(previewImg, latestUrl || AVATAR_PLACEHOLDER, timestamp, { param: 'ts' });
     }
 
-    updateInlineAvatarImages(nick, latestUrl, timestamp);
+    updateInlineAvatarImages(nick, latestUrl || AVATAR_PLACEHOLDER, timestamp);
 
     let reloadError = null;
     try {

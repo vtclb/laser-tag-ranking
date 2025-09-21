@@ -10,7 +10,6 @@ import {
   issueAccessKey,
   getProfile,
   safeDel,
-  avatarNickKey,
 } from './api.js?v=2025-09-19-avatars-2';
 import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-19-avatars-2';
 import { refreshArenaTeams } from './scenario.js?v=2025-09-19-avatars-2';
@@ -23,9 +22,13 @@ const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
   let uiLeague = 'sundaygames';
 
-function maybeAutoRebalance() {
+async function maybeAutoRebalance() {
   if (balanceMode === 'auto') {
-    recomputeAutoBalance();
+    try {
+      await recomputeAutoBalance();
+    } catch (err) {
+      log('[ranking]', err);
+    }
   }
 }
 
@@ -74,14 +77,18 @@ async function addPlayer(nick){
   lobby.push({ ...res, team: null });
   renderLobby();
   renderLobbyCards();
-  renderAllAvatars();
+  try {
+    await renderAllAvatars(document.getElementById('players') || document);
+  } catch (err) {
+    log('[ranking]', err);
+  }
   renderSelect(filtered);
-  maybeAutoRebalance();
+  await maybeAutoRebalance();
 }
 
 // Ініціалізує лоббі новим набором гравців
-  export function initLobby(pl, league = uiLeague) {
-    uiLeague = String(league || '').toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
+export async function initLobby(pl, league = uiLeague) {
+  uiLeague = String(league || '').toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
   players = pl;
   filtered = [...players];
   const saved = loadLobbyState(uiLeague);
@@ -96,11 +103,15 @@ async function addPlayer(nick){
   renderSelect(filtered);
   renderLobby();
   renderLobbyCards();
-  renderAllAvatars();
-  maybeAutoRebalance();
+  try {
+    await renderAllAvatars(document.getElementById('players') || document);
+  } catch (err) {
+    log('[ranking]', err);
+  }
+  await maybeAutoRebalance();
 }
 
-export function updateLobbyState(updates){
+export async function updateLobbyState(updates){
   updates.forEach(u=>{
     const norm = {nick:u.nick};
     if(u.points!==undefined) norm.pts = u.points;
@@ -120,8 +131,12 @@ export function updateLobbyState(updates){
   if(teamCount) initTeams(teamCount, teams);
   renderLobby();
   renderLobbyCards();
-  renderAllAvatars();
-  maybeAutoRebalance();
+  try {
+    await renderAllAvatars(document.getElementById('players') || document);
+  } catch (err) {
+    log('[ranking]', err);
+  }
+  await maybeAutoRebalance();
 }
 
 // Рендер списку доступних гравців
@@ -180,15 +195,20 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSelect(filtered);
   };
 
-    document.getElementById('btn-add-selected').onclick = () => {
+    document.getElementById('btn-add-selected').onclick = async () => {
       selected.forEach(p => {
         if (!lobby.includes(p)) lobby.push(p);
       });
       selected = [];
       renderLobby();
       renderLobbyCards();
-      renderAllAvatars();
+      try {
+        await renderAllAvatars(document.getElementById('players') || document);
+      } catch (err) {
+        log('[ranking]', err);
+      }
       renderSelect(filtered);
+      await maybeAutoRebalance();
     };
 
   document.getElementById('btn-clear-selected').onclick = () => {
@@ -249,14 +269,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Встановлюємо кількість команд для ручного режиму
-export function setManualCount(n) {
+export async function setManualCount(n) {
   manualCount = n;
   renderLobby();
   renderLobbyCards();
-  renderAllAvatars();
+  try {
+    await renderAllAvatars(document.getElementById('players') || document);
+  } catch (err) {
+    log('[ranking]', err);
+  }
 }
 
-export function clearLobby() {
+export async function clearLobby() {
   lobby.length = 0;
   manualCount = 0;
   Object.keys(teams).forEach(k => { teams[k].length = 0; });
@@ -265,10 +289,15 @@ export function clearLobby() {
 
   renderLobby();
   renderLobbyCards();
-  renderAllAvatars();
+  try {
+    await renderAllAvatars(document.getElementById('players') || document);
+  } catch (err) {
+    log('[ranking]', err);
+  }
   renderTeams();
   updateSummary();
   renderSelect(filtered);
+  await maybeAutoRebalance();
 }
 
 function renderTeams() {
@@ -293,7 +322,6 @@ function renderPlayerList(el, arr) {
     const div = document.createElement('div');
     div.className = 'player';
     div.dataset.nick = p.nick;
-    div.dataset.nickKey = avatarNickKey(p.nick);
     div.draggable = true;
 
     const img = document.createElement('img');
@@ -303,7 +331,6 @@ function renderPlayerList(el, arr) {
     img.width = 40;
     img.height = 40;
     img.dataset.nick = p.nick;
-    img.dataset.nickKey = avatarNickKey(p.nick);
     img.src = AVATAR_PLACEHOLDER;
     img.onerror = () => {
       img.onerror = null;
@@ -339,10 +366,10 @@ function renderPlayerList(el, arr) {
 function setupDnD(containers) {
   containers.forEach(c => {
     c.addEventListener('dragover', e => e.preventDefault());
-    c.addEventListener('drop', e => {
+    c.addEventListener('drop', async e => {
       e.preventDefault();
       const nick = e.dataTransfer.getData('text/plain');
-      movePlayer(nick, c.id);
+      await movePlayer(nick, c.id);
     });
   });
 
@@ -367,16 +394,21 @@ function takePlayer(nick) {
   return null;
 }
 
-function movePlayer(nick, targetId) {
+async function movePlayer(nick, targetId) {
   const p = takePlayer(nick);
   if (!p) return;
   if (targetId === 'lobby-list') lobby.push(p);
-    else if (targetId === 'team-a') teams[1].push(p);
-    else if (targetId === 'team-b') teams[2].push(p);
-    renderLobby();
-    renderLobbyCards();
-    renderAllAvatars();
+  else if (targetId === 'team-a') teams[1].push(p);
+  else if (targetId === 'team-b') teams[2].push(p);
+  renderLobby();
+  renderLobbyCards();
+  try {
+    await renderAllAvatars(document.getElementById('players') || document);
+  } catch (err) {
+    log('[ranking]', err);
   }
+  await maybeAutoRebalance();
+}
 
 // Рендер лоббі
 function renderLobby() {
@@ -431,7 +463,6 @@ function renderLobby() {
     const issueBtn = document.createElement('button');
     issueBtn.className = 'btn-issue-key';
     issueBtn.dataset.nick = p.nick;
-    issueBtn.dataset.nickKey = avatarNickKey(p.nick);
     issueBtn.textContent = 'Видати ключ';
     tdBtn.appendChild(issueBtn);
     tr.appendChild(tdBtn);
@@ -511,7 +542,6 @@ function renderLobbyCards() {
     const issueBtn = document.createElement('button');
     issueBtn.className = 'btn-issue-key';
     issueBtn.dataset.nick = p.nick;
-    issueBtn.dataset.nickKey = avatarNickKey(p.nick);
     issueBtn.textContent = 'Видати ключ';
     const accessSpan = document.createElement('span');
     accessSpan.className = 'access-key';
@@ -540,7 +570,7 @@ function renderLobbyCards() {
   });
 }
 
-function onLobbyAction(e) {
+async function onLobbyAction(e) {
   const assign = e.target.closest('.assign');
   if (assign) {
     const idx = +assign.dataset.i;
@@ -554,28 +584,36 @@ function onLobbyAction(e) {
     preset[teamNo] = preset[teamNo] || [];
     preset[teamNo].push(p);
 
-      initTeams(manualCount, preset);
-      refreshArenaTeams();
-      renderLobby();
-      renderLobbyCards();
-      renderAllAvatars();
-      renderSelect(filtered);
-      maybeAutoRebalance();
-      return;
+    initTeams(manualCount, preset);
+    refreshArenaTeams();
+    renderLobby();
+    renderLobbyCards();
+    try {
+      await renderAllAvatars(document.getElementById('players') || document);
+    } catch (err) {
+      log('[ranking]', err);
     }
+    renderSelect(filtered);
+    await maybeAutoRebalance();
+    return;
+  }
 
   const remove = e.target.closest('.remove-lobby');
   if (remove) {
     const idx = +remove.dataset.i;
-      lobby.splice(idx, 1);
-      renderLobby();
-      renderLobbyCards();
-      renderAllAvatars();
-      renderSelect(filtered);
-      refreshArenaTeams();
-      maybeAutoRebalance();
-      return;
+    lobby.splice(idx, 1);
+    renderLobby();
+    renderLobbyCards();
+    try {
+      await renderAllAvatars(document.getElementById('players') || document);
+    } catch (err) {
+      log('[ranking]', err);
     }
+    renderSelect(filtered);
+    refreshArenaTeams();
+    await maybeAutoRebalance();
+    return;
+  }
 
   const sel = e.target.closest('.abonement-select');
   if (sel && e.type === 'change') {
@@ -660,8 +698,8 @@ document.addEventListener('click', async e => {
   overlay?.addEventListener('click', closePanel);
   panel?.addEventListener('click', e => e.stopPropagation());
 
-  document.getElementById('ui-clear-lobby')?.addEventListener('click', () => {
-    if (typeof window.clearLobby === 'function') window.clearLobby();
+  document.getElementById('ui-clear-lobby')?.addEventListener('click', async () => {
+    if (typeof window.clearLobby === 'function') await window.clearLobby();
     else {
       document.getElementById('lobby-list')?.replaceChildren();
       document.querySelector('.bal__players')?.replaceChildren();
@@ -669,8 +707,8 @@ document.addEventListener('click', async e => {
     closePanel();
   });
 
-  document.getElementById('btn-clear-lobby')?.addEventListener('click', () => {
-    if (typeof clearLobby === 'function') clearLobby();
+  document.getElementById('btn-clear-lobby')?.addEventListener('click', async () => {
+    if (typeof clearLobby === 'function') await clearLobby();
   });
 
   const fixVh = () => {

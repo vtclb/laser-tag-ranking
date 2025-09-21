@@ -1,5 +1,11 @@
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
-import { fetchAvatarsMap } from './api.js?v=2025-09-19-avatars-2';
+import {
+  AVATAR_PLACEHOLDER,
+  AVATARS_FEED,
+  AVATAR_BY_NICK,
+  AVATAR_CACHE_BUST,
+  AVATAR_WORKER_BASE,
+  ASSETS_VER
+} from './config.js?v=2025-09-19-avatars-2';
 
 const ZERO_WIDTH_CHARS_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const COMBINING_MARKS_RE = /[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\uFE20-\uFE2F]/g;
@@ -30,92 +36,37 @@ const HOMOGRAPH_MAP = Object.freeze({
 const HOMOGRAPH_PATTERN = (() => {
   const chars = Object.keys(HOMOGRAPH_MAP);
   if (!chars.length) return null;
-  const escaped = chars
-    .map(ch => ch.replace(/[\\\]\[\-]/g, '\\$&'))
-    .join('');
+  const escaped = chars.map(ch => ch.replace(/[\\\]\[\-]/g, '\\$&')).join('');
   return new RegExp(`[${escaped}]`, 'gu');
 })();
+
+const runtimeRoot = typeof window !== 'undefined' ? window : globalThis;
+const headerTemplate = {};
+if (runtimeRoot && runtimeRoot.AVATAR_HEADERS && typeof runtimeRoot.AVATAR_HEADERS === 'object') {
+  Object.assign(headerTemplate, runtimeRoot.AVATAR_HEADERS);
+}
+const originHeader = runtimeRoot?.location?.origin ? String(runtimeRoot.location.origin) : '';
+if (originHeader && !headerTemplate['x-avatar-origin']) headerTemplate['x-avatar-origin'] = originHeader;
+const assetVersion = trimConfigValue(ASSETS_VER) || trimConfigValue(AVATAR_CACHE_BUST);
+if (assetVersion && !headerTemplate['x-avatar-version']) headerTemplate['x-avatar-version'] = assetVersion;
+if (!headerTemplate['x-avatar-proxy']) headerTemplate['x-avatar-proxy'] = 'laser-tag-ranking';
+const AV_HEADERS = Object.freeze(headerTemplate);
+
+const FEED_ENDPOINT = resolveEndpoint(AVATARS_FEED, AVATAR_WORKER_BASE);
+const AVATAR_ENDPOINT = resolveEndpoint(AVATAR_BY_NICK, AVATAR_WORKER_BASE, { ensureTrailingSlash: true });
+const CACHE_BUST_SEED = trimConfigValue(AVATAR_CACHE_BUST);
 
 const state = {
   mapping: Object.create(null),
   updatedAt: 0,
-  source: 'none'
+  lastSync: 0
 };
 
-let pendingPromise = null;
-let pendingIsFresh = false;
+let feedPromise = null;
+let feedPromiseIsFresh = false;
+const nickRequests = new Map();
 
-function cloneMapping(rawMapping) {
-  const mapping = Object.create(null);
-  if (!rawMapping || typeof rawMapping !== 'object') return mapping;
-  for (const [key, value] of Object.entries(rawMapping)) {
-    if (typeof value !== 'string') continue;
-    mapping[key] = value;
-  }
-  return mapping;
-}
-
-function resolveRoot(root) {
-  if (root && typeof root.querySelectorAll === 'function') return root;
-  if (typeof document !== 'undefined') return document;
-  return null;
-}
-
-function ensureImageElement(target) {
-  if (!target) return null;
-  if (target.tagName && target.tagName.toLowerCase() === 'img') return target;
-  if (typeof target.querySelector === 'function') {
-    const existing = target.querySelector('img.avatar') || target.querySelector('img');
-    if (existing) return existing;
-    const created = target.ownerDocument?.createElement('img') || document?.createElement?.('img');
-    if (!created) return null;
-    created.classList.add('avatar');
-    target.prepend(created);
-    return created;
-  }
-  return null;
-}
-
-function seedPlaceholder(node) {
-  const img = ensureImageElement(node);
-  if (!img) return null;
-  img.referrerPolicy = 'no-referrer';
-  img.decoding = 'async';
-  if (!img.loading) img.loading = 'lazy';
-  if (!img.alt) img.alt = node?.dataset?.nick || 'avatar';
-  img.onerror = () => {
-    img.onerror = null;
-    img.src = AVATAR_PLACEHOLDER;
-  };
-  if (!img.getAttribute('src')) {
-    img.src = AVATAR_PLACEHOLDER;
-  }
-  return img;
-}
-
-function withBust(src, bust) {
-  if (!src) return src;
-  if (/^(?:data|blob):/i.test(src)) return src;
-  const value = Number.isFinite(bust) ? bust : bust ? Number(bust) : 0;
-  if (!value) return src;
-  const separator = src.includes('?') ? '&' : '?';
-  return `${src}${separator}t=${value}`;
-}
-
-function applyImage(img, url, bust) {
-  if (!img) return;
-  const base = typeof url === 'string' && url ? url : AVATAR_PLACEHOLDER;
-  const bustValue = Number.isFinite(bust) ? bust : Date.now();
-  const fallback = withBust(AVATAR_PLACEHOLDER, bustValue) || AVATAR_PLACEHOLDER;
-  const nextSrc = withBust(base, bustValue) || AVATAR_PLACEHOLDER;
-  img.onerror = () => {
-    img.onerror = null;
-    img.src = fallback;
-  };
-  img.src = nextSrc;
-}
-
-export function normalizeNick(value) {
+export function norm(value) {
   if (value == null) return '';
   const input = String(value);
   const trimmed = input.trim().toLowerCase();
@@ -131,132 +82,417 @@ export function normalizeNick(value) {
   return replaced;
 }
 
-export async function fetchMap({ fresh = false } = {}) {
-  if (pendingPromise) {
-    if (!fresh || pendingIsFresh) {
-      return pendingPromise;
+function trimConfigValue(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function ensureTrailingSlash(url) {
+  if (!url) return url;
+  return url.endsWith('/') ? url : `${url}/`;
+}
+
+function resolveEndpoint(primary, fallback, { ensureTrailingSlash: wantTrailingSlash = false } = {}) {
+  const primaryTrimmed = trimConfigValue(primary);
+  const fallbackTrimmed = trimConfigValue(fallback);
+  const applyTrailing = value => (wantTrailingSlash ? ensureTrailingSlash(value) : value);
+
+  if (primaryTrimmed) {
+    try {
+      const absolute = new URL(primaryTrimmed);
+      return applyTrailing(absolute.toString());
+    } catch {
+      if (fallbackTrimmed) {
+        try {
+          const base = new URL(fallbackTrimmed);
+          const relative = primaryTrimmed.startsWith('/') ? primaryTrimmed.slice(1) : primaryTrimmed;
+          const resolved = new URL(relative, base);
+          return applyTrailing(resolved.toString());
+        } catch {
+          // ignore invalid URL
+        }
+      }
     }
   }
 
+  return applyTrailing(fallbackTrimmed) || '';
+}
+
+function buildCacheBust(...parts) {
+  const tokens = [];
+  for (const part of parts) {
+    if (typeof part === 'number') {
+      if (Number.isFinite(part) && part > 0) tokens.push(String(part));
+    } else {
+      const value = trimConfigValue(part);
+      if (value) tokens.push(value);
+    }
+  }
+  return tokens.join('-');
+}
+
+function appendCacheBust(url, bustValue) {
+  if (!url) return url;
+  const trimmed = trimConfigValue(bustValue);
+  if (!trimmed) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set('t', trimmed);
+    return u.toString();
+  } catch {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}t=${encodeURIComponent(trimmed)}`;
+  }
+}
+
+function resolveUpdatedAt(headers, fallback = Date.now()) {
+  if (!headers || typeof headers.get !== 'function') return fallback;
+  const direct = headers.get('x-avatar-updated-at') || headers.get('x-updated-at');
+  if (direct) {
+    const numeric = Number(direct);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    const parsed = Date.parse(direct);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  const lastModified = headers.get('last-modified');
+  if (lastModified) {
+    const parsed = Date.parse(lastModified);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function sanitizeMapping(rawMapping) {
+  const mapping = Object.create(null);
+  if (!rawMapping || typeof rawMapping !== 'object') return mapping;
+  for (const [rawKey, rawUrl] of Object.entries(rawMapping)) {
+    const key = norm(rawKey);
+    const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+    if (key && url) mapping[key] = url;
+  }
+  return mapping;
+}
+
+function sanitizeEntries(entries) {
+  const mapping = Object.create(null);
+  if (!Array.isArray(entries)) return mapping;
+  for (const entry of entries) {
+    if (!entry || entry.length < 2) continue;
+    const [nick, url] = entry;
+    const key = norm(nick);
+    const trimmed = typeof url === 'string' ? url.trim() : '';
+    if (key && trimmed) mapping[key] = trimmed;
+  }
+  return mapping;
+}
+
+function parseFeedPayload(raw, headers) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  let mapping = null;
+  if (raw.mapping && typeof raw.mapping === 'object') {
+    mapping = sanitizeMapping(raw.mapping);
+  } else if (Array.isArray(raw.entries)) {
+    mapping = sanitizeEntries(raw.entries);
+  }
+
+  if (!mapping) mapping = Object.create(null);
+  const updatedAt = Number.isFinite(raw.updatedAt) ? raw.updatedAt : resolveUpdatedAt(headers, Date.now());
+  return { mapping, updatedAt };
+}
+
+function replaceMapping(nextMapping, updatedAt) {
+  state.mapping = Object.create(null);
+  for (const [key, url] of Object.entries(nextMapping || {})) {
+    state.mapping[key] = url;
+  }
+  state.updatedAt = Number.isFinite(updatedAt) ? updatedAt : Date.now();
+  state.lastSync = Date.now();
+}
+
+function resolveRoot(root) {
+  if (root && typeof root.querySelectorAll === 'function') return root;
+  if (typeof document !== 'undefined') return document;
+  return null;
+}
+
+function ensureImageElement(target) {
+  if (!target) return null;
+  if (target.tagName && target.tagName.toLowerCase() === 'img') return target;
+  if (typeof target.querySelector === 'function') {
+    const existing = target.querySelector('img[data-nick]') || target.querySelector('img.avatar') || target.querySelector('img');
+    if (existing) return existing;
+    const created = target.ownerDocument?.createElement('img') || document?.createElement?.('img');
+    if (!created) return null;
+    created.classList.add('avatar');
+    target.prepend(created);
+    return created;
+  }
+  return null;
+}
+
+function seedPlaceholder(img, nick) {
+  if (!img) return;
+  if (!img.referrerPolicy) img.referrerPolicy = 'no-referrer';
+  img.decoding = img.decoding || 'async';
+  if (!img.loading) img.loading = 'lazy';
+  if (!img.alt) img.alt = nick || 'avatar';
+  if (!img.getAttribute('src')) {
+    img.src = AVATAR_PLACEHOLDER;
+  }
+}
+
+function applyImage(img, url, bustSource) {
+  if (!img) return;
+  const stamp = Number.isFinite(bustSource) ? bustSource : Date.now();
+  const bust = buildCacheBust(CACHE_BUST_SEED, stamp);
+  const baseUrl = typeof url === 'string' && url ? url : '';
+  if (!baseUrl) {
+    img.onerror = null;
+    img.src = AVATAR_PLACEHOLDER;
+    return;
+  }
+  const fallback = appendCacheBust(AVATAR_PLACEHOLDER, bust) || AVATAR_PLACEHOLDER;
+  const target = appendCacheBust(baseUrl, bust) || baseUrl;
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = fallback;
+  };
+  img.src = target;
+}
+
+function prepareTarget(node) {
+  const img = ensureImageElement(node);
+  if (!img) return null;
+
+  const containerNick = typeof node?.dataset?.nick === 'string' ? node.dataset.nick : '';
+  const imageNick = typeof img.dataset?.nick === 'string' ? img.dataset.nick : '';
+  const rawNick = imageNick || containerNick || '';
+  const trimmed = rawNick.trim();
+
+  if (node !== img && containerNick !== trimmed) {
+    if (trimmed) node.dataset.nick = trimmed;
+    else delete node.dataset.nick;
+  }
+
+  if (imageNick !== trimmed) {
+    if (trimmed) img.dataset.nick = trimmed;
+    else delete img.dataset.nick;
+  }
+
+  const key = norm(trimmed);
+  if (key) img.dataset.nickKey = key;
+  else delete img.dataset.nickKey;
+
+  seedPlaceholder(img, trimmed);
+  return { img, nick: trimmed, key };
+}
+
+function collectTargets(scope) {
+  const seen = new Set();
+  const result = [];
+
+  scope.querySelectorAll('img[data-nick]').forEach(img => {
+    const entry = prepareTarget(img);
+    if (entry && !seen.has(entry.img)) {
+      seen.add(entry.img);
+      result.push(entry);
+    }
+  });
+
+  scope.querySelectorAll('[data-nick]:not(img)').forEach(node => {
+    const entry = prepareTarget(node);
+    if (entry && !seen.has(entry.img)) {
+      seen.add(entry.img);
+      result.push(entry);
+    }
+  });
+
+  return result;
+}
+
+async function loadFeed({ fresh = false } = {}) {
+  if (feedPromise) {
+    if (!fresh || feedPromiseIsFresh) return feedPromise;
+  }
+
+  if (!fresh && state.lastSync && Date.now() - state.lastSync < 30_000) {
+    return state.mapping;
+  }
+
   const request = (async () => {
-    let result;
+    if (!FEED_ENDPOINT) return state.mapping;
+
+    const bust = buildCacheBust(CACHE_BUST_SEED, fresh ? Date.now() : '');
+    const targetUrl = appendCacheBust(FEED_ENDPOINT, bust);
+
+    let response;
     try {
-      result = await fetchAvatarsMap({ force: fresh });
+      response = await fetch(targetUrl, {
+        method: 'GET',
+        headers: { ...AV_HEADERS, 'Cache-Control': 'no-cache' }
+      });
     } catch (err) {
-      result = null;
+      console.warn('[avatars] feed fetch failed', err);
+      return state.mapping;
     }
 
-    const mapping = cloneMapping(result?.mapping);
-    state.mapping = mapping;
-    state.updatedAt = Number.isFinite(result?.updatedAt) ? result.updatedAt : Date.now();
-    state.source = typeof result?.source === 'string' && result.source ? result.source : 'proxy';
-
-    if (!result) {
-      state.source = 'error';
+    if (!response || !response.ok) {
+      console.warn('[avatars] feed status', response?.status);
+      return state.mapping;
     }
 
-    const size = Object.keys(state.mapping).length;
-    console.log(`[avatars] source=${state.source} size=${size}`);
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (err) {
+      console.warn('[avatars] feed parse failed', err);
+      data = null;
+    }
 
-    return {
-      mapping: state.mapping,
-      updatedAt: state.updatedAt,
-      source: state.source
-    };
+    const parsed = parseFeedPayload(data, response.headers);
+    if (parsed) {
+      replaceMapping(parsed.mapping, parsed.updatedAt);
+      const size = Object.keys(state.mapping).length;
+      console.log(`[avatars] feed size=${size} updatedAt=${state.updatedAt}`);
+    }
+
+    return state.mapping;
   })();
 
-  pendingPromise = request;
-  pendingIsFresh = fresh;
+  feedPromise = request;
+  feedPromiseIsFresh = fresh;
 
   try {
     return await request;
   } finally {
-    if (pendingPromise === request) {
-      pendingPromise = null;
-      pendingIsFresh = false;
+    if (feedPromise === request) {
+      feedPromise = null;
+      feedPromiseIsFresh = false;
     }
   }
 }
 
-export function getLocalAvatarUrl(value) {
-  const key = normalizeNick(value);
-  if (!key) return '';
-  return state.mapping[key] || '';
+async function fetchAvatarRecord(nick, { fresh = false } = {}) {
+  const original = typeof nick === 'string' ? nick.trim() : '';
+  const key = norm(original);
+  if (!key) {
+    return { url: '', updatedAt: Date.now() };
+  }
+
+  if (!fresh) {
+    const cached = state.mapping[key];
+    if (cached) return { url: cached, updatedAt: state.updatedAt || Date.now() };
+    if (nickRequests.has(key)) return nickRequests.get(key);
+  }
+
+  if (!AVATAR_ENDPOINT) {
+    return { url: '', updatedAt: Date.now() };
+  }
+
+  const request = (async () => {
+    const bust = buildCacheBust(CACHE_BUST_SEED, Date.now());
+    const target = appendCacheBust(`${AVATAR_ENDPOINT}${encodeURIComponent(original)}`, bust);
+
+    let response;
+    try {
+      response = await fetch(target, {
+        method: 'GET',
+        headers: { ...AV_HEADERS, 'Cache-Control': 'no-cache' }
+      });
+    } catch (err) {
+      console.warn('[avatars] nick fetch failed', err);
+      return { url: '', updatedAt: Date.now() };
+    }
+
+    if (!response || !response.ok) {
+      console.warn('[avatars] nick status', response?.status);
+      return { url: '', updatedAt: Date.now() };
+    }
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (err) {
+      console.warn('[avatars] nick parse failed', err);
+      data = null;
+    }
+
+    const rawUrl = data && typeof data.url === 'string' ? data.url.trim() : '';
+    const updatedAtCandidate = Number.isFinite(data?.updatedAt) ? data.updatedAt : resolveUpdatedAt(response.headers, Date.now());
+    if (rawUrl) {
+      state.mapping[key] = rawUrl;
+      state.updatedAt = Math.max(state.updatedAt, updatedAtCandidate);
+      state.lastSync = Date.now();
+    }
+
+    return { url: rawUrl, updatedAt: updatedAtCandidate };
+  })();
+
+  nickRequests.set(key, request);
+  try {
+    return await request;
+  } finally {
+    if (nickRequests.get(key) === request) {
+      nickRequests.delete(key);
+    }
+  }
+}
+
+async function resolveMiss(entry, fallbackBust) {
+  const record = await fetchAvatarRecord(entry.nick);
+  const url = record?.url || '';
+  const bust = Number.isFinite(record?.updatedAt) ? record.updatedAt : fallbackBust;
+  if (entry.key && url) entry.img.dataset.nickKey = entry.key;
+  applyImage(entry.img, url, bust);
 }
 
 export async function renderAllAvatars(root) {
   const scope = resolveRoot(root);
   if (!scope) return;
 
-  const nodes = Array.from(scope.querySelectorAll('[data-nick]'));
-  if (!nodes.length) return;
+  const targets = collectTargets(scope);
+  if (!targets.length) return;
 
-  const prepared = nodes.map(node => {
-    const rawNick = typeof node.dataset.nick === 'string' ? node.dataset.nick : '';
-    const trimmedNick = rawNick.trim();
-    if (trimmedNick !== rawNick) node.dataset.nick = trimmedNick;
-    const normalized = normalizeNick(trimmedNick);
-    const img = seedPlaceholder(node);
-    if (img) {
-      if (trimmedNick) img.dataset.nick = trimmedNick;
-      if (normalized) img.dataset.nickKey = normalized;
-      else delete img.dataset.nickKey;
+  await loadFeed({ fresh: false });
+
+  const fallbackBust = state.updatedAt || Date.now();
+  const pending = [];
+
+  for (const entry of targets) {
+    if (!entry.key) {
+      applyImage(entry.img, '', fallbackBust);
+      continue;
     }
-    return { node, img, normalized, raw: trimmedNick };
-  });
 
-  const { updatedAt } = await fetchMap({ fresh: false });
-  const bust = Number.isFinite(updatedAt) ? updatedAt : Date.now();
+    const url = state.mapping[entry.key];
+    if (url) {
+      applyImage(entry.img, url, state.updatedAt);
+      continue;
+    }
 
-  prepared.forEach(entry => {
-    if (!entry.img) return;
-    const url = entry.normalized ? getLocalAvatarUrl(entry.normalized) : '';
-    applyImage(entry.img, url, bust);
-  });
+    if (!AVATAR_ENDPOINT) {
+      applyImage(entry.img, '', fallbackBust);
+      continue;
+    }
+
+    pending.push(resolveMiss(entry, fallbackBust));
+  }
+
+  if (pending.length) {
+    await Promise.allSettled(pending);
+  }
 }
 
 export async function reloadAvatars(options = {}) {
   const { root = undefined, fresh = false } = options || {};
-  await fetchMap({ fresh: Boolean(fresh) });
+  await loadFeed({ fresh: Boolean(fresh) });
   await renderAllAvatars(root);
 }
 
-export function updateOneAvatar(nick, url, bust) {
-  const normalized = normalizeNick(nick);
-  if (!normalized) return;
-
-  const safeUrl = typeof url === 'string' ? url : '';
-  state.mapping[normalized] = safeUrl;
-
-  const bustValue = Number.isFinite(bust) ? bust : Date.now();
-  if (Number.isFinite(bust)) {
-    state.updatedAt = Math.max(state.updatedAt, bustValue);
-  }
-
-  const scope = resolveRoot(document);
-  if (!scope) return;
-
-  const nodes = Array.from(scope.querySelectorAll('[data-nick]'));
-  nodes.forEach(node => {
-    const rawNick = typeof node.dataset.nick === 'string' ? node.dataset.nick : '';
-    if (!rawNick) return;
-    const normalizedNick = normalizeNick(rawNick);
-    if (!normalizedNick || normalizedNick !== normalized) return;
-    const img = seedPlaceholder(node);
-    if (!img) return;
-    img.dataset.nick = rawNick;
-    img.dataset.nickKey = normalized;
-    applyImage(img, safeUrl, bustValue);
-  });
-
-  const keyedImages = Array.from(scope.querySelectorAll('img[data-nick-key]'));
-  keyedImages.forEach(img => {
-    const currentKey = typeof img.dataset.nickKey === 'string' ? img.dataset.nickKey : '';
-    if (currentKey !== normalized) return;
-    if (img.closest('[data-nick]')) return;
-    img.dataset.nickKey = normalized;
-    applyImage(img, safeUrl, bustValue);
-  });
+export function getAvatarUrlSync(nick) {
+  const key = norm(nick);
+  if (!key) return '';
+  return state.mapping[key] || '';
 }
 
 if (typeof document !== 'undefined' && document.addEventListener) {
@@ -266,3 +502,4 @@ if (typeof document !== 'undefined' && document.addEventListener) {
     });
   });
 }
+

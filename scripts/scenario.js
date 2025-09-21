@@ -3,8 +3,8 @@
 import { teams, initTeams }          from './teams.js?v=2025-09-19-avatars-2';
 import { autoBalance2, autoBalanceN } from './balanceUtils.js?v=2025-09-19-avatars-2';
 import { lobby, setManualCount }      from './lobby.js?v=2025-09-19-avatars-2';
+import { state }                      from './state.js?v=2025-09-19-avatars-2';
 import {
-  balanceMode,
   registerRecomputeAutoBalance,
   recomputeAutoBalance as triggerRecomputeAutoBalance,
 } from './balance.js?v=2025-09-19-avatars-2';
@@ -42,7 +42,7 @@ function updateStartButton() {
 
 /** Авто-баланс: N=2 чи N>2 */
 export async function recomputeAutoBalance() {
-  if (balanceMode !== 'auto') return;
+  if (state.balanceMode !== 'auto') return;
   if (!teamSizeSel || !arenaSelect || !arenaCheckboxes || !btnStart) return;
 
   const n = +teamSizeSel.value;

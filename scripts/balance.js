@@ -1,11 +1,11 @@
 // scripts/balance.js
 
-export let balanceMode = localStorage.getItem('balancerMode') || 'auto';
+import { state, setBalanceMode } from './state.js?v=2025-09-19-avatars-2';
 
 let recomputeHandler = null;
 
 export function getBalanceMode() {
-  return balanceMode;
+  return state.balanceMode;
 }
 
 export function registerRecomputeAutoBalance(fn) {
@@ -27,13 +27,13 @@ export function applyModeUI() {
   const manualBtn = document.getElementById('mode-manual');
 
   if (autoBtn) {
-    autoBtn.classList.toggle('btn-primary', balanceMode === 'auto');
+    autoBtn.classList.toggle('btn-primary', state.balanceMode === 'auto');
   }
   if (manualBtn) {
-    manualBtn.classList.toggle('btn-primary', balanceMode === 'manual');
+    manualBtn.classList.toggle('btn-primary', state.balanceMode === 'manual');
   }
   if (document.body) {
-    document.body.dataset.balanceMode = balanceMode;
+    document.body.dataset.balanceMode = state.balanceMode;
   }
 }
 
@@ -43,8 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (autoBtn) {
     autoBtn.addEventListener('click', async () => {
-      balanceMode = 'auto';
-      localStorage.setItem('balancerMode', balanceMode);
+      setBalanceMode('auto');
       applyModeUI();
       await recomputeAutoBalance();
     });
@@ -52,8 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (manualBtn) {
     manualBtn.addEventListener('click', () => {
-      balanceMode = 'manual';
-      localStorage.setItem('balancerMode', balanceMode);
+      setBalanceMode('manual');
       applyModeUI();
     });
   }

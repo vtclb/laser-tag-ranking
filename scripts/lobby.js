@@ -10,19 +10,28 @@ import {
   getProfile,
   safeDel,
 } from './api.js?v=2025-09-19-avatars-2';
-import { saveLobbyState, loadLobbyState, getLobbyStorageKey } from './state.js?v=2025-09-19-avatars-2';
+import {
+  state,
+  setLeague,
+  setLobbyPlayers,
+  setTeamsCount,
+  setTeams,
+  saveLobbyState,
+  loadLobbyState,
+  getLobbyStorageKey,
+} from './state.js?v=2025-09-19-avatars-2';
 import { refreshArenaTeams } from './scenario.js?v=2025-09-19-avatars-2';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
-import { balanceMode, recomputeAutoBalance } from './balance.js?v=2025-09-19-avatars-2';
+import { recomputeAutoBalance } from './balance.js?v=2025-09-19-avatars-2';
 
-export let lobby = [];
-let players = [], filtered = [], selected = [], manualCount = 0;
+export const lobby = state.lobbyPlayers;
+let players = [], filtered = [], selected = [];
 const ABONEMENT_TYPES = ['none', 'lite', 'full'];
 
-  let uiLeague = 'sundaygames';
+setLeague(state.league);
 
 async function maybeAutoRebalance() {
-  if (balanceMode === 'auto') {
+  if (state.balanceMode === 'auto') {
     try {
       await recomputeAutoBalance();
     } catch (err) {
@@ -56,7 +65,7 @@ async function addPlayer(nick){
   let res = players.find(p => p.nick === nick);
   if (!res) {
     try {
-      const data = await getProfile({ nick, league: uiLeague });
+      const data = await getProfile({ nick, league: state.league });
       const profile = data && data.profile;
       if (profile) {
         const pts = Number(profile.points || 0);
@@ -86,18 +95,20 @@ async function addPlayer(nick){
 }
 
 // Ініціалізує лоббі новим набором гравців
-export async function initLobby(pl, league = uiLeague) {
-  uiLeague = String(league || '').toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
+export async function initLobby(pl, league = state.league) {
+  setLeague(league);
   players = pl;
   filtered = [...players];
-  const saved = loadLobbyState(uiLeague);
-  lobby = saved?.lobby || [];
-  manualCount = saved?.manualCount || 0;
+  const saved = loadLobbyState(state.league);
+  setLobbyPlayers(saved?.lobbyPlayers || []);
+  setTeamsCount(saved?.teamsCount || 0);
   selected = [];
   const searchInput = document.getElementById('player-search');
   if (searchInput) searchInput.value = '';
-  if (manualCount > 0) {
-    initTeams(manualCount, saved?.teams || {});
+  if (state.teamsCount > 0) {
+    initTeams(state.teamsCount, saved?.teams || {});
+  } else {
+    setTeams({});
   }
   renderSelect(filtered);
   renderLobby();
@@ -251,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!Number.isInteger(n)) return;
       const sizeSelect = document.getElementById('teamsize');
       if (sizeSelect) sizeSelect.value = String(n);
-      if (balanceMode === 'manual') {
+      if (state.balanceMode === 'manual') {
         try {
           await setManualCount(n);
         } catch (err) {
@@ -278,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!nick) return;
       const age = parseInt(newAge.value, 10) || 0;
       try {
-        const status = await adminCreatePlayer({ league: uiLeague, nick, age });
+        const status = await adminCreatePlayer({ league: state.league, nick, age });
         if (status === 'DUPLICATE') {
           if (typeof showToast === 'function') {
             showToast('Такий нік вже існує');
@@ -315,8 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Встановлюємо кількість команд для ручного режиму
 export async function setManualCount(n) {
-  manualCount = n;
-  if (manualCount <= 0) {
+  setTeamsCount(n);
+  if (state.teamsCount <= 0) {
     Object.keys(teams).forEach(key => {
       const arr = teams[key] || [];
       arr.forEach(player => {
@@ -327,7 +338,7 @@ export async function setManualCount(n) {
   } else {
     Object.keys(teams).forEach(key => {
       const teamNo = parseInt(key, 10);
-      if (Number.isInteger(teamNo) && teamNo > manualCount) {
+      if (Number.isInteger(teamNo) && teamNo > state.teamsCount) {
         const overflow = teams[key] || [];
         overflow.forEach(player => {
           if (!lobby.some(lp => lp.nick === player.nick)) lobby.push(player);
@@ -348,10 +359,12 @@ export async function setManualCount(n) {
 
 export async function clearLobby() {
   lobby.length = 0;
-  manualCount = 0;
+  setTeamsCount(0);
   Object.keys(teams).forEach(k => { teams[k].length = 0; });
+  setTeams({});
 
-  safeDel(localStorage, getLobbyStorageKey(undefined, uiLeague));
+  const storage = typeof localStorage !== 'undefined' ? localStorage : null;
+  safeDel(storage, getLobbyStorageKey(undefined, state.league));
 
   renderLobby();
   renderLobbyCards();
@@ -386,7 +399,7 @@ function createLobbyEntry(player, index) {
   entry.className = 'lobby-player';
   entry.dataset.nick = player.nick;
   entry.dataset.i = index;
-  if (manualCount > 0) entry.setAttribute('draggable', 'true');
+  if (state.teamsCount > 0) entry.setAttribute('draggable', 'true');
   else entry.removeAttribute('draggable');
 
   const main = document.createElement('div');
@@ -439,7 +452,7 @@ function createLobbyEntry(player, index) {
 
   const actions = document.createElement('div');
   actions.className = 'lobby-player__actions';
-  for (let k = 0; k < manualCount; k++) {
+  for (let k = 0; k < state.teamsCount; k++) {
     const assignBtn = document.createElement('button');
     assignBtn.type = 'button';
     assignBtn.className = 'assign';
@@ -463,7 +476,7 @@ function createTeamEntry(player) {
   const li = document.createElement('li');
   li.className = 'team-player';
   li.dataset.nick = player.nick;
-  if (manualCount > 0) li.setAttribute('draggable', 'true');
+  if (state.teamsCount > 0) li.setAttribute('draggable', 'true');
   else li.removeAttribute('draggable');
 
   const name = document.createElement('span');
@@ -568,13 +581,13 @@ function renderLobby() {
   const dropTargets = [lobbyContainer];
   const teamsContainer = document.getElementById('lobby');
   if (teamsContainer) {
-    teamsContainer.classList.toggle('hidden', manualCount === 0);
+    teamsContainer.classList.toggle('hidden', state.teamsCount === 0);
     Array.from(teamsContainer.querySelectorAll('.team')).forEach(teamDiv => {
       const key = teamDiv.dataset.team || '';
       const teamNo = parseInt(key.replace('team', ''), 10);
       const list = teamDiv.querySelector('.team-list');
       const sumEl = teamDiv.querySelector('.team-sum');
-      const isActive = manualCount > 0 && Number.isInteger(teamNo) && manualCount >= teamNo;
+      const isActive = state.teamsCount > 0 && Number.isInteger(teamNo) && state.teamsCount >= teamNo;
 
       if (!Number.isInteger(teamNo)) {
         teamDiv.classList.add('hidden');
@@ -604,10 +617,10 @@ function renderLobby() {
   }
 
   updateSummary();
-  saveLobbyState({ lobby, teams, manualCount, league: uiLeague });
+  saveLobbyState();
   updatePlayersDatalist();
 
-  if (manualCount > 0) {
+  if (state.teamsCount > 0) {
     setupDnD(dropTargets);
   }
 }
@@ -662,7 +675,7 @@ function renderLobbyCards() {
 
     const actionsSpan = document.createElement('span');
     actionsSpan.className = 'actions';
-    for (let k = 0; k < manualCount; k++) {
+    for (let k = 0; k < state.teamsCount; k++) {
       const btn = document.createElement('button');
       btn.className = 'assign';
       btn.dataset.i = i;
@@ -697,7 +710,7 @@ async function onLobbyAction(e) {
     preset[teamNo] = preset[teamNo] || [];
     preset[teamNo].push(p);
 
-    initTeams(manualCount, preset);
+    initTeams(state.teamsCount, preset);
     refreshArenaTeams();
     renderLobby();
     renderLobbyCards();
@@ -736,7 +749,7 @@ async function onLobbyAction(e) {
     const prevType = player.abonement || 'none';
     (async () => {
       try {
-        const res = await updateAbonement({ nick: player.nick, league: uiLeague, type: newType });
+        const res = await updateAbonement({ nick: player.nick, league: state.league, type: newType });
         if (res !== 'OK' && res?.status !== 'OK') throw new Error('Failed');
         player.abonement = newType;
         const full = players.find(p => p.nick === player.nick);
@@ -758,7 +771,7 @@ document.addEventListener('click', async e => {
   if (!btn) return;
   const nick = btn.dataset.nick;
   try {
-    const key = await issueAccessKey({ nick, league: uiLeague });
+    const key = await issueAccessKey({ nick, league: state.league });
     const host = btn.closest('.lobby-player') || btn.closest('.player') || btn.closest('tr');
     const cell = host?.querySelector('.access-key');
     if (cell) {

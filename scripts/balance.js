@@ -1,8 +1,16 @@
 // scripts/balance.js
 
-import { fetchLeagueCsv, parsePlayersFromCsv, saveResult } from './api.js';
-import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js';
-import { initAvatarAdmin } from './avatarAdmin.js';
+import {
+  fetchLeagueCsv,
+  parsePlayersFromCsv,
+  saveResult,
+  saveDetailedStats,
+  normalizeLeague,
+  safeSet,
+} from './api.js?v=2025-09-19-balance-hotfix-1';
+import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js?v=2025-09-19-balance-hotfix-1';
+import { initAvatarAdmin } from './avatarAdmin.js?v=2025-09-19-balance-hotfix-1';
+import { parseGamePdf } from './pdfParser.js?v=2025-09-19-balance-hotfix-1';
 import {
   state,
   setBalanceMode,
@@ -16,7 +24,7 @@ import {
   getTeamKeys,
   getTeamNumber,
   setTeamMembers,
-} from './state.js';
+} from './state.js?v=2025-09-19-balance-hotfix-1';
 
 let recomputeHandler = null;
 let allPlayers = [];
@@ -26,6 +34,29 @@ let playerListEl = null;
 let addToLobbyBtnEl = null;
 let manualInteractionsTeardown = null;
 let manualDragNick = null;
+let scenarioSectionEl = null;
+let scenarioAreaEl = null;
+let scenarioAutoBtnEl = null;
+let scenarioManualBtnEl = null;
+let teamSizeSelectEl = null;
+let arenaSelectEl = null;
+let arenaCheckboxesEl = null;
+let arenaStartBtnEl = null;
+let arenaAreaEl = null;
+let arenaVsEl = null;
+let arenaRoundsEl = null;
+let arenaPenaltyInputEl = null;
+let arenaSaveBtnEl = null;
+let arenaClearBtnEl = null;
+let arenaMvpInputs = [];
+let pdfInputEl = null;
+let parsePdfBtnEl = null;
+let arenaActiveTeams = [];
+let isArenaDatalistLocked = false;
+let arenaDatalistBackup = '';
+let lastSavedMatchId = null;
+let isArenaActive = false;
+const ARENA_ROUNDS = [1, 2, 3];
 
 export function getBalanceMode() {
   return state.balanceMode;
@@ -124,6 +155,9 @@ export function renderLobby() {
     disableManualInteractions();
   }
 
+  renderArenaCheckboxes();
+  updateStartButtonState();
+
   console.debug('[balance] render', {
     lobbySize: state.lobbyPlayers.length,
     teamsCount: state.teamsCount,
@@ -181,6 +215,7 @@ function updateSummary() {
 }
 
 function updatePlayersDatalist() {
+  if (isArenaDatalistLocked) return;
   const dl = document.getElementById('players-datalist');
   if (!dl) return;
   dl.innerHTML = '';
@@ -194,6 +229,108 @@ function updatePlayersDatalist() {
     option.value = nick;
     dl.appendChild(option);
   });
+}
+
+function lockArenaDatalist(nicks = []) {
+  const dl = document.getElementById('players-datalist');
+  if (!dl) return;
+  if (!isArenaDatalistLocked) {
+    arenaDatalistBackup = dl.innerHTML;
+  }
+  isArenaDatalistLocked = true;
+  const options = Array.from(new Set(nicks.filter(Boolean)));
+  dl.innerHTML = options.map(nick => `<option value="${nick}"></option>`).join('');
+}
+
+function unlockArenaDatalist() {
+  const dl = document.getElementById('players-datalist');
+  if (!dl) {
+    isArenaDatalistLocked = false;
+    arenaDatalistBackup = '';
+    return;
+  }
+  if (isArenaDatalistLocked) {
+    dl.innerHTML = arenaDatalistBackup || '';
+  }
+  isArenaDatalistLocked = false;
+  arenaDatalistBackup = '';
+  updatePlayersDatalist();
+}
+
+function applyPlayerUpdates(updates = []) {
+  if (!Array.isArray(updates) || !updates.length) {
+    return false;
+  }
+
+  let changed = false;
+  const processed = new Set();
+
+  const getPtsValue = update => {
+    const candidates = [update?.pts, update?.points];
+    for (const candidate of candidates) {
+      if (candidate === undefined || candidate === null || candidate === '') continue;
+      const numeric = Number(candidate);
+      if (Number.isFinite(numeric)) {
+        return numeric;
+      }
+    }
+    return null;
+  };
+
+  const assignValues = (player, update) => {
+    if (!player || typeof player !== 'object') return false;
+    let mutated = false;
+    const ptsValue = getPtsValue(update);
+    if (Number.isFinite(ptsValue) && player.pts !== ptsValue) {
+      player.pts = ptsValue;
+      mutated = true;
+    }
+    if (typeof update?.rank === 'string' && player.rank !== update.rank) {
+      player.rank = update.rank;
+      mutated = true;
+    }
+    Object.entries(update || {}).forEach(([key, value]) => {
+      if (key === 'nick' || key === 'points' || value === undefined) return;
+      if (player[key] !== value) {
+        player[key] = value;
+        mutated = true;
+      }
+    });
+    if (update?.points !== undefined && !Number.isFinite(ptsValue)) {
+      const ptsFromPoints = Number(update.points);
+      if (Number.isFinite(ptsFromPoints) && player.pts !== ptsFromPoints) {
+        player.pts = ptsFromPoints;
+        mutated = true;
+      }
+    }
+    return mutated;
+  };
+
+  const updateArray = (array, update) => {
+    if (!Array.isArray(array) || !array.length) return false;
+    let mutated = false;
+    array.forEach(player => {
+      if (player?.nick === update.nick) {
+        if (assignValues(player, update)) mutated = true;
+      }
+    });
+    return mutated;
+  };
+
+  updates.forEach(update => {
+    const nick = typeof update?.nick === 'string' ? update.nick.trim() : '';
+    if (!nick || processed.has(nick)) return;
+    processed.add(nick);
+
+    if (updateArray(allPlayers, update)) changed = true;
+    if (updateArray(state.players, update)) changed = true;
+    if (updateArray(state.lobbyPlayers, update)) changed = true;
+    getTeamKeys().forEach(key => {
+      if (updateArray(state.teams[key], update)) changed = true;
+    });
+  });
+
+  return changed;
 }
 
 function updateTeamButtonsUI() {
@@ -585,6 +722,8 @@ export async function loadPlayersForLeague(source) {
   setTeamsCount(0);
   setTeams({});
 
+  resetArenaUI();
+
   renderPlayerList();
   renderLobby();
   applyModeUI();
@@ -739,10 +878,364 @@ function initSearch() {
   });
 }
 
+function ensureScenarioSectionVisible() {
+  if (scenarioSectionEl) {
+    scenarioSectionEl.removeAttribute('hidden');
+  }
+  if (scenarioAreaEl) {
+    scenarioAreaEl.classList.remove('hidden');
+  }
+  updateArenaSelectVisibility();
+}
+
+function updateArenaSelectVisibility() {
+  if (!arenaSelectEl) return;
+  const shouldShow = Number.isInteger(state.teamsCount) && state.teamsCount >= 2;
+  arenaSelectEl.classList.toggle('hidden', !shouldShow);
+}
+
+function renderArenaCheckboxes() {
+  if (!arenaCheckboxesEl) return;
+
+  const validSelection = arenaActiveTeams.filter(teamKey => {
+    const teamNumber = getTeamNumber(teamKey);
+    return Number.isInteger(teamNumber) && teamNumber <= state.teamsCount;
+  });
+  arenaActiveTeams = validSelection;
+
+  arenaCheckboxesEl.innerHTML = '';
+  for (let index = 1; index <= state.teamsCount; index++) {
+    const teamKey = getTeamKey(index);
+    if (!teamKey) continue;
+
+    const members = getTeamMembers(teamKey);
+    const sum = members.reduce((acc, player) => acc + (Number(player?.pts) || 0), 0);
+
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'arena-team';
+    checkbox.dataset.team = teamKey;
+    checkbox.checked = arenaActiveTeams.includes(teamKey);
+    checkbox.disabled = isArenaActive;
+    checkbox.addEventListener('change', updateStartButtonState);
+    label.appendChild(checkbox);
+    label.insertAdjacentText('beforeend', ` Команда ${index} (∑ ${sum})`);
+    arenaCheckboxesEl.appendChild(label);
+  }
+
+  updateArenaSelectVisibility();
+}
+
+function updateStartButtonState() {
+  if (!arenaStartBtnEl) return;
+  if (isArenaActive) {
+    arenaStartBtnEl.disabled = true;
+    return;
+  }
+  const totalChecked = arenaCheckboxesEl
+    ? arenaCheckboxesEl.querySelectorAll('.arena-team:checked').length
+    : 0;
+  arenaStartBtnEl.disabled = totalChecked !== 2;
+}
+
+function resetArenaUI({ keepCheckboxState = false } = {}) {
+  if (arenaAreaEl) {
+    arenaAreaEl.classList.add('hidden');
+  }
+  if (arenaRoundsEl) {
+    arenaRoundsEl.innerHTML = '';
+  }
+  arenaMvpInputs.forEach(input => {
+    if (input) input.value = '';
+  });
+  if (arenaPenaltyInputEl) {
+    arenaPenaltyInputEl.value = '';
+  }
+  if (!keepCheckboxState && arenaCheckboxesEl) {
+    Array.from(arenaCheckboxesEl.querySelectorAll('.arena-team')).forEach(cb => {
+      cb.checked = false;
+    });
+    arenaActiveTeams = [];
+  }
+  if (arenaSaveBtnEl) {
+    arenaSaveBtnEl.disabled = true;
+  }
+  if (pdfInputEl) {
+    pdfInputEl.value = '';
+  }
+  if (parsePdfBtnEl) {
+    parsePdfBtnEl.disabled = true;
+  }
+  unlockArenaDatalist();
+  isArenaActive = false;
+  if (!keepCheckboxState) {
+    updateStartButtonState();
+  }
+}
+
+function getArenaSelectedTeamKeys() {
+  if (!arenaCheckboxesEl) return [];
+  const raw = Array.from(arenaCheckboxesEl.querySelectorAll('.arena-team:checked'))
+    .map(cb => getTeamKey(cb.dataset.team))
+    .filter(Boolean);
+  return Array.from(new Set(raw));
+}
+
+function buildArenaRounds(teamKeys) {
+  if (!arenaRoundsEl) return;
+  arenaRoundsEl.innerHTML = '';
+  teamKeys.forEach((teamKey, index) => {
+    const teamNumber = getTeamNumber(teamKey);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'arena-round-block';
+    const header = document.createElement('h4');
+    header.textContent = `Команда ${teamNumber}`;
+    wrapper.appendChild(header);
+    ARENA_ROUNDS.forEach(round => {
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = `round-${round}-${index === 0 ? 'a' : 'b'}`;
+      label.appendChild(checkbox);
+      label.insertAdjacentText('beforeend', ` Раунд ${round}`);
+      wrapper.appendChild(label);
+    });
+    arenaRoundsEl.appendChild(wrapper);
+  });
+}
+
+function handleScenarioAutoClick() {
+  if (!teamSizeSelectEl) return;
+  const size = parseInt(teamSizeSelectEl.value, 10);
+  if (!Number.isInteger(size) || size <= 0) return;
+  setTeamsCount(size);
+  handleModeSwitch('auto');
+  renderArenaCheckboxes();
+  updateStartButtonState();
+}
+
+function handleScenarioManualClick() {
+  if (!teamSizeSelectEl) return;
+  const size = parseInt(teamSizeSelectEl.value, 10);
+  if (!Number.isInteger(size) || size <= 0) return;
+  setTeamsCount(size);
+  handleModeSwitch('manual');
+  renderArenaCheckboxes();
+  updateStartButtonState();
+}
+
+function handleArenaCheckboxClick() {
+  updateStartButtonState();
+}
+
+function handleStartMatch() {
+  const selected = getArenaSelectedTeamKeys();
+  if (selected.length !== 2) {
+    alert('Виберіть дві команди для бою');
+    return;
+  }
+
+  const membersA = getTeamMembers(selected[0]);
+  const membersB = getTeamMembers(selected[1]);
+  if (!membersA.length || !membersB.length) {
+    alert('Обрані команди мають містити гравців');
+    return;
+  }
+
+  resetArenaUI({ keepCheckboxState: true });
+  arenaActiveTeams = selected;
+  isArenaActive = true;
+
+  const numbers = selected.map(key => getTeamNumber(key));
+  if (arenaVsEl) {
+    arenaVsEl.textContent = `Команда ${numbers[0]} ✕ Команда ${numbers[1]}`;
+  }
+  buildArenaRounds(selected);
+  if (arenaAreaEl) {
+    arenaAreaEl.classList.remove('hidden');
+  }
+  if (arenaSaveBtnEl) {
+    arenaSaveBtnEl.disabled = false;
+  }
+  const nickOptions = [...membersA, ...membersB]
+    .map(player => player?.nick)
+    .filter(Boolean);
+  lockArenaDatalist(nickOptions);
+  updateStartButtonState();
+  if (parsePdfBtnEl) {
+    parsePdfBtnEl.disabled = !pdfInputEl || !(pdfInputEl.files && pdfInputEl.files.length);
+  }
+}
+
+async function handleArenaSave() {
+  if (!isArenaActive || arenaActiveTeams.length !== 2) {
+    alert('Спочатку розпочніть бій');
+    return;
+  }
+
+  const [teamKeyA, teamKeyB] = arenaActiveTeams;
+  const membersA = getTeamMembers(teamKeyA);
+  const membersB = getTeamMembers(teamKeyB);
+  const allowedNicks = new Set([...membersA, ...membersB].map(player => player.nick));
+
+  const mvpValues = arenaMvpInputs.map(input => (input?.value || '').trim());
+  if (!mvpValues[0]) {
+    alert('Вкажіть MVP');
+    return;
+  }
+  const seen = new Set();
+  for (const nick of mvpValues.filter(Boolean)) {
+    if (!allowedNicks.has(nick)) {
+      alert(`Гравець ${nick} не бере участі у цьому матчі`);
+      return;
+    }
+    if (seen.has(nick)) {
+      alert('Гравці для нагород мають бути різними');
+      return;
+    }
+    seen.add(nick);
+  }
+
+  let winsA = 0;
+  let winsB = 0;
+  ARENA_ROUNDS.forEach(round => {
+    if (arenaRoundsEl?.querySelector(`.round-${round}-a`)?.checked) winsA++;
+    if (arenaRoundsEl?.querySelector(`.round-${round}-b`)?.checked) winsB++;
+  });
+  const series = `${winsA}-${winsB}`;
+  const winner = winsA > winsB ? 'team1' : winsB > winsA ? 'team2' : 'tie';
+
+  const league = normalizeLeague(leagueSelectEl?.value || state.league);
+  const payload = {
+    league,
+    team1: membersA.map(player => player.nick).join(', '),
+    team2: membersB.map(player => player.nick).join(', '),
+    winner,
+    mvp1: mvpValues[0],
+    mvp2: mvpValues[1],
+    mvp3: mvpValues[2],
+    mvp: mvpValues[0],
+    series,
+    penalties: (arenaPenaltyInputEl?.value || '').trim(),
+  };
+
+  let response;
+  try {
+    response = await saveResult(payload);
+  } catch (err) {
+    console.error('[balance] arena save failed', err);
+    const msg = 'Не вдалося зберегти гру';
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
+    return;
+  }
+
+  if (!response || !response.ok) {
+    const message = response && typeof response === 'object' && 'message' in response
+      ? response.message
+      : 'Невідома помилка';
+    console.error('[balance] arena save error', message);
+    const msg = `Помилка збереження: ${message}`;
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
+    return;
+  }
+
+  const successMessage = response && typeof response === 'object' && 'message' in response
+    ? response.message
+    : 'Гру успішно збережено та рейтинги оновлено';
+  if (typeof showToast === 'function') showToast(successMessage); else alert(successMessage);
+
+  lastSavedMatchId = response?.matchId || Date.now();
+  window.lastMatchId = lastSavedMatchId;
+
+  if (Array.isArray(response?.players)) {
+    const updated = applyPlayerUpdates(response.players);
+    if (updated) {
+      renderPlayerList();
+    }
+    renderLobby();
+  } else {
+    renderLobby();
+  }
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      safeSet(localStorage, 'gamedayRefresh', Date.now());
+    }
+  } catch (err) {
+    console.warn('[balance] failed to update gamedayRefresh', err);
+  }
+
+  resetArenaUI();
+  renderArenaCheckboxes();
+}
+
+function handleClearArenaClick() {
+  resetArenaUI();
+  renderArenaCheckboxes();
+}
+
+function handlePdfInputChange() {
+  if (!parsePdfBtnEl) return;
+  const hasFile = !!(pdfInputEl && pdfInputEl.files && pdfInputEl.files.length);
+  parsePdfBtnEl.disabled = !hasFile || !lastSavedMatchId;
+}
+
+async function handleParsePdfClick() {
+  if (!pdfInputEl || !pdfInputEl.files || !pdfInputEl.files.length) {
+    alert('Оберіть PDF-файл для імпорту');
+    return;
+  }
+  const file = pdfInputEl.files[0];
+  const matchId = lastSavedMatchId || window.lastMatchId;
+  if (!matchId) {
+    alert('Спершу збережіть результат гри');
+    return;
+  }
+
+  try {
+    const stats = await parseGamePdf(file);
+    const res = await saveDetailedStats(matchId, stats);
+    const ok = typeof res === 'string' ? res.trim() === 'OK' : res?.ok;
+    if (ok) {
+      const msg = 'Детальна статистика з PDF імпортована успішно';
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
+    } else {
+      const msg = `Помилка імпорту статистики: ${res}`;
+      if (typeof showToast === 'function') showToast(msg); else alert(msg);
+    }
+  } catch (err) {
+    console.error('[balance] parse pdf failed', err);
+    const msg = `Не вдалося розпарсити PDF: ${err?.message || err}`;
+    if (typeof showToast === 'function') showToast(msg); else alert(msg);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   leagueSelectEl = document.getElementById('league');
   playerListEl = document.getElementById('player-list');
   addToLobbyBtnEl = document.getElementById('add-to-lobby');
+  scenarioSectionEl = document.getElementById('sec-scenario');
+  scenarioAreaEl = document.getElementById('scenario-area');
+  scenarioAutoBtnEl = document.getElementById('btn-auto');
+  scenarioManualBtnEl = document.getElementById('btn-manual');
+  teamSizeSelectEl = document.getElementById('teamsize');
+  arenaSelectEl = document.getElementById('arena-select');
+  arenaCheckboxesEl = document.getElementById('arena-checkboxes');
+  arenaStartBtnEl = document.getElementById('btn-start-match');
+  arenaAreaEl = document.getElementById('arena-area');
+  arenaVsEl = document.getElementById('arena-vs');
+  arenaRoundsEl = document.getElementById('arena-rounds');
+  arenaPenaltyInputEl = document.getElementById('penalty');
+  arenaSaveBtnEl = document.getElementById('btn-save-match');
+  arenaClearBtnEl = document.getElementById('btn-clear-arena');
+  arenaMvpInputs = [
+    document.getElementById('mvp1'),
+    document.getElementById('mvp2'),
+    document.getElementById('mvp3'),
+  ].filter(Boolean);
+  pdfInputEl = document.getElementById('pdf-upload');
+  parsePdfBtnEl = document.getElementById('btn-parse-pdf');
 
   if (leagueSelectEl) {
     leagueSelectEl.value = state.league;
@@ -791,6 +1284,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   bindTeamsCount();
   initSearch();
+
+  if (scenarioAutoBtnEl) {
+    scenarioAutoBtnEl.addEventListener('click', handleScenarioAutoClick);
+  }
+  if (scenarioManualBtnEl) {
+    scenarioManualBtnEl.addEventListener('click', handleScenarioManualClick);
+  }
+  if (arenaCheckboxesEl) {
+    arenaCheckboxesEl.addEventListener('change', handleArenaCheckboxClick);
+  }
+  if (arenaStartBtnEl) {
+    arenaStartBtnEl.addEventListener('click', handleStartMatch);
+  }
+  if (arenaSaveBtnEl) {
+    arenaSaveBtnEl.addEventListener('click', handleArenaSave);
+  }
+  if (arenaClearBtnEl) {
+    arenaClearBtnEl.addEventListener('click', handleClearArenaClick);
+  }
+  if (pdfInputEl) {
+    pdfInputEl.addEventListener('change', handlePdfInputChange);
+  }
+  if (parsePdfBtnEl) {
+    parsePdfBtnEl.disabled = true;
+    parsePdfBtnEl.addEventListener('click', handleParsePdfClick);
+  }
+
+  ensureScenarioSectionVisible();
+  resetArenaUI();
+  renderArenaCheckboxes();
+  updateStartButtonState();
 
   registerRecomputeAutoBalance(runAutoBalance);
   applyModeUI();

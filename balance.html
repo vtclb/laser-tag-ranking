@@ -7,10 +7,6 @@
   <link rel="stylesheet" href="balancer.css">
   <link rel="stylesheet" href="styles/balance.css">
   <link rel="stylesheet" href="styles/balance.mobile.css">
-  <script
-    type="module"
-    src="scripts/polyfills.js?v=2025-09-19-avatars-3"
-  ></script>
 </head>
 <body class="bal">
   <header>
@@ -209,19 +205,20 @@
   <script src="scripts/toast.js?v=2025-09-19-avatars-3"></script>
 
   <!-- ES-модулі -->
-  <script type="module" src="./scripts/logger.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/config.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/api.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/avatars.client.js"></script>
-  <script type="module" src="./scripts/balanceUtils.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/teams.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/lobby.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/arena.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/avatarAdmin.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/main.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/sortUtils.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/scenario.js?v=2025-09-19-avatars-3"></script>
-  <script type="module" src="./scripts/pdfParser.js?v=2025-09-19-avatars-3"></script>
+  <script type="module">
+    const { VER } = await import('./scripts/config.js');
+    const moduleChain = [
+      `./scripts/config.js?v=${VER}`,
+      `./scripts/logger.js?v=${VER}`,
+      `./scripts/state.js?v=${VER}`,
+      `./scripts/api.js?v=${VER}`,
+      `./scripts/balance.js?v=${VER}`,
+    ];
+
+    for (const modulePath of moduleChain) {
+      await import(modulePath);
+    }
+  </script>
 </body>
 </html>
 

@@ -1,9 +1,9 @@
-import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
-import { fetchOnce, CSV_URLS, normalizeLeague, avatarNickKey } from "./api.js?v=2025-09-19-avatars-2";
-import { LEAGUE } from "./constants.js?v=2025-09-19-avatars-2";
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
+import { AVATAR_PLACEHOLDER } from './config.js';
+import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js";
+import { LEAGUE } from "./constants.js";
+import { rankLetterForPoints } from './rankUtils.js';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
 const CSV_TTL = 60 * 1000;
 
@@ -194,11 +194,11 @@ function sortPlayers() {
   allPlayers.forEach((p, i) => (p._index = i));
 }
 
-function applyFilters() {
+async function applyFilters() {
   const q = (searchInput?.value || "").toLowerCase();
   players = allPlayers.filter((p) => p.nickname.toLowerCase().includes(q));
   currentPage = 1;
-  renderTable(players, rankingEl);
+  await renderTable(players, rankingEl);
   applyPagination();
 }
 
@@ -218,7 +218,6 @@ function createRow(p, i) {
   img.loading = "lazy";
   img.width = img.height = 32;
   img.dataset.nick = p.nickname;
-  img.dataset.nickKey = avatarNickKey(p.nickname);
   img.src = AVATAR_PLACEHOLDER;
   img.onerror = () => {
     img.onerror = null;
@@ -264,7 +263,7 @@ function createRow(p, i) {
   return tr;
 }
 
-export function renderTable(list, tbodyEl) {
+export async function renderTable(list, tbodyEl) {
   const fragment = document.createDocumentFragment();
   const ops = [];
   const seen = new Set();
@@ -313,17 +312,33 @@ export function renderTable(list, tbodyEl) {
     }
   }
 
-  if (ops.length) {
-    requestAnimationFrame(() => {
-      ops
-        .sort((a, b) => a.index - b.index)
-        .forEach(({ row, index }) => {
-          tbodyEl.insertBefore(row, tbodyEl.children[index] || null);
-        });
-      renderAllAvatars();
+  const applyOps = () => {
+    ops
+      .sort((a, b) => a.index - b.index)
+      .forEach(({ row, index }) => {
+        tbodyEl.insertBefore(row, tbodyEl.children[index] || null);
+      });
+  };
+
+  const renderAvatarsSafe = async () => {
+    if (typeof document === "undefined") return;
+    try {
+      await renderAllAvatars(document);
+    } catch (err) {
+      log("[ranking]", "renderAllAvatars failed", err);
+    }
+  };
+
+  if (ops.length && typeof requestAnimationFrame === "function") {
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        applyOps();
+        renderAvatarsSafe().finally(resolve);
+      });
     });
   } else {
-    renderAllAvatars();
+    if (ops.length) applyOps();
+    await renderAvatarsSafe();
   }
 }
 
@@ -353,7 +368,11 @@ export function renderTopMVP(list, container) {
 
 export function initSearch(inputEl) {
   searchInput = inputEl;
-  searchInput.addEventListener("input", applyFilters);
+  searchInput.addEventListener("input", () => {
+    applyFilters().catch((err) => {
+      log("[ranking]", "applyFilters failed", err);
+    });
+  });
 }
 
 function initPagination(prevEl, nextEl, infoEl, allEl) {
@@ -477,7 +496,9 @@ async function init() {
       sortState.dir = key === "points" ? -1 : 1;
     }
     sortPlayers();
-    applyFilters();
+    applyFilters().catch((err) => {
+      log("[ranking]", "applyFilters failed", err);
+    });
     updateArrows();
   });
   initSearch(document.getElementById("search"));
@@ -488,7 +509,7 @@ async function init() {
     document.getElementById("show-all")
   );
   sortPlayers();
-  applyFilters();
+  await applyFilters();
   updateArrows();
 }
 

@@ -257,6 +257,35 @@ function getPlayersByNicks(nicks) {
     .map(player => ({ ...player }));
 }
 
+function sortPlayersAndRender(comparator) {
+  if (typeof comparator !== 'function') return;
+
+  const searchInput = document.getElementById('player-search');
+  const searchTerm = searchInput ? searchInput.value : '';
+
+  allPlayers.sort(comparator);
+  setPlayers(allPlayers);
+  renderPlayerList();
+
+  if (searchInput) {
+    searchInput.value = searchTerm;
+    applySearchFilter(searchTerm || '');
+  }
+}
+
+function sortPlayersByName() {
+  sortPlayersAndRender((a, b) => a.nick.localeCompare(b.nick, 'uk'));
+}
+
+function sortPlayersByPtsDesc() {
+  sortPlayersAndRender((a, b) => {
+    const ptsA = Number.isFinite(a?.pts) ? a.pts : Number(a?.points) || 0;
+    const ptsB = Number.isFinite(b?.pts) ? b.pts : Number(b?.points) || 0;
+    if (ptsB !== ptsA) return ptsB - ptsA;
+    return a.nick.localeCompare(b.nick, 'uk');
+  });
+}
+
 export function renderPlayerList() {
   const area = document.getElementById('select-area');
   const list = playerListEl || document.getElementById('player-list');
@@ -541,6 +570,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveBtn = document.getElementById('save-game');
   if (saveBtn) {
     saveBtn.addEventListener('click', handleSaveGame);
+  }
+
+  const sortByNameBtn = document.getElementById('btn-sort-name');
+  if (sortByNameBtn) {
+    sortByNameBtn.addEventListener('click', sortPlayersByName);
+  }
+
+  const sortByPtsBtn = document.getElementById('btn-sort-pts');
+  if (sortByPtsBtn) {
+    sortByPtsBtn.addEventListener('click', sortPlayersByPtsDesc);
   }
 
   bindModeButtons({

@@ -8,7 +8,6 @@ import {
   adminCreatePlayer,
   issueAccessKey,
   getProfile,
-  safeDel,
 } from './api.js?v=2025-09-19-avatars-2';
 import {
   state,
@@ -16,9 +15,10 @@ import {
   setLobbyPlayers,
   setTeamsCount,
   setTeams,
-  saveLobbyState,
-  loadLobbyState,
-  getLobbyStorageKey,
+  setPlayers,
+  getTeamKey,
+  getTeamKeys,
+  getTeamNumber,
 } from './state.js?v=2025-09-19-avatars-2';
 import { refreshArenaTeams } from './scenario.js?v=2025-09-19-avatars-2';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
@@ -97,18 +97,16 @@ async function addPlayer(nick){
 // Ініціалізує лоббі новим набором гравців
 export async function initLobby(pl, league = state.league) {
   setLeague(league);
-  players = pl;
+  players = Array.isArray(pl) ? [...pl] : [];
   filtered = [...players];
-  const saved = loadLobbyState(state.league);
-  setLobbyPlayers(saved?.lobbyPlayers || []);
-  setTeamsCount(saved?.teamsCount || 0);
+  setPlayers(players);
+  setLobbyPlayers([]);
+  setTeams({});
   selected = [];
   const searchInput = document.getElementById('player-search');
   if (searchInput) searchInput.value = '';
   if (state.teamsCount > 0) {
-    initTeams(state.teamsCount, saved?.teams || {});
-  } else {
-    setTeams({});
+    initTeams(state.teamsCount, state.teams);
   }
   renderSelect(filtered);
   renderLobby();
@@ -137,8 +135,8 @@ export async function updateLobbyState(updates){
       if(tp) Object.assign(tp, norm);
     });
   });
-  const teamCount = Object.keys(teams).length;
-  if(teamCount) initTeams(teamCount, teams);
+  const teamCount = state.teamsCount;
+  if (teamCount > 0) initTeams(teamCount, teams);
   renderLobby();
   renderLobbyCards();
   try {
@@ -328,22 +326,22 @@ document.addEventListener('DOMContentLoaded', () => {
 export async function setManualCount(n) {
   setTeamsCount(n);
   if (state.teamsCount <= 0) {
-    Object.keys(teams).forEach(key => {
+    getTeamKeys().forEach(key => {
       const arr = teams[key] || [];
       arr.forEach(player => {
         if (!lobby.some(lp => lp.nick === player.nick)) lobby.push(player);
       });
-      teams[key] = [];
+      teams[key].length = 0;
     });
   } else {
-    Object.keys(teams).forEach(key => {
-      const teamNo = parseInt(key, 10);
+    getTeamKeys().forEach(key => {
+      const teamNo = getTeamNumber(key);
       if (Number.isInteger(teamNo) && teamNo > state.teamsCount) {
         const overflow = teams[key] || [];
         overflow.forEach(player => {
           if (!lobby.some(lp => lp.nick === player.nick)) lobby.push(player);
         });
-        teams[key] = [];
+        teams[key].length = 0;
       }
     });
   }
@@ -360,11 +358,7 @@ export async function setManualCount(n) {
 export async function clearLobby() {
   lobby.length = 0;
   setTeamsCount(0);
-  Object.keys(teams).forEach(k => { teams[k].length = 0; });
   setTeams({});
-
-  const storage = typeof localStorage !== 'undefined' ? localStorage : null;
-  safeDel(storage, getLobbyStorageKey(undefined, state.league));
 
   renderLobby();
   renderLobbyCards();
@@ -544,16 +538,25 @@ async function movePlayer(nick, targetKey) {
   if (!player) return;
 
   if (String(targetKey || '').startsWith('team')) {
-    const teamNo = parseInt(String(targetKey).replace('team', ''), 10);
-    if (!Number.isNaN(teamNo)) {
-      teams[teamNo] = teams[teamNo] || [];
-      teams[teamNo].push(player);
-    } else {
-      lobby.push(player);
+    const teamNo = Number.parseInt(String(targetKey).replace('team', ''), 10);
+    const teamKey = getTeamKey(teamNo);
+    if (teamKey) {
+      teams[teamKey].push(player);
+      renderLobby();
+      renderLobbyCards();
+      try {
+        await renderAllAvatars(document.getElementById('players') || document);
+      } catch (err) {
+        log('[ranking]', err);
+      }
+      renderSelect(filtered);
+      refreshArenaTeams();
+      await maybeAutoRebalance();
+      return;
     }
-  } else {
-    lobby.push(player);
   }
+
+  lobby.push(player);
 
   renderLobby();
   renderLobbyCards();
@@ -584,7 +587,8 @@ function renderLobby() {
     teamsContainer.classList.toggle('hidden', state.teamsCount === 0);
     Array.from(teamsContainer.querySelectorAll('.team')).forEach(teamDiv => {
       const key = teamDiv.dataset.team || '';
-      const teamNo = parseInt(key.replace('team', ''), 10);
+      const teamNo = getTeamNumber(key);
+      const teamKey = getTeamKey(key);
       const list = teamDiv.querySelector('.team-list');
       const sumEl = teamDiv.querySelector('.team-sum');
       const isActive = state.teamsCount > 0 && Number.isInteger(teamNo) && state.teamsCount >= teamNo;
@@ -596,8 +600,7 @@ function renderLobby() {
         return;
       }
 
-      teams[teamNo] = teams[teamNo] || [];
-      const members = teams[teamNo];
+      const members = teamKey ? teams[teamKey] : [];
       if (list) {
         list.replaceChildren();
         members.forEach(player => {
@@ -617,7 +620,6 @@ function renderLobby() {
   }
 
   updateSummary();
-  saveLobbyState();
   updatePlayersDatalist();
 
   if (state.teamsCount > 0) {
@@ -704,13 +706,18 @@ async function onLobbyAction(e) {
     const p = lobby.splice(idx, 1)[0];
 
     const preset = {};
-    Object.keys(teams).forEach(key => {
+    const teamKey = getTeamKey(teamNo);
+    getTeamKeys().forEach(key => {
       preset[key] = [...teams[key]];
     });
-    preset[teamNo] = preset[teamNo] || [];
-    preset[teamNo].push(p);
+    if (teamKey) {
+      preset[teamKey] = preset[teamKey] || [];
+      preset[teamKey].push(p);
+      initTeams(state.teamsCount, preset);
+    } else {
+      lobby.splice(idx, 0, p);
+    }
 
-    initTeams(state.teamsCount, preset);
     refreshArenaTeams();
     renderLobby();
     renderLobbyCards();

@@ -504,13 +504,44 @@ export async function fetchCsv(url, ttlMs = 0) {
   if (typeof Papa !== 'undefined') {
     return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
   }
-  const lines = text.trim().split('\n').filter(Boolean);
+  const parseCsvLine = (line) => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
+  };
+
+  const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
   if (!lines.length) return [];
-  const header = lines[0].split(',').map(h => h.trim());
+  const header = parseCsvLine(lines[0]).map((h, index) => {
+    const value = (h ?? '').trim();
+    return index === 0 ? value.replace(/^\ufeff/, '') : value;
+  });
   return lines.slice(1).map(line => {
-    const cols = line.split(',');
+    const cols = parseCsvLine(line);
     const obj = {};
-    header.forEach((h, i) => { obj[h] = (cols[i] ?? '').trim(); });
+    header.forEach((h, i) => {
+      if (!h) return;
+      const value = cols[i] ?? '';
+      obj[h] = typeof value === 'string' ? value.trim() : '';
+    });
     return obj;
   });
 }

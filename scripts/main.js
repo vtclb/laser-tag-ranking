@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         safeSet(window.__SESS, cacheKey, JSON.stringify(players));
       }
 
-      initLobby(players, csvLeague);          // Рендер лоббі
+      await initLobby(players, csvLeague);          // Рендер лоббі
       document.getElementById('sec-player-picker')?.classList.add('open');
       await initAvatarAdmin(players, selLeague.value);    // Рендер аватарів
       scenArea.classList.remove('hidden'); // Показ блоку «Режим гри»
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // При зміні ліги — очищуємо поточне лоббі та ховаємо сценарій
   selLeague.addEventListener('change', async () => {
     const csvLeague = window.uiLeagueToCsv(selLeague.value);
-    initLobby([], csvLeague);               // Порожнє лоббі
+    await initLobby([], csvLeague);               // Порожнє лоббі
     await initAvatarAdmin([], selLeague.value);
     scenArea.classList.add('hidden');
     document.getElementById('ui-panel').hidden = false;

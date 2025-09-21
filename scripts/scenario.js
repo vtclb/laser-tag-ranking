@@ -41,14 +41,19 @@ function updateStartButton() {
 }
 
 /** Авто-баланс: N=2 чи N>2 */
-export function recomputeAutoBalance() {
+export async function recomputeAutoBalance() {
   if (balanceMode !== 'auto') return;
   if (!teamSizeSel || !arenaSelect || !arenaCheckboxes || !btnStart) return;
 
   const n = +teamSizeSel.value;
   if (!Number.isInteger(n) || n <= 0) return;
 
-  setManualCount(n);    // сповіщаємо lobby.js, скільки кнопок “→…” малювати
+  try {
+    await setManualCount(n);    // сповіщаємо lobby.js, скільки кнопок “→…” малювати
+  } catch (err) {
+    console.error('recomputeAutoBalance: failed to set manual count', err);
+    return;
+  }
   let data;
   if (n === 2) {
     const { A, B } = autoBalance2(lobby);
@@ -62,14 +67,23 @@ export function recomputeAutoBalance() {
   updateStartButton();
 }
 
-function handleAuto() {
-  triggerRecomputeAutoBalance();
+async function handleAuto() {
+  try {
+    await triggerRecomputeAutoBalance();
+  } catch (err) {
+    console.error('handleAuto: recompute failed', err);
+  }
 }
 
 /** Ручне формування команд */
-function handleManual() {
+async function handleManual() {
   const n = +teamSizeSel.value;
-  setManualCount(n);    // скільки кнопок “→…” робити біля кожного гравця лоббі
+  try {
+    await setManualCount(n);    // скільки кнопок “→…” робити біля кожного гравця лоббі
+  } catch (err) {
+    console.error('handleManual: failed to set manual count', err);
+    return;
+  }
   initTeams(n, {});     // створює пусті масиви teams[1]…teams[n]
   arenaSelect.classList.remove('hidden');
   renderArenaCheckboxes();

@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.lastMatchId = res.matchId || Date.now();
 
       if (Array.isArray(res.players)) {
-        updateLobbyState(res.players);
+        await updateLobbyState(res.players);
       }
 
       const successMessage = message || 'Гру успішно збережено та рейтинги оновлено';

@@ -12,9 +12,13 @@ export function registerRecomputeAutoBalance(fn) {
   recomputeHandler = typeof fn === 'function' ? fn : null;
 }
 
-export function recomputeAutoBalance() {
+export async function recomputeAutoBalance() {
   if (typeof recomputeHandler === 'function') {
-    recomputeHandler();
+    try {
+      await recomputeHandler();
+    } catch (err) {
+      console.error('[balance] recompute failed', err);
+    }
   }
 }
 
@@ -38,11 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const manualBtn = document.getElementById('mode-manual');
 
   if (autoBtn) {
-    autoBtn.addEventListener('click', () => {
+    autoBtn.addEventListener('click', async () => {
       balanceMode = 'auto';
       localStorage.setItem('balancerMode', balanceMode);
       applyModeUI();
-      recomputeAutoBalance();
+      await recomputeAutoBalance();
     });
   }
 

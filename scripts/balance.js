@@ -12,6 +12,10 @@ import {
   setTeams,
   setTeamsCount,
   getTeamMembers,
+  getTeamKey,
+  getTeamKeys,
+  getTeamNumber,
+  setTeamMembers,
 } from './state.js';
 
 let recomputeHandler = null;
@@ -20,6 +24,8 @@ const selectedCandidates = new Set();
 let leagueSelectEl = null;
 let playerListEl = null;
 let addToLobbyBtnEl = null;
+let manualInteractionsTeardown = null;
+let manualDragNick = null;
 
 export function getBalanceMode() {
   return state.balanceMode;
@@ -98,6 +104,11 @@ export function renderLobby() {
       const pts = Number.isFinite(player.pts) ? player.pts : 0;
       const rank = player.rank || '';
       div.textContent = `${player.nick} · ${pts} pts${rank ? ` · ${rank}` : ''}`;
+      if (canUseManualDrag()) {
+        div.setAttribute('draggable', 'true');
+      } else {
+        div.removeAttribute('draggable');
+      }
       lobbyContainer.appendChild(div);
     });
   }
@@ -106,6 +117,12 @@ export function renderLobby() {
   updatePlayersDatalist();
   updateTeamButtonsUI();
   renderTeams();
+
+  if (isManualModeActive()) {
+    enableManualInteractions();
+  } else {
+    disableManualInteractions();
+  }
 
   console.debug('[balance] render', {
     lobbySize: state.lobbyPlayers.length,
@@ -197,16 +214,23 @@ function renderTeams() {
     const teamNumber = index + 1;
     const list = teamDiv.querySelector('.team-list');
     const sumEl = teamDiv.querySelector('[data-team-sum]');
-    const members = getTeamMembers(teamNumber);
+    const teamAttr = teamDiv.dataset.team || `team${teamNumber}`;
+    const members = getTeamMembers(teamAttr);
     const shouldShow = state.teamsCount >= teamNumber && state.teamsCount > 0;
 
     if (list) {
       list.innerHTML = '';
+      list.dataset.team = teamAttr;
       members.forEach(player => {
         const li = document.createElement('li');
         li.className = 'team-player';
         li.dataset.nick = player.nick;
         li.textContent = `${player.nick} (${Number(player.pts) || 0})`;
+        if (canUseManualDrag()) {
+          li.setAttribute('draggable', 'true');
+        } else {
+          li.removeAttribute('draggable');
+        }
         list.appendChild(li);
       });
     }
@@ -218,6 +242,184 @@ function renderTeams() {
 
     teamDiv.classList.toggle('hidden', !shouldShow);
   });
+}
+
+function isManualModeActive() {
+  return state.balanceMode === 'manual';
+}
+
+function canUseManualDrag() {
+  return isManualModeActive() && state.teamsCount > 0;
+}
+
+function disableManualInteractions() {
+  if (typeof manualInteractionsTeardown === 'function') {
+    manualInteractionsTeardown();
+    manualInteractionsTeardown = null;
+  }
+  manualDragNick = null;
+}
+
+function takePlayerFromCollections(nick) {
+  const normalized = typeof nick === 'string' ? nick.trim() : '';
+  if (!normalized) return null;
+
+  const lobbyCopy = [...state.lobbyPlayers];
+  const lobbyIndex = lobbyCopy.findIndex(player => player.nick === normalized);
+  if (lobbyIndex !== -1) {
+    const [player] = lobbyCopy.splice(lobbyIndex, 1);
+    setLobbyPlayers(lobbyCopy);
+    return player;
+  }
+
+  for (const key of getTeamKeys()) {
+    const members = [...getTeamMembers(key)];
+    const memberIndex = members.findIndex(player => player.nick === normalized);
+    if (memberIndex !== -1) {
+      const [player] = members.splice(memberIndex, 1);
+      setTeamMembers(key, members);
+      return player;
+    }
+  }
+
+  return null;
+}
+
+function placePlayerInTarget(player, targetKey) {
+  if (!player) return false;
+  const rawTarget = typeof targetKey === 'string' ? targetKey : String(targetKey ?? '');
+  if (!rawTarget || rawTarget === 'lobby' || rawTarget === 'lobby-list' || rawTarget === 'lobbyPlayers') {
+    setLobbyPlayers([...state.lobbyPlayers, player]);
+    return true;
+  }
+
+  const teamNumber = getTeamNumber(rawTarget);
+  const teamKey = getTeamKey(rawTarget);
+
+  if (!Number.isInteger(teamNumber) || teamNumber < 1 || teamNumber > state.teamsCount || !teamKey) {
+    setLobbyPlayers([...state.lobbyPlayers, player]);
+    return false;
+  }
+
+  const members = [...getTeamMembers(teamKey), player];
+  setTeamMembers(teamKey, members);
+  return true;
+}
+
+function movePlayerBetweenCollections(nick, targetKey) {
+  const player = takePlayerFromCollections(nick);
+  if (!player) return false;
+  const success = placePlayerInTarget(player, targetKey);
+  renderLobby();
+  return success;
+}
+
+function enableManualInteractions() {
+  if (manualInteractionsTeardown || typeof document === 'undefined') {
+    return;
+  }
+
+  const lobbyContainer = document.getElementById('lobby-list');
+  const teamLists = Array.from(document.querySelectorAll('.team-list'));
+
+  if (!lobbyContainer) return;
+
+  const dropTargets = [lobbyContainer, ...teamLists].filter(Boolean);
+  const cleanups = [];
+
+  const handleDragOver = event => {
+    if (!isManualModeActive()) return;
+    event.preventDefault();
+    event.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = event => {
+    event.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = event => {
+    if (!isManualModeActive()) return;
+    event.preventDefault();
+    const target = event.currentTarget;
+    target.classList.remove('drag-over');
+    const nick = (event.dataTransfer && event.dataTransfer.getData('text/plain')) || manualDragNick;
+    manualDragNick = null;
+    const targetKey = target.dataset.team || 'lobby';
+    if (nick) {
+      movePlayerBetweenCollections(nick, targetKey);
+    }
+  };
+
+  dropTargets.forEach(target => {
+    target.addEventListener('dragover', handleDragOver);
+    target.addEventListener('dragleave', handleDragLeave);
+    target.addEventListener('drop', handleDrop);
+    cleanups.push(() => {
+      target.removeEventListener('dragover', handleDragOver);
+      target.removeEventListener('dragleave', handleDragLeave);
+      target.removeEventListener('drop', handleDrop);
+      target.classList.remove('drag-over');
+    });
+  });
+
+  const handleDragStart = event => {
+    if (!isManualModeActive()) return;
+    const item = event.target.closest('.lobby-player, .team-player');
+    if (!item) return;
+    const nick = item.dataset.nick;
+    if (!nick) return;
+    if (!canUseManualDrag() && item.classList.contains('lobby-player')) {
+      return;
+    }
+    manualDragNick = nick;
+    item.classList.add('dragging');
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', nick);
+    }
+  };
+
+  const handleDragEnd = event => {
+    manualDragNick = null;
+    const item = event.target.closest('.lobby-player, .team-player');
+    if (item) {
+      item.classList.remove('dragging');
+    }
+  };
+
+  document.addEventListener('dragstart', handleDragStart);
+  document.addEventListener('dragend', handleDragEnd);
+  cleanups.push(() => {
+    document.removeEventListener('dragstart', handleDragStart);
+    document.removeEventListener('dragend', handleDragEnd);
+  });
+
+  const handleTeamClick = event => {
+    if (!isManualModeActive()) return;
+    const element = event.target.closest('.team-player');
+    if (!element) return;
+    const nick = element.dataset.nick;
+    if (nick) {
+      movePlayerBetweenCollections(nick, 'lobby');
+    }
+  };
+
+  teamLists.forEach(list => {
+    if (!list) return;
+    list.addEventListener('click', handleTeamClick);
+    cleanups.push(() => list.removeEventListener('click', handleTeamClick));
+  });
+
+  manualInteractionsTeardown = () => {
+    cleanups.forEach(fn => {
+      try {
+        fn();
+      } catch (err) {
+        console.error('[balance] manual cleanup failed', err);
+      }
+    });
+    manualInteractionsTeardown = null;
+  };
 }
 
 function runAutoBalance() {
@@ -415,13 +617,14 @@ function handleModeSwitch(mode) {
   applyModeUI();
 
   if (mode === 'auto') {
+    disableManualInteractions();
     if (state.teamsCount <= 0) {
       const fallback = state.lobbyPlayers.length <= 1 ? 1 : 2;
       setTeamsCount(Math.min(4, Math.max(1, fallback)));
     }
     runAutoBalance();
   } else {
-    setTeams({});
+    enableManualInteractions();
     renderLobby();
   }
 }

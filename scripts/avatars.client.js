@@ -1,7 +1,5 @@
 import {
   AVATAR_PLACEHOLDER,
-  AVATARS_FEED,
-  AVATAR_BY_NICK,
   AVATAR_CACHE_BUST,
   AVATAR_WORKER_BASE,
   ASSETS_VER
@@ -52,8 +50,10 @@ if (assetVersion && !headerTemplate['x-avatar-version']) headerTemplate['x-avata
 if (!headerTemplate['x-avatar-proxy']) headerTemplate['x-avatar-proxy'] = 'laser-tag-ranking';
 const AV_HEADERS = Object.freeze(headerTemplate);
 
-const FEED_ENDPOINT = resolveEndpoint(AVATARS_FEED, AVATAR_WORKER_BASE);
-const AVATAR_ENDPOINT = resolveEndpoint(AVATAR_BY_NICK, AVATAR_WORKER_BASE, { ensureTrailingSlash: true });
+const WORKER_BASE_URL = prepareWorkerBase(AVATAR_WORKER_BASE);
+const AVATAR_COLLECTION_URL = buildWorkerUrl(WORKER_BASE_URL, 'avatars');
+const FEED_ENDPOINT = AVATAR_COLLECTION_URL;
+const AVATAR_ENDPOINT = ensureTrailingSlash(AVATAR_COLLECTION_URL);
 const CACHE_BUST_SEED = trimConfigValue(AVATAR_CACHE_BUST);
 
 const state = {
@@ -91,30 +91,30 @@ function ensureTrailingSlash(url) {
   return url.endsWith('/') ? url : `${url}/`;
 }
 
-function resolveEndpoint(primary, fallback, { ensureTrailingSlash: wantTrailingSlash = false } = {}) {
-  const primaryTrimmed = trimConfigValue(primary);
-  const fallbackTrimmed = trimConfigValue(fallback);
-  const applyTrailing = value => (wantTrailingSlash ? ensureTrailingSlash(value) : value);
-
-  if (primaryTrimmed) {
-    try {
-      const absolute = new URL(primaryTrimmed);
-      return applyTrailing(absolute.toString());
-    } catch {
-      if (fallbackTrimmed) {
-        try {
-          const base = new URL(fallbackTrimmed);
-          const relative = primaryTrimmed.startsWith('/') ? primaryTrimmed.slice(1) : primaryTrimmed;
-          const resolved = new URL(relative, base);
-          return applyTrailing(resolved.toString());
-        } catch {
-          // ignore invalid URL
-        }
-      }
-    }
+function prepareWorkerBase(rawBase) {
+  const trimmed = trimConfigValue(rawBase);
+  if (!trimmed) return '';
+  try {
+    const urlObj = new URL(trimmed);
+    urlObj.search = '';
+    if (!urlObj.pathname.endsWith('/')) urlObj.pathname += '/';
+    return urlObj.toString();
+  } catch {
+    return '';
   }
+}
 
-  return applyTrailing(fallbackTrimmed) || '';
+function buildWorkerUrl(baseUrl, relativePath = '') {
+  if (!baseUrl) return '';
+  const segment = typeof relativePath === 'string' ? relativePath.trim() : '';
+  if (!segment) return baseUrl;
+  try {
+    const normalized = segment.startsWith('/') ? segment.slice(1) : segment;
+    const resolved = new URL(normalized, baseUrl);
+    return resolved.toString();
+  } catch {
+    return '';
+  }
 }
 
 function buildCacheBust(...parts) {

@@ -3,11 +3,8 @@ import { log } from './logger.js?v=2025-09-19-avatars-2';
 import {
   AVATAR_PLACEHOLDER,
   AVATAR_WORKER_BASE,
-  AVATARS_FEED,
-  AVATAR_BY_NICK,
   AVATAR_CACHE_BUST,
-  GAS_BASE_URL,
-  GAS_JSON_URL,
+  GAS_PROXY_BASE,
   ASSETS_VER
 } from './config.js';
 
@@ -57,7 +54,7 @@ function normalizeProxyBase(rawUrl, { name } = {}) {
   return { proxyUrl, proxyOrigin };
 }
 
-function trimAvatarConfigValue(value) {
+function trimConfigValue(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
@@ -73,7 +70,7 @@ function ensureTrailingSlashValue(url) {
 }
 
 function computeWorkerBase(rawBase) {
-  const trimmed = trimAvatarConfigValue(rawBase);
+  const trimmed = trimConfigValue(rawBase);
   if (!trimmed) return '';
   try {
     const urlObj = requireUrl(trimmed, { name: 'AVATAR_WORKER_BASE' });
@@ -85,29 +82,17 @@ function computeWorkerBase(rawBase) {
   }
 }
 
-function resolveWorkerEndpoint(rawValue, { fallbackBase = '', ensureTrailingSlash = false, name = 'URL' } = {}) {
-  const trimmed = trimAvatarConfigValue(rawValue);
-  if (trimmed) {
-    try {
-      const urlObj = requireUrl(trimmed, { name });
-      if (ensureTrailingSlash && !urlObj.pathname.endsWith('/')) urlObj.pathname += '/';
-      return urlObj.toString();
-    } catch {
-      if (fallbackBase) {
-        try {
-          const baseUrl = new URL(fallbackBase);
-          const relative = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
-          const urlObj = new URL(relative, baseUrl);
-          if (ensureTrailingSlash && !urlObj.pathname.endsWith('/')) urlObj.pathname += '/';
-          return urlObj.toString();
-        } catch {
-          // ignore invalid relative URL
-        }
-      }
-    }
+function buildWorkerUrl(baseUrl, relativePath = '') {
+  if (!baseUrl) return '';
+  const segment = typeof relativePath === 'string' ? relativePath.trim() : '';
+  if (!segment) return baseUrl;
+  try {
+    const normalized = segment.startsWith('/') ? segment.slice(1) : segment;
+    const urlObj = new URL(normalized, baseUrl);
+    return urlObj.toString();
+  } catch {
+    return '';
   }
-  if (!fallbackBase) return '';
-  return ensureTrailingSlash ? ensureTrailingSlashValue(fallbackBase) : fallbackBase;
 }
 
 function buildCacheBust(...parts) {
@@ -116,7 +101,7 @@ function buildCacheBust(...parts) {
     if (typeof part === 'number') {
       tokens.push(String(part));
     } else {
-      const value = trimAvatarConfigValue(part);
+      const value = trimConfigValue(part);
       if (value) tokens.push(value);
     }
   }
@@ -127,7 +112,7 @@ function appendCacheBust(url, bustValue) {
   if (!url) return url;
   const trimmed = typeof bustValue === 'number' && Number.isFinite(bustValue)
     ? String(bustValue)
-    : trimAvatarConfigValue(bustValue);
+    : trimConfigValue(bustValue);
   if (!trimmed) return url;
   try {
     const u = new URL(url);
@@ -140,16 +125,35 @@ function appendCacheBust(url, bustValue) {
 }
 
 const AVATAR_WORKER_BASE_URL = computeWorkerBase(AVATAR_WORKER_BASE);
-const AVATARS_FEED_URL = resolveWorkerEndpoint(AVATARS_FEED, {
-  fallbackBase: AVATAR_WORKER_BASE_URL,
-  name: 'AVATARS_FEED'
-});
-const AVATAR_BY_NICK_URL = resolveWorkerEndpoint(AVATAR_BY_NICK, {
-  fallbackBase: AVATAR_WORKER_BASE_URL,
-  ensureTrailingSlash: true,
-  name: 'AVATAR_BY_NICK'
-});
-const AVATAR_CACHE_BUST_VALUE = trimAvatarConfigValue(AVATAR_CACHE_BUST);
+const AVATAR_COLLECTION_URL = buildWorkerUrl(AVATAR_WORKER_BASE_URL, 'avatars');
+const AVATARS_FEED_URL = AVATAR_COLLECTION_URL;
+const AVATAR_BY_NICK_URL = ensureTrailingSlashValue(AVATAR_COLLECTION_URL);
+const AVATAR_CACHE_BUST_VALUE = trimConfigValue(AVATAR_CACHE_BUST);
+
+const GAS_PROXY_BASE_VALUE = trimConfigValue(GAS_PROXY_BASE);
+let gasProxyUrl = '';
+let gasProxyOrigin = '';
+if (GAS_PROXY_BASE_VALUE) {
+  try {
+    const conf = normalizeProxyBase(GAS_PROXY_BASE_VALUE, { name: 'GAS_PROXY_BASE' });
+    gasProxyUrl = conf.proxyUrl;
+    gasProxyOrigin = conf.proxyOrigin;
+  } catch {
+    gasProxyUrl = '';
+    gasProxyOrigin = '';
+  }
+}
+export const GAS_PROXY_ORIGIN = gasProxyOrigin;
+const GAS_PROXY_URL = gasProxyUrl;
+let gasProxyJsonUrl = '';
+if (GAS_PROXY_URL) {
+  try {
+    gasProxyJsonUrl = new URL('json', GAS_PROXY_URL).toString();
+  } catch {
+    gasProxyJsonUrl = '';
+  }
+}
+const GAS_PROXY_JSON_URL = gasProxyJsonUrl;
 
 // ==================== PROXY (Cloudflare Worker) ====================
 // Можеш переозначити в index.html ПЕРЕД підключенням api.js:
@@ -171,7 +175,7 @@ window.WEB_APP_URL  = WEB_APP_URL;
 window.PROXY_URL    = PROXY_URL;
 window.PROXY_ORIGIN = PROXY_ORIGIN;
 
-// Додатковий прямий бекап на Apps Script налаштовується через GAS_BASE_URL у config.js
+// Додатковий прямий бекап налаштовується через GAS_PROXY_BASE у config.js
 
 // ==================== NET HELPERS ====================
 async function parseTextSafely(res) {
@@ -579,8 +583,8 @@ export async function saveResult(data) {
 
   // 2) опційний прямий fallback на GAS
   const needRetry = !result.ok && ['ERR', 'ERR_PROXY', 'ERR_NETWORK', 'ERR_JSON_PARSE', 'ERR_HTML'].includes(result.status);
-  if (needRetry && GAS_BASE_URL) {
-    result = await attempt(GAS_BASE_URL);
+  if (needRetry && GAS_PROXY_ORIGIN) {
+    result = await attempt(GAS_PROXY_ORIGIN);
   }
   return result;
 }
@@ -775,9 +779,9 @@ export function toBase64NoPrefix(file) {
 // ==================== JSON API (general) ====================
 export async function gasPost(path = '', json = {}) {
   const payload = (json && typeof json === 'object') ? json : {};
-  const baseUrl = GAS_JSON_URL || GAS_BASE_URL || '';
+  const baseUrl = GAS_PROXY_JSON_URL;
   if (!baseUrl) {
-    return { status: 'ERR', message: 'GAS fallback URL not configured' };
+    return { status: 'ERR', message: 'GAS proxy URL not configured' };
   }
 
   const normalizedBase = baseUrl.replace(/\/+$/, '');

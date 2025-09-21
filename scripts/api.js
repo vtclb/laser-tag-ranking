@@ -1,6 +1,15 @@
 // scripts/api.js
 import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER, AVATARS_BASE, GAS_BASE_URL, GAS_JSON_URL, ASSETS_VER } from './config.js';
+import {
+  AVATAR_PLACEHOLDER,
+  AVATAR_WORKER_BASE,
+  AVATARS_FEED,
+  AVATAR_BY_NICK,
+  AVATAR_CACHE_BUST,
+  GAS_BASE_URL,
+  GAS_JSON_URL,
+  ASSETS_VER
+} from './config.js';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -47,6 +56,100 @@ function normalizeProxyBase(rawUrl, { name } = {}) {
   const proxyOrigin = proxyUrl.slice(0, -1); // без кінцевого '/'
   return { proxyUrl, proxyOrigin };
 }
+
+function trimAvatarConfigValue(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function ensureTrailingSlashValue(url) {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    if (!parsed.pathname.endsWith('/')) parsed.pathname += '/';
+    return parsed.toString();
+  } catch {
+    return url.endsWith('/') ? url : `${url}/`;
+  }
+}
+
+function computeWorkerBase(rawBase) {
+  const trimmed = trimAvatarConfigValue(rawBase);
+  if (!trimmed) return '';
+  try {
+    const urlObj = requireUrl(trimmed, { name: 'AVATAR_WORKER_BASE' });
+    urlObj.search = '';
+    if (!urlObj.pathname.endsWith('/')) urlObj.pathname += '/';
+    return urlObj.toString();
+  } catch {
+    return '';
+  }
+}
+
+function resolveWorkerEndpoint(rawValue, { fallbackBase = '', ensureTrailingSlash = false, name = 'URL' } = {}) {
+  const trimmed = trimAvatarConfigValue(rawValue);
+  if (trimmed) {
+    try {
+      const urlObj = requireUrl(trimmed, { name });
+      if (ensureTrailingSlash && !urlObj.pathname.endsWith('/')) urlObj.pathname += '/';
+      return urlObj.toString();
+    } catch {
+      if (fallbackBase) {
+        try {
+          const baseUrl = new URL(fallbackBase);
+          const relative = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+          const urlObj = new URL(relative, baseUrl);
+          if (ensureTrailingSlash && !urlObj.pathname.endsWith('/')) urlObj.pathname += '/';
+          return urlObj.toString();
+        } catch {
+          // ignore invalid relative URL
+        }
+      }
+    }
+  }
+  if (!fallbackBase) return '';
+  return ensureTrailingSlash ? ensureTrailingSlashValue(fallbackBase) : fallbackBase;
+}
+
+function buildCacheBust(...parts) {
+  const tokens = [];
+  for (const part of parts) {
+    if (typeof part === 'number') {
+      tokens.push(String(part));
+    } else {
+      const value = trimAvatarConfigValue(part);
+      if (value) tokens.push(value);
+    }
+  }
+  return tokens.join('-');
+}
+
+function appendCacheBust(url, bustValue) {
+  if (!url) return url;
+  const trimmed = typeof bustValue === 'number' && Number.isFinite(bustValue)
+    ? String(bustValue)
+    : trimAvatarConfigValue(bustValue);
+  if (!trimmed) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set('t', trimmed);
+    return u.toString();
+  } catch {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}t=${encodeURIComponent(trimmed)}`;
+  }
+}
+
+const AVATAR_WORKER_BASE_URL = computeWorkerBase(AVATAR_WORKER_BASE);
+const AVATARS_FEED_URL = resolveWorkerEndpoint(AVATARS_FEED, {
+  fallbackBase: AVATAR_WORKER_BASE_URL,
+  name: 'AVATARS_FEED'
+});
+const AVATAR_BY_NICK_URL = resolveWorkerEndpoint(AVATAR_BY_NICK, {
+  fallbackBase: AVATAR_WORKER_BASE_URL,
+  ensureTrailingSlash: true,
+  name: 'AVATAR_BY_NICK'
+});
+const AVATAR_CACHE_BUST_VALUE = trimAvatarConfigValue(AVATAR_CACHE_BUST);
 
 // ==================== PROXY (Cloudflare Worker) ====================
 // Можеш переозначити в index.html ПЕРЕД підключенням api.js:
@@ -195,9 +298,7 @@ if (!headerTemplate['x-avatar-proxy']) headerTemplate['x-avatar-proxy'] = 'laser
 export const AV_HEADERS = Object.freeze(headerTemplate);
 
 function avatarProxyBase() {
-  const base = typeof AVATARS_BASE === 'string' ? AVATARS_BASE.trim() : '';
-  if (!base) return '';
-  return base.endsWith('/') ? base : `${base}/`;
+  return AVATAR_BY_NICK_URL || '';
 }
 
 export function avatarNickKey(value) {
@@ -519,13 +620,13 @@ export async function fetchAvatarsMap({ force = false } = {}) {
     }
   }
 
-  const base = typeof AVATARS_BASE === 'string' ? AVATARS_BASE.trim() : '';
+  const base = AVATARS_FEED_URL;
   if (!base) {
     return rememberAvatarMap(emptyAvatarMapResult('unconfigured'), now);
   }
 
-  const bust = force ? now : '';
-  const targetUrl = bust ? `${base}${base.includes('?') ? '&' : '?'}t=${bust}` : base;
+  const bust = buildCacheBust(AVATAR_CACHE_BUST_VALUE, force ? now : '');
+  const targetUrl = appendCacheBust(base, bust);
 
   let response;
   try {
@@ -577,15 +678,15 @@ export async function fetchAvatarForNick(nick, { force = false } = {}) {
     if (cached) return cached;
   }
 
-  const base = avatarProxyBase() || AVATARS_BASE || '';
+  const base = avatarProxyBase() || '';
   if (!base) {
     const record = { url: null, updatedAt: Date.now() };
     storeAvatarRecord(key, record, { legacyKey: originalNick });
     return record;
   }
 
-  const bust = Date.now();
-  const target = `${base}${encodeURIComponent(originalNick)}?t=${bust}`;
+  const bust = buildCacheBust(AVATAR_CACHE_BUST_VALUE, Date.now());
+  const target = appendCacheBust(`${base}${encodeURIComponent(originalNick)}`, bust);
 
   let response;
   try {

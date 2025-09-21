@@ -442,6 +442,7 @@ function initEventListeners() {
   const autoBtn = document.getElementById('mode-auto');
   const manualBtn = document.getElementById('mode-manual');
   const saveBtn = document.getElementById('save-game');
+  const loadBtn = document.getElementById('btn-load');
 
   if (leagueSelect) {
     leagueSelect.value = state.league;
@@ -450,6 +451,22 @@ function initEventListeners() {
 
   if (addBtn) {
     addBtn.addEventListener('click', handleAddToLobbyClick);
+  }
+
+  if (loadBtn) {
+    const originalText = loadBtn.textContent || '';
+    loadBtn.addEventListener('click', async () => {
+      const targetSelect = leagueSelect || document.getElementById('league');
+      loadBtn.disabled = true;
+      loadBtn.textContent = 'Завантаження...';
+
+      try {
+        await handleLeagueChange(targetSelect || null);
+      } finally {
+        loadBtn.disabled = false;
+        loadBtn.textContent = originalText || 'Завантажити гравців';
+      }
+    });
   }
 
   if (autoBtn) {

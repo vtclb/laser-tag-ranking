@@ -1,6 +1,6 @@
 // scripts/balance.js
 
-import { loadPlayers, saveResult } from './api.js?v=2025-09-19-avatars-2';
+import { fetchLeagueCsv, parsePlayersFromCsv, saveResult } from './api.js';
 import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js?v=2025-09-19-avatars-2';
 import { initAvatarAdmin } from './avatarAdmin.js?v=2025-09-19-avatars-2';
 import {
@@ -312,7 +312,8 @@ async function handleLeagueChange(selectEl) {
     : league;
 
   try {
-    allPlayers = await loadPlayers(csvLeague);
+    const csvText = await fetchLeagueCsv(csvLeague);
+    allPlayers = parsePlayersFromCsv(csvText);
     allPlayers.sort((a, b) => a.nick.localeCompare(b.nick, 'uk'));
     await initAvatarAdmin(allPlayers, league);
   } catch (err) {

@@ -1,12 +1,12 @@
 // scripts/api.js
-import { log } from './logger.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
 import {
   AVATAR_PLACEHOLDER,
   AVATAR_WORKER_BASE,
   AVATAR_CACHE_BUST,
   ASSETS_VER
 } from './avatarConfig.js';
-import { GAS_PROXY_BASE } from './config.js';
+import { GAS_PROXY_BASE, LEAGUE_CSV } from './config.js';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -226,12 +226,12 @@ export function toFormUrlEncoded(obj = {}) {
 // ==================== CSV FEEDS ====================
 export const CSV_URLS = {
   kids: {
-    ranking: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
-    games:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
+    ranking: LEAGUE_CSV.kids,
+    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   },
   sundaygames: {
-    ranking: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv',
-    games:   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
+    ranking: LEAGUE_CSV.sundaygames,
+    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   }
 };
 
@@ -486,7 +486,7 @@ export function normalizeLeague(v) {
 }
 export function getLeagueFeedUrl(league) {
   const key = normalizeLeague(league);
-  const url = CSV_URLS[key]?.ranking;
+  const url = LEAGUE_CSV[key];
   if (!url) throw new Error('Unknown league: ' + league);
   return url;
 }
@@ -498,12 +498,18 @@ export function getGamesFeedUrl(league) {
 }
 
 // ==================== CSV PARSER ====================
-export async function fetchCsv(url, ttlMs = 0) {
-  const text = await fetchOnce(url, ttlMs);
-  if (typeof text !== 'string') throw new Error('API: feed failed');
+function parseCsvText(text) {
+  if (typeof text !== 'string') return [];
+
   if (typeof Papa !== 'undefined') {
-    return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+    try {
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      return Array.isArray(parsed?.data) ? parsed.data : [];
+    } catch (err) {
+      log('[ranking]', 'Papa parse failed', err);
+    }
   }
+
   const parseCsvLine = (line) => {
     const result = [];
     let current = '';
@@ -546,18 +552,49 @@ export async function fetchCsv(url, ttlMs = 0) {
   });
 }
 
+export async function fetchCsv(url, ttlMs = 0) {
+  const text = await fetchOnce(url, ttlMs);
+  if (typeof text !== 'string') throw new Error('API: feed failed');
+  return parseCsvText(text);
+}
+
 // ==================== PLAYERS ====================
-export async function loadPlayers(league) {
-  const rows = await fetchCsv(getLeagueFeedUrl(league));
+export async function fetchLeagueCsv(league) {
+  const baseUrl = getLeagueFeedUrl(league);
+  let targetUrl = baseUrl;
+  try {
+    const urlObj = new URL(baseUrl);
+    urlObj.searchParams.set('cb', Date.now());
+    targetUrl = urlObj.toString();
+  } catch {
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    targetUrl = `${baseUrl}${separator}cb=${Date.now()}`;
+  }
+
+  const response = await fetch(targetUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch league CSV: HTTP ${response.status}`);
+  }
+  return response.text();
+}
+
+export function parsePlayersFromCsv(csvText) {
+  const rows = parseCsvText(typeof csvText === 'string' ? csvText : '');
+  if (!Array.isArray(rows) || !rows.length) return [];
   return rows.map(r => {
-    const nick = String(r.Nickname || '').trim();
+    const nick = String(r?.Nickname || '').trim();
     if (!nick) return null;
     const pts = Number(r.Points || 0);
-    const pl  = { nick, pts, rank: rankFromPoints(pts) };
-    const ab  = r.abonement_type ? String(r.abonement_type).trim() : '';
+    const pl = { nick, pts, rank: rankFromPoints(pts) };
+    const ab = r.abonement_type ? String(r.abonement_type).trim() : '';
     if (ab) pl.abonement = ab;
     return pl;
   }).filter(Boolean);
+}
+
+export async function loadPlayers(league) {
+  const csvText = await fetchLeagueCsv(league);
+  return parsePlayersFromCsv(csvText);
 }
 export async function fetchPlayerData(league) { return loadPlayers(league); }
 

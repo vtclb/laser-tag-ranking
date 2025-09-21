@@ -742,7 +742,10 @@ export async function loadPlayersForLeague(source) {
 
   selectedCandidates.clear();
   setLobbyPlayers([]);
-  setTeamsCount(0);
+  const preservedTeamsCount = Number.isInteger(state.teamsCount) && state.teamsCount > 0
+    ? state.teamsCount
+    : 4;
+  setTeamsCount(preservedTeamsCount);
   setTeams({});
 
   resetArenaUI();

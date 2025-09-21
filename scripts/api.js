@@ -4,9 +4,9 @@ import {
   AVATAR_PLACEHOLDER,
   AVATAR_WORKER_BASE,
   AVATAR_CACHE_BUST,
-  GAS_PROXY_BASE,
   ASSETS_VER
-} from './config.js';
+} from './avatarConfig.js';
+import { GAS_PROXY_BASE } from './config.js';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;

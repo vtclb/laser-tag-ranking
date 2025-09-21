@@ -1,4 +1,4 @@
-import { AVATAR_WORKER_BASE, AVATAR_PLACEHOLDER } from './config.js';
+import { AVATAR_WORKER_BASE, AVATAR_PLACEHOLDER } from './avatarConfig.js';
 
 const RAW_BASE = typeof AVATAR_WORKER_BASE === 'string' ? AVATAR_WORKER_BASE.trim() : '';
 const NORMALIZED_BASE = RAW_BASE ? RAW_BASE.replace(/\/+$/, '') : '';

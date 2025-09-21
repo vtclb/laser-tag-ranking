@@ -1,5 +1,5 @@
 import { log } from './logger.js';
-import { AVATAR_PLACEHOLDER } from './config.js';
+import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
 import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js";
 import { LEAGUE } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';

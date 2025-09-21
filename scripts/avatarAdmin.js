@@ -1,15 +1,15 @@
 // scripts/avatarAdmin.js
 import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { uploadAvatar, loadPlayers, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
+import { uploadAvatar, loadPlayers, fetchAvatarForNick, avatarNickKey } from './api.js?v=2025-09-19-avatars-2';
 import { AVATAR_PLACEHOLDER } from './config.js?v=2025-09-19-avatars-2';
-import { reloadAvatars, norm } from './avatars.client.js?v=2025-09-19-avatars-2';
+import { reloadAvatars } from './avatars.client.js';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 export let avatarFailures = 0;
 
 function nickKey(value) {
-  return norm(value);
+  return avatarNickKey(value);
 }
 
 export function noteAvatarFailure(nick, reason) {

@@ -342,11 +342,16 @@ const seasonGeneral = {
   tours: 12,
   finals: 2,
   totalGamesLogged: 1422,
+  totalRounds: 4266,
   totalPointsScored: 9540,
   totalWins: 729,
   overtimeMatches: 32,
   uniquePlayers: 64,
   newcomers: 19,
+  activeTeams: 14,
+  averageWinRate: 0.512,
+  averageAccuracy: 0.463,
+  averagePointsPerGame: 6.7,
   arenas: ['LaserTown', 'SKY Arena', 'Арсенал'],
   podium: ['Laston', 'Leres', 'Zavodchanyn']
 };
@@ -885,6 +890,18 @@ const decimalFormatter = new Intl.NumberFormat('uk-UA', {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1
 });
+const pointsPluralRules = new Intl.PluralRules('uk-UA');
+
+function formatPointsWord(value) {
+  const rule = pointsPluralRules.select(Number(value));
+  if (rule === 'one') {
+    return 'очко';
+  }
+  if (rule === 'few') {
+    return 'очки';
+  }
+  return 'очок';
+}
 
 const metricsGrid = document.getElementById('metrics-grid');
 const podiumGrid = document.getElementById('podium-grid');
@@ -904,74 +921,97 @@ function formatPercent(value, formatter = percentFormatter0) {
   return formatter.format(value);
 }
 
-function calculateMetrics() {
-  const totalGames = topPlayers.reduce((sum, player) => sum + player.games, 0);
-  const totalPoints = topPlayers.reduce((sum, player) => sum + player.totalPoints, 0);
-  const averageWinRate = topPlayers.reduce((sum, player) => sum + player.winRate, 0) / topPlayers.length;
-  const averageAccuracy = topPlayers.reduce((sum, player) => sum + player.accuracy, 0) / topPlayers.length;
-  const longestStreakPlayer = topPlayers.reduce((best, player) =>
-    player.bestStreak > best.bestStreak ? player : best
-  );
-  const mostAccurate = topPlayers.reduce((best, player) =>
-    player.accuracy > best.accuracy ? player : best
-  );
-  const strongestWinRate = topPlayers.reduce((best, player) =>
-    player.winRate > best.winRate ? player : best
-  );
-  const uniqueTeams = new Set(topPlayers.map((player) => player.team)).size;
-  const podiumPoints = topPlayers.slice(0, 3).reduce((sum, player) => sum + player.totalPoints, 0);
+const seasonTickerMessages = [
+  `Матчів: ${numberFormatter.format(seasonGeneral.totalGamesLogged)} · Раундів: ${numberFormatter.format(seasonGeneral.totalRounds)}`,
+  `Очки сезону: ${numberFormatter.format(seasonGeneral.totalPointsScored)} (подіум ${formatPercent(seasonPointsSummary.podiumShare, percentFormatter1)})`,
+  `Середні очки топ-10: ${numberFormatter.format(seasonPointsSummary.averageTop10)} ±${decimalFormatter.format(seasonPointsSummary.standardDeviation)}`,
+  `Найтісніша гонка: ${seasonPointsSummary.closestRace.players.join(' vs ')} (${seasonPointsSummary.closestRace.diff} ${formatPointsWord(seasonPointsSummary.closestRace.diff)})`
+];
 
+function calculateMetrics() {
   return {
-    totalGames,
-    totalPoints,
-    averageWinRate,
-    averageAccuracy,
-    longestStreakPlayer,
-    mostAccurate,
-    strongestWinRate,
-    uniqueTeams,
-    podiumPoints
+    totalGames: seasonGeneral.totalGamesLogged,
+    totalRounds: seasonGeneral.totalRounds,
+    totalPoints: seasonGeneral.totalPointsScored,
+    averageWinRate: seasonGeneral.averageWinRate,
+    averageAccuracy: seasonGeneral.averageAccuracy,
+    averagePointsPerGame: seasonGeneral.averagePointsPerGame,
+    uniquePlayers: seasonGeneral.uniquePlayers,
+    newcomers: seasonGeneral.newcomers,
+    activeTeams: seasonGeneral.activeTeams,
+    tours: seasonGeneral.tours,
+    finals: seasonGeneral.finals,
+    totalWins: seasonGeneral.totalWins,
+    overtimeMatches: seasonGeneral.overtimeMatches,
+    podiumNames: seasonGeneral.podium,
+    podiumPoints: seasonPointsSummary.podiumPoints,
+    podiumShare: seasonPointsSummary.podiumShare,
+    averageTop10: seasonPointsSummary.averageTop10,
+    medianTop10: seasonPointsSummary.medianTop10,
+    standardDeviation: seasonPointsSummary.standardDeviation,
+    minPoints: seasonPointsSummary.minPoints,
+    maxPoints: seasonPointsSummary.maxPoints,
+    pointsByTier: seasonPointsSummary.pointsByTier,
+    biggestClimb: seasonPointsSummary.biggestClimb,
+    closestRace: seasonPointsSummary.closestRace
   };
 }
 
 function renderMetrics() {
   const data = calculateMetrics();
+  const roundsLabel = `${numberFormatter.format(data.totalRounds)} раундів`;
+  const seasonPhases = `${numberFormatter.format(data.tours)} турів · ${numberFormatter.format(data.finals)} фінали`;
+  const overtimeLabel = `${numberFormatter.format(data.overtimeMatches)} овертайми`;
+  const teamsLabel = `${numberFormatter.format(data.activeTeams)} команд`;
+  const newcomersLabel = `${numberFormatter.format(data.newcomers)} новачків`;
+  const podiumNames = Array.isArray(data.podiumNames) ? data.podiumNames.join(' / ') : '';
+  const closestRaceLabel = `${data.closestRace.players.join(' vs ')} (+${data.closestRace.diff} ${formatPointsWord(data.closestRace.diff)})`;
+  const top10Plus = Math.max(0, data.maxPoints - data.averageTop10);
+  const top10Minus = Math.max(0, data.averageTop10 - data.minPoints);
+  const top10Spread = `+${numberFormatter.format(top10Plus)} / -${numberFormatter.format(top10Minus)} очок`;
+
   const cards = [
     {
       label: 'Матчів зіграно',
       value: numberFormatter.format(data.totalGames),
-      footnote: '12 турів + фінал та шоу-матч',
+      delta: seasonPhases,
+      footnote: `${roundsLabel} · ${overtimeLabel}`,
       key: 'games'
     },
     {
       label: 'Унікальних гравців',
-      value: numberFormatter.format(topPlayers.length),
-      footnote: `Команди: ${data.uniqueTeams}`,
+      value: numberFormatter.format(data.uniquePlayers),
+      delta: teamsLabel,
+      footnote: newcomersLabel,
       key: 'players'
     },
     {
       label: 'Сумарні очки',
       value: numberFormatter.format(data.totalPoints),
-      footnote: `Подіум тримає ${numberFormatter.format(data.podiumPoints)} очок`,
+      delta: `${formatPercent(data.podiumShare, percentFormatter1)} частка`,
+      footnote: `Подіум ${podiumNames}: ${numberFormatter.format(data.podiumPoints)} очок`,
       key: 'points'
     },
     {
       label: 'Середній win rate',
       value: formatPercent(data.averageWinRate, percentFormatter1),
-      footnote: `Найвищий у ${data.strongestWinRate.nickname}: ${formatPercent(data.strongestWinRate.winRate, percentFormatter1)}`,
+      delta: `${numberFormatter.format(data.totalWins)} перемог`,
+      footnote: `Найтісніша гонка: ${closestRaceLabel}`,
       key: 'winrate'
     },
     {
       label: 'Середня точність',
       value: formatPercent(data.averageAccuracy, percentFormatter1),
-      footnote: `Найточніша — ${data.mostAccurate.nickname}`,
+      delta: `≈${decimalFormatter.format(data.averagePointsPerGame)} очка/матч`,
+      footnote: `Діапазон очок топ-10: ${numberFormatter.format(data.minPoints)}–${numberFormatter.format(data.maxPoints)}`,
       key: 'accuracy'
     },
     {
-      label: 'Найдовша серія',
-      value: `${numberFormatter.format(data.longestStreakPlayer.bestStreak)} перемог`,
-      footnote: `${data.longestStreakPlayer.nickname} з ${data.longestStreakPlayer.team}`,
-      key: 'streak'
+      label: 'Середні очки топ-10',
+      value: numberFormatter.format(data.averageTop10),
+      delta: top10Spread,
+      footnote: `σ = ${decimalFormatter.format(data.standardDeviation)} · Медіана ${numberFormatter.format(data.medianTop10)}`,
+      key: 'top10avg'
     }
   ];
 
@@ -983,6 +1023,7 @@ function renderMetrics() {
     article.innerHTML = `
       <span class="metric-label">${card.label}</span>
       <span class="metric-value">${card.value}</span>
+      ${card.delta ? `<span class="metric-delta">${card.delta}</span>` : ''}
       <span class="metric-footnote">${card.footnote}</span>
     `;
     metricsGrid.append(article);
@@ -1222,20 +1263,7 @@ function startTicker() {
   if (!tickerEl) {
     return;
   }
-  const metrics = calculateMetrics();
-  const podiumNames = topPlayers
-    .slice(0, 3)
-    .map((player) => player.nickname)
-    .join(' / ');
-  const messages = [
-    `Подіум сезону: ${podiumNames}`,
-    `Найточніший — ${metrics.mostAccurate.nickname} (${formatPercent(
-      metrics.mostAccurate.accuracy,
-      percentFormatter1
-    )})`,
-    `Найдовший стрік: ${metrics.longestStreakPlayer.bestStreak} від ${metrics.longestStreakPlayer.nickname}`,
-    `Сумарні очки: ${numberFormatter.format(metrics.totalPoints)}`
-  ];
+  const messages = seasonTickerMessages;
 
   let index = 0;
   const update = () => {

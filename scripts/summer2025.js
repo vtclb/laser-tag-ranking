@@ -4,6 +4,26 @@ function nameAlias(nickname) {
   return nickname === 'Kуmar' ? 'Kumar' : nickname;
 }
 
+function getRankTierByPlace(place) {
+  const rank = Number(place);
+  if (!Number.isFinite(rank) || rank <= 0) {
+    return '—';
+  }
+  if (rank <= 3) {
+    return 'S';
+  }
+  if (rank <= 7) {
+    return 'A';
+  }
+  if (rank <= 10) {
+    return 'B';
+  }
+  if (rank <= 15) {
+    return 'C';
+  }
+  return 'D';
+}
+
 const topPlayers = [
   {
     rank: 1,
@@ -1109,19 +1129,37 @@ function renderModal(player) {
   }
 
   modalTitle.textContent = `${player.nickname} · ${player.team}`;
-  const averageRecent = player.recentScores.reduce((sum, score) => sum + score, 0) /
-    player.recentScores.length;
-  const lastAccuracy = player.recentAccuracy[player.recentAccuracy.length - 1];
-  const accuracyTrend =
-    lastAccuracy - player.recentAccuracy[0] >= 0 ? 'зростає' : 'спадає';
+  const alias = nameAlias(player.nickname);
+  const rawBattles = gamesPlayedByPlayer[alias] ?? player.games;
+  const battles =
+    (typeof rawBattles === 'number' ? rawBattles : rawBattles?.games) ??
+    player.games ??
+    0;
+  const rankTier = player.rankTier || getRankTierByPlace(player.rank);
+  const recentScores = Array.isArray(player.recentScores) ? player.recentScores : [];
+  const hasRecentScores = recentScores.length > 0;
+  const averageRecent = hasRecentScores
+    ? recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length
+    : 0;
+  const sparklineMarkup = hasRecentScores
+    ? renderSparkline(recentScores, player.nickname)
+    : '<p>Немає даних для графіка.</p>';
+  const tempoSummary = hasRecentScores
+    ? `Середній темп — ${decimalFormatter.format(averageRecent)} очок за ${recentScores.length} останні бої.`
+    : 'Немає даних про останні бої.';
+  const recentResultsParagraph = hasRecentScores
+    ? `<p>Останні результати: ${recentScores
+        .map((value) => `${numberFormatter.format(value)} очок`)
+        .join(' · ')}.</p>`
+    : '';
 
   modalBody.innerHTML = `
     <section>
       <h3>Основні показники</h3>
       <div class="detail-grid">
         <div>
-          <strong>Матчів</strong>
-          ${numberFormatter.format(player.games)}
+          <strong>Бої (зіграні)</strong>
+          ${numberFormatter.format(battles)}
         </div>
         <div>
           <strong>Перемог</strong>
@@ -1136,8 +1174,8 @@ function renderModal(player) {
           ${numberFormatter.format(player.averagePoints)}
         </div>
         <div>
-          <strong>Точність</strong>
-          ${formatPercent(player.accuracy, percentFormatter1)}
+          <strong>Ранг</strong>
+          ${rankTier}
         </div>
         <div>
           <strong>Стрік</strong>
@@ -1171,14 +1209,9 @@ function renderModal(player) {
     </section>
     <section>
       <h3>Останні матчі</h3>
-      ${renderSparkline(player.recentScores, player.nickname)}
-      <p>Середній темп — ${decimalFormatter.format(averageRecent)} очок, точність ${formatPercent(
-    lastAccuracy,
-    percentFormatter1
-  )} (${accuracyTrend}).</p>
-      <p>Останні показники точності: ${player.recentAccuracy
-        .map((value) => formatPercent(value, percentFormatter1))
-        .join(' · ')}.</p>
+      ${sparklineMarkup}
+      <p>${tempoSummary}</p>
+      ${recentResultsParagraph}
     </section>
     <section>
       <h3>Фішки гравця</h3>

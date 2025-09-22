@@ -1082,45 +1082,90 @@ function renderPodium() {
   });
 }
 
-function renderSparkline(values, label) {
-  const width = 320;
-  const height = 120;
-  const paddingX = 14;
-  const paddingY = 18;
+function buildPlayerChart(timeline, mode = 'delta') {
+  if (!timeline || !Array.isArray(timeline.scores) || timeline.scores.length === 0) {
+    return '<p>Немає даних для графіка.</p>';
+  }
+
+  const baseValues = timeline.scores;
+  const values =
+    mode === 'cum'
+      ? baseValues.reduce((acc, value, index) => {
+          const previous = index === 0 ? 0 : acc[index - 1];
+          acc.push(previous + value);
+          return acc;
+        }, [])
+      : baseValues;
+
+  const width = 360;
+  const height = 240;
+  const paddingX = 24;
+  const paddingY = 32;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = Math.max(max - min, 1);
+  const step = values.length > 1 ? (width - paddingX * 2) / (values.length - 1) : 0;
 
-  const points = values
-    .map((value, index) => {
-      const x =
-        paddingX + (index / Math.max(values.length - 1, 1)) * (width - paddingX * 2);
-      const normalized = (value - min) / range;
-      const y = height - paddingY - normalized * (height - paddingY * 2);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+  const points = values.map((value, index) => {
+    const x = paddingX + step * index;
+    const normalized = (value - min) / range;
+    const y = height - paddingY - normalized * (height - paddingY * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
 
-  const fillPoints = `${paddingX},${height - paddingY} ${points} ${
-    width - paddingX
-  },${height - paddingY}`;
+  const fillPoints = [
+    `${paddingX},${height - paddingY}`,
+    ...points,
+    `${width - paddingX},${height - paddingY}`
+  ].join(' ');
 
   const description = values
-    .map((value, index) => `Раунд ${index + 1}: ${value}`)
+    .map((value, index) => {
+      const label = mode === 'cum' ? 'Сумарно' : 'Раунд';
+      return `${label} ${index + 1}: ${numberFormatter.format(Math.round(value))}`;
+    })
     .join(', ');
 
+  const baselineY = height - paddingY;
+  const [lastX = '0', lastY = '0'] = points[points.length - 1]?.split(',') ?? [];
+  const modeTitle = mode === 'cum' ? 'Накопичені очки' : 'Очки за матч';
+
   return `
-    <svg class="sparkline" viewBox="0 0 ${width} ${height}" role="img" aria-label="Динаміка очок ${label}">
-      <title>Очки ${label}</title>
+    <svg class="player-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${modeTitle}">
+      <title>${modeTitle}</title>
       <desc>${description}</desc>
+      <rect x="${paddingX}" y="${paddingY}" width="${width - paddingX * 2}" height="${
+    height - paddingY * 2
+  }" fill="rgba(9, 14, 32, 0.65)" stroke="rgba(157, 215, 255, 0.2)"></rect>
       <polyline points="${fillPoints}" fill="rgba(255, 102, 196, 0.15)" stroke="none"></polyline>
-      <polyline points="${points}" fill="none" stroke="#ff66c4" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></polyline>
-      <line x1="${paddingX}" y1="${height - paddingY}" x2="${width - paddingX}" y2="${height - paddingY}" stroke="rgba(255, 255, 255, 0.2)" stroke-dasharray="6 6"></line>
-      <circle cx="${points.split(' ').slice(-1)[0].split(',')[0]}" cy="${
-    points.split(' ').slice(-1)[0].split(',')[1]
-  }" r="5" fill="#ffd700" stroke="#05070e" stroke-width="2"></circle>
+      <polyline points="${points.join(' ')}" fill="none" stroke="#ff66c4" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></polyline>
+      <line x1="${paddingX}" y1="${baselineY}" x2="${width - paddingX}" y2="${baselineY}" stroke="rgba(255, 255, 255, 0.2)" stroke-dasharray="6 6"></line>
+      <circle cx="${lastX}" cy="${lastY}" r="4.5" fill="#ffd700" stroke="#05070e" stroke-width="2"></circle>
     </svg>
   `;
+}
+
+function renderPairList(items, type) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return '<p class="pair-placeholder">—</p>';
+  }
+
+  const markup = items
+    .map((item) => {
+      if (type === 'teammate') {
+        const gamesLabel = `${numberFormatter.format(item.games)} боїв`;
+        const winsLabel = `${numberFormatter.format(item.wins)} перемог`;
+        const wrLabel = formatPercent(item.wr, percentFormatter1);
+        return `<li><strong>${item.name}</strong><span>${gamesLabel} · ${winsLabel} · WR ${wrLabel}</span></li>`;
+      }
+
+      const meetingsLabel = `${numberFormatter.format(item.meetings)} дуелей`;
+      const wrLabel = formatPercent(item.wr, percentFormatter1);
+      return `<li><strong>${item.name}</strong><span>${meetingsLabel} · WR ${wrLabel}</span></li>`;
+    })
+    .join('');
+
+  return `<ul class="pair-list">${markup}</ul>`;
 }
 
 function renderModal(player) {
@@ -1141,8 +1186,17 @@ function renderModal(player) {
   const averageRecent = hasRecentScores
     ? recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length
     : 0;
-  const sparklineMarkup = hasRecentScores
-    ? renderSparkline(recentScores, player.nickname)
+  const timeline = timeSeries[alias];
+  const hasTimeline = Array.isArray(timeline?.scores) && timeline.scores.length > 0;
+  const defaultChartMode = 'delta';
+  const chartControlsMarkup = hasTimeline
+    ? `<div class="chart-mode-switch" role="radiogroup" aria-label="Режим графіка">
+        <label><input type="radio" name="chart-mode" value="delta" checked /> Δ очки</label>
+        <label><input type="radio" name="chart-mode" value="cum" /> Σ очки</label>
+      </div>`
+    : '';
+  const chartMarkup = hasTimeline
+    ? buildPlayerChart(timeline, defaultChartMode)
     : '<p>Немає даних для графіка.</p>';
   const tempoSummary = hasRecentScores
     ? `Середній темп — ${decimalFormatter.format(averageRecent)} очок за ${recentScores.length} останні бої.`
@@ -1209,9 +1263,20 @@ function renderModal(player) {
     </section>
     <section>
       <h3>Останні матчі</h3>
-      ${sparklineMarkup}
+      ${chartControlsMarkup}
+      <div class="chart-wrapper" data-chart-wrapper>
+        ${chartMarkup}
+      </div>
       <p>${tempoSummary}</p>
       ${recentResultsParagraph}
+    </section>
+    <section>
+      <h3>Топ напарників</h3>
+      ${renderPairList(player.teammateTop, 'teammate')}
+    </section>
+    <section>
+      <h3>Топ суперників</h3>
+      ${renderPairList(player.opponentTop, 'opponent')}
     </section>
     <section>
       <h3>Фішки гравця</h3>
@@ -1222,6 +1287,18 @@ function renderModal(player) {
       <p>Набір: ${player.loadout}</p>
     </section>
   `;
+
+  if (hasTimeline) {
+    const chartWrapper = modalBody.querySelector('[data-chart-wrapper]');
+    const modeInputs = modalBody.querySelectorAll('input[name="chart-mode"]');
+    modeInputs.forEach((input) => {
+      input.addEventListener('change', (event) => {
+        if (event.target instanceof HTMLInputElement && event.target.checked) {
+          chartWrapper.innerHTML = buildPlayerChart(timeline, event.target.value);
+        }
+      });
+    });
+  }
 
   if (typeof modal.showModal === 'function') {
     modal.showModal();

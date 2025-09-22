@@ -398,9 +398,64 @@
         color: #9dd7ff;
         margin-bottom: 0.35rem;
       }
-      .sparkline {
+      .chart-mode-switch {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        font-size: 0.5rem;
+        text-transform: none;
+      }
+      .chart-mode-switch label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.5rem;
+        background: rgba(11, 18, 40, 0.6);
+        border: var(--pixel-border) solid rgba(36, 59, 83, 0.65);
+        cursor: pointer;
+      }
+      .chart-mode-switch input {
+        accent-color: var(--accent);
+      }
+      .chart-wrapper {
+        width: 100%;
+        min-height: clamp(220px, 45vh, 260px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .player-chart {
         width: 100%;
         height: auto;
+        max-height: clamp(220px, 45vh, 260px);
+      }
+      .pair-list {
+        list-style: none;
+        display: grid;
+        gap: 0.45rem;
+        font-size: 0.55rem;
+        text-transform: none;
+      }
+      .pair-list li {
+        background: rgba(7, 12, 30, 0.75);
+        border: var(--pixel-border) solid rgba(36, 59, 83, 0.45);
+        padding: 0.5rem;
+        display: grid;
+        gap: 0.3rem;
+      }
+      .pair-list strong {
+        color: var(--primary);
+        font-size: 0.55rem;
+      }
+      .pair-list span {
+        font-size: 0.5rem;
+        color: #d7e9ff;
+      }
+      .pair-placeholder {
+        font-size: 0.65rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-align: center;
+        text-transform: none;
       }
       .detail-list {
         list-style: square inside;

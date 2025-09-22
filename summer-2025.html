@@ -280,6 +280,35 @@
         background: rgba(0, 0, 0, 0.6);
         border: var(--pixel-border) solid rgba(255, 255, 255, 0.1);
       }
+      .role-cell {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+      }
+      .role-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.6rem;
+        padding: 0.15rem 0.35rem;
+        background: rgba(0, 0, 0, 0.55);
+        border: var(--pixel-border) solid rgba(255, 255, 255, 0.18);
+        font-size: 0.5rem;
+        letter-spacing: 0.08em;
+      }
+      .role-badge.tier-S {
+        color: #ff66c4;
+        border-color: rgba(255, 102, 196, 0.6);
+      }
+      .role-badge.tier-A {
+        color: #ffd700;
+        border-color: rgba(255, 215, 0, 0.5);
+      }
+      .role-badge.tier-B {
+        color: #66ffda;
+        border-color: rgba(102, 255, 218, 0.45);
+      }
       tr.tier-S .rank-chip {
         color: #ff66c4;
         border-color: rgba(255, 102, 196, 0.6);
@@ -456,8 +485,13 @@
             <button class="tab-button" role="tab" data-sort="averagePoints">
               Середній бал
             </button>
-            <button class="tab-button" role="tab" data-sort="accuracy">
-              Точність
+            <button
+              class="tab-button"
+              role="tab"
+              data-sort="games"
+              aria-label="Сортувати таблицю за кількістю боїв"
+            >
+              Бої
             </button>
             <button class="tab-button" role="tab" data-sort="winRate">
               Win rate
@@ -474,7 +508,7 @@
                 <th scope="col">Сер. очки</th>
                 <th scope="col">Ігор</th>
                 <th scope="col">% перемог</th>
-                <th scope="col">Точність</th>
+                <th scope="col">Бої</th>
                 <th scope="col">Роль</th>
                 <th scope="col">Деталі</th>
               </tr>

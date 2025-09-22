@@ -921,6 +921,19 @@ function formatPercent(value, formatter = percentFormatter0) {
   return formatter.format(value);
 }
 
+function getGamesPlayedValue(player) {
+  const alias = nameAlias(player.nickname);
+  const stats = gamesPlayedByPlayer[alias];
+  return stats?.games ?? player.games ?? 0;
+}
+
+function getSortValue(player, sortKey) {
+  if (sortKey === 'games') {
+    return getGamesPlayedValue(player);
+  }
+  return player[sortKey];
+}
+
 const seasonTickerMessages = [
   `Матчів: ${numberFormatter.format(seasonGeneral.totalGamesLogged)} · Раундів: ${numberFormatter.format(seasonGeneral.totalRounds)}`,
   `Очки сезону: ${numberFormatter.format(seasonGeneral.totalPointsScored)} (подіум ${formatPercent(seasonPointsSummary.podiumShare, percentFormatter1)})`,
@@ -1202,8 +1215,8 @@ function renderLeaderboard() {
     if (currentSort === 'rank') {
       return direction * (a.rank - b.rank);
     }
-    const valueA = a[currentSort];
-    const valueB = b[currentSort];
+    const valueA = getSortValue(a, currentSort);
+    const valueB = getSortValue(b, currentSort);
     if (valueA === valueB) {
       return a.rank - b.rank;
     }
@@ -1238,6 +1251,8 @@ function renderLeaderboard() {
   filtered.forEach((player) => {
     const row = document.createElement('tr');
     row.classList.add(`tier-${player.rankTier}`);
+    const gamesPlayed = getGamesPlayedValue(player);
+    const rankBadge = `<span class="role-badge tier-${player.rankTier}" aria-label="Ранг ${player.rankTier}">${player.rankTier}</span>`;
     row.innerHTML = `
       <td><span class="rank-chip">${player.rank}</span></td>
       <td>
@@ -1248,8 +1263,13 @@ function renderLeaderboard() {
       <td>${numberFormatter.format(player.averagePoints)}</td>
       <td>${numberFormatter.format(player.games)}</td>
       <td>${formatPercent(player.winRate)}</td>
-      <td>${formatPercent(player.accuracy)}</td>
-      <td>${player.role}</td>
+      <td>${numberFormatter.format(gamesPlayed)}</td>
+      <td>
+        <span class="role-cell">
+          <span>${player.role}</span>
+          ${rankBadge}
+        </span>
+      </td>
       <td><button type="button" class="pixel-button" data-player="${player.nickname}">Профіль</button></td>
     `;
 

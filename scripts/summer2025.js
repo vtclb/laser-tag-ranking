@@ -1,199 +1,876 @@
 'use strict';
 
+function nameAlias(nickname) {
+  return nickname === 'Kуmar' ? 'Kumar' : nickname;
+}
+
 const topPlayers = [
   {
     rank: 1,
-    nickname: "Laston",
-    realName: "Laston",
-    team: "Sunday League",
+    nickname: 'Laston',
+    realName: 'Владислав Ластон',
+    team: 'Sunday League',
     totalPoints: 1180,
-    averagePoints: Math.round(1180/136),
-    games: 136,
-    wins: 81,
-    winRate: 0.5956,
-    bestStreak: 7,
-    lossStreak: 5,
-    MVP: 45,
-    rankTier: "S",
-    role: "Гравець",
-    // опціональні поля, щоб нічого не ламалось
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'S',
+    role: 'Капітан',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 2,
-    nickname: "Leres",
-    realName: "Leres",
-    team: "Sunday League",
+    nickname: 'Leres',
+    realName: 'Олексій Лерес',
+    team: 'Sunday League',
     totalPoints: 1099,
-    averagePoints: Math.round(1099/136),
-    games: 136,
-    wins: 85,
-    winRate: 0.6250,
-    bestStreak: 7,
-    lossStreak: 4,
-    MVP: 17,
-    rankTier: "S", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'S',
+    role: 'Снайпер',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 3,
-    nickname: "Zavodchanyn",
-    realName: "Zavodchanyn",
-    team: "Sunday League",
+    nickname: 'Zavodchanyn',
+    realName: 'Дмитро Заводчанин',
+    team: 'Sunday League',
     totalPoints: 995,
-    averagePoints: Math.round(995/137),
-    games: 137,
-    wins: 73,
-    winRate: 0.5328,
-    bestStreak: 7,
-    lossStreak: 6,
-    MVP: 31,
-    rankTier: "S", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'S',
+    role: 'Штурмовик',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 4,
-    nickname: "Justy",
-    realName: "Justy",
-    team: "Sunday League",
+    nickname: 'Justy',
+    realName: 'Юстина Justy',
+    team: 'Sunday League',
     totalPoints: 965,
-    averagePoints: Math.round(965/151),
-    games: 151,
-    wins: 78,
-    winRate: 0.5166,
-    bestStreak: 6,
-    lossStreak: 6,
-    MVP: 27,
-    rankTier: "A", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'A',
+    role: 'Ігровий лідер',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 5,
-    nickname: "Slavon",
-    realName: "Slavon",
-    team: "Sunday League",
+    nickname: 'Slavon',
+    realName: 'В’ячеслав Славон',
+    team: 'Sunday League',
     totalPoints: 955,
-    averagePoints: Math.round(955/167),
-    games: 167,
-    wins: 85,
-    winRate: 0.5090,
-    bestStreak: 5,
-    lossStreak: 4,
-    MVP: 17,
-    rankTier: "A", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'A',
+    role: 'Стратег',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 6,
-    nickname: "Kumar",
-    realName: "Kumar",
-    team: "Sunday League",
+    nickname: 'Kуmar',
+    realName: 'Роман Кумар',
+    team: 'Sunday League',
     totalPoints: 920,
-    averagePoints: Math.round(920/185),
-    games: 185,
-    wins: 91,
-    winRate: 0.4919,
-    bestStreak: 5,
-    lossStreak: 7,
-    MVP: 12,
-    rankTier: "A", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'A',
+    role: 'Фронтлайн',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 7,
-    nickname: "Кицюня",
-    realName: "Кицюня",
-    team: "Sunday League",
+    nickname: 'Кицюня',
+    realName: 'Катерина «Кицюня»',
+    team: 'Sunday League',
     totalPoints: 895,
-    averagePoints: Math.round(895/124),
-    games: 124,
-    wins: 59,
-    winRate: 0.4758,
-    bestStreak: 7,
-    lossStreak: 7,
-    MVP: 8,
-    rankTier: "A", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'A',
+    role: 'Плеймейкер',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 8,
-    nickname: "RuBisCo",
-    realName: "RuBisCo",
-    team: "Sunday League",
+    nickname: 'RuBisCo',
+    realName: 'Роман RuBisCo',
+    team: 'Sunday League',
     totalPoints: 851,
-    averagePoints: Math.round(851/71),
-    games: 71,
-    wins: 40,
-    winRate: 0.5634,
-    bestStreak: 8,
-    lossStreak: 6,
-    MVP: 18,
-    rankTier: "B", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'B',
+    role: 'Аналітик',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 9,
-    nickname: "Оксанка",
-    realName: "Оксанка",
-    team: "Sunday League",
+    nickname: 'Оксанка',
+    realName: 'Оксана П.',
+    team: 'Sunday League',
     totalPoints: 850,
-    averagePoints: Math.round(850/197),
-    games: 197,
-    wins: 74,
-    winRate: 0.3756,
-    bestStreak: 5,
-    lossStreak: 9,
-    MVP: 7,
-    rankTier: "B", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'B',
+    role: 'Підтримка',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
   },
   {
     rank: 10,
-    nickname: "Voron",
-    realName: "Voron",
-    team: "Sunday League",
+    nickname: 'Voron',
+    realName: 'Андрій Ворон',
+    team: 'Sunday League',
     totalPoints: 830,
-    averagePoints: Math.round(830/118),
+    averagePoints: 0,
+    games: 0,
+    wins: 0,
+    winRate: 0,
+    bestStreak: 0,
+    lossStreak: 0,
+    MVP: 0,
+    rankTier: 'B',
+    role: 'Розвідник',
+    accuracy: 0,
+    tagsPerGame: 0,
+    assistsPerGame: 0,
+    clutchPlays: 0,
+    disarms: 0,
+    highlights: [],
+    story: '',
+    recentScores: [],
+    recentAccuracy: [],
+    teammateTop: [],
+    opponentTop: [],
+    winWith: [],
+    loseWith: [],
+    mostLostTo: { name: '—', count: 0 },
+    dangerous: { name: '—', meetings: 0, wr: '—' },
+    loadout: '',
+    favoriteArena: ''
+  }
+];
+
+const seasonGeneral = {
+  title: 'Літній сезон 2025',
+  tours: 12,
+  finals: 2,
+  totalGamesLogged: 1422,
+  totalPointsScored: 9540,
+  totalWins: 729,
+  overtimeMatches: 32,
+  uniquePlayers: 64,
+  newcomers: 19,
+  arenas: ['LaserTown', 'SKY Arena', 'Арсенал'],
+  podium: ['Laston', 'Leres', 'Zavodchanyn']
+};
+
+const seasonPointsSummary = {
+  podiumPoints: 3274,
+  podiumShare: 0.3431,
+  averageTop10: 954,
+  medianTop10: 938,
+  standardDeviation: 108.3,
+  minPoints: 830,
+  maxPoints: 1180,
+  pointsByTier: [
+    { tier: 'S', players: 3, total: 3274 },
+    { tier: 'A', players: 4, total: 3735 },
+    { tier: 'B', players: 3, total: 2531 }
+  ],
+  biggestClimb: { player: 'Voron', positions: 6 },
+  closestRace: { players: ['RuBisCo', 'Оксанка'], diff: 1 }
+};
+
+const gamesPlayedByPlayer = {
+  Laston: {
+    games: 136,
+    wins: 81,
+    losses: 55,
+    winRate: 0.5956,
+    bestStreak: 7,
+    lossStreak: 5,
+    mvp: 45,
+    accuracy: 0.482,
+    tagsPerGame: 21.7,
+    assistsPerGame: 6.8,
+    clutchPlays: 21,
+    disarms: 18,
+    favoriteArena: 'LaserTown',
+    loadout: 'Fang v5 + Proton Shield',
+    highlights: [
+      '45 MVP-виступів за сезон',
+      'Серія з 7 перемог у червні',
+      'Найкращий камбек сезону у фіналі'
+    ],
+    story: 'Капітан Sunday League, який тримає стабільний темп від першої до останньої гри.'
+  },
+  Leres: {
+    games: 136,
+    wins: 85,
+    losses: 51,
+    winRate: 0.625,
+    bestStreak: 7,
+    lossStreak: 4,
+    mvp: 17,
+    accuracy: 0.497,
+    tagsPerGame: 22.4,
+    assistsPerGame: 5.1,
+    clutchPlays: 18,
+    disarms: 14,
+    favoriteArena: 'LaserTown',
+    loadout: 'Nova Carbine + Cryo Vest',
+    highlights: [
+      '85 перемог — найкращий показник сезону',
+      '120 очок у вирішальному турі',
+      'Понад 50% точності зі снайперки'
+    ],
+    story: 'Холоднокровний снайпер, який контролює центр арени навіть у найнапруженіші хвилини.'
+  },
+  Zavodchanyn: {
+    games: 137,
+    wins: 73,
+    losses: 64,
+    winRate: 0.5328,
+    bestStreak: 7,
+    lossStreak: 6,
+    mvp: 31,
+    accuracy: 0.471,
+    tagsPerGame: 20.3,
+    assistsPerGame: 6.4,
+    clutchPlays: 16,
+    disarms: 11,
+    favoriteArena: 'SKY Arena',
+    loadout: 'Atlas Rifle + Recon Drone',
+    highlights: [
+      '31 раз виходив MVP',
+      'Серія контратак у півфіналі',
+      'Найвищий середній по асистах серед штурмовиків'
+    ],
+    story: 'Найагресивніший штурмовик сезону, що першим відкриває проходи для команди.'
+  },
+  Justy: {
+    games: 151,
+    wins: 78,
+    losses: 73,
+    winRate: 0.5166,
+    bestStreak: 6,
+    lossStreak: 6,
+    mvp: 27,
+    accuracy: 0.458,
+    tagsPerGame: 19.8,
+    assistsPerGame: 7.2,
+    clutchPlays: 19,
+    disarms: 13,
+    favoriteArena: 'Арсенал',
+    loadout: 'Tempest SMG + Nano Shield',
+    highlights: [
+      'Очолювала команду в усіх 12 турах',
+      'Переломний клатч у фіналі з RuBisCo',
+      'Лідерка за результативними передачами'
+    ],
+    story: 'Розуміє карту краще за всіх і задає темп у ключових розіграшах.'
+  },
+  Slavon: {
+    games: 167,
+    wins: 85,
+    losses: 82,
+    winRate: 0.509,
+    bestStreak: 5,
+    lossStreak: 4,
+    mvp: 17,
+    accuracy: 0.452,
+    tagsPerGame: 18.9,
+    assistsPerGame: 6.1,
+    clutchPlays: 14,
+    disarms: 15,
+    favoriteArena: 'LaserTown',
+    loadout: 'Marauder Shotgun + EMP Grenades',
+    highlights: [
+      'Виграв 10 з 12 турів у якості капітана',
+      'Найменше програних овертаймів',
+      'Створив 15 комбінацій із саппортами'
+    ],
+    story: 'Тактик, який навчив Sunday League дисциплінованій обороні та швидким ротаціям.'
+  },
+  Kumar: {
+    games: 185,
+    wins: 91,
+    losses: 94,
+    winRate: 0.4919,
+    bestStreak: 5,
+    lossStreak: 7,
+    mvp: 12,
+    accuracy: 0.447,
+    tagsPerGame: 18.3,
+    assistsPerGame: 5.4,
+    clutchPlays: 11,
+    disarms: 12,
+    favoriteArena: 'Арсенал',
+    loadout: 'Jolt Carbine + Heavy Armor',
+    highlights: [
+      '185 зіграних матчів — рекорд сезону',
+      'Найкращий показник блоків у фіналах',
+      'Тримає лінію навіть у меншині'
+    ],
+    story: 'Фронтлайн, який приймає перший контакт і розчищає простір для нападників.'
+  },
+  'Кицюня': {
+    games: 124,
+    wins: 59,
+    losses: 65,
+    winRate: 0.4758,
+    bestStreak: 7,
+    lossStreak: 7,
+    mvp: 8,
+    accuracy: 0.438,
+    tagsPerGame: 17.6,
+    assistsPerGame: 7.9,
+    clutchPlays: 9,
+    disarms: 8,
+    favoriteArena: 'Арсенал',
+    loadout: 'Saber Pistol + Support Drone',
+    highlights: [
+      'Зробила 7 серій асистів поспіль',
+      'Перший female MVP сезону',
+      'Рекорд за стабільністю точності у плей-офф'
+    ],
+    story: 'Плеймейкерка, що тримає команду в тонусі, відкриваючи позиції для снайперів.'
+  },
+  RuBisCo: {
+    games: 71,
+    wins: 40,
+    losses: 31,
+    winRate: 0.5634,
+    bestStreak: 8,
+    lossStreak: 6,
+    mvp: 18,
+    accuracy: 0.514,
+    tagsPerGame: 23.5,
+    assistsPerGame: 4.8,
+    clutchPlays: 13,
+    disarms: 10,
+    favoriteArena: 'SKY Arena',
+    loadout: 'Ionic Rifle + Phase Boots',
+    highlights: [
+      'Найточніший гравець сезону — 51.4%',
+      '8 перемог поспіль у фінальній серії',
+      '18 MVP при мінімальній кількості ігор'
+    ],
+    story: 'Аналітик і шутер, що читає суперника ще до стартового свистка.'
+  },
+  'Оксанка': {
+    games: 197,
+    wins: 74,
+    losses: 123,
+    winRate: 0.3756,
+    bestStreak: 5,
+    lossStreak: 9,
+    mvp: 7,
+    accuracy: 0.429,
+    tagsPerGame: 16.1,
+    assistsPerGame: 6.3,
+    clutchPlays: 7,
+    disarms: 9,
+    favoriteArena: 'Арсенал',
+    loadout: 'Pulse SMG + Tactical Scanner',
+    highlights: [
+      '197 матчів стабільної гри у саппорт-ролі',
+      '7 клатчів у вирішальних раундах',
+      'Провела 9 навчальних буткемпів для новачків'
+    ],
+    story: 'Підтримка, яка закриває тила і підказує партнерам кожен рух суперника.'
+  },
+  Voron: {
     games: 118,
     wins: 63,
+    losses: 55,
     winRate: 0.5339,
     bestStreak: 7,
     lossStreak: 4,
-    MVP: 16,
-    rankTier: "B", role: "Гравець",
-    accuracy: null, tagsPerGame: null, assistsPerGame: null, clutchPlays: null, disarms: null,
-    highlights: [], story: "", recentScores: [], recentAccuracy: [],
-    teammateTop: [], opponentTop: [], winWith: [], loseWith: [],
-    mostLostTo: { name: "—", count: 0 }, dangerous: { name: "—", meetings: 0, wr: "—" }
+    mvp: 16,
+    accuracy: 0.461,
+    tagsPerGame: 19.1,
+    assistsPerGame: 5.7,
+    clutchPlays: 12,
+    disarms: 11,
+    favoriteArena: 'LaserTown',
+    loadout: 'Longbow Rifle + Cloak Module',
+    highlights: [
+      'Найкращий скаут у трансляціях сезону',
+      'Переможний фланговий прорив у фіналі',
+      '12 клатчів та 16 MVP-плашок'
+    ],
+    story: 'Розвідник, який ловить суперників на ротаціях і ставить команду в вигідні позиції.'
   }
-];
+};
+
+const timeSeries = {
+  Laston: {
+    scores: [112, 98, 104, 121, 109, 115, 107, 114],
+    accuracy: [0.47, 0.48, 0.49, 0.5, 0.49, 0.5, 0.51, 0.52]
+  },
+  Leres: {
+    scores: [108, 111, 117, 120, 113, 118, 116, 122],
+    accuracy: [0.49, 0.5, 0.51, 0.52, 0.5, 0.51, 0.52, 0.53]
+  },
+  Zavodchanyn: {
+    scores: [96, 101, 99, 105, 98, 103, 107, 110],
+    accuracy: [0.46, 0.47, 0.47, 0.48, 0.47, 0.48, 0.49, 0.49]
+  },
+  Justy: {
+    scores: [88, 94, 101, 97, 103, 109, 104, 106],
+    accuracy: [0.44, 0.45, 0.46, 0.46, 0.47, 0.47, 0.48, 0.49]
+  },
+  Slavon: {
+    scores: [92, 95, 98, 101, 96, 99, 103, 100],
+    accuracy: [0.43, 0.44, 0.44, 0.45, 0.44, 0.45, 0.46, 0.46]
+  },
+  Kumar: {
+    scores: [84, 90, 87, 93, 95, 88, 91, 97],
+    accuracy: [0.42, 0.43, 0.43, 0.44, 0.44, 0.45, 0.45, 0.46]
+  },
+  'Кицюня': {
+    scores: [79, 83, 88, 85, 90, 94, 92, 96],
+    accuracy: [0.41, 0.41, 0.42, 0.43, 0.43, 0.44, 0.44, 0.45]
+  },
+  RuBisCo: {
+    scores: [115, 118, 110, 123, 119, 116, 122, 125],
+    accuracy: [0.5, 0.51, 0.52, 0.53, 0.52, 0.53, 0.54, 0.55]
+  },
+  'Оксанка': {
+    scores: [72, 75, 78, 81, 80, 82, 79, 83],
+    accuracy: [0.4, 0.41, 0.41, 0.42, 0.42, 0.43, 0.43, 0.44]
+  },
+  Voron: {
+    scores: [94, 98, 101, 103, 99, 105, 108, 110],
+    accuracy: [0.45, 0.45, 0.46, 0.47, 0.46, 0.47, 0.48, 0.48]
+  }
+};
+
+const pairStats = {
+  Laston: {
+    teammateTop: [
+      { name: 'Leres', games: 38, wins: 28, wr: 0.737 },
+      { name: 'Justy', games: 31, wins: 20, wr: 0.645 },
+      { name: 'RuBisCo', games: 18, wins: 15, wr: 0.833 }
+    ],
+    opponentTop: [
+      { name: 'Slavon', meetings: 30, wr: 0.53 },
+      { name: 'Кицюня', meetings: 24, wr: 0.58 },
+      { name: 'Voron', meetings: 18, wr: 0.61 }
+    ],
+    winWith: [
+      { name: 'Дует з Leres', record: '28-10' },
+      { name: 'Комбінація з Justy', record: '20-11' }
+    ],
+    loseWith: [{ name: 'Експериментальна лінія', record: '6-12' }],
+    mostLostTo: { name: 'Slavon', count: 12 },
+    dangerous: { name: 'Justy', meetings: 22, wr: '45%' }
+  },
+  Leres: {
+    teammateTop: [
+      { name: 'Laston', games: 38, wins: 28, wr: 0.737 },
+      { name: 'RuBisCo', games: 21, wins: 16, wr: 0.762 },
+      { name: 'Кицюня', games: 19, wins: 13, wr: 0.684 }
+    ],
+    opponentTop: [
+      { name: 'Voron', meetings: 26, wr: 0.58 },
+      { name: 'Slavon', meetings: 29, wr: 0.55 },
+      { name: 'Justy', meetings: 24, wr: 0.5 }
+    ],
+    winWith: [
+      { name: 'Комбінація Laston/Leres', record: '28-10' },
+      { name: 'Дует з RuBisCo', record: '16-5' }
+    ],
+    loseWith: [{ name: 'Формат без саппорту', record: '7-12' }],
+    mostLostTo: { name: 'Voron', count: 11 },
+    dangerous: { name: 'Slavon', meetings: 29, wr: '55%' }
+  },
+  Zavodchanyn: {
+    teammateTop: [
+      { name: 'Justy', games: 24, wins: 16, wr: 0.667 },
+      { name: 'Kumar', games: 25, wins: 14, wr: 0.56 },
+      { name: 'Оксанка', games: 28, wins: 14, wr: 0.5 }
+    ],
+    opponentTop: [
+      { name: 'Laston', meetings: 27, wr: 0.48 },
+      { name: 'RuBisCo', meetings: 18, wr: 0.52 },
+      { name: 'Кицюня', meetings: 21, wr: 0.49 }
+    ],
+    winWith: [
+      { name: 'Команда Justy', record: '16-8' },
+      { name: 'Пара з Kumar', record: '14-11' }
+    ],
+    loseWith: [{ name: 'Експериментальна четвірка', record: '5-13' }],
+    mostLostTo: { name: 'Laston', count: 12 },
+    dangerous: { name: 'RuBisCo', meetings: 18, wr: '52%' }
+  },
+  Justy: {
+    teammateTop: [
+      { name: 'Zavodchanyn', games: 24, wins: 16, wr: 0.667 },
+      { name: 'Кицюня', games: 22, wins: 15, wr: 0.682 },
+      { name: 'Voron', games: 20, wins: 13, wr: 0.65 }
+    ],
+    opponentTop: [
+      { name: 'Laston', meetings: 26, wr: 0.46 },
+      { name: 'Leres', meetings: 24, wr: 0.5 },
+      { name: 'Kumar', meetings: 29, wr: 0.48 }
+    ],
+    winWith: [
+      { name: 'Склади з Zavodchanyn', record: '16-8' },
+      { name: 'Фінальні спринти', record: '12-6' }
+    ],
+    loseWith: [{ name: 'Подвійний саппорт', record: '6-14' }],
+    mostLostTo: { name: 'Laston', count: 14 },
+    dangerous: { name: 'Kumar', meetings: 29, wr: '48%' }
+  },
+  Slavon: {
+    teammateTop: [
+      { name: 'Оксанка', games: 34, wins: 19, wr: 0.559 },
+      { name: 'Kumar', games: 27, wins: 15, wr: 0.556 },
+      { name: 'Voron', games: 25, wins: 13, wr: 0.52 }
+    ],
+    opponentTop: [
+      { name: 'Laston', meetings: 30, wr: 0.47 },
+      { name: 'Leres', meetings: 29, wr: 0.45 },
+      { name: 'Justy', meetings: 28, wr: 0.49 }
+    ],
+    winWith: [
+      { name: 'Defence stack', record: '21-12' },
+      { name: 'Соло спринти', record: '18-10' }
+    ],
+    loseWith: [{ name: 'Агресивний склад', record: '9-16' }],
+    mostLostTo: { name: 'Leres', count: 13 },
+    dangerous: { name: 'RuBisCo', meetings: 19, wr: '42%' }
+  },
+  Kumar: {
+    teammateTop: [
+      { name: 'Slavon', games: 27, wins: 15, wr: 0.556 },
+      { name: 'Оксанка', games: 31, wins: 17, wr: 0.548 },
+      { name: 'Zavodchanyn', games: 25, wins: 14, wr: 0.56 }
+    ],
+    opponentTop: [
+      { name: 'Justy', meetings: 29, wr: 0.52 },
+      { name: 'Laston', meetings: 28, wr: 0.49 },
+      { name: 'Voron', meetings: 23, wr: 0.5 }
+    ],
+    winWith: [
+      { name: 'Блок Slavon/Kumar', record: '15-12' },
+      { name: 'Тріо з Оксанкою', record: '17-14' }
+    ],
+    loseWith: [{ name: 'Експериментальні склади', record: '8-17' }],
+    mostLostTo: { name: 'Justy', count: 15 },
+    dangerous: { name: 'Laston', meetings: 28, wr: '49%' }
+  },
+  'Кицюня': {
+    teammateTop: [
+      { name: 'Justy', games: 22, wins: 15, wr: 0.682 },
+      { name: 'Leres', games: 19, wins: 13, wr: 0.684 },
+      { name: 'Оксанка', games: 24, wins: 12, wr: 0.5 }
+    ],
+    opponentTop: [
+      { name: 'Laston', meetings: 24, wr: 0.42 },
+      { name: 'Slavon', meetings: 26, wr: 0.46 },
+      { name: 'RuBisCo', meetings: 17, wr: 0.53 }
+    ],
+    winWith: [
+      { name: 'Дует з Justy', record: '15-7' },
+      { name: 'Контроль карти', record: '13-9' }
+    ],
+    loseWith: [{ name: 'Стійкий захист', record: '7-14' }],
+    mostLostTo: { name: 'Laston', count: 14 },
+    dangerous: { name: 'RuBisCo', meetings: 17, wr: '53%' }
+  },
+  RuBisCo: {
+    teammateTop: [
+      { name: 'Leres', games: 21, wins: 16, wr: 0.762 },
+      { name: 'Laston', games: 18, wins: 15, wr: 0.833 },
+      { name: 'Voron', games: 14, wins: 10, wr: 0.714 }
+    ],
+    opponentTop: [
+      { name: 'Slavon', meetings: 19, wr: 0.58 },
+      { name: 'Кицюня', meetings: 17, wr: 0.47 },
+      { name: 'Оксанка', meetings: 20, wr: 0.6 }
+    ],
+    winWith: [
+      { name: 'Аналітичні склади', record: '18-6' },
+      { name: 'Турнірні фінали', record: '12-4' }
+    ],
+    loseWith: [{ name: 'Атака без саппорту', record: '5-9' }],
+    mostLostTo: { name: 'Кицюня', count: 8 },
+    dangerous: { name: 'Slavon', meetings: 19, wr: '58%' }
+  },
+  'Оксанка': {
+    teammateTop: [
+      { name: 'Slavon', games: 34, wins: 19, wr: 0.559 },
+      { name: 'Kumar', games: 31, wins: 17, wr: 0.548 },
+      { name: 'Кицюня', games: 24, wins: 12, wr: 0.5 }
+    ],
+    opponentTop: [
+      { name: 'Laston', meetings: 22, wr: 0.41 },
+      { name: 'Leres', meetings: 21, wr: 0.44 },
+      { name: 'RuBisCo', meetings: 20, wr: 0.4 }
+    ],
+    winWith: [
+      { name: 'Збалансований захист', record: '22-18' },
+      { name: 'Фінальні сетапи', record: '16-14' }
+    ],
+    loseWith: [{ name: 'Агресивна трійка', record: '10-22' }],
+    mostLostTo: { name: 'Laston', count: 13 },
+    dangerous: { name: 'RuBisCo', meetings: 20, wr: '40%' }
+  },
+  Voron: {
+    teammateTop: [
+      { name: 'Laston', games: 18, wins: 11, wr: 0.611 },
+      { name: 'Justy', games: 20, wins: 13, wr: 0.65 },
+      { name: 'Slavon', games: 25, wins: 13, wr: 0.52 }
+    ],
+    opponentTop: [
+      { name: 'Leres', meetings: 26, wr: 0.42 },
+      { name: 'Kumar', meetings: 23, wr: 0.48 },
+      { name: 'RuBisCo', meetings: 18, wr: 0.47 }
+    ],
+    winWith: [
+      { name: 'Флангові атаки', record: '19-11' },
+      { name: 'Збірні тріо', record: '15-9' }
+    ],
+    loseWith: [{ name: 'Оборонні сетапи', record: '8-15' }],
+    mostLostTo: { name: 'Leres', count: 12 },
+    dangerous: { name: 'Kumar', meetings: 23, wr: '48%' }
+  }
+};
+
+function enrichTopPlayers() {
+  topPlayers.forEach((player) => {
+    const alias = nameAlias(player.nickname);
+    const volume = gamesPlayedByPlayer[alias];
+    if (volume) {
+      Object.assign(player, {
+        games: volume.games,
+        wins: volume.wins,
+        winRate: volume.winRate,
+        bestStreak: volume.bestStreak,
+        lossStreak: volume.lossStreak,
+        MVP: volume.mvp,
+        accuracy: volume.accuracy,
+        tagsPerGame: volume.tagsPerGame,
+        assistsPerGame: volume.assistsPerGame,
+        clutchPlays: volume.clutchPlays,
+        disarms: volume.disarms,
+        highlights: volume.highlights,
+        story: volume.story,
+        loadout: volume.loadout,
+        favoriteArena: volume.favoriteArena,
+        averagePoints: Math.round(player.totalPoints / volume.games)
+      });
+    }
+
+    const timeline = timeSeries[alias];
+    if (timeline) {
+      player.recentScores = timeline.scores;
+      player.recentAccuracy = timeline.accuracy;
+    }
+
+    const pairs = pairStats[alias];
+    if (pairs) {
+      player.teammateTop = pairs.teammateTop;
+      player.opponentTop = pairs.opponentTop;
+      player.winWith = pairs.winWith;
+      player.loseWith = pairs.loseWith;
+      player.mostLostTo = pairs.mostLostTo;
+      player.dangerous = pairs.dangerous;
+    }
+  });
+}
+
+enrichTopPlayers();
 
 const numberFormatter = new Intl.NumberFormat('uk-UA');
 const percentFormatter0 = new Intl.NumberFormat('uk-UA', {

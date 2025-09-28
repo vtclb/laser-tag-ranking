@@ -14,6 +14,12 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
     "Timabuilding": "Бойбуд"
   };
 
+  const MVP_FIELD_GROUPS = [
+    ['MVP', 'Mvp', 'mvp'],
+    ['MVP2', 'mvp2', 'MVP 2', 'mvp 2'],
+    ['MVP3', 'mvp3', 'MVP 3', 'mvp 3'],
+  ];
+
   const leagueSel = document.getElementById('league');
   const dateInput = document.getElementById('date');
   const loadBtn   = document.getElementById('loadBtn');
@@ -125,10 +131,30 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       const t1 = g.Team1.split(',').map(s=>normName(s.trim()));
       const t2 = g.Team2.split(',').map(s=>normName(s.trim()));
       const winner = g.Winner;
-      const mvpList = [g.MVP, g.mvp2, g.mvp3]
-        .flatMap(v => String(v || '').split(/[;,]/))
-        .map(s => normName(s.trim()))
-        .filter(Boolean);
+      const rawMvpNames = MVP_FIELD_GROUPS.flatMap(headers => {
+        const placeNames = [];
+        headers.forEach(h => {
+          const raw = g[h];
+          if(!raw) return;
+          String(raw)
+            .split(/[;,]/)
+            .map(s => s.trim())
+            .filter(Boolean)
+            .forEach(name => {
+              if(!placeNames.includes(name)) placeNames.push(name);
+            });
+        });
+        return placeNames;
+      });
+
+      const mvpList = [];
+      const seenMvp = new Set();
+      rawMvpNames.forEach(name => {
+        const normalized = normName(name);
+        if(!normalized || seenMvp.has(normalized)) return;
+        seenMvp.add(normalized);
+        mvpList.push(normalized);
+      });
 
       let s1 = parseInt(g.Score1, 10);
       let s2 = parseInt(g.Score2, 10);

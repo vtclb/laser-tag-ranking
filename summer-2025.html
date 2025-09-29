@@ -534,22 +534,22 @@
             <button class="tab-button" role="tab" data-sort="rank" aria-selected="true">
               Рейтинг
             </button>
-            <button class="tab-button" role="tab" data-sort="totalPoints">
-              Очки
-            </button>
-            <button class="tab-button" role="tab" data-sort="averagePoints">
-              Середній бал
+            <button class="tab-button" role="tab" data-sort="season_points">
+              Очки сезону
             </button>
             <button
               class="tab-button"
               role="tab"
               data-sort="games"
-              aria-label="Сортувати таблицю за кількістю боїв"
+              aria-label="Сортувати таблицю за кількістю ігор"
             >
-              Бої
+              Ігри
             </button>
             <button class="tab-button" role="tab" data-sort="winRate">
               Win rate
+            </button>
+            <button class="tab-button" role="tab" data-sort="roundWR">
+              WR раундів
             </button>
           </div>
         </div>
@@ -559,13 +559,13 @@
               <tr>
                 <th scope="col">#</th>
                 <th scope="col">Гравець</th>
-                <th scope="col">Очки</th>
-                <th scope="col">Сер. очки</th>
+                <th scope="col">Очки сезону</th>
                 <th scope="col">Ігор</th>
-                <th scope="col">% перемог</th>
-                <th scope="col">Бої</th>
-                <th scope="col">Роль</th>
-                <th scope="col">Деталі</th>
+                <th scope="col">Раундів</th>
+                <th scope="col">Стрік перемог</th>
+                <th scope="col">Стрік поразок</th>
+                <th scope="col">MVP</th>
+                <th scope="col">Ранг</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>

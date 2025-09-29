@@ -1,6 +1,12 @@
 'use strict';
 
 const FALLBACK = '—';
+const PLAYER_KOAN_FALLBACK = 'Цитата буде додана пізніше.';
+
+const playerKoans =
+  typeof window !== 'undefined' && window.playerKoans && typeof window.playerKoans === 'object'
+    ? window.playerKoans
+    : {};
 
 function normalizeString(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -202,23 +208,43 @@ function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
     const lossStreak = toFiniteNumber(entry?.loss_streak);
     const mvpCount = toFiniteNumber(entry?.MVP);
 
-    const teammates = Array.isArray(entry?.teammates_most)
-      ? entry.teammates_most.map((item) => ({
-          name: typeof item?.name === 'string' && item.name.trim() ? item.name : FALLBACK,
-          games: toFiniteNumber(item?.count)
-        }))
+    const teammatesMost = Array.isArray(entry?.teammates_most)
+      ? entry.teammates_most
+          .map((item) => ({
+            name: typeof item?.name === 'string' ? item.name.trim() : '',
+            count: toFiniteNumber(item?.count)
+          }))
+          .filter((item) => item.name && item.count !== null)
       : [];
 
-    const opponents = Array.isArray(entry?.opponents_most)
-      ? entry.opponents_most.map((item) => ({
-          name: typeof item?.name === 'string' && item.name.trim() ? item.name : FALLBACK,
-          meetings: toFiniteNumber(item?.count)
-        }))
+    const teammatesMostWins = Array.isArray(entry?.teammates_most_wins)
+      ? entry.teammates_most_wins
+          .map((item) => ({
+            name: typeof item?.name === 'string' ? item.name.trim() : '',
+            count: toFiniteNumber(item?.count)
+          }))
+          .filter((item) => item.name && item.count !== null)
       : [];
 
-    const lossesTo = Array.isArray(entry?.opponents_most_losses_to)
-      ? entry.opponents_most_losses_to[0]
-      : null;
+    const opponentsMost = Array.isArray(entry?.opponents_most)
+      ? entry.opponents_most
+          .map((item) => ({
+            name: typeof item?.name === 'string' ? item.name.trim() : '',
+            count: toFiniteNumber(item?.count)
+          }))
+          .filter((item) => item.name && item.count !== null)
+      : [];
+
+    const opponentsMostLosses = Array.isArray(entry?.opponents_most_losses_to)
+      ? entry.opponents_most_losses_to
+          .map((item) => ({
+            name: typeof item?.name === 'string' ? item.name.trim() : '',
+            count: toFiniteNumber(item?.count)
+          }))
+          .filter((item) => item.name && item.count !== null)
+      : [];
+
+    const lossesTo = opponentsMostLosses.length > 0 ? opponentsMostLosses[0] : null;
 
     return {
       rank,
@@ -259,8 +285,10 @@ function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
       story: FALLBACK,
       recentScores: [],
       recentAccuracy: [],
-      teammateTop: teammates,
-      opponentTop: opponents,
+      teammatesMost,
+      teammatesMostWins,
+      opponentsMost,
+      opponentsMostLosses,
       winWith: [],
       loseWith: [],
       mostLostTo: lossesTo
@@ -739,7 +767,29 @@ function renderPairList(items, type) {
 
   const markup = items
     .map((item) => {
-      const name = typeof item?.name === 'string' && item.name.trim() ? item.name : FALLBACK;
+      const name = typeof item?.name === 'string' && item.name.trim() ? item.name.trim() : FALLBACK;
+      const countLabel = formatNumberValue(item?.count);
+
+      if (type === 'teammates-most') {
+        const detailText = countLabel !== FALLBACK ? `${countLabel} ігор` : FALLBACK;
+        return `<li><strong>${name}</strong><span>${detailText}</span></li>`;
+      }
+
+      if (type === 'teammates-wins') {
+        const detailText = countLabel !== FALLBACK ? `${countLabel} перемог` : FALLBACK;
+        return `<li><strong>${name}</strong><span>${detailText}</span></li>`;
+      }
+
+      if (type === 'opponents-most') {
+        const detailText = countLabel !== FALLBACK ? `${countLabel} дуелей` : FALLBACK;
+        return `<li><strong>${name}</strong><span>${detailText}</span></li>`;
+      }
+
+      if (type === 'opponents-losses') {
+        const detailText = countLabel !== FALLBACK ? `${countLabel} поразок` : FALLBACK;
+        return `<li><strong>${name}</strong><span>${detailText}</span></li>`;
+      }
+
       if (type === 'teammate') {
         const details = [];
         const gamesLabel = formatNumberValue(item?.games);
@@ -781,22 +831,35 @@ function renderModal(player) {
   }
 
   modalTitle.textContent = `${player?.nickname ?? FALLBACK} · ${player?.team ?? FALLBACK}`;
-  const battlesLabel = formatNumberValue(player?.games);
+  const gamesLabel = formatNumberValue(player?.games);
   const winsLabel = formatNumberValue(player?.wins);
+  const lossesLabel = formatNumberValue(player?.losses);
   const winRateLabel = formatPercentValue(player?.winRate, percentFormatter1);
-  const totalPointsLabel = formatNumberValue(player?.totalPoints);
-  const averagePointsLabel = formatNumberValue(player?.averagePoints);
+  const seasonPointsLabel = formatNumberValue(player?.season_points ?? player?.totalPoints);
+  const mvpLabel = formatNumberValue(player?.MVP);
   const rankTier =
     typeof player?.rankTier === 'string' && player.rankTier.trim()
       ? player.rankTier
       : getRankTierByPlace(player?.rank);
-  const bestStreakLabel = formatNumberValue(player?.bestStreak);
-  const tagsLabel = formatDecimalValue(player?.tagsPerGame);
-  const assistsLabel = formatDecimalValue(player?.assistsPerGame);
-  const clutchLabel = formatNumberValue(player?.clutchPlays);
-  const disarmsLabel = formatNumberValue(player?.disarms);
-  const roleLabel = player?.role ?? FALLBACK;
-  const arenaLabel = player?.favoriteArena ?? FALLBACK;
+  const winStreakLabel = formatNumberValue(player?.win_streak ?? player?.bestStreak);
+  const lossStreakLabel = formatNumberValue(player?.loss_streak ?? player?.lossStreak);
+  const roundsLabel = formatNumberValue(player?.rounds);
+  const roundWinsLabel = formatNumberValue(player?.round_wins);
+  const roundLossesLabel = formatNumberValue(player?.round_losses);
+  const roundWinRateLabel = formatPercentValue(player?.roundWR, percentFormatter1);
+  const koanCandidates = [];
+  if (typeof player?.nickname === 'string' && player.nickname.trim()) {
+    koanCandidates.push(player.nickname.trim());
+  }
+  if (typeof player?.canonicalNickname === 'string' && player.canonicalNickname.trim()) {
+    koanCandidates.push(player.canonicalNickname.trim());
+  }
+  const koanText = koanCandidates
+    .map((name) =>
+      playerKoans && typeof playerKoans[name] === 'string' ? playerKoans[name].trim() : ''
+    )
+    .find((value) => typeof value === 'string' && value);
+  const koanDisplay = koanText && typeof koanText === 'string' ? koanText : PLAYER_KOAN_FALLBACK;
 
   const recentScores = Array.isArray(player?.recentScores) ? player.recentScores : [];
   const hasRecentScores = recentScores.length > 0;
@@ -839,54 +902,62 @@ function renderModal(player) {
       <h3>Основні показники</h3>
       <div class="detail-grid">
         <div>
-          <strong>Бої (зіграні)</strong>
-          ${battlesLabel}
+          <strong>Ігор</strong>
+          ${gamesLabel}
         </div>
         <div>
           <strong>Перемог</strong>
-          ${winsLabel} (${winRateLabel})
+          ${winsLabel}
         </div>
         <div>
-          <strong>Очок за сезон</strong>
-          ${totalPointsLabel}
+          <strong>Поразок</strong>
+          ${lossesLabel}
         </div>
         <div>
-          <strong>Сер. очки</strong>
-          ${averagePointsLabel}
+          <strong>Win rate</strong>
+          ${winRateLabel}
+        </div>
+        <div>
+          <strong>Очок сезону</strong>
+          ${seasonPointsLabel}
         </div>
         <div>
           <strong>Ранг</strong>
           ${rankTier ?? FALLBACK}
         </div>
         <div>
-          <strong>Стрік</strong>
-          ${bestStreakLabel !== FALLBACK ? `${bestStreakLabel} поспіль` : FALLBACK}
+          <strong>Win стрик</strong>
+          ${winStreakLabel !== FALLBACK ? `${winStreakLabel} перемог` : FALLBACK}
         </div>
         <div>
-          <strong>Tags/гра</strong>
-          ${tagsLabel}
+          <strong>Loss стрик</strong>
+          ${lossStreakLabel !== FALLBACK ? `${lossStreakLabel} поразок` : FALLBACK}
         </div>
         <div>
-          <strong>Асисти/гра</strong>
-          ${assistsLabel}
+          <strong>Раундів</strong>
+          ${roundsLabel}
         </div>
         <div>
-          <strong>Clutch</strong>
-          ${clutchLabel !== FALLBACK ? `${clutchLabel} сейви` : FALLBACK}
+          <strong>Перемог у раундах</strong>
+          ${roundWinsLabel}
         </div>
         <div>
-          <strong>Обеззброєнь</strong>
-          ${disarmsLabel}
+          <strong>Поразок у раундах</strong>
+          ${roundLossesLabel}
         </div>
         <div>
-          <strong>Роль</strong>
-          ${roleLabel}
+          <strong>WR раундів</strong>
+          ${roundWinRateLabel}
         </div>
         <div>
-          <strong>Улюблена арена</strong>
-          ${arenaLabel}
+          <strong>MVP</strong>
+          ${mvpLabel}
         </div>
       </div>
+    </section>
+    <section>
+      <h3>Цитата</h3>
+      <p>${koanDisplay}</p>
     </section>
     <section>
       <h3>Останні матчі</h3>
@@ -899,11 +970,25 @@ function renderModal(player) {
     </section>
     <section>
       <h3>Топ напарників</h3>
-      ${renderPairList(player?.teammateTop, 'teammate')}
+      <div>
+        <h4>Найчастіше разом</h4>
+        ${renderPairList(player?.teammatesMost, 'teammates-most')}
+      </div>
+      <div>
+        <h4>Перемог разом</h4>
+        ${renderPairList(player?.teammatesMostWins, 'teammates-wins')}
+      </div>
     </section>
     <section>
       <h3>Топ суперників</h3>
-      ${renderPairList(player?.opponentTop, 'opponent')}
+      <div>
+        <h4>Найчастіші дуелі</h4>
+        ${renderPairList(player?.opponentsMost, 'opponents-most')}
+      </div>
+      <div>
+        <h4>Поразок від</h4>
+        ${renderPairList(player?.opponentsMostLosses, 'opponents-losses')}
+      </div>
     </section>
     <section>
       <h3>Фішки гравця</h3>
@@ -911,7 +996,6 @@ function renderModal(player) {
         ${highlightsMarkup}
       </ul>
       <p>${player?.story ?? FALLBACK}</p>
-      <p>Набір: ${player?.loadout ?? FALLBACK}</p>
     </section>
   `;
 

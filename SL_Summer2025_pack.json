@@ -1,0 +1,406 @@
+{
+  "meta": {
+    "format": "v2",
+    "generated_at": "2025-09-29T11:28:37.951366Z",
+    "season": "Season 1 · Summer 2025",
+    "league": "Sunday League"
+  },
+  "aggregates": {
+    "total_games": 322,
+    "total_rounds": 1269,
+    "avg_rounds_per_game": 3.94,
+    "avg_players_per_game": 8.52,
+    "players_with_games": 81,
+    "players_in_rating": 79,
+    "points_total": 24239,
+    "points_positive_only": 29030,
+    "points_negative_only": -4791,
+    "common_score": "1-3",
+    "longest_game_rounds": 5
+  },
+  "top10": [
+    {
+      "rank": 1,
+      "player": "Laston",
+      "season_points": 1180,
+      "games": 136,
+      "wins": 81,
+      "losses": 55,
+      "draws": 0,
+      "winRate": 0.5956,
+      "win_streak": 7,
+      "loss_streak": 5,
+      "rounds": 532,
+      "round_wins": 293,
+      "round_losses": 239,
+      "roundWR": 0.5508,
+      "MVP": 45,
+      "rankTier": "S",
+      "teammates_most": [
+        {"name":"Slavon","count":53},
+        {"name":"Кицюня","count":41},
+        {"name":"Leres","count":38}
+      ],
+      "teammates_most_wins": [
+        {"name":"Slavon","count":36},
+        {"name":"Кицюня","count":24},
+        {"name":"Kуmar","count":23}
+      ],
+      "opponents_most": [
+        {"name":"Zavodchanyn","count":63},
+        {"name":"Leres","count":60},
+        {"name":"Kуmar","count":60}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Оксанка","count":19},
+        {"name":"Kуmar","count":18},
+        {"name":"Bogd","count":15}
+      ]
+    },
+    {
+      "rank": 2,
+      "player": "Leres",
+      "season_points": 1099,
+      "games": 136,
+      "wins": 85,
+      "losses": 51,
+      "draws": 0,
+      "winRate": 0.625,
+      "win_streak": 7,
+      "loss_streak": 4,
+      "rounds": 499,
+      "round_wins": 258,
+      "round_losses": 241,
+      "roundWR": 0.516,
+      "MVP": 17,
+      "rankTier": "S",
+      "teammates_most": [
+        {"name":"Kуmar","count":55},
+        {"name":"Оксанка","count":47},
+        {"name":"Сocosik","count":43}
+      ],
+      "teammates_most_wins": [
+        {"name":"Kуmar","count":36},
+        {"name":"Zavodchanyn","count":29},
+        {"name":"Laston","count":27}
+      ],
+      "opponents_most": [
+        {"name":"Сocosik","count":62},
+        {"name":"Laston","count":60},
+        {"name":"Slavon","count":60}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Laston","count":28},
+        {"name":"Slavon","count":24},
+        {"name":"Zavodchanyn","count":24}
+      ]
+    },
+    {
+      "rank": 3,
+      "player": "Zavodchanyn",
+      "season_points": 995,
+      "games": 137,
+      "wins": 73,
+      "losses": 64,
+      "draws": 0,
+      "winRate": 0.5328,
+      "win_streak": 7,
+      "loss_streak": 6,
+      "rounds": 551,
+      "round_wins": 291,
+      "round_losses": 260,
+      "roundWR": 0.5281,
+      "MVP": 31,
+      "rankTier": "S",
+      "teammates_most": [
+        {"name":"Slavon","count":45},
+        {"name":"Justy","count":40},
+        {"name":"Leres","count":39}
+      ],
+      "teammates_most_wins": [
+        {"name":"Slavon","count":27},
+        {"name":"Justy","count":23},
+        {"name":"Leres","count":22}
+      ],
+      "opponents_most": [
+        {"name":"Laston","count":63},
+        {"name":"Kуmar","count":60},
+        {"name":"Оксанка","count":58}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Laston","count":29},
+        {"name":"Kуmar","count":28},
+        {"name":"Оксанка","count":24}
+      ]
+    },
+    {
+      "rank": 4,
+      "player": "Justy",
+      "season_points": 965,
+      "games": 151,
+      "wins": 78,
+      "losses": 73,
+      "draws": 0,
+      "winRate": 0.5166,
+      "win_streak": 6,
+      "loss_streak": 6,
+      "rounds": 599,
+      "round_wins": 313,
+      "round_losses": 286,
+      "roundWR": 0.5225,
+      "MVP": 27,
+      "rankTier": "A",
+      "teammates_most": [
+        {"name":"Zavodchanyn","count":40},
+        {"name":"Slavon","count":32},
+        {"name":"Сocosik","count":30}
+      ],
+      "teammates_most_wins": [
+        {"name":"Zavodchanyn","count":23},
+        {"name":"Slavon","count":20},
+        {"name":"Сocosik","count":19}
+      ],
+      "opponents_most": [
+        {"name":"Оксанка","count":62},
+        {"name":"Slavon","count":61},
+        {"name":"Laston","count":55}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Оксанка","count":30},
+        {"name":"Slavon","count":29},
+        {"name":"Laston","count":28}
+      ]
+    },
+    {
+      "rank": 5,
+      "player": "Slavon",
+      "season_points": 955,
+      "games": 167,
+      "wins": 85,
+      "losses": 82,
+      "draws": 0,
+      "winRate": 0.509,
+      "win_streak": 5,
+      "loss_streak": 4,
+      "rounds": 684,
+      "round_wins": 351,
+      "round_losses": 333,
+      "roundWR": 0.5132,
+      "MVP": 17,
+      "rankTier": "A",
+      "teammates_most": [
+        {"name":"Laston","count":53},
+        {"name":"Zavodchanyn","count":45},
+        {"name":"Justy","count":32}
+      ],
+      "teammates_most_wins": [
+        {"name":"Laston","count":36},
+        {"name":"Zavodchanyn","count":27},
+        {"name":"Justy","count":20}
+      ],
+      "opponents_most": [
+        {"name":"Laston","count":67},
+        {"name":"Justy","count":61},
+        {"name":"Leres","count":54}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Laston","count":31},
+        {"name":"Justy","count":30},
+        {"name":"Leres","count":27}
+      ]
+    },
+    {
+      "rank": 6,
+      "player": "Kumar",
+      "season_points": 920,
+      "games": 185,
+      "wins": 91,
+      "losses": 94,
+      "draws": 0,
+      "winRate": 0.4919,
+      "win_streak": 5,
+      "loss_streak": 7,
+      "rounds": 744,
+      "round_wins": 366,
+      "round_losses": 378,
+      "roundWR": 0.492,
+      "MVP": 12,
+      "rankTier": "A",
+      "teammates_most": [
+        {"name":"Leres","count":55},
+        {"name":"Slavon","count":38},
+        {"name":"Laston","count":46}
+      ],
+      "teammates_most_wins": [
+        {"name":"Leres","count":36},
+        {"name":"Laston","count":23},
+        {"name":"Zavodchanyn","count":22}
+      ],
+      "opponents_most": [
+        {"name":"Laston","count":60},
+        {"name":"Zavodchanyn","count":60},
+        {"name":"Оксанка","count":59}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Laston","count":31},
+        {"name":"Zavodchanyn","count":30},
+        {"name":"Оксанка","count":28}
+      ]
+    },
+    {
+      "rank": 7,
+      "player": "Кицюня",
+      "season_points": 895,
+      "games": 124,
+      "wins": 59,
+      "losses": 65,
+      "draws": 0,
+      "winRate": 0.4758,
+      "win_streak": 7,
+      "loss_streak": 7,
+      "rounds": 481,
+      "round_wins": 233,
+      "round_losses": 248,
+      "roundWR": 0.4844,
+      "MVP": 8,
+      "rankTier": "A",
+      "teammates_most": [
+        {"name":"Laston","count":41},
+        {"name":"Сocosik","count":33},
+        {"name":"Оксанка","count":31}
+      ],
+      "teammates_most_wins": [
+        {"name":"Laston","count":24},
+        {"name":"Сocosik","count":22},
+        {"name":"Оксанка","count":19}
+      ],
+      "opponents_most": [
+        {"name":"Оксанка","count":63},
+        {"name":"Сocosik","count":55},
+        {"name":"Slavon","count":52}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Оксанка","count":32},
+        {"name":"Сocosik","count":30},
+        {"name":"Slavon","count":29}
+      ]
+    },
+    {
+      "rank": 8,
+      "player": "RuBisCo",
+      "season_points": 851,
+      "games": 71,
+      "wins": 40,
+      "losses": 31,
+      "draws": 0,
+      "winRate": 0.5634,
+      "win_streak": 8,
+      "loss_streak": 6,
+      "rounds": 280,
+      "round_wins": 155,
+      "round_losses": 125,
+      "roundWR": 0.5536,
+      "MVP": 18,
+      "rankTier": "B",
+      "teammates_most": [
+        {"name":"Кицюня","count":17},
+        {"name":"Laston","count":14},
+        {"name":"Сocosik","count":14}
+      ],
+      "teammates_most_wins": [
+        {"name":"Кицюня","count":10},
+        {"name":"Laston","count":10},
+        {"name":"Leres","count":9}
+      ],
+      "opponents_most": [
+        {"name":"Оксанка","count":29},
+        {"name":"Сocosik","count":27},
+        {"name":"Kуmar","count":26}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Оксанка","count":14},
+        {"name":"Сocosik","count":13},
+        {"name":"Kуmar","count":12}
+      ]
+    },
+    {
+      "rank": 9,
+      "player": "Оксанка",
+      "season_points": 850,
+      "games": 197,
+      "wins": 74,
+      "losses": 123,
+      "draws": 0,
+      "winRate": 0.3756,
+      "win_streak": 5,
+      "loss_streak": 9,
+      "rounds": 768,
+      "round_wins": 338,
+      "round_losses": 430,
+      "roundWR": 0.4401,
+      "MVP": 7,
+      "rankTier": "B",
+      "teammates_most": [
+        {"name":"Leres","count":47},
+        {"name":"Сocosik","count":42},
+        {"name":"Kуmar","count":41}
+      ],
+      "teammates_most_wins": [
+        {"name":"Leres","count":27},
+        {"name":"Kуmar","count":21},
+        {"name":"Сocosik","count":20}
+      ],
+      "opponents_most": [
+        {"name":"Voron","count":48},
+        {"name":"Slavon","count":60},
+        {"name":"Laston","count":59}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Voron","count":29},
+        {"name":"Slavon","count":31},
+        {"name":"Laston","count":30}
+      ]
+    },
+    {
+      "rank": 10,
+      "player": "Voron",
+      "season_points": 830,
+      "games": 118,
+      "wins": 63,
+      "losses": 55,
+      "draws": 0,
+      "winRate": 0.5339,
+      "win_streak": 7,
+      "loss_streak": 4,
+      "rounds": 480,
+      "round_wins": 257,
+      "round_losses": 223,
+      "roundWR": 0.5354,
+      "MVP": 16,
+      "rankTier": "B",
+      "teammates_most": [
+        {"name":"Сocosik","count":28},
+        {"name":"Bogd","count":25},
+        {"name":"Justy","count":22}
+      ],
+      "teammates_most_wins": [
+        {"name":"Сocosik","count":19},
+        {"name":"Bogd","count":18},
+        {"name":"Laston","count":15}
+      ],
+      "opponents_most": [
+        {"name":"Оксанка","count":48},
+        {"name":"Сocosik","count":40},
+        {"name":"Kуmar","count":39}
+      ],
+      "opponents_most_losses_to": [
+        {"name":"Оксанка","count":23},
+        {"name":"Сocosik","count":20},
+        {"name":"Kуmar","count":20}
+      ]
+    }
+  ],
+  "aliases": {
+    "Kumar": ["Kуmar"]
+  }
+}

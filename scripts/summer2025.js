@@ -2,8 +2,59 @@
 
 const FALLBACK = '—';
 
-function nameAlias(nickname) {
-  return nickname === 'Kуmar' ? 'Kumar' : nickname;
+function normalizeString(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function resolveCanonicalNickname(nickname, aliasMap = {}) {
+  const original = typeof nickname === 'string' ? nickname.trim() : '';
+  if (!original) {
+    return '';
+  }
+
+  const lookup = original.toLowerCase();
+  for (const [canonicalRaw, aliases] of Object.entries(aliasMap ?? {})) {
+    const canonical = typeof canonicalRaw === 'string' ? canonicalRaw.trim() : '';
+    if (!canonical) {
+      continue;
+    }
+    if (canonical.toLowerCase() === lookup) {
+      return canonical;
+    }
+    if (
+      Array.isArray(aliases) &&
+      aliases.some(
+        (alias) => typeof alias === 'string' && alias.trim().toLowerCase() === lookup
+      )
+    ) {
+      return canonical;
+    }
+  }
+
+  return original;
+}
+
+function getNicknameVariants(nickname, aliasMap = {}) {
+  const variants = new Set();
+  const canonical = resolveCanonicalNickname(nickname, aliasMap);
+  const aliasList =
+    canonical && aliasMap && Array.isArray(aliasMap[canonical]) ? aliasMap[canonical] : [];
+
+  [nickname, canonical, ...(aliasList ?? [])].forEach((value) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) {
+        variants.add(trimmed);
+      }
+    }
+  });
+
+  return Array.from(variants);
+}
+
+function normalizeNickname(nickname, aliasMap = {}) {
+  const canonical = resolveCanonicalNickname(nickname, aliasMap);
+  return normalizeString(canonical || nickname);
 }
 
 function getRankTierByPlace(place) {
@@ -125,17 +176,31 @@ let tickerTimer = null;
 let controlsBound = false;
 let profileBound = false;
 
-function normalizeTopPlayers(top10 = [], meta = {}) {
+function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
   const leagueName = typeof meta.league === 'string' && meta.league.trim() ? meta.league : FALLBACK;
 
   return top10.map((entry, index) => {
-    const nickname = typeof entry?.player === 'string' && entry.player.trim() ? entry.player : FALLBACK;
+    const nicknameRaw =
+      typeof entry?.player === 'string' && entry.player.trim() ? entry.player.trim() : '';
+    const nickname = nicknameRaw || FALLBACK;
+    const canonicalNickname = nicknameRaw ? resolveCanonicalNickname(nicknameRaw, aliasMap) : '';
+    const nicknameAliases = nicknameRaw ? getNicknameVariants(nicknameRaw, aliasMap) : [];
+    const normalizedNickname = nicknameRaw ? normalizeNickname(nicknameRaw, aliasMap) : '';
     const rank = toFiniteNumber(entry?.rank) ?? index + 1;
     const games = toFiniteNumber(entry?.games);
     const wins = toFiniteNumber(entry?.wins);
+    const losses = toFiniteNumber(entry?.losses);
+    const draws = toFiniteNumber(entry?.draws);
     const totalPoints = toFiniteNumber(entry?.season_points);
     const averagePoints =
       games && games > 0 && totalPoints !== null ? totalPoints / games : null;
+    const rounds = toFiniteNumber(entry?.rounds);
+    const roundWins = toFiniteNumber(entry?.round_wins);
+    const roundLosses = toFiniteNumber(entry?.round_losses);
+    const roundWinRate = toFiniteNumber(entry?.roundWR);
+    const winStreak = toFiniteNumber(entry?.win_streak);
+    const lossStreak = toFiniteNumber(entry?.loss_streak);
+    const mvpCount = toFiniteNumber(entry?.MVP);
 
     const teammates = Array.isArray(entry?.teammates_most)
       ? entry.teammates_most.map((item) => ({
@@ -158,16 +223,28 @@ function normalizeTopPlayers(top10 = [], meta = {}) {
     return {
       rank,
       nickname,
+      canonicalNickname: canonicalNickname || nickname,
+      normalizedNickname,
+      aliases: nicknameAliases,
       realName: FALLBACK,
       team: leagueName,
+      season_points: totalPoints,
       totalPoints,
       averagePoints,
       games,
       wins,
+      losses,
+      draws,
       winRate: toFiniteNumber(entry?.winRate),
-      bestStreak: toFiniteNumber(entry?.win_streak),
-      lossStreak: toFiniteNumber(entry?.loss_streak),
-      MVP: toFiniteNumber(entry?.MVP),
+      roundWR: roundWinRate,
+      rounds,
+      round_wins: roundWins,
+      round_losses: roundLosses,
+      win_streak: winStreak,
+      loss_streak: lossStreak,
+      MVP: mvpCount,
+      bestStreak: winStreak,
+      lossStreak,
       rankTier:
         typeof entry?.rankTier === 'string' && entry.rankTier.trim()
           ? entry.rankTier
@@ -406,23 +483,47 @@ function renderPodium(players = topPlayers) {
 }
 
 function getSortValue(player, sortKey) {
-  if (!player) {
+  if (!player || !sortKey) {
     return null;
   }
-  if (sortKey === 'games') {
-    return toFiniteNumber(player.games);
+
+  switch (sortKey) {
+    case 'rank':
+      return toFiniteNumber(player.rank);
+    case 'season_points':
+      return toFiniteNumber(player.season_points ?? player.totalPoints);
+    case 'games':
+      return toFiniteNumber(player.games);
+    case 'rounds':
+      return toFiniteNumber(player.rounds);
+    case 'winRate':
+    case 'roundWR':
+      return toFiniteNumber(player[sortKey]);
+    case 'win_streak':
+      return toFiniteNumber(player.win_streak ?? player.bestStreak);
+    case 'loss_streak':
+      return toFiniteNumber(player.loss_streak ?? player.lossStreak);
+    case 'MVP':
+      return toFiniteNumber(player.MVP);
+    case 'rankTier': {
+      const tier = typeof player.rankTier === 'string' ? player.rankTier.trim() : '';
+      return tier ? tier.charCodeAt(0) : null;
+    }
+    default:
+      return toFiniteNumber(player[sortKey]);
   }
-  if (sortKey === 'rank') {
-    return toFiniteNumber(player.rank);
-  }
-  return toFiniteNumber(player[sortKey]);
 }
 
 function renderLeaderboard(players = topPlayers) {
   if (!leaderboardBody) {
     return;
   }
-  const searchTerm = searchInput?.value.trim().toLowerCase() ?? '';
+  const rawSearch = searchInput?.value ?? '';
+  const searchTerm = rawSearch.trim();
+  const searchTermLower = searchTerm.toLowerCase();
+  const aliasMap = PACK?.aliases ?? {};
+  const normalizedSearch = normalizeNickname(searchTerm, aliasMap);
+  const hasNormalizedSearch = Boolean(normalizedSearch);
   const sorted = [...players].sort((a, b) => {
     const valueA = getSortValue(a, currentSort);
     const valueB = getSortValue(b, currentSort);
@@ -442,16 +543,37 @@ function renderLeaderboard(players = topPlayers) {
     if (!searchTerm) {
       return true;
     }
-    const haystack = [
+
+    const aliasList = Array.isArray(player?.aliases) ? player.aliases : [];
+    const textFields = [
       player?.nickname ?? '',
+      player?.canonicalNickname ?? '',
       player?.realName ?? '',
       player?.team ?? '',
       player?.role ?? '',
-      player?.favoriteArena ?? ''
-    ]
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(searchTerm);
+      player?.favoriteArena ?? '',
+      ...aliasList
+    ].filter(Boolean);
+
+    const plainMatch = textFields.some((value) =>
+      value.toLowerCase().includes(searchTermLower)
+    );
+    if (plainMatch) {
+      return true;
+    }
+
+    if (!hasNormalizedSearch) {
+      return false;
+    }
+
+    const normalizedNicknameValue = normalizeNickname(player?.nickname ?? '', aliasMap);
+    if (normalizedNicknameValue && normalizedNicknameValue === normalizedSearch) {
+      return true;
+    }
+
+    return aliasList.some(
+      (alias) => normalizeNickname(alias, aliasMap) === normalizedSearch
+    );
   });
 
   leaderboardBody.innerHTML = '';
@@ -478,24 +600,67 @@ function renderLeaderboard(players = topPlayers) {
       ? `<span class="role-badge tier-${rankTier}" aria-label="Ранг ${rankTier}">${rankTier}</span>`
       : `<span class="role-badge tier-none" aria-label="Ранг відсутній">${FALLBACK}</span>`;
 
+    const seasonPointsLabel = formatNumberValue(player?.season_points ?? player?.totalPoints);
+    const gamesLabel = formatNumberValue(player?.games);
+    const winsLabel = formatNumberValue(player?.wins);
+    const lossesLabel = formatNumberValue(player?.losses);
+    const drawsLabel = formatNumberValue(player?.draws);
+    const winRateLabel = formatPercentValue(player?.winRate, percentFormatter1);
+    const roundsLabel = formatNumberValue(player?.rounds);
+    const roundWinsLabel = formatNumberValue(player?.round_wins);
+    const roundLossesLabel = formatNumberValue(player?.round_losses);
+    const winStreakLabel = formatNumberValue(player?.win_streak);
+    const lossStreakLabel = formatNumberValue(player?.loss_streak);
+    const mvpLabel = formatNumberValue(player?.MVP);
+
+    const gamesTooltipParts = [];
+    if (winsLabel !== FALLBACK) {
+      gamesTooltipParts.push(`Перемоги: ${winsLabel}`);
+    }
+    if (lossesLabel !== FALLBACK) {
+      gamesTooltipParts.push(`Поразки: ${lossesLabel}`);
+    }
+    if (drawsLabel !== FALLBACK) {
+      gamesTooltipParts.push(`Нічиї: ${drawsLabel}`);
+    }
+    if (winRateLabel !== FALLBACK) {
+      gamesTooltipParts.push(`Win rate: ${winRateLabel}`);
+    }
+    const gamesTooltip = gamesTooltipParts.join(' · ');
+
+    const roundsTooltipParts = [];
+    if (roundWinsLabel !== FALLBACK) {
+      roundsTooltipParts.push(`Перемоги: ${roundWinsLabel}`);
+    }
+    if (roundLossesLabel !== FALLBACK) {
+      roundsTooltipParts.push(`Поразки: ${roundLossesLabel}`);
+    }
+    const roundsTooltip = roundsTooltipParts.join(' · ');
+
+    const playerNickname = typeof player?.nickname === 'string' ? player.nickname : '';
+
     row.innerHTML = `
       <td><span class="rank-chip">${formatNumberValue(player?.rank)}</span></td>
       <td>
         <div>${player?.nickname ?? FALLBACK}</div>
         <small>${player?.realName ?? FALLBACK}</small>
+        <button type="button" class="pixel-button" data-player="${playerNickname}">Профіль</button>
       </td>
-      <td>${formatNumberValue(player?.totalPoints)}</td>
-      <td>${formatNumberValue(player?.averagePoints)}</td>
-      <td>${formatNumberValue(player?.games)}</td>
-      <td>${formatPercentValue(player?.winRate)}</td>
-      <td>${formatNumberValue(player?.games)}</td>
+      <td>${seasonPointsLabel}</td>
+      <td>
+        <span ${gamesTooltip ? `title="${gamesTooltip}"` : ''}>${gamesLabel}</span>
+      </td>
+      <td>
+        <span ${roundsTooltip ? `title="${roundsTooltip}"` : ''}>${roundsLabel}</span>
+      </td>
+      <td>${winStreakLabel}</td>
+      <td>${lossStreakLabel}</td>
+      <td>${mvpLabel}</td>
       <td>
         <span class="role-cell">
-          <span>${player?.role ?? FALLBACK}</span>
           ${badgeMarkup}
         </span>
       </td>
-      <td><button type="button" class="pixel-button" data-player="${player?.nickname ?? ''}">Профіль</button></td>
     `;
 
     const button = row.querySelector('button');
@@ -875,7 +1040,7 @@ async function boot() {
     ]);
     PACK = packData;
     EVENTS = eventsData;
-    topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {});
+    topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});
     renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
     renderPodium(topPlayers);
     renderLeaderboard(topPlayers);

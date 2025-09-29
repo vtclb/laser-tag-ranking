@@ -1,5 +1,7 @@
 'use strict';
 
+const FALLBACK = '—';
+
 function nameAlias(nickname) {
   return nickname === 'Kуmar' ? 'Kumar' : nickname;
 }
@@ -7,7 +9,7 @@ function nameAlias(nickname) {
 function getRankTierByPlace(place) {
   const rank = Number(place);
   if (!Number.isFinite(rank) || rank <= 0) {
-    return '—';
+    return FALLBACK;
   }
   if (rank <= 3) {
     return 'S';
@@ -24,878 +26,37 @@ function getRankTierByPlace(place) {
   return 'D';
 }
 
-const topPlayers = [
-  {
-    rank: 1,
-    nickname: 'Laston',
-    realName: 'Владислав Ластон',
-    team: 'Sunday League',
-    totalPoints: 1180,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'S',
-    role: 'Капітан',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 2,
-    nickname: 'Leres',
-    realName: 'Олексій Лерес',
-    team: 'Sunday League',
-    totalPoints: 1099,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'S',
-    role: 'Снайпер',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 3,
-    nickname: 'Zavodchanyn',
-    realName: 'Дмитро Заводчанин',
-    team: 'Sunday League',
-    totalPoints: 995,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'S',
-    role: 'Штурмовик',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 4,
-    nickname: 'Justy',
-    realName: 'Юстина Justy',
-    team: 'Sunday League',
-    totalPoints: 965,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'A',
-    role: 'Ігровий лідер',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 5,
-    nickname: 'Slavon',
-    realName: 'В’ячеслав Славон',
-    team: 'Sunday League',
-    totalPoints: 955,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'A',
-    role: 'Стратег',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 6,
-    nickname: 'Kуmar',
-    realName: 'Роман Кумар',
-    team: 'Sunday League',
-    totalPoints: 920,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'A',
-    role: 'Фронтлайн',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 7,
-    nickname: 'Кицюня',
-    realName: 'Катерина «Кицюня»',
-    team: 'Sunday League',
-    totalPoints: 895,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'A',
-    role: 'Плеймейкер',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 8,
-    nickname: 'RuBisCo',
-    realName: 'Роман RuBisCo',
-    team: 'Sunday League',
-    totalPoints: 851,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'B',
-    role: 'Аналітик',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 9,
-    nickname: 'Оксанка',
-    realName: 'Оксана П.',
-    team: 'Sunday League',
-    totalPoints: 850,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'B',
-    role: 'Підтримка',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
-  },
-  {
-    rank: 10,
-    nickname: 'Voron',
-    realName: 'Андрій Ворон',
-    team: 'Sunday League',
-    totalPoints: 830,
-    averagePoints: 0,
-    games: 0,
-    wins: 0,
-    winRate: 0,
-    bestStreak: 0,
-    lossStreak: 0,
-    MVP: 0,
-    rankTier: 'B',
-    role: 'Розвідник',
-    accuracy: 0,
-    tagsPerGame: 0,
-    assistsPerGame: 0,
-    clutchPlays: 0,
-    disarms: 0,
-    highlights: [],
-    story: '',
-    recentScores: [],
-    recentAccuracy: [],
-    teammateTop: [],
-    opponentTop: [],
-    winWith: [],
-    loseWith: [],
-    mostLostTo: { name: '—', count: 0 },
-    dangerous: { name: '—', meetings: 0, wr: '—' },
-    loadout: '',
-    favoriteArena: ''
+function toFiniteNumber(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
   }
-];
-
-const seasonGeneral = {
-  title: 'Літній сезон 2025',
-  tours: 12,
-  finals: 2,
-  totalGamesLogged: 1422,
-  totalRounds: 4266,
-  totalPointsScored: 9540,
-  totalWins: 729,
-  overtimeMatches: 32,
-  uniquePlayers: 64,
-  newcomers: 19,
-  activeTeams: 14,
-  averageWinRate: 0.512,
-  averageAccuracy: 0.463,
-  averagePointsPerGame: 6.7,
-  arenas: ['LaserTown', 'SKY Arena', 'Арсенал'],
-  podium: ['Laston', 'Leres', 'Zavodchanyn']
-};
-
-const seasonPointsSummary = {
-  podiumPoints: 3274,
-  podiumShare: 0.3431,
-  averageTop10: 954,
-  medianTop10: 938,
-  standardDeviation: 108.3,
-  minPoints: 830,
-  maxPoints: 1180,
-  pointsByTier: [
-    { tier: 'S', players: 3, total: 3274 },
-    { tier: 'A', players: 4, total: 3735 },
-    { tier: 'B', players: 3, total: 2531 }
-  ],
-  biggestClimb: { player: 'Voron', positions: 6 },
-  closestRace: { players: ['RuBisCo', 'Оксанка'], diff: 1 }
-};
-
-const gamesPlayedByPlayer = {
-  Laston: {
-    games: 136,
-    wins: 81,
-    losses: 55,
-    winRate: 0.5956,
-    bestStreak: 7,
-    lossStreak: 5,
-    mvp: 45,
-    accuracy: 0.482,
-    tagsPerGame: 21.7,
-    assistsPerGame: 6.8,
-    clutchPlays: 21,
-    disarms: 18,
-    favoriteArena: 'LaserTown',
-    loadout: 'Fang v5 + Proton Shield',
-    highlights: [
-      '45 MVP-виступів за сезон',
-      'Серія з 7 перемог у червні',
-      'Найкращий камбек сезону у фіналі'
-    ],
-    story: 'Капітан Sunday League, який тримає стабільний темп від першої до останньої гри.'
-  },
-  Leres: {
-    games: 136,
-    wins: 85,
-    losses: 51,
-    winRate: 0.625,
-    bestStreak: 7,
-    lossStreak: 4,
-    mvp: 17,
-    accuracy: 0.497,
-    tagsPerGame: 22.4,
-    assistsPerGame: 5.1,
-    clutchPlays: 18,
-    disarms: 14,
-    favoriteArena: 'LaserTown',
-    loadout: 'Nova Carbine + Cryo Vest',
-    highlights: [
-      '85 перемог — найкращий показник сезону',
-      '120 очок у вирішальному турі',
-      'Понад 50% точності зі снайперки'
-    ],
-    story: 'Холоднокровний снайпер, який контролює центр арени навіть у найнапруженіші хвилини.'
-  },
-  Zavodchanyn: {
-    games: 137,
-    wins: 73,
-    losses: 64,
-    winRate: 0.5328,
-    bestStreak: 7,
-    lossStreak: 6,
-    mvp: 31,
-    accuracy: 0.471,
-    tagsPerGame: 20.3,
-    assistsPerGame: 6.4,
-    clutchPlays: 16,
-    disarms: 11,
-    favoriteArena: 'SKY Arena',
-    loadout: 'Atlas Rifle + Recon Drone',
-    highlights: [
-      '31 раз виходив MVP',
-      'Серія контратак у півфіналі',
-      'Найвищий середній по асистах серед штурмовиків'
-    ],
-    story: 'Найагресивніший штурмовик сезону, що першим відкриває проходи для команди.'
-  },
-  Justy: {
-    games: 151,
-    wins: 78,
-    losses: 73,
-    winRate: 0.5166,
-    bestStreak: 6,
-    lossStreak: 6,
-    mvp: 27,
-    accuracy: 0.458,
-    tagsPerGame: 19.8,
-    assistsPerGame: 7.2,
-    clutchPlays: 19,
-    disarms: 13,
-    favoriteArena: 'Арсенал',
-    loadout: 'Tempest SMG + Nano Shield',
-    highlights: [
-      'Очолювала команду в усіх 12 турах',
-      'Переломний клатч у фіналі з RuBisCo',
-      'Лідерка за результативними передачами'
-    ],
-    story: 'Розуміє карту краще за всіх і задає темп у ключових розіграшах.'
-  },
-  Slavon: {
-    games: 167,
-    wins: 85,
-    losses: 82,
-    winRate: 0.509,
-    bestStreak: 5,
-    lossStreak: 4,
-    mvp: 17,
-    accuracy: 0.452,
-    tagsPerGame: 18.9,
-    assistsPerGame: 6.1,
-    clutchPlays: 14,
-    disarms: 15,
-    favoriteArena: 'LaserTown',
-    loadout: 'Marauder Shotgun + EMP Grenades',
-    highlights: [
-      'Виграв 10 з 12 турів у якості капітана',
-      'Найменше програних овертаймів',
-      'Створив 15 комбінацій із саппортами'
-    ],
-    story: 'Тактик, який навчив Sunday League дисциплінованій обороні та швидким ротаціям.'
-  },
-  Kumar: {
-    games: 185,
-    wins: 91,
-    losses: 94,
-    winRate: 0.4919,
-    bestStreak: 5,
-    lossStreak: 7,
-    mvp: 12,
-    accuracy: 0.447,
-    tagsPerGame: 18.3,
-    assistsPerGame: 5.4,
-    clutchPlays: 11,
-    disarms: 12,
-    favoriteArena: 'Арсенал',
-    loadout: 'Jolt Carbine + Heavy Armor',
-    highlights: [
-      '185 зіграних матчів — рекорд сезону',
-      'Найкращий показник блоків у фіналах',
-      'Тримає лінію навіть у меншині'
-    ],
-    story: 'Фронтлайн, який приймає перший контакт і розчищає простір для нападників.'
-  },
-  'Кицюня': {
-    games: 124,
-    wins: 59,
-    losses: 65,
-    winRate: 0.4758,
-    bestStreak: 7,
-    lossStreak: 7,
-    mvp: 8,
-    accuracy: 0.438,
-    tagsPerGame: 17.6,
-    assistsPerGame: 7.9,
-    clutchPlays: 9,
-    disarms: 8,
-    favoriteArena: 'Арсенал',
-    loadout: 'Saber Pistol + Support Drone',
-    highlights: [
-      'Зробила 7 серій асистів поспіль',
-      'Перший female MVP сезону',
-      'Рекорд за стабільністю точності у плей-офф'
-    ],
-    story: 'Плеймейкерка, що тримає команду в тонусі, відкриваючи позиції для снайперів.'
-  },
-  RuBisCo: {
-    games: 71,
-    wins: 40,
-    losses: 31,
-    winRate: 0.5634,
-    bestStreak: 8,
-    lossStreak: 6,
-    mvp: 18,
-    accuracy: 0.514,
-    tagsPerGame: 23.5,
-    assistsPerGame: 4.8,
-    clutchPlays: 13,
-    disarms: 10,
-    favoriteArena: 'SKY Arena',
-    loadout: 'Ionic Rifle + Phase Boots',
-    highlights: [
-      'Найточніший гравець сезону — 51.4%',
-      '8 перемог поспіль у фінальній серії',
-      '18 MVP при мінімальній кількості ігор'
-    ],
-    story: 'Аналітик і шутер, що читає суперника ще до стартового свистка.'
-  },
-  'Оксанка': {
-    games: 197,
-    wins: 74,
-    losses: 123,
-    winRate: 0.3756,
-    bestStreak: 5,
-    lossStreak: 9,
-    mvp: 7,
-    accuracy: 0.429,
-    tagsPerGame: 16.1,
-    assistsPerGame: 6.3,
-    clutchPlays: 7,
-    disarms: 9,
-    favoriteArena: 'Арсенал',
-    loadout: 'Pulse SMG + Tactical Scanner',
-    highlights: [
-      '197 матчів стабільної гри у саппорт-ролі',
-      '7 клатчів у вирішальних раундах',
-      'Провела 9 навчальних буткемпів для новачків'
-    ],
-    story: 'Підтримка, яка закриває тила і підказує партнерам кожен рух суперника.'
-  },
-  Voron: {
-    games: 118,
-    wins: 63,
-    losses: 55,
-    winRate: 0.5339,
-    bestStreak: 7,
-    lossStreak: 4,
-    mvp: 16,
-    accuracy: 0.461,
-    tagsPerGame: 19.1,
-    assistsPerGame: 5.7,
-    clutchPlays: 12,
-    disarms: 11,
-    favoriteArena: 'LaserTown',
-    loadout: 'Longbow Rifle + Cloak Module',
-    highlights: [
-      'Найкращий скаут у трансляціях сезону',
-      'Переможний фланговий прорив у фіналі',
-      '12 клатчів та 16 MVP-плашок'
-    ],
-    story: 'Розвідник, який ловить суперників на ротаціях і ставить команду в вигідні позиції.'
+  if (typeof value === 'string' && value.trim() === '') {
+    return null;
   }
-};
-
-const timeSeries = {
-  Laston: {
-    scores: [112, 98, 104, 121, 109, 115, 107, 114],
-    accuracy: [0.47, 0.48, 0.49, 0.5, 0.49, 0.5, 0.51, 0.52]
-  },
-  Leres: {
-    scores: [108, 111, 117, 120, 113, 118, 116, 122],
-    accuracy: [0.49, 0.5, 0.51, 0.52, 0.5, 0.51, 0.52, 0.53]
-  },
-  Zavodchanyn: {
-    scores: [96, 101, 99, 105, 98, 103, 107, 110],
-    accuracy: [0.46, 0.47, 0.47, 0.48, 0.47, 0.48, 0.49, 0.49]
-  },
-  Justy: {
-    scores: [88, 94, 101, 97, 103, 109, 104, 106],
-    accuracy: [0.44, 0.45, 0.46, 0.46, 0.47, 0.47, 0.48, 0.49]
-  },
-  Slavon: {
-    scores: [92, 95, 98, 101, 96, 99, 103, 100],
-    accuracy: [0.43, 0.44, 0.44, 0.45, 0.44, 0.45, 0.46, 0.46]
-  },
-  Kumar: {
-    scores: [84, 90, 87, 93, 95, 88, 91, 97],
-    accuracy: [0.42, 0.43, 0.43, 0.44, 0.44, 0.45, 0.45, 0.46]
-  },
-  'Кицюня': {
-    scores: [79, 83, 88, 85, 90, 94, 92, 96],
-    accuracy: [0.41, 0.41, 0.42, 0.43, 0.43, 0.44, 0.44, 0.45]
-  },
-  RuBisCo: {
-    scores: [115, 118, 110, 123, 119, 116, 122, 125],
-    accuracy: [0.5, 0.51, 0.52, 0.53, 0.52, 0.53, 0.54, 0.55]
-  },
-  'Оксанка': {
-    scores: [72, 75, 78, 81, 80, 82, 79, 83],
-    accuracy: [0.4, 0.41, 0.41, 0.42, 0.42, 0.43, 0.43, 0.44]
-  },
-  Voron: {
-    scores: [94, 98, 101, 103, 99, 105, 108, 110],
-    accuracy: [0.45, 0.45, 0.46, 0.47, 0.46, 0.47, 0.48, 0.48]
-  }
-};
-
-const pairStats = {
-  Laston: {
-    teammateTop: [
-      { name: 'Leres', games: 38, wins: 28, wr: 0.737 },
-      { name: 'Justy', games: 31, wins: 20, wr: 0.645 },
-      { name: 'RuBisCo', games: 18, wins: 15, wr: 0.833 }
-    ],
-    opponentTop: [
-      { name: 'Slavon', meetings: 30, wr: 0.53 },
-      { name: 'Кицюня', meetings: 24, wr: 0.58 },
-      { name: 'Voron', meetings: 18, wr: 0.61 }
-    ],
-    winWith: [
-      { name: 'Дует з Leres', record: '28-10' },
-      { name: 'Комбінація з Justy', record: '20-11' }
-    ],
-    loseWith: [{ name: 'Експериментальна лінія', record: '6-12' }],
-    mostLostTo: { name: 'Slavon', count: 12 },
-    dangerous: { name: 'Justy', meetings: 22, wr: '45%' }
-  },
-  Leres: {
-    teammateTop: [
-      { name: 'Laston', games: 38, wins: 28, wr: 0.737 },
-      { name: 'RuBisCo', games: 21, wins: 16, wr: 0.762 },
-      { name: 'Кицюня', games: 19, wins: 13, wr: 0.684 }
-    ],
-    opponentTop: [
-      { name: 'Voron', meetings: 26, wr: 0.58 },
-      { name: 'Slavon', meetings: 29, wr: 0.55 },
-      { name: 'Justy', meetings: 24, wr: 0.5 }
-    ],
-    winWith: [
-      { name: 'Комбінація Laston/Leres', record: '28-10' },
-      { name: 'Дует з RuBisCo', record: '16-5' }
-    ],
-    loseWith: [{ name: 'Формат без саппорту', record: '7-12' }],
-    mostLostTo: { name: 'Voron', count: 11 },
-    dangerous: { name: 'Slavon', meetings: 29, wr: '55%' }
-  },
-  Zavodchanyn: {
-    teammateTop: [
-      { name: 'Justy', games: 24, wins: 16, wr: 0.667 },
-      { name: 'Kumar', games: 25, wins: 14, wr: 0.56 },
-      { name: 'Оксанка', games: 28, wins: 14, wr: 0.5 }
-    ],
-    opponentTop: [
-      { name: 'Laston', meetings: 27, wr: 0.48 },
-      { name: 'RuBisCo', meetings: 18, wr: 0.52 },
-      { name: 'Кицюня', meetings: 21, wr: 0.49 }
-    ],
-    winWith: [
-      { name: 'Команда Justy', record: '16-8' },
-      { name: 'Пара з Kumar', record: '14-11' }
-    ],
-    loseWith: [{ name: 'Експериментальна четвірка', record: '5-13' }],
-    mostLostTo: { name: 'Laston', count: 12 },
-    dangerous: { name: 'RuBisCo', meetings: 18, wr: '52%' }
-  },
-  Justy: {
-    teammateTop: [
-      { name: 'Zavodchanyn', games: 24, wins: 16, wr: 0.667 },
-      { name: 'Кицюня', games: 22, wins: 15, wr: 0.682 },
-      { name: 'Voron', games: 20, wins: 13, wr: 0.65 }
-    ],
-    opponentTop: [
-      { name: 'Laston', meetings: 26, wr: 0.46 },
-      { name: 'Leres', meetings: 24, wr: 0.5 },
-      { name: 'Kumar', meetings: 29, wr: 0.48 }
-    ],
-    winWith: [
-      { name: 'Склади з Zavodchanyn', record: '16-8' },
-      { name: 'Фінальні спринти', record: '12-6' }
-    ],
-    loseWith: [{ name: 'Подвійний саппорт', record: '6-14' }],
-    mostLostTo: { name: 'Laston', count: 14 },
-    dangerous: { name: 'Kumar', meetings: 29, wr: '48%' }
-  },
-  Slavon: {
-    teammateTop: [
-      { name: 'Оксанка', games: 34, wins: 19, wr: 0.559 },
-      { name: 'Kumar', games: 27, wins: 15, wr: 0.556 },
-      { name: 'Voron', games: 25, wins: 13, wr: 0.52 }
-    ],
-    opponentTop: [
-      { name: 'Laston', meetings: 30, wr: 0.47 },
-      { name: 'Leres', meetings: 29, wr: 0.45 },
-      { name: 'Justy', meetings: 28, wr: 0.49 }
-    ],
-    winWith: [
-      { name: 'Defence stack', record: '21-12' },
-      { name: 'Соло спринти', record: '18-10' }
-    ],
-    loseWith: [{ name: 'Агресивний склад', record: '9-16' }],
-    mostLostTo: { name: 'Leres', count: 13 },
-    dangerous: { name: 'RuBisCo', meetings: 19, wr: '42%' }
-  },
-  Kumar: {
-    teammateTop: [
-      { name: 'Slavon', games: 27, wins: 15, wr: 0.556 },
-      { name: 'Оксанка', games: 31, wins: 17, wr: 0.548 },
-      { name: 'Zavodchanyn', games: 25, wins: 14, wr: 0.56 }
-    ],
-    opponentTop: [
-      { name: 'Justy', meetings: 29, wr: 0.52 },
-      { name: 'Laston', meetings: 28, wr: 0.49 },
-      { name: 'Voron', meetings: 23, wr: 0.5 }
-    ],
-    winWith: [
-      { name: 'Блок Slavon/Kumar', record: '15-12' },
-      { name: 'Тріо з Оксанкою', record: '17-14' }
-    ],
-    loseWith: [{ name: 'Експериментальні склади', record: '8-17' }],
-    mostLostTo: { name: 'Justy', count: 15 },
-    dangerous: { name: 'Laston', meetings: 28, wr: '49%' }
-  },
-  'Кицюня': {
-    teammateTop: [
-      { name: 'Justy', games: 22, wins: 15, wr: 0.682 },
-      { name: 'Leres', games: 19, wins: 13, wr: 0.684 },
-      { name: 'Оксанка', games: 24, wins: 12, wr: 0.5 }
-    ],
-    opponentTop: [
-      { name: 'Laston', meetings: 24, wr: 0.42 },
-      { name: 'Slavon', meetings: 26, wr: 0.46 },
-      { name: 'RuBisCo', meetings: 17, wr: 0.53 }
-    ],
-    winWith: [
-      { name: 'Дует з Justy', record: '15-7' },
-      { name: 'Контроль карти', record: '13-9' }
-    ],
-    loseWith: [{ name: 'Стійкий захист', record: '7-14' }],
-    mostLostTo: { name: 'Laston', count: 14 },
-    dangerous: { name: 'RuBisCo', meetings: 17, wr: '53%' }
-  },
-  RuBisCo: {
-    teammateTop: [
-      { name: 'Leres', games: 21, wins: 16, wr: 0.762 },
-      { name: 'Laston', games: 18, wins: 15, wr: 0.833 },
-      { name: 'Voron', games: 14, wins: 10, wr: 0.714 }
-    ],
-    opponentTop: [
-      { name: 'Slavon', meetings: 19, wr: 0.58 },
-      { name: 'Кицюня', meetings: 17, wr: 0.47 },
-      { name: 'Оксанка', meetings: 20, wr: 0.6 }
-    ],
-    winWith: [
-      { name: 'Аналітичні склади', record: '18-6' },
-      { name: 'Турнірні фінали', record: '12-4' }
-    ],
-    loseWith: [{ name: 'Атака без саппорту', record: '5-9' }],
-    mostLostTo: { name: 'Кицюня', count: 8 },
-    dangerous: { name: 'Slavon', meetings: 19, wr: '58%' }
-  },
-  'Оксанка': {
-    teammateTop: [
-      { name: 'Slavon', games: 34, wins: 19, wr: 0.559 },
-      { name: 'Kumar', games: 31, wins: 17, wr: 0.548 },
-      { name: 'Кицюня', games: 24, wins: 12, wr: 0.5 }
-    ],
-    opponentTop: [
-      { name: 'Laston', meetings: 22, wr: 0.41 },
-      { name: 'Leres', meetings: 21, wr: 0.44 },
-      { name: 'RuBisCo', meetings: 20, wr: 0.4 }
-    ],
-    winWith: [
-      { name: 'Збалансований захист', record: '22-18' },
-      { name: 'Фінальні сетапи', record: '16-14' }
-    ],
-    loseWith: [{ name: 'Агресивна трійка', record: '10-22' }],
-    mostLostTo: { name: 'Laston', count: 13 },
-    dangerous: { name: 'RuBisCo', meetings: 20, wr: '40%' }
-  },
-  Voron: {
-    teammateTop: [
-      { name: 'Laston', games: 18, wins: 11, wr: 0.611 },
-      { name: 'Justy', games: 20, wins: 13, wr: 0.65 },
-      { name: 'Slavon', games: 25, wins: 13, wr: 0.52 }
-    ],
-    opponentTop: [
-      { name: 'Leres', meetings: 26, wr: 0.42 },
-      { name: 'Kumar', meetings: 23, wr: 0.48 },
-      { name: 'RuBisCo', meetings: 18, wr: 0.47 }
-    ],
-    winWith: [
-      { name: 'Флангові атаки', record: '19-11' },
-      { name: 'Збірні тріо', record: '15-9' }
-    ],
-    loseWith: [{ name: 'Оборонні сетапи', record: '8-15' }],
-    mostLostTo: { name: 'Leres', count: 12 },
-    dangerous: { name: 'Kumar', meetings: 23, wr: '48%' }
-  }
-};
-
-function enrichTopPlayers() {
-  topPlayers.forEach((player) => {
-    const alias = nameAlias(player.nickname);
-    const volume = gamesPlayedByPlayer[alias];
-    if (volume) {
-      Object.assign(player, {
-        games: volume.games,
-        wins: volume.wins,
-        winRate: volume.winRate,
-        bestStreak: volume.bestStreak,
-        lossStreak: volume.lossStreak,
-        MVP: volume.mvp,
-        accuracy: volume.accuracy,
-        tagsPerGame: volume.tagsPerGame,
-        assistsPerGame: volume.assistsPerGame,
-        clutchPlays: volume.clutchPlays,
-        disarms: volume.disarms,
-        highlights: volume.highlights,
-        story: volume.story,
-        loadout: volume.loadout,
-        favoriteArena: volume.favoriteArena,
-        averagePoints: Math.round(player.totalPoints / volume.games)
-      });
-    }
-
-    const timeline = timeSeries[alias];
-    if (timeline) {
-      player.recentScores = timeline.scores;
-      player.recentAccuracy = timeline.accuracy;
-    }
-
-    const pairs = pairStats[alias];
-    if (pairs) {
-      player.teammateTop = pairs.teammateTop;
-      player.opponentTop = pairs.opponentTop;
-      player.winWith = pairs.winWith;
-      player.loseWith = pairs.loseWith;
-      player.mostLostTo = pairs.mostLostTo;
-      player.dangerous = pairs.dangerous;
-    }
-  });
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
 }
 
-enrichTopPlayers();
+function computeMedian(values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return null;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+  return sorted[middle];
+}
+
+function computeStdDev(values, mean) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return null;
+  }
+  const variance =
+    values.reduce((acc, value) => acc + Math.pow(value - mean, 2), 0) / values.length;
+  return Math.sqrt(variance);
+}
 
 const numberFormatter = new Intl.NumberFormat('uk-UA');
 const percentFormatter0 = new Intl.NumberFormat('uk-UA', {
@@ -912,8 +73,27 @@ const decimalFormatter = new Intl.NumberFormat('uk-UA', {
 });
 const pointsPluralRules = new Intl.PluralRules('uk-UA');
 
+function formatNumberValue(value) {
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? FALLBACK : numberFormatter.format(numeric);
+}
+
+function formatDecimalValue(value) {
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? FALLBACK : decimalFormatter.format(numeric);
+}
+
+function formatPercentValue(value, formatter = percentFormatter0) {
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? FALLBACK : formatter.format(numeric);
+}
+
 function formatPointsWord(value) {
-  const rule = pointsPluralRules.select(Number(value));
+  const numeric = toFiniteNumber(value);
+  if (numeric === null) {
+    return 'очок';
+  }
+  const rule = pointsPluralRules.select(numeric);
   if (rule === 'one') {
     return 'очко';
   }
@@ -936,149 +116,391 @@ const closeButton = modal?.querySelector('[data-close]');
 
 let currentSort = 'rank';
 let currentDirection = 'asc';
+let PACK = null;
+let EVENTS = null;
+let topPlayers = [];
+let seasonTickerMessages = [];
+let metricsSnapshot = null;
+let tickerTimer = null;
+let controlsBound = false;
+let profileBound = false;
 
-function formatPercent(value, formatter = percentFormatter0) {
-  return formatter.format(value);
+function normalizeTopPlayers(top10 = [], meta = {}) {
+  const leagueName = typeof meta.league === 'string' && meta.league.trim() ? meta.league : FALLBACK;
+
+  return top10.map((entry, index) => {
+    const nickname = typeof entry?.player === 'string' && entry.player.trim() ? entry.player : FALLBACK;
+    const rank = toFiniteNumber(entry?.rank) ?? index + 1;
+    const games = toFiniteNumber(entry?.games);
+    const wins = toFiniteNumber(entry?.wins);
+    const totalPoints = toFiniteNumber(entry?.season_points);
+    const averagePoints =
+      games && games > 0 && totalPoints !== null ? totalPoints / games : null;
+
+    const teammates = Array.isArray(entry?.teammates_most)
+      ? entry.teammates_most.map((item) => ({
+          name: typeof item?.name === 'string' && item.name.trim() ? item.name : FALLBACK,
+          games: toFiniteNumber(item?.count)
+        }))
+      : [];
+
+    const opponents = Array.isArray(entry?.opponents_most)
+      ? entry.opponents_most.map((item) => ({
+          name: typeof item?.name === 'string' && item.name.trim() ? item.name : FALLBACK,
+          meetings: toFiniteNumber(item?.count)
+        }))
+      : [];
+
+    const lossesTo = Array.isArray(entry?.opponents_most_losses_to)
+      ? entry.opponents_most_losses_to[0]
+      : null;
+
+    return {
+      rank,
+      nickname,
+      realName: FALLBACK,
+      team: leagueName,
+      totalPoints,
+      averagePoints,
+      games,
+      wins,
+      winRate: toFiniteNumber(entry?.winRate),
+      bestStreak: toFiniteNumber(entry?.win_streak),
+      lossStreak: toFiniteNumber(entry?.loss_streak),
+      MVP: toFiniteNumber(entry?.MVP),
+      rankTier:
+        typeof entry?.rankTier === 'string' && entry.rankTier.trim()
+          ? entry.rankTier
+          : getRankTierByPlace(rank),
+      role: FALLBACK,
+      accuracy: toFiniteNumber(entry?.accuracy),
+      tagsPerGame: toFiniteNumber(entry?.tags_per_game),
+      assistsPerGame: toFiniteNumber(entry?.assists_per_game),
+      clutchPlays: toFiniteNumber(entry?.clutch_plays),
+      disarms: toFiniteNumber(entry?.disarms),
+      highlights: [],
+      story: FALLBACK,
+      recentScores: [],
+      recentAccuracy: [],
+      teammateTop: teammates,
+      opponentTop: opponents,
+      winWith: [],
+      loseWith: [],
+      mostLostTo: lossesTo
+        ? {
+            name:
+              typeof lossesTo?.name === 'string' && lossesTo.name.trim()
+                ? lossesTo.name
+                : FALLBACK,
+            count: toFiniteNumber(lossesTo?.count)
+          }
+        : { name: FALLBACK, count: null },
+      dangerous: null,
+      loadout: FALLBACK,
+      favoriteArena: FALLBACK,
+      timeline: null
+    };
+  });
 }
 
-function getGamesPlayedValue(player) {
-  const alias = nameAlias(player.nickname);
-  const stats = gamesPlayedByPlayer[alias];
-  return stats?.games ?? player.games ?? 0;
-}
+function buildMetrics(aggregates = {}, players = []) {
+  const totalGames = toFiniteNumber(aggregates?.total_games);
+  const totalRounds = toFiniteNumber(aggregates?.total_rounds);
+  const avgRoundsPerGame = toFiniteNumber(aggregates?.avg_rounds_per_game);
+  const avgPlayersPerGame = toFiniteNumber(aggregates?.avg_players_per_game);
+  const playersWithGames = toFiniteNumber(aggregates?.players_with_games);
+  const playersInRating = toFiniteNumber(aggregates?.players_in_rating);
+  const totalPoints = toFiniteNumber(aggregates?.points_total);
+  const pointsPositiveOnly = toFiniteNumber(aggregates?.points_positive_only);
+  const pointsNegativeOnly = toFiniteNumber(aggregates?.points_negative_only);
+  const longestGameRounds = toFiniteNumber(aggregates?.longest_game_rounds);
+  const commonScore =
+    typeof aggregates?.common_score === 'string' && aggregates.common_score.trim()
+      ? aggregates.common_score
+      : FALLBACK;
 
-function getSortValue(player, sortKey) {
-  if (sortKey === 'games') {
-    return getGamesPlayedValue(player);
-  }
-  return player[sortKey];
-}
+  const podiumPlayers = players.slice(0, 3);
+  const pointsValues = players
+    .map((player) => toFiniteNumber(player?.totalPoints))
+    .filter((value) => value !== null);
+  const podiumPoints = podiumPlayers.reduce(
+    (sum, player) => sum + (toFiniteNumber(player?.totalPoints) ?? 0),
+    0
+  );
+  const podiumNames = podiumPlayers.map((player) => player.nickname ?? FALLBACK);
+  const averageTop10 =
+    pointsValues.length > 0
+      ? pointsValues.reduce((sum, value) => sum + value, 0) / pointsValues.length
+      : null;
+  const medianTop10 = computeMedian(pointsValues);
+  const standardDeviation =
+    pointsValues.length > 0 && averageTop10 !== null
+      ? computeStdDev(pointsValues, averageTop10)
+      : null;
+  const minPoints = pointsValues.length > 0 ? Math.min(...pointsValues) : null;
+  const maxPoints = pointsValues.length > 0 ? Math.max(...pointsValues) : null;
+  const averagePointsPerGame =
+    totalGames && totalPoints !== null && totalGames > 0 ? totalPoints / totalGames : null;
+  const podiumShare =
+    totalPoints && totalPoints > 0 && podiumPoints > 0 ? podiumPoints / totalPoints : null;
 
-const seasonTickerMessages = [
-  `Матчів: ${numberFormatter.format(seasonGeneral.totalGamesLogged)} · Раундів: ${numberFormatter.format(seasonGeneral.totalRounds)}`,
-  `Очки сезону: ${numberFormatter.format(seasonGeneral.totalPointsScored)} (подіум ${formatPercent(seasonPointsSummary.podiumShare, percentFormatter1)})`,
-  `Середні очки топ-10: ${numberFormatter.format(seasonPointsSummary.averageTop10)} ±${decimalFormatter.format(seasonPointsSummary.standardDeviation)}`,
-  `Найтісніша гонка: ${seasonPointsSummary.closestRace.players.join(' vs ')} (${seasonPointsSummary.closestRace.diff} ${formatPointsWord(seasonPointsSummary.closestRace.diff)})`
-];
-
-function calculateMetrics() {
   return {
-    totalGames: seasonGeneral.totalGamesLogged,
-    totalRounds: seasonGeneral.totalRounds,
-    totalPoints: seasonGeneral.totalPointsScored,
-    averageWinRate: seasonGeneral.averageWinRate,
-    averageAccuracy: seasonGeneral.averageAccuracy,
-    averagePointsPerGame: seasonGeneral.averagePointsPerGame,
-    uniquePlayers: seasonGeneral.uniquePlayers,
-    newcomers: seasonGeneral.newcomers,
-    activeTeams: seasonGeneral.activeTeams,
-    tours: seasonGeneral.tours,
-    finals: seasonGeneral.finals,
-    totalWins: seasonGeneral.totalWins,
-    overtimeMatches: seasonGeneral.overtimeMatches,
-    podiumNames: seasonGeneral.podium,
-    podiumPoints: seasonPointsSummary.podiumPoints,
-    podiumShare: seasonPointsSummary.podiumShare,
-    averageTop10: seasonPointsSummary.averageTop10,
-    medianTop10: seasonPointsSummary.medianTop10,
-    standardDeviation: seasonPointsSummary.standardDeviation,
-    minPoints: seasonPointsSummary.minPoints,
-    maxPoints: seasonPointsSummary.maxPoints,
-    pointsByTier: seasonPointsSummary.pointsByTier,
-    biggestClimb: seasonPointsSummary.biggestClimb,
-    closestRace: seasonPointsSummary.closestRace
+    totalGames,
+    totalRounds,
+    avgRoundsPerGame,
+    avgPlayersPerGame,
+    playersWithGames,
+    playersInRating,
+    totalPoints,
+    pointsPositiveOnly,
+    pointsNegativeOnly,
+    longestGameRounds,
+    commonScore,
+    podiumPoints: podiumPlayers.length > 0 ? podiumPoints : null,
+    podiumNames,
+    podiumShare,
+    averagePointsPerGame,
+    averageTop10,
+    medianTop10,
+    standardDeviation,
+    minPoints,
+    maxPoints
   };
 }
 
-function renderMetrics() {
-  const data = calculateMetrics();
-  const roundsLabel = `${numberFormatter.format(data.totalRounds)} раундів`;
-  const seasonPhases = `${numberFormatter.format(data.tours)} турів · ${numberFormatter.format(data.finals)} фінали`;
-  const overtimeLabel = `${numberFormatter.format(data.overtimeMatches)} овертайми`;
-  const teamsLabel = `${numberFormatter.format(data.activeTeams)} команд`;
-  const newcomersLabel = `${numberFormatter.format(data.newcomers)} новачків`;
-  const podiumNames = Array.isArray(data.podiumNames) ? data.podiumNames.join(' / ') : '';
-  const closestRaceLabel = `${data.closestRace.players.join(' vs ')} (+${data.closestRace.diff} ${formatPointsWord(data.closestRace.diff)})`;
-  const top10Plus = Math.max(0, data.maxPoints - data.averageTop10);
-  const top10Minus = Math.max(0, data.averageTop10 - data.minPoints);
-  const top10Spread = `+${numberFormatter.format(top10Plus)} / -${numberFormatter.format(top10Minus)} очок`;
+function buildTickerMessages(data) {
+  return [
+    `Матчів: ${formatNumberValue(data.totalGames)} · Раундів: ${formatNumberValue(data.totalRounds)}`,
+    `Очки сезону: ${formatNumberValue(data.totalPoints)} (подіум ${formatPercentValue(
+      data.podiumShare,
+      percentFormatter1
+    )})`,
+    `Середні очки топ-10: ${formatNumberValue(data.averageTop10)} ±${formatDecimalValue(
+      data.standardDeviation
+    )}`
+  ];
+}
+function renderMetricsFromAggregates(aggregates = {}, players = []) {
+  metricsSnapshot = buildMetrics(aggregates, players);
+  const data = metricsSnapshot;
 
   const cards = [
     {
       label: 'Матчів зіграно',
-      value: numberFormatter.format(data.totalGames),
-      delta: seasonPhases,
-      footnote: `${roundsLabel} · ${overtimeLabel}`,
+      value: formatNumberValue(data.totalGames),
+      delta:
+        data.avgRoundsPerGame !== null
+          ? `~${formatDecimalValue(data.avgRoundsPerGame)} раундів/матч`
+          : '',
+      footnote: `Раундів: ${formatNumberValue(data.totalRounds)}`,
       key: 'games'
     },
     {
-      label: 'Унікальних гравців',
-      value: numberFormatter.format(data.uniquePlayers),
-      delta: teamsLabel,
-      footnote: newcomersLabel,
+      label: 'Активних гравців',
+      value: formatNumberValue(data.playersWithGames),
+      delta:
+        data.playersInRating !== null
+          ? `У рейтингу ${formatNumberValue(data.playersInRating)}`
+          : '',
+      footnote:
+        data.avgPlayersPerGame !== null
+          ? `Середній склад: ${formatDecimalValue(data.avgPlayersPerGame)} гравця`
+          : FALLBACK,
       key: 'players'
     },
     {
       label: 'Сумарні очки',
-      value: numberFormatter.format(data.totalPoints),
-      delta: `${formatPercent(data.podiumShare, percentFormatter1)} частка`,
-      footnote: `Подіум ${podiumNames}: ${numberFormatter.format(data.podiumPoints)} очок`,
+      value: formatNumberValue(data.totalPoints),
+      delta:
+        data.pointsPositiveOnly !== null
+          ? `Позитивні ${formatNumberValue(data.pointsPositiveOnly)}`
+          : '',
+      footnote:
+        data.pointsNegativeOnly !== null
+          ? `Негативні ${formatNumberValue(data.pointsNegativeOnly)}`
+          : FALLBACK,
       key: 'points'
     },
     {
-      label: 'Середній win rate',
-      value: formatPercent(data.averageWinRate, percentFormatter1),
-      delta: `${numberFormatter.format(data.totalWins)} перемог`,
-      footnote: `Найтісніша гонка: ${closestRaceLabel}`,
-      key: 'winrate'
+      label: 'Подіум',
+      value: formatNumberValue(data.podiumPoints),
+      delta:
+        data.podiumShare !== null
+          ? `Частка ${formatPercentValue(data.podiumShare, percentFormatter1)}`
+          : '',
+      footnote: data.podiumNames.length > 0 ? data.podiumNames.join(' / ') : FALLBACK,
+      key: 'podium'
     },
     {
-      label: 'Середня точність',
-      value: formatPercent(data.averageAccuracy, percentFormatter1),
-      delta: `≈${decimalFormatter.format(data.averagePointsPerGame)} очка/матч`,
-      footnote: `Діапазон очок топ-10: ${numberFormatter.format(data.minPoints)}–${numberFormatter.format(data.maxPoints)}`,
-      key: 'accuracy'
+      label: 'Середні очки/матч',
+      value: formatDecimalValue(data.averagePointsPerGame),
+      delta: data.commonScore !== FALLBACK ? `Типовий рахунок ${data.commonScore}` : '',
+      footnote:
+        data.longestGameRounds !== null
+          ? `Найдовший бій: ${formatNumberValue(data.longestGameRounds)} раундів`
+          : FALLBACK,
+      key: 'pace'
     },
     {
-      label: 'Середні очки топ-10',
-      value: numberFormatter.format(data.averageTop10),
-      delta: top10Spread,
-      footnote: `σ = ${decimalFormatter.format(data.standardDeviation)} · Медіана ${numberFormatter.format(data.medianTop10)}`,
-      key: 'top10avg'
+      label: 'Топ-10',
+      value: formatNumberValue(data.averageTop10),
+      delta:
+        data.standardDeviation !== null ? `σ = ${formatDecimalValue(data.standardDeviation)}` : '',
+      footnote:
+        data.minPoints !== null && data.maxPoints !== null
+          ? `Діапазон: ${formatNumberValue(data.minPoints)}–${formatNumberValue(
+              data.maxPoints
+            )} · Медіана ${formatNumberValue(data.medianTop10)}`
+          : FALLBACK,
+      key: 'top10'
     }
   ];
 
-  metricsGrid.innerHTML = '';
-  cards.forEach((card) => {
-    const article = document.createElement('article');
-    article.className = 'metric-card';
-    article.dataset.metric = card.key;
-    article.innerHTML = `
-      <span class="metric-label">${card.label}</span>
-      <span class="metric-value">${card.value}</span>
-      ${card.delta ? `<span class="metric-delta">${card.delta}</span>` : ''}
-      <span class="metric-footnote">${card.footnote}</span>
-    `;
-    metricsGrid.append(article);
-  });
+  if (metricsGrid) {
+    metricsGrid.innerHTML = '';
+    cards.forEach((card) => {
+      const article = document.createElement('article');
+      article.className = 'metric-card';
+      article.dataset.metric = card.key;
+      article.innerHTML = `
+        <span class="metric-label">${card.label}</span>
+        <span class="metric-value">${card.value}</span>
+        ${card.delta ? `<span class="metric-delta">${card.delta}</span>` : ''}
+        <span class="metric-footnote">${card.footnote}</span>
+      `;
+      metricsGrid.append(article);
+    });
+  }
+
+  seasonTickerMessages = buildTickerMessages(data);
+  startTicker(seasonTickerMessages);
 }
 
-function renderPodium() {
+function renderPodium(players = topPlayers) {
+  if (!podiumGrid) {
+    return;
+  }
   podiumGrid.innerHTML = '';
-  topPlayers.slice(0, 3).forEach((player, index) => {
+  players.slice(0, 3).forEach((player, index) => {
     const card = document.createElement('article');
     card.className = 'podium-card';
     card.dataset.rank = `#${index + 1}`;
+    const rankTier =
+      typeof player?.rankTier === 'string' && player.rankTier.trim()
+        ? player.rankTier
+        : getRankTierByPlace(player?.rank);
     card.innerHTML = `
-      <h3>${player.nickname}</h3>
+      <h3>${player?.nickname ?? FALLBACK}</h3>
       <ul>
-        <li>${player.team}</li>
-        <li>${numberFormatter.format(player.totalPoints)} очок</li>
-        <li>Win rate ${formatPercent(player.winRate)}</li>
-        <li>Стрік ${player.bestStreak}</li>
+        <li>${player?.team ?? FALLBACK}</li>
+        <li>${formatNumberValue(player?.totalPoints)} очок</li>
+        <li>Win rate ${formatPercentValue(player?.winRate)}</li>
+        <li>Стрік ${formatNumberValue(player?.bestStreak)}</li>
       </ul>
     `;
+    if (rankTier && rankTier !== FALLBACK) {
+      card.classList.add(`tier-${rankTier}`);
+    }
     podiumGrid.append(card);
+  });
+}
+
+function getSortValue(player, sortKey) {
+  if (!player) {
+    return null;
+  }
+  if (sortKey === 'games') {
+    return toFiniteNumber(player.games);
+  }
+  if (sortKey === 'rank') {
+    return toFiniteNumber(player.rank);
+  }
+  return toFiniteNumber(player[sortKey]);
+}
+
+function renderLeaderboard(players = topPlayers) {
+  if (!leaderboardBody) {
+    return;
+  }
+  const searchTerm = searchInput?.value.trim().toLowerCase() ?? '';
+  const sorted = [...players].sort((a, b) => {
+    const valueA = getSortValue(a, currentSort);
+    const valueB = getSortValue(b, currentSort);
+    const fallbackAsc = Number.POSITIVE_INFINITY;
+    const fallbackDesc = Number.NEGATIVE_INFINITY;
+    const safeA =
+      valueA !== null ? valueA : currentDirection === 'asc' ? fallbackAsc : fallbackDesc;
+    const safeB =
+      valueB !== null ? valueB : currentDirection === 'asc' ? fallbackAsc : fallbackDesc;
+    if (safeA === safeB) {
+      return 0;
+    }
+    return currentDirection === 'asc' ? safeA - safeB : safeB - safeA;
+  });
+
+  const filtered = sorted.filter((player) => {
+    if (!searchTerm) {
+      return true;
+    }
+    const haystack = [
+      player?.nickname ?? '',
+      player?.realName ?? '',
+      player?.team ?? '',
+      player?.role ?? '',
+      player?.favoriteArena ?? ''
+    ]
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(searchTerm);
+  });
+
+  leaderboardBody.innerHTML = '';
+
+  if (filtered.length === 0) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = `<td colspan="9">Немає гравців за цим запитом</td>`;
+    leaderboardBody.append(emptyRow);
+    return;
+  }
+
+  filtered.forEach((player) => {
+    const row = document.createElement('tr');
+    const rankTier =
+      typeof player?.rankTier === 'string' && player.rankTier.trim()
+        ? player.rankTier
+        : null;
+    if (rankTier) {
+      row.classList.add(`tier-${rankTier}`);
+    } else {
+      row.classList.add('tier-none');
+    }
+    const badgeMarkup = rankTier
+      ? `<span class="role-badge tier-${rankTier}" aria-label="Ранг ${rankTier}">${rankTier}</span>`
+      : `<span class="role-badge tier-none" aria-label="Ранг відсутній">${FALLBACK}</span>`;
+
+    row.innerHTML = `
+      <td><span class="rank-chip">${formatNumberValue(player?.rank)}</span></td>
+      <td>
+        <div>${player?.nickname ?? FALLBACK}</div>
+        <small>${player?.realName ?? FALLBACK}</small>
+      </td>
+      <td>${formatNumberValue(player?.totalPoints)}</td>
+      <td>${formatNumberValue(player?.averagePoints)}</td>
+      <td>${formatNumberValue(player?.games)}</td>
+      <td>${formatPercentValue(player?.winRate)}</td>
+      <td>${formatNumberValue(player?.games)}</td>
+      <td>
+        <span class="role-cell">
+          <span>${player?.role ?? FALLBACK}</span>
+          ${badgeMarkup}
+        </span>
+      </td>
+      <td><button type="button" class="pixel-button" data-player="${player?.nickname ?? ''}">Профіль</button></td>
+    `;
+
+    const button = row.querySelector('button');
+    button?.addEventListener('click', () => renderModal(player));
+    leaderboardBody.append(row);
   });
 }
 
@@ -1087,7 +509,7 @@ function buildPlayerChart(timeline, mode = 'delta') {
     return '<p>Немає даних для графіка.</p>';
   }
 
-  const baseValues = timeline.scores;
+  const baseValues = timeline.scores.map((value) => toFiniteNumber(value) ?? 0);
   const values =
     mode === 'cum'
       ? baseValues.reduce((acc, value, index) => {
@@ -1122,7 +544,7 @@ function buildPlayerChart(timeline, mode = 'delta') {
   const description = values
     .map((value, index) => {
       const label = mode === 'cum' ? 'Сумарно' : 'Раунд';
-      return `${label} ${index + 1}: ${numberFormatter.format(Math.round(value))}`;
+      return `${label} ${index + 1}: ${formatNumberValue(Math.round(value))}`;
     })
     .join(', ');
 
@@ -1152,16 +574,36 @@ function renderPairList(items, type) {
 
   const markup = items
     .map((item) => {
+      const name = typeof item?.name === 'string' && item.name.trim() ? item.name : FALLBACK;
       if (type === 'teammate') {
-        const gamesLabel = `${numberFormatter.format(item.games)} боїв`;
-        const winsLabel = `${numberFormatter.format(item.wins)} перемог`;
-        const wrLabel = formatPercent(item.wr, percentFormatter1);
-        return `<li><strong>${item.name}</strong><span>${gamesLabel} · ${winsLabel} · WR ${wrLabel}</span></li>`;
+        const details = [];
+        const gamesLabel = formatNumberValue(item?.games);
+        const winsLabel = formatNumberValue(item?.wins);
+        const wrLabel = formatPercentValue(item?.wr, percentFormatter1);
+        if (gamesLabel !== FALLBACK) {
+          details.push(`${gamesLabel} боїв`);
+        }
+        if (winsLabel !== FALLBACK) {
+          details.push(`${winsLabel} перемог`);
+        }
+        if (wrLabel !== FALLBACK) {
+          details.push(`WR ${wrLabel}`);
+        }
+        const detailText = details.length > 0 ? details.join(' · ') : FALLBACK;
+        return `<li><strong>${name}</strong><span>${detailText}</span></li>`;
       }
 
-      const meetingsLabel = `${numberFormatter.format(item.meetings)} дуелей`;
-      const wrLabel = formatPercent(item.wr, percentFormatter1);
-      return `<li><strong>${item.name}</strong><span>${meetingsLabel} · WR ${wrLabel}</span></li>`;
+      const details = [];
+      const meetingsLabel = formatNumberValue(item?.meetings);
+      const wrLabel = formatPercentValue(item?.wr, percentFormatter1);
+      if (meetingsLabel !== FALLBACK) {
+        details.push(`${meetingsLabel} дуелей`);
+      }
+      if (wrLabel !== FALLBACK) {
+        details.push(`WR ${wrLabel}`);
+      }
+      const detailText = details.length > 0 ? details.join(' · ') : FALLBACK;
+      return `<li><strong>${name}</strong><span>${detailText}</span></li>`;
     })
     .join('');
 
@@ -1173,20 +615,43 @@ function renderModal(player) {
     return;
   }
 
-  modalTitle.textContent = `${player.nickname} · ${player.team}`;
-  const alias = nameAlias(player.nickname);
-  const rawBattles = gamesPlayedByPlayer[alias] ?? player.games;
-  const battles =
-    (typeof rawBattles === 'number' ? rawBattles : rawBattles?.games) ??
-    player.games ??
-    0;
-  const rankTier = player.rankTier || getRankTierByPlace(player.rank);
-  const recentScores = Array.isArray(player.recentScores) ? player.recentScores : [];
+  modalTitle.textContent = `${player?.nickname ?? FALLBACK} · ${player?.team ?? FALLBACK}`;
+  const battlesLabel = formatNumberValue(player?.games);
+  const winsLabel = formatNumberValue(player?.wins);
+  const winRateLabel = formatPercentValue(player?.winRate, percentFormatter1);
+  const totalPointsLabel = formatNumberValue(player?.totalPoints);
+  const averagePointsLabel = formatNumberValue(player?.averagePoints);
+  const rankTier =
+    typeof player?.rankTier === 'string' && player.rankTier.trim()
+      ? player.rankTier
+      : getRankTierByPlace(player?.rank);
+  const bestStreakLabel = formatNumberValue(player?.bestStreak);
+  const tagsLabel = formatDecimalValue(player?.tagsPerGame);
+  const assistsLabel = formatDecimalValue(player?.assistsPerGame);
+  const clutchLabel = formatNumberValue(player?.clutchPlays);
+  const disarmsLabel = formatNumberValue(player?.disarms);
+  const roleLabel = player?.role ?? FALLBACK;
+  const arenaLabel = player?.favoriteArena ?? FALLBACK;
+
+  const recentScores = Array.isArray(player?.recentScores) ? player.recentScores : [];
   const hasRecentScores = recentScores.length > 0;
-  const averageRecent = hasRecentScores
-    ? recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length
-    : 0;
-  const timeline = timeSeries[alias];
+  const averageRecent =
+    hasRecentScores
+      ? recentScores.reduce((sum, score) => sum + (toFiniteNumber(score) ?? 0), 0) /
+        recentScores.length
+      : null;
+  const tempoSummary = hasRecentScores
+    ? `Середній темп — ${formatDecimalValue(averageRecent)} очок за ${formatNumberValue(
+        recentScores.length
+      )} останні бої.`
+    : 'Немає даних про останні бої.';
+  const recentResultsParagraph = hasRecentScores
+    ? `<p>Останні результати: ${recentScores
+        .map((value) => `${formatNumberValue(value)} очок`)
+        .join(' · ')}.</p>`
+    : '';
+
+  const timeline = player?.timeline ?? null;
   const hasTimeline = Array.isArray(timeline?.scores) && timeline.scores.length > 0;
   const defaultChartMode = 'delta';
   const chartControlsMarkup = hasTimeline
@@ -1198,14 +663,11 @@ function renderModal(player) {
   const chartMarkup = hasTimeline
     ? buildPlayerChart(timeline, defaultChartMode)
     : '<p>Немає даних для графіка.</p>';
-  const tempoSummary = hasRecentScores
-    ? `Середній темп — ${decimalFormatter.format(averageRecent)} очок за ${recentScores.length} останні бої.`
-    : 'Немає даних про останні бої.';
-  const recentResultsParagraph = hasRecentScores
-    ? `<p>Останні результати: ${recentScores
-        .map((value) => `${numberFormatter.format(value)} очок`)
-        .join(' · ')}.</p>`
-    : '';
+
+  const highlightsMarkup =
+    Array.isArray(player?.highlights) && player.highlights.length > 0
+      ? player.highlights.map((item) => `<li>${item}</li>`).join('')
+      : '<li>—</li>';
 
   modalBody.innerHTML = `
     <section>
@@ -1213,51 +675,51 @@ function renderModal(player) {
       <div class="detail-grid">
         <div>
           <strong>Бої (зіграні)</strong>
-          ${numberFormatter.format(battles)}
+          ${battlesLabel}
         </div>
         <div>
           <strong>Перемог</strong>
-          ${numberFormatter.format(player.wins)} (${formatPercent(player.winRate, percentFormatter1)})
+          ${winsLabel} (${winRateLabel})
         </div>
         <div>
           <strong>Очок за сезон</strong>
-          ${numberFormatter.format(player.totalPoints)}
+          ${totalPointsLabel}
         </div>
         <div>
           <strong>Сер. очки</strong>
-          ${numberFormatter.format(player.averagePoints)}
+          ${averagePointsLabel}
         </div>
         <div>
           <strong>Ранг</strong>
-          ${rankTier}
+          ${rankTier ?? FALLBACK}
         </div>
         <div>
           <strong>Стрік</strong>
-          ${player.bestStreak} поспіль
+          ${bestStreakLabel !== FALLBACK ? `${bestStreakLabel} поспіль` : FALLBACK}
         </div>
         <div>
           <strong>Tags/гра</strong>
-          ${decimalFormatter.format(player.tagsPerGame)}
+          ${tagsLabel}
         </div>
         <div>
           <strong>Асисти/гра</strong>
-          ${decimalFormatter.format(player.assistsPerGame)}
+          ${assistsLabel}
         </div>
         <div>
           <strong>Clutch</strong>
-          ${numberFormatter.format(player.clutchPlays)} сейви
+          ${clutchLabel !== FALLBACK ? `${clutchLabel} сейви` : FALLBACK}
         </div>
         <div>
           <strong>Обеззброєнь</strong>
-          ${numberFormatter.format(player.disarms)}
+          ${disarmsLabel}
         </div>
         <div>
           <strong>Роль</strong>
-          ${player.role}
+          ${roleLabel}
         </div>
         <div>
           <strong>Улюблена арена</strong>
-          ${player.favoriteArena}
+          ${arenaLabel}
         </div>
       </div>
     </section>
@@ -1272,19 +734,19 @@ function renderModal(player) {
     </section>
     <section>
       <h3>Топ напарників</h3>
-      ${renderPairList(player.teammateTop, 'teammate')}
+      ${renderPairList(player?.teammateTop, 'teammate')}
     </section>
     <section>
       <h3>Топ суперників</h3>
-      ${renderPairList(player.opponentTop, 'opponent')}
+      ${renderPairList(player?.opponentTop, 'opponent')}
     </section>
     <section>
       <h3>Фішки гравця</h3>
       <ul class="detail-list">
-        ${player.highlights.map((item) => `<li>${item}</li>`).join('')}
+        ${highlightsMarkup}
       </ul>
-      <p>${player.story}</p>
-      <p>Набір: ${player.loadout}</p>
+      <p>${player?.story ?? FALLBACK}</p>
+      <p>Набір: ${player?.loadout ?? FALLBACK}</p>
     </section>
   `;
 
@@ -1318,91 +780,23 @@ function closeModal() {
   }
 }
 
-function renderLeaderboard() {
-  const searchTerm = searchInput.value.trim().toLowerCase();
-  const sorted = [...topPlayers].sort((a, b) => {
-    const direction = currentDirection === 'asc' ? 1 : -1;
-    if (currentSort === 'rank') {
-      return direction * (a.rank - b.rank);
-    }
-    const valueA = getSortValue(a, currentSort);
-    const valueB = getSortValue(b, currentSort);
-    if (valueA === valueB) {
-      return a.rank - b.rank;
-    }
-    return direction * (valueA > valueB ? 1 : -1);
-  });
-
-  const filtered = sorted.filter((player) => {
-    if (!searchTerm) {
-      return true;
-    }
-    const haystack = [
-      player.nickname,
-      player.realName,
-      player.team,
-      player.role,
-      player.favoriteArena
-    ]
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(searchTerm);
-  });
-
-  leaderboardBody.innerHTML = '';
-
-  if (filtered.length === 0) {
-    const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = `<td colspan="9">Немає гравців за цим запитом</td>`;
-    leaderboardBody.append(emptyRow);
-    return;
-  }
-
-  filtered.forEach((player) => {
-    const row = document.createElement('tr');
-    row.classList.add(`tier-${player.rankTier}`);
-    const gamesPlayed = getGamesPlayedValue(player);
-    const rankBadge = `<span class="role-badge tier-${player.rankTier}" aria-label="Ранг ${player.rankTier}">${player.rankTier}</span>`;
-    row.innerHTML = `
-      <td><span class="rank-chip">${player.rank}</span></td>
-      <td>
-        <div>${player.nickname}</div>
-        <small>${player.realName}</small>
-      </td>
-      <td>${numberFormatter.format(player.totalPoints)}</td>
-      <td>${numberFormatter.format(player.averagePoints)}</td>
-      <td>${numberFormatter.format(player.games)}</td>
-      <td>${formatPercent(player.winRate)}</td>
-      <td>${numberFormatter.format(gamesPlayed)}</td>
-      <td>
-        <span class="role-cell">
-          <span>${player.role}</span>
-          ${rankBadge}
-        </span>
-      </td>
-      <td><button type="button" class="pixel-button" data-player="${player.nickname}">Профіль</button></td>
-    `;
-
-    const button = row.querySelector('button');
-    button?.addEventListener('click', () => renderModal(player));
-    leaderboardBody.append(row);
-  });
-}
-
-function startTicker() {
+function startTicker(messages = []) {
   if (!tickerEl) {
     return;
   }
-  const messages = seasonTickerMessages;
-
+  if (tickerTimer) {
+    clearInterval(tickerTimer);
+    tickerTimer = null;
+  }
+  const list = Array.isArray(messages) && messages.length > 0 ? messages : [FALLBACK];
   let index = 0;
   const update = () => {
-    tickerEl.textContent = messages[index];
-    index = (index + 1) % messages.length;
+    tickerEl.textContent = list[index];
+    index = (index + 1) % list.length;
   };
   update();
-  if (messages.length > 1) {
-    setInterval(update, 4600);
+  if (list.length > 1) {
+    tickerTimer = window.setInterval(update, 4600);
   }
 }
 
@@ -1413,44 +807,86 @@ function updateTabs(targetButton) {
   });
 }
 
-tabButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    const sortKey = button.dataset.sort;
-    if (!sortKey) {
-      return;
-    }
-    if (currentSort === sortKey) {
-      currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      currentSort = sortKey;
-      currentDirection = sortKey === 'rank' ? 'asc' : 'desc';
-    }
-    updateTabs(button);
+function bindTableControls() {
+  if (controlsBound) {
+    return;
+  }
+  controlsBound = true;
+
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const sortKey = button.dataset.sort;
+      if (!sortKey) {
+        return;
+      }
+      if (currentSort === sortKey) {
+        currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort = sortKey;
+        currentDirection = sortKey === 'rank' ? 'asc' : 'desc';
+      }
+      updateTabs(button);
+      renderLeaderboard();
+    });
+  });
+
+  searchInput?.addEventListener('input', () => {
     renderLeaderboard();
   });
-});
 
-searchInput?.addEventListener('input', () => {
-  renderLeaderboard();
-});
+  updateTabs(tabButtons[0] ?? null);
+}
 
-closeButton?.addEventListener('click', () => {
-  closeModal();
-});
-
-modal?.addEventListener('click', (event) => {
-  if (event.target === modal) {
-    closeModal();
+function bindProfile() {
+  if (profileBound) {
+    return;
   }
-});
+  profileBound = true;
 
-modal?.addEventListener('cancel', (event) => {
-  event.preventDefault();
-  closeModal();
-});
+  closeButton?.addEventListener('click', () => {
+    closeModal();
+  });
 
-updateTabs(tabButtons[0] ?? null);
-renderMetrics();
-renderPodium();
-renderLeaderboard();
-startTicker();
+  modal?.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  modal?.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    closeModal();
+  });
+}
+
+async function fetchJSON(url, options = {}) {
+  const response = await fetch(url, { cache: 'no-store', ...options });
+  if (!response.ok) {
+    throw new Error(`Не вдалося завантажити ${url}: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function boot() {
+  try {
+    const [packData, eventsData] = await Promise.all([
+      fetchJSON('/SL_Summer2025_pack.json'),
+      fetchJSON('/sunday_summer_2025_EVENTS.json')
+    ]);
+    PACK = packData;
+    EVENTS = eventsData;
+    topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {});
+    renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
+    renderPodium(topPlayers);
+    renderLeaderboard(topPlayers);
+    bindTableControls();
+    bindProfile();
+  } catch (error) {
+    console.error('[summer2025] boot failed', error);
+    if (metricsGrid) {
+      metricsGrid.innerHTML = '<p class="error">Не вдалося завантажити дані сезону.</p>';
+    }
+  }
+}
+
+boot();

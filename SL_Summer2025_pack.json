@@ -623,6 +623,8 @@
     { "player": "Den", "season_points": 311, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
     { "player": "Люся", "season_points": 291, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
     { "player": "Nata", "season_points": 261, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 }
-    /* … решта гравців зі спрощеними полями, як і раніше (очки+ранг; за потреби додам повні) */
-  ]
+  ],
+  "notes": {
+    "allPlayers": "Решта гравців подані у спрощеному форматі (очки та ранг); за потреби можна додати повні дані."
+  }
 }

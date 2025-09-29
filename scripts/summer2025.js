@@ -8,6 +8,36 @@ const playerKoans =
     ? window.playerKoans
     : {};
 
+function normName(value, aliasMap = {}) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const lookup = trimmed.toLowerCase();
+  for (const [canonicalRaw, aliases] of Object.entries(aliasMap ?? {})) {
+    const canonical = typeof canonicalRaw === 'string' ? canonicalRaw.trim() : '';
+    if (!canonical) {
+      continue;
+    }
+    if (canonical.toLowerCase() === lookup) {
+      return canonical;
+    }
+    if (
+      Array.isArray(aliases) &&
+      aliases.some((alias) => typeof alias === 'string' && alias.trim().toLowerCase() === lookup)
+    ) {
+      return canonical;
+    }
+  }
+
+  return trimmed;
+}
+
 function normalizeString(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
@@ -697,20 +727,105 @@ function renderLeaderboard(players = topPlayers) {
   });
 }
 
-function buildPlayerChart(timeline, mode = 'delta') {
-  if (!timeline || !Array.isArray(timeline.scores) || timeline.scores.length === 0) {
-    return '<p>Немає даних для графіка.</p>';
+function buildPlayerTimelineData(player, events, aliasMap = {}) {
+  const empty = { delta: [], cumulative: [] };
+  if (!player || !events) {
+    return empty;
   }
 
-  const baseValues = timeline.scores.map((value) => toFiniteNumber(value) ?? 0);
-  const values =
-    mode === 'cum'
-      ? baseValues.reduce((acc, value, index) => {
-          const previous = index === 0 ? 0 : acc[index - 1];
-          acc.push(previous + value);
-          return acc;
-        }, [])
-      : baseValues;
+  const candidateNames = new Set();
+  const addCandidate = (value) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) {
+        candidateNames.add(trimmed);
+      }
+    }
+  };
+
+  addCandidate(player?.nickname);
+  addCandidate(player?.canonicalNickname);
+  const aliases = Array.isArray(player?.aliases) ? player.aliases : [];
+  aliases.forEach(addCandidate);
+
+  if (candidateNames.size === 0) {
+    return empty;
+  }
+
+  const normalizedCandidates = new Set();
+  candidateNames.forEach((name) => {
+    const normalized = normName(name, aliasMap);
+    if (normalized) {
+      normalizedCandidates.add(normalized);
+    }
+  });
+
+  if (normalizedCandidates.size === 0) {
+    return empty;
+  }
+
+  const pointsLog = Array.isArray(events?.pointsLog) ? events.pointsLog : [];
+  const entries = pointsLog
+    .map((entry, index) => {
+      const normalizedPlayer = normName(entry?.player, aliasMap);
+      if (!normalizedPlayer || !normalizedCandidates.has(normalizedPlayer)) {
+        return null;
+      }
+
+      const dateRaw = typeof entry?.date === 'string' ? entry.date.trim() : '';
+      const deltaValue = toFiniteNumber(entry?.delta);
+      if (!dateRaw || deltaValue === null) {
+        return null;
+      }
+
+      const timestamp = Date.parse(dateRaw);
+      return {
+        x: dateRaw,
+        y: deltaValue,
+        timestamp: Number.isFinite(timestamp) ? timestamp : null,
+        order: index
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.timestamp !== b.timestamp) {
+        if (a.timestamp === null) {
+          return 1;
+        }
+        if (b.timestamp === null) {
+          return -1;
+        }
+        return a.timestamp - b.timestamp;
+      }
+      return a.order - b.order;
+    });
+
+  if (entries.length === 0) {
+    return empty;
+  }
+
+  const deltaSeries = entries.map(({ x, y }) => ({ x, y }));
+  const cumulativeSeries = [];
+  let runningTotal = 0;
+  for (const point of entries) {
+    runningTotal += point.y;
+    cumulativeSeries.push({ x: point.x, y: runningTotal });
+  }
+
+  return { delta: deltaSeries, cumulative: cumulativeSeries };
+}
+
+function buildPlayerChart(dataset, mode = 'delta') {
+  if (!dataset || typeof dataset !== 'object') {
+    return '<p>ще немає змін очок за датами</p>';
+  }
+
+  const series = mode === 'cum' ? dataset.cumulative : dataset.delta;
+  if (!Array.isArray(series) || series.length === 0) {
+    return '<p>ще немає змін очок за датами</p>';
+  }
+
+  const values = series.map((point) => toFiniteNumber(point?.y) ?? 0);
 
   const width = 360;
   const height = 240;
@@ -734,10 +849,10 @@ function buildPlayerChart(timeline, mode = 'delta') {
     `${width - paddingX},${height - paddingY}`
   ].join(' ');
 
-  const description = values
-    .map((value, index) => {
-      const label = mode === 'cum' ? 'Сумарно' : 'Раунд';
-      return `${label} ${index + 1}: ${formatNumberValue(Math.round(value))}`;
+  const description = series
+    .map((point, index) => {
+      const label = mode === 'cum' ? 'Сумарно' : 'Δ';
+      return `${label} ${point.x}: ${formatNumberValue(values[index])}`;
     })
     .join(', ');
 
@@ -879,8 +994,8 @@ function renderModal(player) {
         .join(' · ')}.</p>`
     : '';
 
-  const timeline = player?.timeline ?? null;
-  const hasTimeline = Array.isArray(timeline?.scores) && timeline.scores.length > 0;
+  const timeline = buildPlayerTimelineData(player, EVENTS, PACK?.aliases ?? {});
+  const hasTimeline = Array.isArray(timeline?.delta) && timeline.delta.length > 0;
   const defaultChartMode = 'delta';
   const chartControlsMarkup = hasTimeline
     ? `<div class="chart-mode-switch" role="radiogroup" aria-label="Режим графіка">
@@ -890,7 +1005,7 @@ function renderModal(player) {
     : '';
   const chartMarkup = hasTimeline
     ? buildPlayerChart(timeline, defaultChartMode)
-    : '<p>Немає даних для графіка.</p>';
+    : '<p>ще немає змін очок за датами</p>';
 
   const highlightsMarkup =
     Array.isArray(player?.highlights) && player.highlights.length > 0

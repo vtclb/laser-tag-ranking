@@ -552,15 +552,15 @@ function getSortValue(player, sortKey) {
       return toFiniteNumber(player.season_points ?? player.totalPoints);
     case 'games':
       return toFiniteNumber(player.games);
+    case 'wins':
+      return toFiniteNumber(player.wins);
+    case 'losses':
+      return toFiniteNumber(player.losses);
     case 'rounds':
       return toFiniteNumber(player.rounds);
     case 'winRate':
     case 'roundWR':
       return toFiniteNumber(player[sortKey]);
-    case 'win_streak':
-      return toFiniteNumber(player.win_streak ?? player.bestStreak);
-    case 'loss_streak':
-      return toFiniteNumber(player.loss_streak ?? player.lossStreak);
     case 'MVP':
       return toFiniteNumber(player.MVP);
     case 'rankTier': {
@@ -638,7 +638,7 @@ function renderLeaderboard(players = topPlayers) {
 
   if (filtered.length === 0) {
     const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = `<td colspan="9">Немає гравців за цим запитом</td>`;
+    emptyRow.innerHTML = `<td colspan="10">Немає гравців за цим запитом</td>`;
     leaderboardBody.append(emptyRow);
     return;
   }
@@ -681,9 +681,6 @@ function renderLeaderboard(players = topPlayers) {
     if (drawsLabel !== FALLBACK) {
       gamesTooltipParts.push(`Нічиї: ${drawsLabel}`);
     }
-    if (winRateLabel !== FALLBACK) {
-      gamesTooltipParts.push(`Win rate: ${winRateLabel}`);
-    }
     const gamesTooltip = gamesTooltipParts.join(' · ');
 
     const roundsTooltipParts = [];
@@ -694,6 +691,15 @@ function renderLeaderboard(players = topPlayers) {
       roundsTooltipParts.push(`Поразки: ${roundLossesLabel}`);
     }
     const roundsTooltip = roundsTooltipParts.join(' · ');
+
+    const winRateTooltipParts = [];
+    if (winStreakLabel !== FALLBACK) {
+      winRateTooltipParts.push(`Стрік перемог: ${winStreakLabel}`);
+    }
+    if (lossStreakLabel !== FALLBACK) {
+      winRateTooltipParts.push(`Стрік поразок: ${lossStreakLabel}`);
+    }
+    const winRateTooltip = winRateTooltipParts.join(' · ');
 
     const playerNickname = typeof player?.nickname === 'string' ? player.nickname : '';
 
@@ -708,11 +714,14 @@ function renderLeaderboard(players = topPlayers) {
       <td>
         <span ${gamesTooltip ? `title="${gamesTooltip}"` : ''}>${gamesLabel}</span>
       </td>
+      <td>${winsLabel}</td>
+      <td>${lossesLabel}</td>
+      <td>
+        <span ${winRateTooltip ? `title="${winRateTooltip}"` : ''}>${winRateLabel}</span>
+      </td>
       <td>
         <span ${roundsTooltip ? `title="${roundsTooltip}"` : ''}>${roundsLabel}</span>
       </td>
-      <td>${winStreakLabel}</td>
-      <td>${lossStreakLabel}</td>
       <td>${mvpLabel}</td>
       <td>
         <span class="role-cell">

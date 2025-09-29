@@ -1005,11 +1005,11 @@ function renderModal(player) {
 
   const timeline = buildPlayerTimelineData(player, EVENTS, PACK?.aliases ?? {});
   const hasTimeline = Array.isArray(timeline?.delta) && timeline.delta.length > 0;
-  const defaultChartMode = 'delta';
+  const defaultChartMode = 'cum';
   const chartControlsMarkup = hasTimeline
     ? `<div class="chart-mode-switch" role="radiogroup" aria-label="Режим графіка">
-        <label><input type="radio" name="chart-mode" value="delta" checked /> Δ очки</label>
-        <label><input type="radio" name="chart-mode" value="cum" /> Σ очки</label>
+        <label><input type="radio" name="chart-mode" value="delta" /> Δ очки</label>
+        <label><input type="radio" name="chart-mode" value="cum" checked /> Σ очки</label>
       </div>`
     : '';
   const chartMarkup = hasTimeline

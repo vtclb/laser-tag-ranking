@@ -1116,11 +1116,34 @@ async function fetchJSON(url, options = {}) {
   return response.json();
 }
 
+function resolveSeasonAsset(pathname) {
+  if (typeof pathname !== 'string' || !pathname) {
+    return pathname;
+  }
+
+  if (typeof window !== 'undefined') {
+    const baseUrl =
+      (typeof document !== 'undefined' && document.baseURI) ||
+      window.location?.href ||
+      window.location?.origin;
+
+    if (baseUrl) {
+      try {
+        return new URL(pathname, baseUrl).href;
+      } catch (error) {
+        console.warn('[summer2025] failed to resolve asset URL', pathname, error);
+      }
+    }
+  }
+
+  return pathname;
+}
+
 async function boot() {
   try {
     const [packData, eventsData] = await Promise.all([
-      fetchJSON('/SL_Summer2025_pack.json'),
-      fetchJSON('/sunday_summer_2025_EVENTS.json')
+      fetchJSON(resolveSeasonAsset('SL_Summer2025_pack.json')),
+      fetchJSON(resolveSeasonAsset('sunday_summer_2025_EVENTS.json'))
     ]);
     PACK = packData;
     EVENTS = eventsData;

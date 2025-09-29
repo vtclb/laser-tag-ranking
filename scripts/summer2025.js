@@ -1,7 +1,7 @@
 'use strict';
 
 const FALLBACK = '—';
-const PLAYER_KOAN_FALLBACK = 'Цитата буде додана пізніше.';
+const PLAYER_KOAN_FALLBACK = 'Коли промінь шукає ціль — ціль уже шукає укриття.';
 
 const playerKoans =
   typeof window !== 'undefined' && window.playerKoans && typeof window.playerKoans === 'object'

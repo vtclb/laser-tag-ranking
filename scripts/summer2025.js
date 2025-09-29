@@ -1246,14 +1246,32 @@ function resolveSeasonAsset(pathname) {
   }
 
   if (typeof window !== 'undefined') {
-    const baseUrl =
-      (typeof document !== 'undefined' && document.baseURI) ||
-      window.location?.href ||
-      window.location?.origin;
+    const directoryHref = (() => {
+      if (typeof document !== 'undefined' && document.baseURI) {
+        try {
+          return new URL('.', document.baseURI).href;
+        } catch (error) {
+          console.warn('[summer2025] failed to resolve document.baseURI', error);
+        }
+      }
 
-    if (baseUrl) {
+      const { origin, pathname: currentPath } = window.location ?? {};
+      if (origin) {
+        try {
+          const base = currentPath ? `${origin}${currentPath}` : origin;
+          return new URL('.', base).href;
+        } catch (error) {
+          console.warn('[summer2025] failed to resolve window.location', error);
+          return `${origin}/`;
+        }
+      }
+
+      return undefined;
+    })();
+
+    if (directoryHref) {
       try {
-        return new URL(pathname, baseUrl).href;
+        return new URL(pathname, directoryHref).href;
       } catch (error) {
         console.warn('[summer2025] failed to resolve asset URL', pathname, error);
       }

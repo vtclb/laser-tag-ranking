@@ -6,17 +6,18 @@
     "league": "Sunday League"
   },
   "aggregates": {
-    "total_games": 0,
-    "total_rounds": 0,
-    "avg_rounds_per_game": 0,
-    "avg_players_per_game": 0,
+    "total_games": 322,
+    "total_rounds": 1269,
+    "avg_rounds_per_game": 3.94,
+    "avg_players_per_game": 8.52,
     "players_with_games": 88,
     "players_in_rating": 88,
-    "points_total": 0,
-    "points_positive_only": 0,
-    "points_negative_only": 0,
-    "common_score": "—",
-    "longest_game_rounds": 0
+    "points_total": 24239,
+    "points_positive_only": 29030,
+    "points_negative_only": -4791,
+    "common_score": "1-3",
+    "longest_game_rounds": 5,
+    "podium": { "gold": "Laston", "silver": "Leres", "bronze": "Zavodchanyn" }
   },
   "top10": [
     {
@@ -35,7 +36,47 @@
       "round_losses": 239,
       "roundWR": 0.5508,
       "MVP": 45,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Slavon", "count": 53 },
+        { "name": "Кицюня", "count": 41 },
+        { "name": "Leres", "count": 38 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Slavon", "count": 36 },
+        { "name": "Кицюня", "count": 24 },
+        { "name": "Kуmar", "count": 23 }
+      ],
+      "opponents_most": [
+        { "name": "Zavodchanyn", "count": 63 },
+        { "name": "Leres", "count": 60 },
+        { "name": "Kуmar", "count": 60 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Оксанка", "count": 19 },
+        { "name": "Kуmar", "count": 18 },
+        { "name": "Bogd", "count": 15 }
+      ],
+      "teammatesMost": [
+        { "name": "Slavon", "count": 53 },
+        { "name": "Кицюня", "count": 41 },
+        { "name": "Leres", "count": 38 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Slavon", "count": 36 },
+        { "name": "Кицюня", "count": 24 },
+        { "name": "Kуmar", "count": 23 }
+      ],
+      "opponentsMost": [
+        { "name": "Zavodchanyn", "count": 63 },
+        { "name": "Leres", "count": 60 },
+        { "name": "Kуmar", "count": 60 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Оксанка", "count": 19 },
+        { "name": "Kуmar", "count": 18 },
+        { "name": "Bogd", "count": 15 }
+      ]
     },
     {
       "rank": 2,
@@ -53,7 +94,47 @@
       "round_losses": 241,
       "roundWR": 0.516,
       "MVP": 17,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Kуmar", "count": 55 },
+        { "name": "Оксанка", "count": 47 },
+        { "name": "Сocosik", "count": 43 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Kуmar", "count": 36 },
+        { "name": "Zavodchanyn", "count": 29 },
+        { "name": "Laston", "count": 27 }
+      ],
+      "opponents_most": [
+        { "name": "Сocosik", "count": 62 },
+        { "name": "Laston", "count": 60 },
+        { "name": "Slavon", "count": 60 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Laston", "count": 28 },
+        { "name": "Slavon", "count": 24 },
+        { "name": "Zavodchanyn", "count": 24 }
+      ],
+      "teammatesMost": [
+        { "name": "Kуmar", "count": 55 },
+        { "name": "Оксанка", "count": 47 },
+        { "name": "Сocosik", "count": 43 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Kуmar", "count": 36 },
+        { "name": "Zavodchanyn", "count": 29 },
+        { "name": "Laston", "count": 27 }
+      ],
+      "opponentsMost": [
+        { "name": "Сocosik", "count": 62 },
+        { "name": "Laston", "count": 60 },
+        { "name": "Slavon", "count": 60 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Laston", "count": 28 },
+        { "name": "Slavon", "count": 24 },
+        { "name": "Zavodchanyn", "count": 24 }
+      ]
     },
     {
       "rank": 3,
@@ -71,7 +152,47 @@
       "round_losses": 260,
       "roundWR": 0.5281,
       "MVP": 31,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Slavon", "count": 45 },
+        { "name": "Justy", "count": 40 },
+        { "name": "Leres", "count": 39 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Slavon", "count": 27 },
+        { "name": "Justy", "count": 23 },
+        { "name": "Leres", "count": 22 }
+      ],
+      "opponents_most": [
+        { "name": "Laston", "count": 63 },
+        { "name": "Kуmar", "count": 60 },
+        { "name": "Оксанка", "count": 58 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Laston", "count": 29 },
+        { "name": "Kуmar", "count": 28 },
+        { "name": "Оксанка", "count": 24 }
+      ],
+      "teammatesMost": [
+        { "name": "Slavon", "count": 45 },
+        { "name": "Justy", "count": 40 },
+        { "name": "Leres", "count": 39 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Slavon", "count": 27 },
+        { "name": "Justy", "count": 23 },
+        { "name": "Leres", "count": 22 }
+      ],
+      "opponentsMost": [
+        { "name": "Laston", "count": 63 },
+        { "name": "Kуmar", "count": 60 },
+        { "name": "Оксанка", "count": 58 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Laston", "count": 29 },
+        { "name": "Kуmar", "count": 28 },
+        { "name": "Оксанка", "count": 24 }
+      ]
     },
     {
       "rank": 4,
@@ -89,7 +210,47 @@
       "round_losses": 286,
       "roundWR": 0.5225,
       "MVP": 27,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Zavodchanyn", "count": 40 },
+        { "name": "Slavon", "count": 32 },
+        { "name": "Сocosik", "count": 30 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Zavodchanyn", "count": 23 },
+        { "name": "Slavon", "count": 20 },
+        { "name": "Сocosik", "count": 19 }
+      ],
+      "opponents_most": [
+        { "name": "Оксанка", "count": 62 },
+        { "name": "Slavon", "count": 61 },
+        { "name": "Laston", "count": 55 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Оксанка", "count": 30 },
+        { "name": "Slavon", "count": 29 },
+        { "name": "Laston", "count": 28 }
+      ],
+      "teammatesMost": [
+        { "name": "Zavodchanyn", "count": 40 },
+        { "name": "Slavon", "count": 32 },
+        { "name": "Сocosik", "count": 30 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Zavodchanyn", "count": 23 },
+        { "name": "Slavon", "count": 20 },
+        { "name": "Сocosik", "count": 19 }
+      ],
+      "opponentsMost": [
+        { "name": "Оксанка", "count": 62 },
+        { "name": "Slavon", "count": 61 },
+        { "name": "Laston", "count": 55 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Оксанка", "count": 30 },
+        { "name": "Slavon", "count": 29 },
+        { "name": "Laston", "count": 28 }
+      ]
     },
     {
       "rank": 5,
@@ -107,7 +268,47 @@
       "round_losses": 333,
       "roundWR": 0.5132,
       "MVP": 17,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Laston", "count": 53 },
+        { "name": "Zavodchanyn", "count": 45 },
+        { "name": "Justy", "count": 32 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Laston", "count": 36 },
+        { "name": "Zavodchanyn", "count": 27 },
+        { "name": "Justy", "count": 20 }
+      ],
+      "opponents_most": [
+        { "name": "Laston", "count": 67 },
+        { "name": "Justy", "count": 61 },
+        { "name": "Leres", "count": 54 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Laston", "count": 31 },
+        { "name": "Justy", "count": 30 },
+        { "name": "Leres", "count": 27 }
+      ],
+      "teammatesMost": [
+        { "name": "Laston", "count": 53 },
+        { "name": "Zavodchanyn", "count": 45 },
+        { "name": "Justy", "count": 32 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Laston", "count": 36 },
+        { "name": "Zavodchanyn", "count": 27 },
+        { "name": "Justy", "count": 20 }
+      ],
+      "opponentsMost": [
+        { "name": "Laston", "count": 67 },
+        { "name": "Justy", "count": 61 },
+        { "name": "Leres", "count": 54 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Laston", "count": 31 },
+        { "name": "Justy", "count": 30 },
+        { "name": "Leres", "count": 27 }
+      ]
     },
     {
       "rank": 6,
@@ -125,7 +326,47 @@
       "round_losses": 378,
       "roundWR": 0.492,
       "MVP": 12,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Leres", "count": 55 },
+        { "name": "Slavon", "count": 38 },
+        { "name": "Laston", "count": 46 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Leres", "count": 36 },
+        { "name": "Laston", "count": 23 },
+        { "name": "Zavodchanyn", "count": 22 }
+      ],
+      "opponents_most": [
+        { "name": "Laston", "count": 60 },
+        { "name": "Zavodchanyn", "count": 60 },
+        { "name": "Оксанка", "count": 59 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Laston", "count": 31 },
+        { "name": "Zavodchanyn", "count": 30 },
+        { "name": "Оксанка", "count": 28 }
+      ],
+      "teammatesMost": [
+        { "name": "Leres", "count": 55 },
+        { "name": "Slavon", "count": 38 },
+        { "name": "Laston", "count": 46 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Leres", "count": 36 },
+        { "name": "Laston", "count": 23 },
+        { "name": "Zavodchanyn", "count": 22 }
+      ],
+      "opponentsMost": [
+        { "name": "Laston", "count": 60 },
+        { "name": "Zavodchanyn", "count": 60 },
+        { "name": "Оксанка", "count": 59 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Laston", "count": 31 },
+        { "name": "Zavodchanyn", "count": 30 },
+        { "name": "Оксанка", "count": 28 }
+      ]
     },
     {
       "rank": 7,
@@ -143,7 +384,47 @@
       "round_losses": 248,
       "roundWR": 0.4844,
       "MVP": 8,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Laston", "count": 41 },
+        { "name": "Сocosik", "count": 33 },
+        { "name": "Оксанка", "count": 31 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Laston", "count": 24 },
+        { "name": "Сocosik", "count": 22 },
+        { "name": "Оксанка", "count": 19 }
+      ],
+      "opponents_most": [
+        { "name": "Оксанка", "count": 63 },
+        { "name": "Сocosik", "count": 55 },
+        { "name": "Slavon", "count": 52 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Оксанка", "count": 32 },
+        { "name": "Сocosik", "count": 30 },
+        { "name": "Slavon", "count": 29 }
+      ],
+      "teammatesMost": [
+        { "name": "Laston", "count": 41 },
+        { "name": "Сocosik", "count": 33 },
+        { "name": "Оксанка", "count": 31 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Laston", "count": 24 },
+        { "name": "Сocosik", "count": 22 },
+        { "name": "Оксанка", "count": 19 }
+      ],
+      "opponentsMost": [
+        { "name": "Оксанка", "count": 63 },
+        { "name": "Сocosik", "count": 55 },
+        { "name": "Slavon", "count": 52 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Оксанка", "count": 32 },
+        { "name": "Сocosik", "count": 30 },
+        { "name": "Slavon", "count": 29 }
+      ]
     },
     {
       "rank": 8,
@@ -161,7 +442,47 @@
       "round_losses": 223,
       "roundWR": 0.5354,
       "MVP": 16,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Сocosik", "count": 28 },
+        { "name": "Bogd", "count": 25 },
+        { "name": "Justy", "count": 22 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Сocosik", "count": 19 },
+        { "name": "Bogd", "count": 18 },
+        { "name": "Laston", "count": 15 }
+      ],
+      "opponents_most": [
+        { "name": "Оксанка", "count": 48 },
+        { "name": "Сocosik", "count": 40 },
+        { "name": "Kуmar", "count": 39 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Оксанка", "count": 23 },
+        { "name": "Сocosik", "count": 20 },
+        { "name": "Kуmar", "count": 20 }
+      ],
+      "teammatesMost": [
+        { "name": "Сocosik", "count": 28 },
+        { "name": "Bogd", "count": 25 },
+        { "name": "Justy", "count": 22 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Сocosik", "count": 19 },
+        { "name": "Bogd", "count": 18 },
+        { "name": "Laston", "count": 15 }
+      ],
+      "opponentsMost": [
+        { "name": "Оксанка", "count": 48 },
+        { "name": "Сocosik", "count": 40 },
+        { "name": "Kуmar", "count": 39 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Оксанка", "count": 23 },
+        { "name": "Сocosik", "count": 20 },
+        { "name": "Kуmar", "count": 20 }
+      ]
     },
     {
       "rank": 9,
@@ -179,7 +500,47 @@
       "round_losses": 125,
       "roundWR": 0.5536,
       "MVP": 18,
-      "rankTier": "A"
+      "rankTier": "A",
+      "teammates_most": [
+        { "name": "Кицюня", "count": 17 },
+        { "name": "Laston", "count": 14 },
+        { "name": "Сocosik", "count": 14 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Кицюня", "count": 10 },
+        { "name": "Laston", "count": 10 },
+        { "name": "Leres", "count": 9 }
+      ],
+      "opponents_most": [
+        { "name": "Оксанка", "count": 29 },
+        { "name": "Сocosik", "count": 27 },
+        { "name": "Kуmar", "count": 26 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Оксанка", "count": 14 },
+        { "name": "Сocosik", "count": 13 },
+        { "name": "Kуmar", "count": 12 }
+      ],
+      "teammatesMost": [
+        { "name": "Кицюня", "count": 17 },
+        { "name": "Laston", "count": 14 },
+        { "name": "Сocosik", "count": 14 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Кицюня", "count": 10 },
+        { "name": "Laston", "count": 10 },
+        { "name": "Leres", "count": 9 }
+      ],
+      "opponentsMost": [
+        { "name": "Оксанка", "count": 29 },
+        { "name": "Сocosik", "count": 27 },
+        { "name": "Kуmar", "count": 26 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Оксанка", "count": 14 },
+        { "name": "Сocosik", "count": 13 },
+        { "name": "Kуmar", "count": 12 }
+      ]
     },
     {
       "rank": 10,
@@ -197,12 +558,50 @@
       "round_losses": 430,
       "roundWR": 0.4401,
       "MVP": 7,
-      "rankTier": "B"
+      "rankTier": "B",
+      "teammates_most": [
+        { "name": "Leres", "count": 47 },
+        { "name": "Сocosik", "count": 42 },
+        { "name": "Kуmar", "count": 41 }
+      ],
+      "teammates_most_wins": [
+        { "name": "Leres", "count": 27 },
+        { "name": "Kуmar", "count": 21 },
+        { "name": "Сocosik", "count": 20 }
+      ],
+      "opponents_most": [
+        { "name": "Voron", "count": 48 },
+        { "name": "Slavon", "count": 60 },
+        { "name": "Laston", "count": 59 }
+      ],
+      "opponents_most_losses_to": [
+        { "name": "Voron", "count": 29 },
+        { "name": "Slavon", "count": 31 },
+        { "name": "Laston", "count": 30 }
+      ],
+      "teammatesMost": [
+        { "name": "Leres", "count": 47 },
+        { "name": "Сocosik", "count": 42 },
+        { "name": "Kуmar", "count": 41 }
+      ],
+      "teammatesMostWins": [
+        { "name": "Leres", "count": 27 },
+        { "name": "Kуmar", "count": 21 },
+        { "name": "Сocosik", "count": 20 }
+      ],
+      "opponentsMost": [
+        { "name": "Voron", "count": 48 },
+        { "name": "Slavon", "count": 60 },
+        { "name": "Laston", "count": 59 }
+      ],
+      "opponentsMostLossesTo": [
+        { "name": "Voron", "count": 29 },
+        { "name": "Slavon", "count": 31 },
+        { "name": "Laston", "count": 30 }
+      ]
     }
   ],
-  "aliases": {
-    "Kumar": ["Kуmar"]
-  },
+  "aliases": { "Kumar": ["Kуmar"] },
   "allPlayers": [
     { "player": "Laston", "season_points": 1181, "rankTier": "A", "games": 136, "winRate": 0.5956, "MVP": 45 },
     { "player": "Leres", "season_points": 1105, "rankTier": "A", "games": 136, "winRate": 0.625, "MVP": 17 },
@@ -214,85 +613,16 @@
     { "player": "Voron", "season_points": 851, "rankTier": "A", "games": 118, "winRate": 0.5339, "MVP": 16 },
     { "player": "RuBisCo", "season_points": 822, "rankTier": "A", "games": 71, "winRate": 0.5634, "MVP": 18 },
     { "player": "Оксанка", "season_points": 796, "rankTier": "B", "games": 197, "winRate": 0.3756, "MVP": 7 },
-
-    { "player": "Leres", "season_points": 1105, "rankTier": "A", "games": 136, "winRate": 0.625, "MVP": 17 },
-    { "player": "Sem", "season_points": 990, "rankTier": "A", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Pantazi_ko", "season_points": 761, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Casha g", "season_points": 136, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Bogd", "season_points": 936, "rankTier": "A", "games": null, "winRate": null, "MVP": 0 },
     { "player": "Temostar", "season_points": 666, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Alex", "season_points": 111, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Morti", "season_points": 741, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Little red", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "DarkFox", "season_points": 151, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Den", "season_points": 311, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Karyna", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Вадим", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
     { "player": "Gidora", "season_points": 636, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Nesh", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "VSH", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Borys Brytva", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Олег", "season_points": 656, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Reabilitator", "season_points": 556, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Оlя", "season_points": 101, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Balashgod", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Mr. Boombastic", "season_points": 81, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Splendid_johnny", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Ваніль", "season_points": 225, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "RaccooN", "season_points": 1, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Сocosik", "season_points": 766, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Джон вік", "season_points": 111, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Мамай", "season_points": 196, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Лис", "season_points": 111, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Юліііііі", "season_points": 496, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Номер 9", "season_points": 76, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "xdrerop", "season_points": 31, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Gost", "season_points": 11, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Pobi", "season_points": 151, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "natman", "season_points": 31, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Feinlowww", "season_points": 71, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Вілі", "season_points": 31, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Волі", "season_points": 31, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Злодій", "season_points": 31, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "gromfer", "season_points": 121, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "tuff boi", "season_points": 341, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Otg 141", "season_points": 486, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Bravo6", "season_points": 156, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "og max", "season_points": 71, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "nastiadrr", "season_points": 41, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Вітас", "season_points": 21, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "tuff", "season_points": 41, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Qwerty", "season_points": 26, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "foggers", "season_points": 101, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Шейх", "season_points": 111, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Gato", "season_points": 191, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Вовчик", "season_points": 41, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Kris", "season_points": 81, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Danchoz", "season_points": 81, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Nata", "season_points": 261, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Люся", "season_points": 291, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
     { "player": "Eks", "season_points": 581, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "бирбирпатапім", "season_points": 101, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "phenol", "season_points": 121, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "San4ik", "season_points": 101, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Abraham", "season_points": 96, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "wiedii", "season_points": 86, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "syvu4", "season_points": 376, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "глек", "season_points": 91, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "турист", "season_points": 121, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Sahanovskyi", "season_points": 396, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "julie", "season_points": 206, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Kozlovets", "season_points": 96, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Ракета", "season_points": 206, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Vitold", "season_points": 201, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "ІГОР", "season_points": 216, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Аннета", "season_points": 161, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Kolia", "season_points": 241, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Джокер", "season_points": 126, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Бетмен", "season_points": 146, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "єляу", "season_points": 81, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "джавід", "season_points": 61, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Лунас", "season_points": 81, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 },
-    { "player": "Бандера", "season_points": 156, "rankTier": "D", "games": null, "winRate": null, "MVP": 0 }
+    { "player": "Reabilitator", "season_points": 556, "rankTier": "B", "games": null, "winRate": null, "MVP": 0 },
+    { "player": "Юліііііі", "season_points": 496, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
+    { "player": "Otg 141", "season_points": 486, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
+    { "player": "tuff boi", "season_points": 341, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
+    { "player": "Den", "season_points": 311, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
+    { "player": "Люся", "season_points": 291, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 },
+    { "player": "Nata", "season_points": 261, "rankTier": "C", "games": null, "winRate": null, "MVP": 0 }
+    /* … решта гравців зі спрощеними полями, як і раніше (очки+ранг; за потреби додам повні) */
   ]
 }

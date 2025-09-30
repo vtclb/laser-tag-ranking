@@ -1,0 +1,11 @@
+{
+  "name": "laser-tag-ranking",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:summer2025-og": "node scripts/summer2025-og.js"
+  },
+  "dependencies": {
+    "sharp": "^0.33.3"
+  }
+}

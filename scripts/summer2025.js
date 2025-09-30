@@ -1,12 +1,6 @@
 'use strict';
 
 const FALLBACK = '—';
-const PLAYER_KOAN_FALLBACK = 'Коли промінь шукає ціль — ціль уже шукає укриття.';
-
-const playerKoans =
-  typeof window !== 'undefined' && window.playerKoans && typeof window.playerKoans === 'object'
-    ? window.playerKoans
-    : {};
 
 function normName(value, aliasMap = {}) {
   if (typeof value !== 'string') {
@@ -971,20 +965,6 @@ function renderModal(player) {
   const roundWinsLabel = formatNumberValue(player?.round_wins);
   const roundLossesLabel = formatNumberValue(player?.round_losses);
   const roundWinRateLabel = formatPercentValue(player?.roundWR, percentFormatter1);
-  const koanCandidates = [];
-  if (typeof player?.nickname === 'string' && player.nickname.trim()) {
-    koanCandidates.push(player.nickname.trim());
-  }
-  if (typeof player?.canonicalNickname === 'string' && player.canonicalNickname.trim()) {
-    koanCandidates.push(player.canonicalNickname.trim());
-  }
-  const koanText = koanCandidates
-    .map((name) =>
-      playerKoans && typeof playerKoans[name] === 'string' ? playerKoans[name].trim() : ''
-    )
-    .find((value) => typeof value === 'string' && value);
-  const koanDisplay = koanText && typeof koanText === 'string' ? koanText : PLAYER_KOAN_FALLBACK;
-
   const recentScores = Array.isArray(player?.recentScores) ? player.recentScores : [];
   const hasRecentScores = recentScores.length > 0;
   const averageRecent =
@@ -1015,11 +995,6 @@ function renderModal(player) {
   const chartMarkup = hasTimeline
     ? buildPlayerChart(timeline, defaultChartMode)
     : '<p>ще немає змін очок за датами</p>';
-
-  const highlightsMarkup =
-    Array.isArray(player?.highlights) && player.highlights.length > 0
-      ? player.highlights.map((item) => `<li>${item}</li>`).join('')
-      : '<li>—</li>';
 
   modalBody.innerHTML = `
     <section>
@@ -1080,10 +1055,6 @@ function renderModal(player) {
       </div>
     </section>
     <section>
-      <h3>Цитата</h3>
-      <p>${koanDisplay}</p>
-    </section>
-    <section>
       <h3>Останні матчі</h3>
       ${chartControlsMarkup}
       <div class="chart-wrapper" data-chart-wrapper>
@@ -1113,13 +1084,6 @@ function renderModal(player) {
         <h4>Поразок від</h4>
         ${renderPairList(player?.opponentsMostLosses, 'opponents-losses')}
       </div>
-    </section>
-    <section>
-      <h3>Фішки гравця</h3>
-      <ul class="detail-list">
-        ${highlightsMarkup}
-      </ul>
-      <p>${player?.story ?? FALLBACK}</p>
     </section>
   `;
 

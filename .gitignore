@@ -1,2 +1,8 @@
 # Ignore test HTML files
 test*.html
+
+# Generated social preview for summer 2025
+assets/summer2025-table-preview.png
+
+# Dependencies installed locally
+node_modules/

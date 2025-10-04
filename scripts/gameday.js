@@ -562,12 +562,27 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
     const parsedGames = games
       .filter(g => normalizeLeagueForFilter(g.League) === leagueSel.value)
       .map(parseGameRow)
-      .filter(g => g.timestamp);
+      .filter(g => g.timestamp || g.date);
+
+    const getSortTime = (match) => {
+      if(match.timestamp) return match.timestamp.getTime();
+      if(match.date){
+        const parsed = new Date(match.date);
+        if(!isNaN(parsed)) return parsed.getTime();
+      }
+      return null;
+    };
 
     parsedGames.sort((a,b)=>{
-      if(a.timestamp && b.timestamp){
-        const diff = b.timestamp - a.timestamp;
+      const aTime = getSortTime(a);
+      const bTime = getSortTime(b);
+      if(aTime !== null && bTime !== null){
+        const diff = bTime - aTime;
         if(diff) return diff;
+      }else if(bTime !== null){
+        return 1;
+      }else if(aTime !== null){
+        return -1;
       }
       return ((+b.id || 0) - (+a.id || 0));
     });

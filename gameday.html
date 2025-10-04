@@ -96,6 +96,36 @@
     tbody tr:nth-child(odd){ background:rgba(255,255,255,0.05); }
     .up   { color:lime; }
     .down { color:red; }
+    .rank-header {
+      white-space: nowrap;
+    }
+    .rank-change-placeholder {
+      display: inline-flex;
+      width: 1.5rem;
+      justify-content: center;
+      color: rgba(255,255,255,0.3);
+      margin-left: 0.3rem;
+    }
+    .rank-cell {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      white-space: nowrap;
+    }
+    .rank-cell .rank-change-icon {
+      width: 1.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .rank-change-icon.up   { color: lime; }
+    .rank-change-icon.down { color: #ff4d4f; }
+    .rank-change-icon.same { color: #ffd700; }
+    .awards-cell {
+      font-size: 0.8rem;
+      color: #ffd700;
+      letter-spacing: 0.02em;
+    }
     .avatar-img { width:40px; height:40px; object-fit:cover; }
     .nick-S { color: magenta; }
     .nick-A { color: red; }
@@ -155,7 +185,18 @@
       <h2>Поточні гравці</h2>
       <div class="table-container">
         <table>
-          <thead><tr><th>Позиція (попередня)</th><th>Аватар</th><th>Нік</th><th>Бали</th><th>Ігор</th><th>Перемоги</th><th>Зміна</th></tr></thead>
+          <thead>
+            <tr>
+              <th class="rank-header">Позиція (попередня)<span class="rank-change-placeholder" aria-hidden="true">⬍</span></th>
+              <th>Аватар</th>
+              <th>Нік</th>
+              <th>Бали</th>
+              <th>Ігор</th>
+              <th>Перемоги</th>
+              <th>Нагороди (MVP/🥈/🥉)</th>
+              <th>Зміна</th>
+            </tr>
+          </thead>
           <tbody id="players"></tbody>
         </table>
       </div>

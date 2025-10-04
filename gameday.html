@@ -122,10 +122,99 @@
       color:#ffd700;
       font-size:1.1rem;
     }
+    .summary {
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(243, 156, 18, 0.4);
+      box-shadow: 0 0 15px rgba(243, 156, 18, 0.25);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 1.5rem;
+    }
+    .summary h2 {
+      margin-bottom: 0.75rem;
+      color: #f39c12;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .summary h3 {
+      font-size: 0.8rem;
+      margin: 1rem 0 0.5rem;
+      color: #f39c12;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+    .summary-card {
+      background: rgba(17, 17, 17, 0.75);
+      border: 1px solid rgba(255, 215, 0, 0.15);
+      border-radius: 8px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .summary-label {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.75);
+      text-transform: uppercase;
+    }
+    .summary-value {
+      font-size: 1.4rem;
+      color: #fff;
+    }
+    .summary-lists {
+      margin-top: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .summary-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding: 0;
+    }
+    .summary-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.75rem;
+    }
+    .summary-player {
+      color: #fff;
+    }
+    .summary-badge {
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      background: rgba(243, 156, 18, 0.2);
+      border: 1px solid rgba(243, 156, 18, 0.65);
+      color: #f39c12;
+      font-size: 0.7rem;
+    }
+    .summary-list li.summary-empty {
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .hidden {
+      display: none !important;
+    }
     @media (max-width: 600px) {
       nav { font-size:0.75rem; }
       table { font-size:0.75rem; }
       select, input[type=date], .filters button { font-size:0.75rem; }
+      .summary-value { font-size: 1.05rem; }
     }
   </style>
 </head>
@@ -167,6 +256,54 @@
       </div>
     </section>
     </div>
+    <section id="summarySection" class="summary hidden">
+      <h2>Підсумки дня</h2>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Матчів зіграно</div>
+          <div class="summary-value" id="summaryMatches">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Учасників дня</div>
+          <div class="summary-value" id="summaryPlayers">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Сумарна дельта очок</div>
+          <div class="summary-value" id="summaryPoints">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Перемоги (усього)</div>
+          <div class="summary-value" id="summaryWins">0</div>
+        </div>
+      </div>
+      <div class="summary-lists">
+        <div class="summary-subblock">
+          <h3>Топ дельти</h3>
+          <ul class="summary-list" id="topDeltaList"></ul>
+        </div>
+        <div class="summary-subblock">
+          <h3>Топ перемог</h3>
+          <ul class="summary-list" id="topWinsList"></ul>
+        </div>
+      </div>
+    </section>
+    <section id="mvpSection" class="summary hidden">
+      <h2>Нагороди дня</h2>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">🏅 MVP</div>
+          <div class="summary-value" id="summaryMvp1">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">⭐ Срібло</div>
+          <div class="summary-value" id="summaryMvp2">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">⭐ Бронза</div>
+          <div class="summary-value" id="summaryMvp3">0</div>
+        </div>
+      </div>
+    </section>
   </div>
   <script src="scripts/toast.js?v=2025-09-19-avatars-2"></script>
   <script type="module" src="scripts/config.js?v=2025-09-19-avatars-2"></script>

@@ -561,6 +561,11 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       let prevPts = toNumber(stateBeforeDay[nick]?.points);
       if(!(nick in baseState)) prevPts = 0;
       const currPts = toNumber(stateAtDayEnd[nick]?.points || (prevPts + stats.delta));
+      const prevRank = Number.isFinite(prevRankMap[nick]) ? prevRankMap[nick] : '-';
+      const currRank = Number.isFinite(currRankMap[nick]) ? currRankMap[nick] : '-';
+      const rankDiff = (Number.isFinite(currRankMap[nick]) && Number.isFinite(prevRankMap[nick]))
+        ? currRankMap[nick] - prevRankMap[nick]
+        : 0;
       return {
         nick,
         prevPts,
@@ -568,8 +573,12 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
         delta: stats.delta,
         wins: stats.wins,
         games: stats.games,
-        prevRank: prevRankMap[nick] || '-',
-        currRank: currRankMap[nick] || '-',
+        mvp1: toNumber(stats.mvp1),
+        mvp2: toNumber(stats.mvp2),
+        mvp3: toNumber(stats.mvp3),
+        prevRank,
+        currRank,
+        rankDiff,
       };
     }).sort((a,b)=>{
       const rankA = Number.isFinite(a.currRank) ? a.currRank : Number.MAX_SAFE_INTEGER;
@@ -586,7 +595,23 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       const nClass='nick-'+rankLetterForPoints(p.pts);
 
       const rank=document.createElement('td');
-      rank.textContent=`${p.currRank} (${p.prevRank})`;
+      rank.className='rank-cell';
+      const rankText=document.createElement('span');
+      rankText.textContent=`${p.currRank} (${p.prevRank})`;
+      const rankIcon=document.createElement('span');
+      let rankIconClass='same';
+      let rankIconSymbol='😐';
+      if(p.rankDiff < 0){
+        rankIconClass='up';
+        rankIconSymbol='▲';
+      }else if(p.rankDiff > 0){
+        rankIconClass='down';
+        rankIconSymbol='▼';
+      }
+      rankIcon.className=`rank-change-icon ${rankIconClass}`;
+      rankIcon.textContent=rankIconSymbol;
+      rank.appendChild(rankText);
+      rank.appendChild(rankIcon);
 
       const tdAvatar=document.createElement('td');
       const img=document.createElement('img');
@@ -614,11 +639,15 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       const wins=document.createElement('td');
       wins.textContent=p.wins;
 
+      const awards=document.createElement('td');
+      awards.className='awards-cell';
+      awards.textContent=`${p.mvp1} / ${p.mvp2} / ${p.mvp3}`;
+
       const delta=document.createElement('td');
       delta.className=cls;
       delta.textContent=`${arrow} ${(p.delta>0?'+':'')+p.delta}`;
 
-      [rank,tdAvatar,nick,pts,games,wins,delta].forEach(td=>tr.appendChild(td));
+      [rank,tdAvatar,nick,pts,games,wins,awards,delta].forEach(td=>tr.appendChild(td));
       playersTb.appendChild(tr);
     });
 

@@ -15,10 +15,15 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
   };
 
   const MVP_FIELD_GROUPS = [
-    ['MVP', 'Mvp', 'mvp'],
-    ['MVP2', 'mvp2', 'MVP 2', 'mvp 2'],
-    ['MVP3', 'mvp3', 'MVP 3', 'mvp 3'],
+    ['MVP', 'Mvp', 'mvp', 'MVP1', 'mvp1', 'MVP 1', 'mvp 1'],
+    ['MVP2', 'mvp2', 'MVP 2', 'mvp 2', 'Silver MVP', 'MVP Silver'],
+    ['MVP3', 'mvp3', 'MVP 3', 'mvp 3', 'Bronze MVP', 'MVP Bronze'],
   ];
+
+  const RANK_SEARCH_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+  const MVP_BONUS = {1: 12, 2: 7, 3: 3};
+  const WIN_BONUS = 20;
+  const TEAM_KEYS = ['Team1', 'Team2', 'Team3', 'Team4'];
 
   const leagueSel = document.getElementById('league');
   const dateInput = document.getElementById('date');
@@ -52,6 +57,326 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
   function partPoints(rank){
     return {S:-14,A:-12,B:-10,C:-8,D:-6,E:-4,F:0}[rank] || 0;
+  }
+
+  function toNumber(v){
+    if(v === null || v === undefined || v === '') return 0;
+    const n = Number(String(v).replace(/[^0-9.+-]/g,''));
+    return isNaN(n) ? 0 : n;
+  }
+
+  function normalizeHeaderKey(k){
+    return String(k || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '')
+      .trim();
+  }
+
+  const RANKING_FIELD_ALIASES = {
+    points: ['points','pts','totalpoints','currentpoints'],
+    wins: ['wins','w','totalwins'],
+    delta: ['delta','daydelta','Δ','change'],
+    games: ['games','g','totalgames','matches'],
+    mvp1: ['mvp1','mvp','mvpgold','goldmvp','mvp_gold'],
+    mvp2: ['mvp2','mvpsilver','silvermvp','mvp_silver'],
+    mvp3: ['mvp3','mvpbronze','bronzemvp','mvp_bronze'],
+  };
+
+  function pickField(row, aliases){
+    const keys = Object.keys(row || {});
+    const map = {};
+    keys.forEach(k=>{ map[normalizeHeaderKey(k)] = k; });
+    for(const alias of aliases){
+      const norm = normalizeHeaderKey(alias);
+      if(norm && map[norm] !== undefined){
+        return row[map[norm]];
+      }
+    }
+    return undefined;
+  }
+
+  function cloneStateMap(src){
+    const out = {};
+    Object.keys(src || {}).forEach(nick => {
+      out[nick] = {...src[nick]};
+    });
+    return out;
+  }
+
+  function ensurePlayerState(map, nick){
+    if(!map[nick]){
+      map[nick] = { points: 0, wins: 0, delta: 0, games: 0, mvp1: 0, mvp2: 0, mvp3: 0 };
+    }else{
+      ['points','wins','delta','games','mvp1','mvp2','mvp3'].forEach(key=>{
+        map[nick][key] = toNumber(map[nick][key]);
+      });
+    }
+    return map[nick];
+  }
+
+  function parsePlayersField(raw){
+    return String(raw || '')
+      .replace(/\r?\n/g, ',')
+      .split(/[;,]/)
+      .map(s=>normName(s.trim()))
+      .filter(Boolean);
+  }
+
+  function parsePenalties(raw){
+    const res = {};
+    String(raw || '')
+      .split(/[;,]/)
+      .map(s=>s.trim())
+      .filter(Boolean)
+      .forEach(item => {
+        const [nickPart, valuePart] = item.split(':');
+        if(!nickPart || valuePart === undefined) return;
+        const nick = normName(nickPart.trim());
+        const val = parseInt(valuePart, 10);
+        if(!nick || isNaN(val)) return;
+        res[nick] = val;
+      });
+    return res;
+  }
+
+  function parseGameRow(row){
+    const teams = TEAM_KEYS.map((key, idx) => {
+      const members = parsePlayersField(row[key]);
+      return {
+        key: key.toLowerCase(),
+        label: key,
+        members,
+        order: idx + 1,
+      };
+    }).filter(t => t.members.length > 0);
+
+    const winnerRaw = String(row.Winner || row.winner || '').trim().toLowerCase();
+    let winnerKey = '';
+    if(['tie','draw','нічия','ничья'].includes(winnerRaw)){
+      winnerKey = 'tie';
+    }else if(winnerRaw){
+      const normalized = winnerRaw.replace(/\s+/g,'');
+      const found = teams.find(t => normalized.includes(String(t.order)) || normalized === t.key.toLowerCase());
+      if(found){
+        winnerKey = found.key;
+      }else{
+        if(normalized === 'team1' || normalized === '1'){ winnerKey = 'team1'; }
+        else if(normalized === 'team2' || normalized === '2'){ winnerKey = 'team2'; }
+        else if(normalized === 'team3' || normalized === '3'){ winnerKey = 'team3'; }
+        else if(normalized === 'team4' || normalized === '4'){ winnerKey = 'team4'; }
+      }
+    }
+
+    const penalties = parsePenalties(row.penalties || row.Penalties);
+
+    const mvpPlacements = {1: [], 2: [], 3: []};
+    MVP_FIELD_GROUPS.forEach((headers, idx) => {
+      const place = idx + 1;
+      headers.forEach(h => {
+        const raw = row[h];
+        if(!raw) return;
+        String(raw)
+          .split(/[;,]/)
+          .map(s => normName(s.trim()))
+          .filter(Boolean)
+          .forEach(nick => {
+            if(!mvpPlacements[place].includes(nick)){
+              mvpPlacements[place].push(nick);
+            }
+          });
+      });
+    });
+
+    let score1 = parseInt(row.Score1, 10);
+    let score2 = parseInt(row.Score2, 10);
+    if(isNaN(score1) || isNaN(score2)){
+      const mScore = String(row.Series || row.series || '').match(/(\d+)\D+(\d+)/);
+      if(mScore){
+        score1 = parseInt(mScore[1], 10);
+        score2 = parseInt(mScore[2], 10);
+      }
+    }
+
+    const tsRaw = row.Timestamp || row.timestamp || row.Date || row.date || '';
+    const ts = tsRaw ? new Date(tsRaw) : null;
+
+    return {
+      id: row.ID || row.Id || row.id || '',
+      rawTimestamp: tsRaw,
+      timestamp: ts && !isNaN(ts) ? ts : null,
+      date: parseDate(tsRaw),
+      teams,
+      winnerKey,
+      penalties,
+      mvpPlacements,
+      score1: isNaN(score1) ? null : score1,
+      score2: isNaN(score2) ? null : score2,
+    };
+  }
+
+  function computeKnownBonus(nick, match, teamByPlayer){
+    const teamKey = teamByPlayer[nick];
+    const isWinner = match.winnerKey && match.winnerKey !== 'tie' && match.winnerKey === teamKey;
+    const winBonus = isWinner ? WIN_BONUS : 0;
+    let mvpPlace = 0;
+    for(let place = 1; place <= 3; place++){
+      if(match.mvpPlacements[place]?.includes(nick)){
+        mvpPlace = place;
+        break;
+      }
+    }
+    const mvpBonus = MVP_BONUS[mvpPlace] || 0;
+    const penalty = match.penalties[nick] || 0;
+    return { winBonus, mvpBonus, penalty, mvpPlace };
+  }
+
+  function rewindMatch(stateMap, match, options = {}){
+    const { collectStats = false, statsMap = null, matchesList = null, pdfLinks = null, snapshotMap = null } = options;
+    const teamByPlayer = {};
+    match.teams.forEach(team => {
+      team.members.forEach(nick => {
+        if(!nick) return;
+        ensurePlayerState(stateMap, nick);
+        teamByPlayer[nick] = team.key;
+      });
+    });
+
+    const participants = Object.keys(teamByPlayer);
+    if(participants.length === 0) return;
+
+    const perPlayer = {};
+    participants.forEach(nick => {
+      const state = ensurePlayerState(stateMap, nick);
+      const afterPoints = toNumber(state.points);
+      const { winBonus, mvpBonus, penalty, mvpPlace } = computeKnownBonus(nick, match, teamByPlayer);
+      const known = winBonus + mvpBonus + penalty;
+
+      let chosenRank = '';
+      let partScore = 0;
+      let beforePoints = afterPoints;
+      for(const letter of RANK_SEARCH_ORDER){
+        const pScore = partPoints(letter);
+        const candidate = afterPoints - known - pScore;
+        const derived = rankLetterForPoints(candidate);
+        if(derived === letter){
+          chosenRank = letter;
+          partScore = pScore;
+          beforePoints = candidate;
+          break;
+        }
+      }
+      if(!chosenRank){
+        partScore = partPoints(rankLetterForPoints(afterPoints));
+        beforePoints = afterPoints - known - partScore;
+        chosenRank = rankLetterForPoints(beforePoints);
+      }
+
+      const delta = afterPoints - beforePoints;
+
+      perPlayer[nick] = {
+        nick,
+        beforePoints,
+        afterPoints,
+        delta,
+        rankBefore: chosenRank,
+        winBonus,
+        mvpBonus,
+        penalty,
+        mvpPlace,
+        teamKey: teamByPlayer[nick],
+      };
+
+      state.points = beforePoints;
+      if(winBonus > 0 && state.wins !== undefined){
+        state.wins = Math.max(0, toNumber(state.wins) - 1);
+      }
+      if(state.games !== undefined){
+        state.games = Math.max(0, toNumber(state.games) - 1);
+      }
+      if(mvpPlace === 1 && state.mvp1 !== undefined){
+        state.mvp1 = Math.max(0, toNumber(state.mvp1) - 1);
+      }
+      if(mvpPlace === 2 && state.mvp2 !== undefined){
+        state.mvp2 = Math.max(0, toNumber(state.mvp2) - 1);
+      }
+      if(mvpPlace === 3 && state.mvp3 !== undefined){
+        state.mvp3 = Math.max(0, toNumber(state.mvp3) - 1);
+      }
+    });
+
+    if(snapshotMap){
+      participants.forEach(nick => {
+        if(!snapshotMap[nick]){
+          snapshotMap[nick] = { points: perPlayer[nick].afterPoints, wins: 0, delta: 0, games: 0, mvp1: 0, mvp2: 0, mvp3: 0 };
+        }else if(snapshotMap[nick].points === undefined){
+          snapshotMap[nick].points = perPlayer[nick].afterPoints;
+        }
+      });
+    }
+
+    if(!collectStats) return;
+
+    participants.forEach(nick => {
+      const info = perPlayer[nick];
+      const stats = statsMap ? (statsMap[nick] = statsMap[nick] || { delta: 0, wins: 0, games: 0, mvp1: 0, mvp2: 0, mvp3: 0 }) : null;
+      if(stats){
+        stats.delta += info.delta;
+        stats.games += 1;
+        if(info.winBonus > 0) stats.wins += 1;
+        if(info.mvpPlace === 1) stats.mvp1 += 1;
+        if(info.mvpPlace === 2) stats.mvp2 += 1;
+        if(info.mvpPlace === 3) stats.mvp3 += 1;
+      }
+    });
+
+    if(matchesList){
+      const byTeam = {};
+      match.teams.forEach(team => {
+        const players = team.members.map(nick => {
+          const info = perPlayer[nick];
+          if(!info) return null;
+          return {
+            nick,
+            delta: info.delta,
+            rank: info.rankBefore,
+            beforePoints: info.beforePoints,
+            afterPoints: info.afterPoints,
+          };
+        }).filter(Boolean);
+        byTeam[team.key] = {
+          key: team.key,
+          label: team.label,
+          order: team.order,
+          players,
+          totalBefore: players.reduce((sum,p)=>sum + p.beforePoints,0),
+        };
+      });
+
+      const mvpInfo = [1,2,3].map(place => {
+        return match.mvpPlacements[place].map(nick => {
+          const info = perPlayer[nick];
+          return {
+            nick,
+            rank: info ? rankLetterForPoints(info.beforePoints) : rankLetterForPoints((ensurePlayerState(stateMap, nick).points || 0)),
+            place,
+          };
+        });
+      });
+
+      matchesList.push({
+        id: match.id,
+        timestamp: match.rawTimestamp,
+        date: match.date,
+        winnerKey: match.winnerKey,
+        score1: match.score1,
+        score2: match.score2,
+        teams: byTeam,
+        teamOrder: match.teams.map(t => t.key),
+        mvp: mvpInfo,
+        penalties: match.penalties,
+        pdfUrl: pdfLinks ? pdfLinks[match.id] : undefined,
+      });
+    }
   }
 
   function parseDate(ts) {
@@ -105,143 +430,105 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       log('[ranking]', err);
     }
 
-    const players = {};
-    const rankMap = {};
-    ranking.forEach(r=>{
-      const name = normName(r.Nickname?.trim());
+    const baseState = {};
+    ranking.forEach(row => {
+      const name = normName(String(row.Nickname || row.nickname || '').trim());
       if(!name) return;
-      players[name] = {pts:0, delta:0, wins:0, games:0};
-      rankMap[name] = +r.Points || 0;
-    });
-
-    const allGames = games.filter(
-      g => normalizeLeagueForFilter(g.League) === leagueSel.value
-    );
-    allGames.sort((a,b)=>{
-      const tDiff = new Date(a.Timestamp) - new Date(b.Timestamp);
-      if(tDiff) return tDiff;
-      return (+a.ID || 0) - (+b.ID || 0);
-    });
-
-    const preDayPts = {};
-    let captured = false;
-    const matchRows = [];
-    allGames.forEach(g=>{
-      const date = parseDate(g.Timestamp);
-      const t1 = g.Team1.split(',').map(s=>normName(s.trim()));
-      const t2 = g.Team2.split(',').map(s=>normName(s.trim()));
-      const winner = g.Winner;
-      const rawMvpNames = MVP_FIELD_GROUPS.flatMap(headers => {
-        const placeNames = [];
-        headers.forEach(h => {
-          const raw = g[h];
-          if(!raw) return;
-          String(raw)
-            .split(/[;,]/)
-            .map(s => s.trim())
-            .filter(Boolean)
-            .forEach(name => {
-              if(!placeNames.includes(name)) placeNames.push(name);
-            });
-        });
-        return placeNames;
-      });
-
-      const mvpList = [];
-      const seenMvp = new Set();
-      rawMvpNames.forEach(name => {
-        const normalized = normName(name);
-        if(!normalized || seenMvp.has(normalized)) return;
-        seenMvp.add(normalized);
-        mvpList.push(normalized);
-      });
-
-      let s1 = parseInt(g.Score1, 10);
-      let s2 = parseInt(g.Score2, 10);
-      if(isNaN(s1) || isNaN(s2)){
-        const mScore = (g.Series || g.series || '').match(/(\d+)\D+(\d+)/);
-        if(mScore){
-          s1 = parseInt(mScore[1], 10);
-          s2 = parseInt(mScore[2], 10);
-        }
-      }
-
-      function apply(team, isWin, store, arr){
-        team.forEach(n=>{
-          players[n] = players[n]||{pts:0,delta:0,wins:0,games:0};
-          const rankBefore = rankLetterForPoints(players[n].pts);
-          let d = partPoints(rankBefore);
-          if(isWin) d+=20;
-          const idx = mvpList.indexOf(n);
-          if(idx > -1) d += [12,7,3][idx] || 0;
-          players[n].pts += d;
-          if(store){
-            players[n].games++;
-            if(isWin) players[n].wins++;
-            players[n].delta += d;
-            arr.push({nick:n,rank:rankBefore,delta:d});
-          }
-        });
-      }
-
-      if(date < dateInput.value){
-        apply(t1, winner==='team1', false, []);
-        apply(t2, winner==='team2', false, []);
-      }else if(date === dateInput.value){
-        if(!captured){
-          Object.keys(players).forEach(n=>{ preDayPts[n] = players[n].pts; });
-          captured = true;
-        }
-        const t1sum = t1.reduce((s,n)=>s+(players[n]?.pts||0),0);
-        const t2sum = t2.reduce((s,n)=>s+(players[n]?.pts||0),0);
-        const team1Pts=[];
-        const team2Pts=[];
-        apply(t1, winner==='team1', true, team1Pts);
-        apply(t2, winner==='team2', true, team2Pts);
-        matchRows.push({
-          id: g.ID,
-          timestamp: g.Timestamp,
-          team1: team1Pts,
-          team2: team2Pts,
-          t1sum,
-          t2sum,
-          score1: s1,
-          score2: s2,
-          winner,
-          mvp: mvpList.map(n => ({nick:n,rank:rankLetterForPoints(players[n]?.pts||0)}))
-        });
-      }else{
-        apply(t1, winner==='team1', false, []);
-        apply(t2, winner==='team2', false, []);
-      }
-    });
-
-    const arr = Object.keys(players).map(n=>{
-      const finalPts = rankMap[n] ?? players[n].pts;
-      const prev = preDayPts[n] ?? (finalPts - players[n].delta);
-      return {
-        nick: n,
-        pts: finalPts,
-        delta: players[n].delta,
-        wins: players[n].wins,
-        games: players[n].games,
-        prevPts: prev
+      const entry = {
+        points: toNumber(pickField(row, RANKING_FIELD_ALIASES.points) ?? row.Points),
+        wins: toNumber(pickField(row, RANKING_FIELD_ALIASES.wins) ?? row.Wins),
+        delta: toNumber(pickField(row, RANKING_FIELD_ALIASES.delta) ?? row.Delta ?? row["Δ"]),
+        games: toNumber(pickField(row, RANKING_FIELD_ALIASES.games) ?? row.Games),
+        mvp1: toNumber(pickField(row, RANKING_FIELD_ALIASES.mvp1) ?? row.MVP ?? row.MVP1),
+        mvp2: toNumber(pickField(row, RANKING_FIELD_ALIASES.mvp2) ?? row.MVP2),
+        mvp3: toNumber(pickField(row, RANKING_FIELD_ALIASES.mvp3) ?? row.MVP3),
       };
+      baseState[name] = entry;
     });
 
-    // sort by previous points to calculate prior ranking
-    arr.slice().sort((a,b)=>b.prevPts - a.prevPts)
-      .forEach((p,i)=>{ p.prevRank = i+1; });
+    const parsedGames = games
+      .filter(g => normalizeLeagueForFilter(g.League) === leagueSel.value)
+      .map(parseGameRow)
+      .filter(g => g.timestamp);
 
-    // sort by current points for global ranking
-    arr.slice().sort((a,b)=>b.pts - a.pts)
-      .forEach((p,i)=>{ p.currRank = i+1; });
+    parsedGames.sort((a,b)=>{
+      if(a.timestamp && b.timestamp){
+        const diff = b.timestamp - a.timestamp;
+        if(diff) return diff;
+      }
+      return ((+b.id || 0) - (+a.id || 0));
+    });
 
-    const list = arr.filter(p=>p.games>0)
-      .sort((a,b)=>a.currRank - b.currRank);
+    const selectedDate = dateInput.value;
+    const workingState = cloneStateMap(baseState);
+    const dayStats = {};
+    const preparedMatches = [];
+    let stateAtDayEnd = null;
+
+    for(const match of parsedGames){
+      if(!match.date){
+        continue;
+      }
+      if(match.date > selectedDate){
+        rewindMatch(workingState, match, { collectStats: false });
+        continue;
+      }
+
+      if(stateAtDayEnd === null){
+        stateAtDayEnd = cloneStateMap(workingState);
+      }
+
+      if(match.date === selectedDate){
+        rewindMatch(workingState, match, { collectStats: true, statsMap: dayStats, matchesList: preparedMatches, pdfLinks, snapshotMap: stateAtDayEnd });
+        continue;
+      }
+      break;
+    }
+
+    if(stateAtDayEnd === null){
+      stateAtDayEnd = cloneStateMap(workingState);
+    }
+
+    const stateBeforeDay = cloneStateMap(workingState);
+    const allPlayers = Array.from(new Set([
+      ...Object.keys(stateBeforeDay),
+      ...Object.keys(stateAtDayEnd),
+      ...Object.keys(dayStats),
+    ]));
+
+    const prevRankMap = {};
+    const currRankMap = {};
+    allPlayers.slice()
+      .sort((a,b)=>toNumber(stateBeforeDay[b]?.points) - toNumber(stateBeforeDay[a]?.points))
+      .forEach((nick, idx)=>{ prevRankMap[nick] = idx + 1; });
+    allPlayers.slice()
+      .sort((a,b)=>toNumber(stateAtDayEnd[b]?.points) - toNumber(stateAtDayEnd[a]?.points))
+      .forEach((nick, idx)=>{ currRankMap[nick] = idx + 1; });
+
+    const playersList = Object.keys(dayStats).map(nick => {
+      const stats = dayStats[nick];
+      let prevPts = toNumber(stateBeforeDay[nick]?.points);
+      if(!(nick in baseState)) prevPts = 0;
+      const currPts = toNumber(stateAtDayEnd[nick]?.points || (prevPts + stats.delta));
+      return {
+        nick,
+        prevPts,
+        pts: currPts,
+        delta: stats.delta,
+        wins: stats.wins,
+        games: stats.games,
+        prevRank: prevRankMap[nick] || '-',
+        currRank: currRankMap[nick] || '-',
+      };
+    }).sort((a,b)=>{
+      const rankA = Number.isFinite(a.currRank) ? a.currRank : Number.MAX_SAFE_INTEGER;
+      const rankB = Number.isFinite(b.currRank) ? b.currRank : Number.MAX_SAFE_INTEGER;
+      if(rankA !== rankB) return rankA - rankB;
+      return b.delta - a.delta;
+    });
 
     playersTb.innerHTML='';
-    list.forEach(p=>{
+    playersList.forEach(p=>{
       const tr=document.createElement('tr');
       const cls=p.delta>=0?'up':'down';
       const arrow=p.delta>0?'▲':p.delta<0?'▼':'';
@@ -270,11 +557,11 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       const pts=document.createElement('td');
       pts.textContent=p.pts;
 
-      const wins=document.createElement('td');
-      wins.textContent=p.wins;
-
       const games=document.createElement('td');
       games.textContent=p.games;
+
+      const wins=document.createElement('td');
+      wins.textContent=p.wins;
 
       const delta=document.createElement('td');
       delta.className=cls;
@@ -286,83 +573,68 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
     renderAllAvatars();
 
-    const displayMatches = matchRows.slice().sort((a,b)=>{
-      const tDiff = new Date(b.timestamp) - new Date(a.timestamp);
-      if(tDiff) return tDiff;
-      return (+b.id || 0) - (+a.id || 0);
-    });
-
     matchesTb.innerHTML='';
-    displayMatches.forEach(m=>{
+    preparedMatches.reverse();
+    preparedMatches.forEach(match => {
       const tr=document.createElement('tr');
-      const cls1=m.winner==='team1'?'team-win':m.winner==='team2'?'team-loss':'';
-      const cls2=m.winner==='team2'?'team-win':m.winner==='team1'?'team-loss':'';
-      const score=formatScore(m.score1,m.score2);
+      const teamKeys = match.teamOrder.length ? match.teamOrder : Object.keys(match.teams);
+      const teamIcons = ['🛡️','🚀','🛰️','⚙️'];
 
-      const td1=document.createElement('td');
-      td1.className='team-label '+cls1;
-      td1.textContent='🛡️ ';
-      m.team1.forEach((p,i)=>{
-        const span=document.createElement('span');
-        span.className='nick-'+p.rank;
-        span.textContent=p.nick;
-        td1.appendChild(span);
-        td1.appendChild(document.createTextNode(` (${p.delta>0?'+':''}${p.delta})`));
-        if(i<m.team1.length-1) td1.appendChild(document.createTextNode(', '));
-      });
-      const total1=document.createElement('span');
-      total1.className='team-total';
-      total1.textContent='['+m.t1sum+']';
-      td1.appendChild(total1);
+      const teamTds = teamKeys.slice(0,2).map((teamKey, idx) => {
+        const team = match.teams[teamKey];
+        if(!team) return null;
+        const td=document.createElement('td');
+        const isWinner = match.winnerKey && match.winnerKey !== 'tie' && match.winnerKey === team.key;
+        const isLoser = match.winnerKey && match.winnerKey !== 'tie' && match.winnerKey !== team.key;
+        td.className='team-label '+(isWinner?'team-win':isLoser?'team-loss':'');
+        td.textContent=(teamIcons[idx] || '🎯')+' ';
+        team.players.forEach((p,i)=>{
+          const span=document.createElement('span');
+          span.className='nick-'+p.rank;
+          span.textContent=p.nick;
+          td.appendChild(span);
+          td.appendChild(document.createTextNode(` (${p.delta>0?'+':''}${p.delta})`));
+          if(i<team.players.length-1) td.appendChild(document.createTextNode(', '));
+        });
+        const total=document.createElement('span');
+        total.className='team-total';
+        total.textContent='['+Math.round(team.totalBefore)+']';
+        td.appendChild(total);
+        return td;
+      }).filter(Boolean);
 
       const tdScore=document.createElement('td');
       const vs=document.createElement('span');
       vs.className='vs';
-      vs.textContent=score;
+      vs.textContent=formatScore(match.score1, match.score2);
       tdScore.appendChild(vs);
 
-      const td2=document.createElement('td');
-      td2.className='team-label '+cls2;
-      td2.textContent='🚀 ';
-      m.team2.forEach((p,i)=>{
-        const span=document.createElement('span');
-        span.className='nick-'+p.rank;
-        span.textContent=p.nick;
-        td2.appendChild(span);
-        td2.appendChild(document.createTextNode(` (${p.delta>0?'+':''}${p.delta})`));
-        if(i<m.team2.length-1) td2.appendChild(document.createTextNode(', '));
-      });
-      const total2=document.createElement('span');
-      total2.className='team-total';
-      total2.textContent='['+m.t2sum+']';
-      td2.appendChild(total2);
-
       const tdMvp=document.createElement('td');
-      function addMvp(label, mv){
-        if(!mv) return;
-        const div=document.createElement('div');
-        div.textContent=label+' ';
-        const span=document.createElement('span');
-        span.className='nick-'+mv.rank;
-        span.textContent=mv.nick;
-        div.appendChild(span);
-        tdMvp.appendChild(div);
-      }
-      addMvp('🏅 MVP:', m.mvp[0]);
-      addMvp('⭐ Срібна зірка:', m.mvp[1]);
-      addMvp('⭐ Бронзова зірка:', m.mvp[2]);
+      const labels=['🏅 MVP:','⭐ Срібна зірка:','⭐ Бронзова зірка:'];
+      match.mvp.forEach((mvps,idx)=>{
+        const label=labels[idx];
+        mvps.forEach(mv=>{
+          const div=document.createElement('div');
+          div.textContent=label+' ';
+          const span=document.createElement('span');
+          span.className='nick-'+mv.rank;
+          span.textContent=mv.nick;
+          div.appendChild(span);
+          tdMvp.appendChild(div);
+        });
+      });
 
       const pdfTd=document.createElement('td');
-      const pdfUrl = pdfLinks[m.id];
-      if(pdfUrl){
+      if(match.pdfUrl){
         const a=document.createElement('a');
-        a.href=pdfUrl;
+        a.href=match.pdfUrl;
         a.textContent='PDF';
         a.target='_blank';
         pdfTd.appendChild(a);
       }
 
-      [td1,tdScore,td2,tdMvp,pdfTd].forEach(td=>tr.appendChild(td));
+      const tds=[teamTds[0],tdScore,teamTds[1],tdMvp,pdfTd].filter(Boolean);
+      tds.forEach(td=>tr.appendChild(td));
       matchesTb.appendChild(tr);
     });
   }

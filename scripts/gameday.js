@@ -31,17 +31,6 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
   const playersTb = document.getElementById('players');
   const matchesTb = document.getElementById('matches');
   const fullscreenBtn = document.getElementById('fullscreen');
-  const summarySection = document.getElementById('summarySection');
-  const mvpSection = document.getElementById('mvpSection');
-  const summaryMatchesEl = document.getElementById('summaryMatches');
-  const summaryPlayersEl = document.getElementById('summaryPlayers');
-  const summaryPointsEl = document.getElementById('summaryPoints');
-  const summaryWinsEl = document.getElementById('summaryWins');
-  const summaryMvp1El = document.getElementById('summaryMvp1');
-  const summaryMvp2El = document.getElementById('summaryMvp2');
-  const summaryMvp3El = document.getElementById('summaryMvp3');
-  const topDeltaList = document.getElementById('topDeltaList');
-  const topWinsList = document.getElementById('topWinsList');
 
   leagueSel.addEventListener('change', loadData);
   dateInput.addEventListener('change', loadData);
@@ -446,107 +435,6 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
     return `${vpIcons(a)} - ${vpIcons(b)}`;
   }
 
-  function toggleHidden(el, hidden){
-    if(!el) return;
-    el.classList.toggle('hidden', hidden);
-  }
-
-  function formatSigned(value){
-    const num = toNumber(value);
-    if(num > 0) return `+${num}`;
-    return `${num}`;
-  }
-
-  function populateList(listEl, items, formatter){
-    if(!listEl) return;
-    listEl.innerHTML = '';
-    if(!items.length){
-      const li = document.createElement('li');
-      li.className = 'summary-empty';
-      li.textContent = 'Немає даних';
-      listEl.appendChild(li);
-      return;
-    }
-    items.forEach((item, idx) => {
-      const { label, value } = formatter(item, idx);
-      const li = document.createElement('li');
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'summary-player';
-      nameSpan.textContent = label;
-      const valueSpan = document.createElement('span');
-      valueSpan.className = 'summary-badge';
-      valueSpan.textContent = value;
-      li.appendChild(nameSpan);
-      li.appendChild(valueSpan);
-      listEl.appendChild(li);
-    });
-  }
-
-  function renderDaySummary(dayStats, matches){
-    if(!summarySection || !mvpSection) return;
-    const entries = Object.entries(dayStats || {});
-    const totals = entries.reduce((acc, [, stats]) => {
-      acc.delta += toNumber(stats.delta);
-      acc.wins += toNumber(stats.wins);
-      acc.games += toNumber(stats.games);
-      acc.mvp1 += toNumber(stats.mvp1);
-      acc.mvp2 += toNumber(stats.mvp2);
-      acc.mvp3 += toNumber(stats.mvp3);
-      return acc;
-    }, { delta: 0, wins: 0, games: 0, mvp1: 0, mvp2: 0, mvp3: 0 });
-    totals.matches = matches.length;
-    totals.players = entries.length;
-
-    const hasMatches = totals.matches > 0;
-    toggleHidden(summarySection, !hasMatches);
-    toggleHidden(mvpSection, !hasMatches);
-
-    if(!hasMatches){
-      if(summaryMatchesEl) summaryMatchesEl.textContent = '0';
-      if(summaryPlayersEl) summaryPlayersEl.textContent = '0';
-      if(summaryPointsEl) summaryPointsEl.textContent = '0';
-      if(summaryWinsEl) summaryWinsEl.textContent = '0';
-      if(summaryMvp1El) summaryMvp1El.textContent = '0';
-      if(summaryMvp2El) summaryMvp2El.textContent = '0';
-      if(summaryMvp3El) summaryMvp3El.textContent = '0';
-      if(topDeltaList) topDeltaList.innerHTML = '';
-      if(topWinsList) topWinsList.innerHTML = '';
-      return;
-    }
-
-    if(summaryMatchesEl) summaryMatchesEl.textContent = `${totals.matches}`;
-    if(summaryPlayersEl) summaryPlayersEl.textContent = `${Math.max(totals.players, 0)}`;
-    if(summaryPointsEl) summaryPointsEl.textContent = formatSigned(totals.delta);
-    if(summaryWinsEl) summaryWinsEl.textContent = `${totals.wins}`;
-    if(summaryMvp1El) summaryMvp1El.textContent = `${totals.mvp1}`;
-    if(summaryMvp2El) summaryMvp2El.textContent = `${totals.mvp2}`;
-    if(summaryMvp3El) summaryMvp3El.textContent = `${totals.mvp3}`;
-
-    const topDelta = entries
-      .slice()
-      .sort((a,b)=>toNumber(b[1].delta) - toNumber(a[1].delta))
-      .slice(0,3);
-    const topWins = entries
-      .slice()
-      .sort((a,b)=>{
-        const winDiff = toNumber(b[1].wins) - toNumber(a[1].wins);
-        if(winDiff) return winDiff;
-        const gameDiff = toNumber(b[1].games) - toNumber(a[1].games);
-        if(gameDiff) return gameDiff;
-        return toNumber(b[1].delta) - toNumber(a[1].delta);
-      })
-      .slice(0,3);
-
-    populateList(topDeltaList, topDelta, ([nick, stats], idx) => ({
-      label: `${idx + 1}. ${nick}`,
-      value: `${formatSigned(stats.delta)} оч.`,
-    }));
-    populateList(topWinsList, topWins, ([nick, stats], idx) => ({
-      label: `${idx + 1}. ${nick}`,
-      value: `${toNumber(stats.wins)} / ${toNumber(stats.games)} ігор`,
-    }));
-  }
-
   function normalizeLeagueForFilter(v){
     return String(v || '').toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
   }
@@ -564,7 +452,6 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
     }catch(err){
       playersTb.innerHTML = '';
       matchesTb.innerHTML = '';
-      renderDaySummary({}, []);
       log('[ranking]', err);
       const msg = 'Failed to load gameday data. Please try again later.';
       if (typeof showToast === 'function') showToast(msg); else alert(msg);
@@ -801,6 +688,5 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       tds.forEach(td=>tr.appendChild(td));
       matchesTb.appendChild(tr);
     });
-    renderDaySummary(dayStats, preparedMatches);
   }
 })();

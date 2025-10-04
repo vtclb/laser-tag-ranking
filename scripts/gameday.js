@@ -426,13 +426,11 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
     globalThis.__gamedayTestHook.parseDate = parseDate;
   }
 
-  function vpIcons(n){
-    return '★'.repeat(n);
-  }
-
   function formatScore(a,b){
-    if(isNaN(a) || isNaN(b)) return '-';
-    return `${vpIcons(a)} - ${vpIcons(b)}`;
+    const scoreA = Number(a);
+    const scoreB = Number(b);
+    if(Number.isNaN(scoreA) || Number.isNaN(scoreB)) return '-';
+    return `${scoreA}-${scoreB}`;
   }
 
   function normalizeLeagueForFilter(v){
@@ -655,6 +653,21 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
     matchesTb.innerHTML='';
     preparedMatches.reverse();
+    const totalPointsPlayed = preparedMatches.reduce((daySum, match) => {
+      const teamKeys = match.teamOrder.length ? match.teamOrder : Object.keys(match.teams);
+      const matchSum = teamKeys.reduce((teamTotal, teamKey) => {
+        const team = match.teams[teamKey];
+        if(!team) return teamTotal;
+        const players = Array.isArray(team.players) ? team.players : [];
+        const teamDelta = players.reduce((playerTotal, player) => {
+          const deltaValue = Number(player?.delta ?? 0);
+          return playerTotal + (Number.isFinite(deltaValue) ? Math.abs(deltaValue) : 0);
+        }, 0);
+        return teamTotal + teamDelta;
+      }, 0);
+      return daySum + matchSum;
+    }, 0);
+
     preparedMatches.forEach(match => {
       const tr=document.createElement('tr');
       const teamKeys = match.teamOrder.length ? match.teamOrder : Object.keys(match.teams);
@@ -717,5 +730,24 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       tds.forEach(td=>tr.appendChild(td));
       matchesTb.appendChild(tr);
     });
+
+    const table = matchesTb.closest('table');
+    const referenceRow = matchesTb.querySelector('tr');
+    const headerCells = table?.tHead?.rows?.[0]?.children?.length || 0;
+    const columnCount = referenceRow ? referenceRow.children.length : (headerCells || 0);
+    const firstColSpan = columnCount > 0 ? Math.max(1, Math.ceil(columnCount / 2)) : 1;
+    const secondColSpan = columnCount > 0 ? Math.max(1, columnCount - firstColSpan) : 1;
+
+    const totalsRow=document.createElement('tr');
+    totalsRow.className='totals';
+    const matchesCell=document.createElement('td');
+    matchesCell.colSpan=firstColSpan;
+    matchesCell.textContent=`Усього матчів: ${preparedMatches.length}`;
+    const pointsCell=document.createElement('td');
+    pointsCell.colSpan=secondColSpan;
+    pointsCell.textContent=`Балів розіграно: ${Math.round(totalPointsPlayed)}`;
+    totalsRow.appendChild(matchesCell);
+    totalsRow.appendChild(pointsCell);
+    matchesTb.appendChild(totalsRow);
   }
 })();

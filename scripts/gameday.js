@@ -703,7 +703,7 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       tdScore.appendChild(vs);
 
       const tdMvp=document.createElement('td');
-      const labels=['🏅 MVP:','⭐ Срібна зірка:','⭐ Бронзова зірка:'];
+      const labels=['🏅 MVP:','🥈 Срібна медаль:','🥉 Бронзова медаль:'];
       match.mvp.forEach((mvps,idx)=>{
         const label=labels[idx];
         mvps.forEach(mv=>{

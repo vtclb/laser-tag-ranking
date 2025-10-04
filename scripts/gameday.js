@@ -208,14 +208,45 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       }
     }
 
-    const tsRaw = row.Timestamp || row.timestamp || row.Date || row.date || '';
-    const ts = tsRaw ? new Date(tsRaw) : null;
+    const timestampFields = ['Timestamp', 'timestamp', 'Date', 'date'];
+    let tsRaw = '';
+    let tsDate = null;
+    let tsIso = '';
+
+    for (const field of timestampFields) {
+      if (!(field in (row || {}))) continue;
+      const value = row[field];
+      if (value === undefined || value === null) continue;
+      const trimmed = String(value).trim();
+      if (!trimmed) continue;
+
+      const parsedIso = parseDate(trimmed);
+      const parsedFromRaw = new Date(trimmed);
+      const rawIsValid = parsedFromRaw && !isNaN(parsedFromRaw);
+
+      if (parsedIso || rawIsValid) {
+        tsRaw = trimmed;
+        if (parsedIso) {
+          tsIso = parsedIso;
+          const isoDate = new Date(parsedIso);
+          if (!isNaN(isoDate)) {
+            tsDate = isoDate;
+          } else if (rawIsValid) {
+            tsDate = parsedFromRaw;
+          }
+        } else if (rawIsValid) {
+          tsDate = parsedFromRaw;
+          tsIso = parsedFromRaw.toISOString().slice(0,10);
+        }
+        break;
+      }
+    }
 
     return {
       id: row.ID || row.Id || row.id || '',
       rawTimestamp: tsRaw,
-      timestamp: ts && !isNaN(ts) ? ts : null,
-      date: parseDate(tsRaw),
+      timestamp: tsDate && !isNaN(tsDate) ? tsDate : null,
+      date: tsIso,
       teams,
       winnerKey,
       penalties,
@@ -399,6 +430,11 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
     }
     const d = new Date(ts);
     return isNaN(d) ? '' : d.toISOString().slice(0,10);
+  }
+
+  if (typeof globalThis !== 'undefined' && globalThis.__gamedayTestHook) {
+    globalThis.__gamedayTestHook.parseGameRow = parseGameRow;
+    globalThis.__gamedayTestHook.parseDate = parseDate;
   }
 
   function vpIcons(n){

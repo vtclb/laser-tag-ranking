@@ -1,767 +1,301 @@
-// scripts/tournamentMode.js
-import {
-  fetchTournaments,
-  createTournament,
-  saveTournamentTeams,
-  createTournamentGames,
-  saveTournamentGame,
-  fetchTournamentData,
-  fetchLeagueCsv,
-  parsePlayersFromCsv,
-} from './api.js?v=2025-09-19-balance-hotfix-1';
-import { AVATAR_PLACEHOLDER } from './avatarConfig.js?v=2025-09-19-avatars-2';
-import { autoBalance } from './balance.js?v=2025-09-19-balance-hotfix-1';
-import { state } from './state.js?v=2025-09-19-balance-hotfix-1';
+// Tournament mode controller
+import { fetchLeagueCsv, parsePlayersFromCsv } from './api.js';
+import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js';
+import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
 
-const DEFAULT_TEAMS = 3;
-const MIN_TEAMS = 2;
-const MAX_TEAMS = 5;
 const TOURNAMENT_GAME_MODES = ['DM', 'KT', 'TR'];
+const MAX_TEAMS = 5;
+const MIN_TEAMS = 2;
 
 const tournamentState = {
-  appMode: 'regular',
-  currentId: '',
-  data: null,
-  selectedResult: '',
-  lobby: [],
-  lobbyLeague: 'kids',
+  league: 'kids',
+  players: [],
+  lobby: new Map(),
+  pool: new Map(),
+  teams: {},
+  games: [],
 };
 
-const lobbyCache = new Map();
+const dom = {};
 
-const dom = {
-  panel: null,
-  teamCards: {},
-  teamNames: {},
-  teamPlayers: {},
-  teamMetrics: {},
-  teamCountSelect: null,
-  lobbyTableBody: null,
-  lobbySearch: null,
-  lobbySelectAll: null,
-  lobbyPool: null,
-  gameSelect: null,
-  resultButtons: null,
-};
-
-function showMessage(msg, type = 'info') {
-  if (typeof showToast === 'function') {
-    showToast(msg, type);
-  } else {
-    alert(msg);
-  }
-}
-
-function setAppMode(mode) {
-  tournamentState.appMode = mode === 'tournament' ? 'tournament' : 'regular';
-  if (document.body) {
-    document.body.dataset.appMode = tournamentState.appMode;
-  }
-  const regularBtn = document.getElementById('mode-regular');
-  const tournamentBtn = document.getElementById('mode-tournament');
-  if (regularBtn) regularBtn.classList.toggle('btn-primary', tournamentState.appMode === 'regular');
-  if (tournamentBtn) tournamentBtn.classList.toggle('btn-primary', tournamentState.appMode === 'tournament');
-}
-
-function cacheDomRefs() {
+function cacheDom() {
   dom.panel = document.getElementById('tournament-panel');
   if (!dom.panel) return false;
-
-  dom.teamCountSelect = dom.panel.querySelector('#tournament-team-count');
-  dom.lobbyTableBody = dom.panel.querySelector('#tournament-lobby-table tbody');
-  dom.lobbySearch = dom.panel.querySelector('#tournament-lobby-search');
-  dom.lobbySelectAll = dom.panel.querySelector('#tournament-lobby-select-all');
-  dom.lobbyPool = dom.panel.querySelector('#tournament-player-pool');
-  dom.gameSelect = dom.panel.querySelector('#tournament-game-select');
-  dom.resultButtons = dom.panel.querySelector('#tournament-result-buttons');
-
-  for (let i = 1; i <= MAX_TEAMS; i++) {
-    dom.teamCards[i] = dom.panel.querySelector(`.team-card[data-slot="${i}"]`);
-    dom.teamNames[i] = dom.panel.querySelector(`#t-team-name-${i}`);
-    dom.teamPlayers[i] = dom.panel.querySelector(`#t-team-players-${i}`);
-    dom.teamMetrics[i] = dom.panel.querySelector(`#t-team-metrics-${i}`);
-  }
+  dom.league = document.getElementById('tournament-league');
+  dom.load = document.getElementById('tournament-load');
+  dom.search = document.getElementById('tournament-search');
+  dom.tableBody = document.querySelector('#tournament-table tbody');
+  dom.addPool = document.getElementById('tournament-add-pool');
+  dom.clear = document.getElementById('tournament-clear');
+  dom.pool = document.getElementById('tournament-pool');
+  dom.teamSelect = document.getElementById('tournament-teams');
+  dom.auto = document.getElementById('tournament-auto');
+  dom.teamsWrap = document.getElementById('tournament-teams-wrap');
+  dom.modeChecks = Array.from(document.querySelectorAll('.mode-check'));
+  dom.generate = document.getElementById('tournament-generate');
+  dom.games = document.getElementById('tournament-games');
+  dom.match = document.getElementById('tournament-match');
   return true;
 }
 
-function parsePlayerList(raw) {
-  return String(raw || '')
-    .split(/[,;\n]/)
-    .map(p => p.trim())
-    .filter(Boolean);
+function setModeActive(isActive) {
+  if (!dom.panel) return;
+  dom.panel.classList.toggle('active', isActive);
+  if (isActive) {
+    renderLobby();
+    renderPool();
+    renderTeams();
+  }
 }
 
-function findPlayerRecord(nick) {
-  return state.players.find(p => p && p.nick === nick);
+function parseLeague(value) {
+  return value === 'olds' ? 'olds' : 'kids';
 }
 
-function buildPlayerLookup() {
-  const lookup = new Map();
-  state.players.forEach(p => {
-    if (p?.nick) lookup.set(p.nick.toLowerCase(), p);
+async function loadLeague() {
+  const league = parseLeague(dom.league?.value);
+  tournamentState.league = league;
+  const csv = await fetchLeagueCsv(league);
+  tournamentState.players = parsePlayersFromCsv(csv);
+  renderLobby();
+}
+
+function filteredPlayers() {
+  const term = (dom.search?.value || '').trim().toLowerCase();
+  if (!term) return [...tournamentState.players];
+  return tournamentState.players.filter(p => p.nick.toLowerCase().includes(term));
+}
+
+function renderLobby() {
+  if (!dom.tableBody) return;
+  dom.tableBody.innerHTML = '';
+  filteredPlayers().forEach(player => {
+    const tr = document.createElement('tr');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.nick = player.nick;
+    const tdCb = document.createElement('td');
+    tdCb.appendChild(cb);
+
+    const tdNick = document.createElement('td');
+    tdNick.className = 'avatar-cell';
+    const img = document.createElement('img');
+    img.className = 'avatar';
+    img.src = player.avatar || AVATAR_PLACEHOLDER;
+    img.alt = player.nick;
+    const name = document.createElement('div');
+    name.innerHTML = `<strong>${player.nick}</strong><div class="muted">${player.rank || ''}</div>`;
+    tdNick.append(img, name);
+
+    const tdPts = document.createElement('td');
+    tdPts.textContent = Number(player.pts || 0).toFixed(0);
+
+    const tdGames = document.createElement('td');
+    tdGames.textContent = player.games || player.matches || 0;
+
+    tr.append(tdCb, tdNick, tdPts, tdGames);
+    dom.tableBody.appendChild(tr);
   });
-  return lookup;
 }
 
-function toBalanceObject(nick) {
-  const rec = findPlayerRecord(nick);
-  if (rec) return rec;
-  return { nick, pts: 0 };
+function selectedFromTable() {
+  const boxes = Array.from(dom.tableBody?.querySelectorAll('input[type="checkbox"]:checked') || []);
+  const selected = new Set();
+  boxes.forEach(cb => selected.add(cb.dataset.nick));
+  return tournamentState.players.filter(p => selected.has(p.nick));
 }
 
-function getSelectedModesFromDom() {
-  const inputs = Array.from(dom.panel?.querySelectorAll('.tournament-mode:checked') || []);
-  const modes = inputs
+function addToPool() {
+  selectedFromTable().forEach(p => tournamentState.pool.set(p.nick, p));
+  renderPool();
+}
+
+function clearSelection() {
+  tournamentState.pool.clear();
+  tournamentState.teams = {};
+  tournamentState.games = [];
+  renderPool();
+  renderTeams();
+  renderGames();
+}
+
+function renderPool() {
+  if (!dom.pool) return;
+  dom.pool.innerHTML = '';
+  tournamentState.pool.forEach(p => {
+    const chip = document.createElement('span');
+    chip.className = 'tag';
+    chip.textContent = `${p.nick} · ${Number(p.pts || 0).toFixed(0)}`;
+    dom.pool.appendChild(chip);
+  });
+}
+
+function computeBalance(players, teamsCount) {
+  if (teamsCount <= 0) return {};
+  if (teamsCount === 1) return { 1: players };
+  if (teamsCount === 2) {
+    const { A, B } = autoBalanceTwo(players);
+    return { 1: A, 2: B };
+  }
+  return autoBalanceMany(players, teamsCount);
+}
+
+function renderTeams() {
+  if (!dom.teamsWrap) return;
+  dom.teamsWrap.innerHTML = '';
+  const teamsCount = Math.min(Math.max(parseInt(dom.teamSelect?.value || '3', 10), MIN_TEAMS), MAX_TEAMS);
+  const players = Array.from(tournamentState.pool.values());
+  const teams = players.length ? computeBalance(players, teamsCount) : {};
+  tournamentState.teams = teams;
+
+  for (let i = 1; i <= teamsCount; i++) {
+    const list = teams[i] || [];
+    const card = document.createElement('div');
+    card.className = 'team-card';
+    const title = document.createElement('h4');
+    title.textContent = `Команда ${i}`;
+    const ul = document.createElement('ul');
+    ul.className = 'team-list';
+    const teamTotal = list.reduce((s, p) => s + (Number(p.pts) || 0), 0);
+    list.forEach(p => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${p.nick}</span><span>${Number(p.pts || 0).toFixed(0)}</span>`;
+      ul.appendChild(li);
+    });
+    const avg = list.length ? (teamTotal / list.length).toFixed(1) : '0.0';
+    const meta = document.createElement('div');
+    meta.className = 'metrics';
+    meta.innerHTML = `<span class="tag">Σ ${teamTotal.toFixed(0)}</span><span class="tag">Avg ${avg}</span><span class="tag">${list.length} грав.</span>`;
+    card.append(title, ul, meta);
+    dom.teamsWrap.appendChild(card);
+  }
+}
+
+function collectModes() {
+  return dom.modeChecks
+    .filter(inp => inp.checked)
     .map(inp => inp.value)
     .filter(mode => TOURNAMENT_GAME_MODES.includes(mode));
-  return modes;
 }
 
-function renderTeamMetrics(slot, metrics) {
-  const el = dom.teamMetrics[slot];
-  if (!el) return;
-  if (!metrics) {
-    el.textContent = '';
-    return;
-  }
-  el.innerHTML = `Σ ${metrics.totalPts.toFixed(0)} · Avg ${metrics.avgPts.toFixed(1)} · SI ${metrics.strengthIndex.toFixed(1)} · ${metrics.count} грав.`;
-}
-
-function calculateTeamMetrics(players) {
-  const lookup = buildPlayerLookup();
-  const list = parsePlayerList(players);
-  const ptsValues = list.map(n => lookup.get(n.toLowerCase())?.pts || 0);
-  const totalPts = ptsValues.reduce((sum, v) => sum + (Number(v) || 0), 0);
-  const count = ptsValues.length;
-  const avgPts = count ? totalPts / count : 0;
-  return {
-    totalPts,
-    avgPts,
-    strengthIndex: avgPts,
-    count,
-  };
-}
-
-function recomputeAllTeamMetrics() {
-  for (let i = 1; i <= MAX_TEAMS; i++) {
-    const textarea = dom.teamPlayers[i];
-    const metrics = textarea ? calculateTeamMetrics(textarea.value || '') : null;
-    renderTeamMetrics(i, metrics);
-  }
-}
-
-function fillTeamsFromAutoBalance() {
-  const poolEl = dom.lobbyPool;
-  const poolList = parsePlayerList(poolEl ? poolEl.value : '');
-  const players = poolList.map(toBalanceObject);
-  if (!players.length) {
-    showMessage('Додайте гравців у пул для автопідбору', 'warn');
-    return;
-  }
-
-  const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
-  const teamCount = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
-  const balanced = autoBalance(players, teamCount);
-  Object.entries(balanced).forEach(([idx, members]) => {
-    const slot = Number(idx);
-    const textarea = dom.teamPlayers[slot];
-    if (textarea) {
-      textarea.value = members.map(p => p.nick).join(',');
-    }
-  });
-  recomputeAllTeamMetrics();
-}
-
-function collectTeamsFromForm() {
-  const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
-  const total = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
-  const teams = [];
-  for (let i = 1; i <= total; i++) {
-    const nameInput = dom.teamNames[i];
-    const playersInput = dom.teamPlayers[i];
-    const slotEl = dom.teamCards[i];
-    const teamId = slotEl?.dataset.teamId || `${tournamentState.currentId || 'T'}_TEAM${i}`;
-    const teamName = (nameInput?.value || '').trim() || `Команда ${i}`;
-    const players = parsePlayerList(playersInput?.value || '');
-    teams.push({ teamId, teamName, players });
-  }
-  return teams;
-}
-
-function setTeamsToForm(teams = []) {
-  const total = Array.isArray(teams)
-    ? Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teams.length || DEFAULT_TEAMS))
-    : DEFAULT_TEAMS;
-  if (dom.teamCountSelect) dom.teamCountSelect.value = total;
-
-  for (let i = 1; i <= MAX_TEAMS; i++) {
-    const slotEl = dom.teamCards[i];
-    const team = teams[i - 1];
-    if (!slotEl) continue;
-    slotEl.hidden = i > total;
-    if (team) {
-      slotEl.dataset.teamId = team.teamId || '';
-      const nameInput = dom.teamNames[i];
-      const playersInput = dom.teamPlayers[i];
-      if (nameInput) nameInput.value = team.teamName || '';
-      if (playersInput) playersInput.value = parsePlayerList(team.players || '').join(',');
-      renderTeamMetrics(i, calculateTeamMetrics(playersInput?.value || ''));
-    } else {
-      slotEl.dataset.teamId = '';
-      const nameInput = dom.teamNames[i];
-      const playersInput = dom.teamPlayers[i];
-      if (nameInput) nameInput.value = '';
-      if (playersInput) playersInput.value = '';
-      renderTeamMetrics(i, calculateTeamMetrics(playersInput?.value || ''));
+function generateRoundRobinGames(teamIds, modes) {
+  const games = [];
+  let modeIndex = 0;
+  for (let i = 0; i < teamIds.length; i++) {
+    for (let j = i + 1; j < teamIds.length; j++) {
+      const mode = modes[modeIndex % modes.length];
+      games.push({ teamA: teamIds[i], teamB: teamIds[j], mode });
+      modeIndex += 1;
     }
   }
+  return games;
 }
 
-function applyTeamCountVisibility() {
-  const total = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
-  for (let i = 1; i <= MAX_TEAMS; i++) {
-    const slotEl = dom.teamCards[i];
-    if (slotEl) {
-      slotEl.hidden = i > total;
-    }
-  }
-  recomputeAllTeamMetrics();
-}
-
-function validateTeamsBeforeSave(teams) {
-  const filled = teams.filter(t => (t.players || []).length);
-  if (filled.length < MIN_TEAMS) {
-    return 'Мінімум дві команди мають містити гравців';
-  }
-
-  const lookup = buildPlayerLookup();
-  const duplicates = new Map();
-  const missing = new Set();
-  const strengths = [];
-  filled.forEach(team => {
-    const metrics = calculateTeamMetrics(team.players || []);
-    strengths.push(metrics.strengthIndex);
-    (team.players || []).forEach(nick => {
-      const key = nick.toLowerCase();
-      if (!duplicates.has(key)) {
-        duplicates.set(key, []);
-      }
-      duplicates.get(key).push(team.teamName || team.teamId);
-      if (!lookup.has(key)) missing.add(nick);
-    });
-  });
-
-  const offender = Array.from(duplicates.entries()).find(([, list]) => list.length > 1);
-  if (offender) {
-    return `Гравець ${offender[0]} дублюється у командах: ${offender[1].join(', ')}`;
-  }
-
-  if (missing.size) {
-    return `Невідомі гравці: ${Array.from(missing).join(', ')}`;
-  }
-
-  const minStrength = Math.min(...strengths);
-  const maxStrength = Math.max(...strengths);
-  if (strengths.length >= 2 && maxStrength > 0) {
-    const diffRatio = (maxStrength - minStrength) / maxStrength;
-    if (diffRatio > 0.4) {
-      showMessage('Попередження: різниця сили команд перевищує 40%', 'warn');
-    }
-  }
-
-  return '';
-}
-
-function setSelectedResult(value) {
-  tournamentState.selectedResult = value || '';
-  const buttons = document.querySelectorAll('#tournament-result-buttons [data-result]');
-  buttons.forEach(btn => {
-    const match = btn.dataset.result === value;
-    btn.classList.toggle('is-selected', match);
-  });
-}
-
-function renderMatchPanel(game) {
-  const teams = Array.isArray(tournamentState.data?.teams) ? tournamentState.data.teams : [];
-  const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
-  const lookup = buildPlayerLookup();
-
-  const fillTeam = (containerId, teamId) => {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const nameEl = container.querySelector('h4');
-    const listEl = container.querySelector('.match-player-list');
-    const strengthEl = container.querySelector('p');
-    const team = teamMap[teamId];
-    if (nameEl) nameEl.textContent = team?.teamName || teamId || '—';
-    if (listEl) listEl.innerHTML = '';
-    const members = parsePlayerList(team?.players || '');
-    const ptsValues = [];
-    members.forEach(nick => {
-      const li = document.createElement('li');
-      li.className = 'match-player-row';
-      const record = lookup.get(nick.toLowerCase());
-      const pts = record?.pts || 0;
-      ptsValues.push(pts);
-
-      const img = document.createElement('img');
-      img.className = 'avatar avatar-sm';
-      img.alt = nick;
-      img.src = record?.avatar || AVATAR_PLACEHOLDER;
-      const text = document.createElement('span');
-      text.textContent = `${nick} — ${pts}`;
-      li.appendChild(img);
-      li.appendChild(text);
-      listEl?.appendChild(li);
-    });
-    const totalPts = ptsValues.reduce((s, v) => s + v, 0);
-    const avg = ptsValues.length ? totalPts / ptsValues.length : 0;
-    if (strengthEl) strengthEl.textContent = members.length ? `Σ ${totalPts.toFixed(0)} · Avg ${avg.toFixed(1)}` : '';
-  };
-
-  fillTeam('match-team-a', game?.teamAId);
-  fillTeam('match-team-b', game?.teamBId);
-}
-
-function applyGameStatus(game) {
-  const statusEl = document.getElementById('tournament-game-status');
-  if (!statusEl) return;
-  if (!game) {
-    statusEl.textContent = '';
-    setSelectedResult('');
-    return;
-  }
-  if (game.isDraw === 'TRUE') {
-    statusEl.textContent = 'Статус: нічия';
-    setSelectedResult('DRAW');
-  } else if (game.winnerTeamId) {
-    statusEl.textContent = `Статус: переможець ${game.winnerTeamId}`;
-    const buttons = document.querySelectorAll('#tournament-result-buttons [data-result]');
-    let selected = '';
-    buttons.forEach(btn => {
-      if (btn.dataset.result === 'A' && game.winnerTeamId === game.teamAId) selected = 'A';
-      if (btn.dataset.result === 'B' && game.winnerTeamId === game.teamBId) selected = 'B';
-    });
-    setSelectedResult(selected);
-  } else {
-    statusEl.textContent = 'Статус: не зіграно';
-    setSelectedResult('');
-  }
-}
-
-function updateDrawAvailability(game) {
-  const allowMap = tournamentState.data?.config || {};
-  const mode = (game?.mode || '').toUpperCase();
-  const allowDraw = mode !== 'KT' && allowMap[mode] !== false;
-  const drawBtn = document.querySelector('#tournament-result-buttons [data-result="DRAW"]');
-  if (drawBtn) {
-    drawBtn.disabled = !allowDraw;
-    drawBtn.title = allowDraw ? '' : 'Нічия недоступна для цього режиму';
-  }
-}
-
-function renderAwards(game) {
-  const selectIds = ['t-mvp', 't-second', 't-third'];
-  const teams = Array.isArray(tournamentState.data?.teams) ? tournamentState.data.teams : [];
-  const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
-  const players = [];
-  if (game) {
-    parsePlayerList(teamMap[game.teamAId]?.players || []).forEach(n => players.push(n));
-    parsePlayerList(teamMap[game.teamBId]?.players || []).forEach(n => players.push(n));
-  }
-  const unique = Array.from(new Set(players));
-  selectIds.forEach(id => {
-    const selectEl = document.getElementById(id);
-    if (!selectEl) return;
-    selectEl.innerHTML = '<option value="">—</option>';
-    unique.forEach(nick => {
-      const opt = document.createElement('option');
-      opt.value = nick;
-      opt.textContent = nick;
-      selectEl.appendChild(opt);
-    });
-  });
-}
-
-function renderGameOptions() {
-  const selectEl = dom.gameSelect;
-  if (!selectEl) return;
-  selectEl.innerHTML = '<option value="">— Немає матчів —</option>';
-  const games = Array.isArray(tournamentState.data?.games) ? tournamentState.data.games : [];
-  const teams = Array.isArray(tournamentState.data?.teams) ? tournamentState.data.teams : [];
-  const teamNames = Object.fromEntries(teams.map(t => [t.teamId, t.teamName || t.teamId]));
-
-  games.forEach(game => {
-    const label = `${teamNames[game.teamAId] || game.teamAId} vs ${teamNames[game.teamBId] || game.teamBId} — ${game.mode}`;
-    const status = game.winnerTeamId || game.isDraw === 'TRUE' ? 'зіграно' : 'не зіграно';
-    const option = document.createElement('option');
-    option.value = game.gameId;
-    option.textContent = `${label} (${status})`;
-    selectEl.appendChild(option);
-  });
-
-  if (games.length) {
-    selectEl.value = games[0].gameId;
-  }
-}
-
-function handleGameSelection() {
-  const selectEl = dom.gameSelect;
-  if (!selectEl) return;
-  const gameId = selectEl.value;
-  const game = (tournamentState.data?.games || []).find(g => g.gameId === gameId);
-  renderAwards(game);
-  applyGameStatus(game);
-  renderMatchPanel(game);
-  updateDrawAvailability(game);
-}
-
-async function refreshTournamentData() {
-  if (!tournamentState.currentId) return;
-  try {
-    const data = await fetchTournamentData(tournamentState.currentId);
-    tournamentState.data = data;
-    setTeamsToForm(data?.teams || []);
-    renderGameOptions();
-    handleGameSelection();
-  } catch (err) {
-    console.error(err);
-    showMessage('Не вдалося оновити дані турніру', 'error');
-  }
-}
-
-function renderLobbyTable(players = []) {
-  const tbody = dom.lobbyTableBody;
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  const search = (dom.lobbySearch?.value || '').toLowerCase();
-  players
-    .filter(p => !search || p.nick.toLowerCase().includes(search))
-    .sort((a, b) => (Number(b.pts) || 0) - (Number(a.pts) || 0))
-    .forEach(player => {
-      const tr = document.createElement('tr');
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = player.nick;
-      checkbox.className = 't-lobby-check';
-      const tdCheck = document.createElement('td');
-      tdCheck.appendChild(checkbox);
-      tr.appendChild(tdCheck);
-
-      const tdAvatar = document.createElement('td');
-      const img = document.createElement('img');
-      img.className = 'avatar avatar-sm';
-      img.alt = player.nick;
-      img.src = player.avatar || AVATAR_PLACEHOLDER;
-      tdAvatar.appendChild(img);
-      tr.appendChild(tdAvatar);
-
-      const cells = [player.nick, Number(player.pts) || 0, player.rank || '', player.games || 0];
-      const keys = ['nick', 'pts', 'rank', 'games'];
-      cells.forEach((val, idx) => {
-        const td = document.createElement('td');
-        td.textContent = val;
-        td.dataset.field = keys[idx];
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-}
-
-function toggleLobbySelection(source) {
-  const rows = document.querySelectorAll('#tournament-lobby-table tbody input[type="checkbox"]');
-  rows.forEach(cb => { cb.checked = source?.checked; });
-}
-
-function addSelectedLobbyToPool() {
-  const selected = Array.from(document.querySelectorAll('#tournament-lobby-table tbody input[type="checkbox"]:checked'))
-    .map(cb => cb.value)
-    .filter(Boolean);
-  if (!selected.length) return;
-  const pool = dom.lobbyPool;
-  if (!pool) return;
-  const existing = parsePlayerList(pool.value);
-  const merged = Array.from(new Set([...existing, ...selected]));
-  pool.value = merged.join(',');
-  recomputeAllTeamMetrics();
-}
-
-async function loadLobbyPlayers() {
-  try {
-    const select = document.getElementById('tournament-lobby-league');
-    const league = select ? select.value : 'kids';
-    tournamentState.lobbyLeague = league;
-    let players = lobbyCache.get(league);
-    if (!players) {
-      const csv = await fetchLeagueCsv(league);
-      players = parsePlayersFromCsv(csv).map(p => ({ ...p, games: p.games || 0 }));
-      lobbyCache.set(league, players);
-    }
-    tournamentState.lobby = players;
-    state.players = players;
-    renderLobbyTable(players);
-    recomputeAllTeamMetrics();
-  } catch (err) {
-    console.error(err);
-    showMessage('Не вдалося завантажити лоббі', 'error');
-  }
-}
-
-async function handleTournamentChange() {
-  const selectEl = document.getElementById('tournament-select');
-  tournamentState.currentId = selectEl ? selectEl.value : '';
-  tournamentState.data = null;
-  if (tournamentState.currentId) {
-    await refreshTournamentData();
-  }
-}
-
-async function handleCreateTournament() {
-  const form = document.getElementById('create-tournament-form');
-  if (form) form.hidden = !form.hidden;
-}
-
-async function submitCreateTournament() {
-  const nameEl = document.getElementById('tournament-name');
-  const leagueEl = document.getElementById('tournament-league');
-  const name = nameEl ? nameEl.value.trim() : '';
-  const league = leagueEl ? leagueEl.value : 'sundaygames';
-  if (!name) {
-    showMessage('Вкажіть назву турніру', 'warn');
-    return;
-  }
-  try {
-    const tournamentId = await createTournament({ name, league });
-    showMessage('Турнір створено', 'success');
-    if (nameEl) nameEl.value = '';
-    await refreshTournamentsList();
-    const selectEl = document.getElementById('tournament-select');
-    if (selectEl) {
-      selectEl.value = tournamentId;
-      tournamentState.currentId = tournamentId;
-      await refreshTournamentData();
-    }
-  } catch (err) {
-    console.error(err);
-    showMessage('Не вдалося створити турнір', 'error');
-  }
-}
-
-async function handleSaveTeams() {
-  if (!tournamentState.currentId) {
-    showMessage('Оберіть турнір перед збереженням складів', 'warn');
-    return;
-  }
-  const teams = collectTeamsFromForm();
-  const validationError = validateTeamsBeforeSave(teams);
-  if (validationError) {
-    showMessage(validationError, 'warn');
-    return;
-  }
-  try {
-    await saveTournamentTeams({ tournamentId: tournamentState.currentId, teams });
-    showMessage('Склади команд оновлено', 'success');
-    await refreshTournamentData();
-  } catch (err) {
-    console.error(err);
-    showMessage('Не вдалося зберегти склади', 'error');
-  }
-}
-
-function generateRoundRobinGames(teams, selectedModes = ['TR']) {
-  const modes = (selectedModes || []).filter(mode => typeof mode === 'string' && TOURNAMENT_GAME_MODES.includes(mode));
+function generateGames() {
+  const modes = collectModes();
   if (!modes.length) {
-    showMessage('Оберіть хоча б один режим', 'warn');
-    return [];
+    showToast?.('Оберіть хоча б один режим', 'warn');
+    return;
+  }
+  const teamIds = Object.keys(tournamentState.teams);
+  if (teamIds.length < MIN_TEAMS) {
+    showToast?.('Додайте щонайменше дві команди', 'warn');
+    return;
   }
 
-  const result = [];
-  let idx = 1;
-  if (teams.length === 2) {
-    const bestOf = 3;
-    for (let i = 0; i < bestOf; i++) {
-      const mode = modes[i % modes.length];
-      result.push({
-        gameId: `G${idx++}`,
-        mode,
-        teamAId: teams[0].teamId,
-        teamBId: teams[1].teamId,
-      });
+  const ordered = teamIds.sort();
+  const games = [];
+
+  if (ordered.length === 2) {
+    // BO3 cycling through modes
+    for (let i = 0; i < 3; i++) {
+      games.push({ teamA: ordered[0], teamB: ordered[1], mode: modes[i % modes.length], round: i + 1 });
     }
-    return result;
+  } else {
+    const rr = generateRoundRobinGames(ordered, modes);
+    rr.forEach((g, index) => games.push({ ...g, round: index + 1 }));
   }
 
-  for (let i = 0; i < teams.length; i++) {
-    for (let j = i + 1; j < teams.length; j++) {
-      const mode = modes[(idx - 1) % modes.length];
-      result.push({
-        gameId: `G${idx++}`,
-        mode,
-        teamAId: teams[i].teamId,
-        teamBId: teams[j].teamId,
-      });
-    }
-  }
-
-  return result;
+  tournamentState.games = games;
+  renderGames();
 }
 
-async function handleGenerateGames() {
-  if (!tournamentState.currentId) {
-    showMessage('Спочатку оберіть турнір', 'warn');
-    return;
-  }
-  const teams = collectTeamsFromForm().filter(t => t.teamId && t.players.length);
-  if (teams.length < 2) {
-    showMessage('Потрібно щонайменше дві команди зі складами', 'warn');
-    return;
-  }
-  const selectedModes = getSelectedModesFromDom();
-  const games = generateRoundRobinGames(teams, selectedModes);
-  if (!games.length) return;
-  try {
-    await createTournamentGames({ tournamentId: tournamentState.currentId, games });
-    showMessage('Матчі створено', 'success');
-    await refreshTournamentData();
-  } catch (err) {
-    console.error(err);
-    showMessage('Не вдалося створити матчі', 'error');
-  }
+function renderGames() {
+  if (!dom.games || !dom.match) return;
+  dom.games.innerHTML = '';
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = '— оберіть матч —';
+  dom.games.appendChild(defaultOpt);
+
+  tournamentState.games.forEach((game, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    opt.textContent = `${game.teamA} vs ${game.teamB} — ${game.mode} (Раунд ${game.round})`;
+    dom.games.appendChild(opt);
+  });
+
+  dom.match.innerHTML = '';
 }
 
-async function handleSaveGame() {
-  if (!tournamentState.currentId) {
-    showMessage('Оберіть турнір', 'warn');
-    return;
-  }
-  const gameId = dom.gameSelect?.value;
-  if (!gameId) {
-    showMessage('Оберіть матч', 'warn');
-    return;
-  }
-  if (!tournamentState.selectedResult) {
-    showMessage('Оберіть результат матчу', 'warn');
-    return;
-  }
-  const game = (tournamentState.data?.games || []).find(g => g.gameId === gameId);
-  if (!game) {
-    showMessage('Матч не знайдено', 'error');
-    return;
-  }
-  const payload = {
-    tournamentId: tournamentState.currentId,
-    gameId,
-    mode: game.mode,
-    teamAId: game.teamAId,
-    teamBId: game.teamBId,
-    result: tournamentState.selectedResult,
-    mvp: document.getElementById('t-mvp')?.value || '',
-    second: document.getElementById('t-second')?.value || '',
-    third: document.getElementById('t-third')?.value || '',
-    exportAsRegularGame: !!document.getElementById('t-export-regular')?.checked,
+function renderMatchDetails(index) {
+  if (!dom.match) return;
+  dom.match.innerHTML = '';
+  const game = tournamentState.games[Number(index)];
+  if (!game) return;
+
+  const createTeamBlock = (teamId) => {
+    const block = document.createElement('div');
+    block.className = 'team-card';
+    const title = document.createElement('h4');
+    title.textContent = teamId;
+    const ul = document.createElement('ul');
+    ul.className = 'team-list';
+    const team = tournamentState.teams[teamId] || [];
+    const total = team.reduce((s, p) => s + (Number(p.pts) || 0), 0);
+    team.forEach(p => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${p.nick}</span><span>${Number(p.pts || 0).toFixed(0)}</span>`;
+      ul.appendChild(li);
+    });
+    const avg = team.length ? (total / team.length).toFixed(1) : '0.0';
+    const meta = document.createElement('div');
+    meta.className = 'metrics';
+    meta.innerHTML = `<span class="tag">Σ ${total.toFixed(0)}</span><span class="tag">Avg ${avg}</span><span class="tag">${team.length} грав.</span>`;
+    block.append(title, ul, meta);
+    return block;
   };
-  try {
-    await saveTournamentGame(payload);
-    showMessage('Результат збережено', 'success');
-    await refreshTournamentData();
-  } catch (err) {
-    console.error(err);
-    showMessage('Не вдалося зберегти результат', 'error');
-  }
+
+  const meta = document.createElement('div');
+  meta.className = 'metrics';
+  meta.innerHTML = `<span class="tag">Режим: ${game.mode}</span><span class="tag">Раунд ${game.round}</span>`;
+  dom.match.append(createTeamBlock(game.teamA), createTeamBlock(game.teamB), meta);
 }
 
-function bindResultButtons() {
-  const container = dom.resultButtons;
-  if (!container) return;
-  container.addEventListener('click', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    const result = target.dataset.result;
-    if (!result || target.disabled) return;
-    setSelectedResult(result);
+function attachEvents() {
+  dom.load?.addEventListener('click', loadLeague);
+  dom.league?.addEventListener('change', loadLeague);
+  dom.search?.addEventListener('input', renderLobby);
+  dom.addPool?.addEventListener('click', addToPool);
+  dom.clear?.addEventListener('click', clearSelection);
+  dom.teamSelect?.addEventListener('change', renderTeams);
+  dom.auto?.addEventListener('click', renderTeams);
+  dom.generate?.addEventListener('click', generateGames);
+  dom.games?.addEventListener('change', e => renderMatchDetails(e.target.value));
+}
+
+function initModeListener() {
+  document.addEventListener('mode:change', (e) => {
+    const mode = e.detail?.mode || 'regular';
+    setModeActive(mode === 'tournament');
   });
 }
 
-function bindTeamInputs() {
-  for (let i = 1; i <= MAX_TEAMS; i++) {
-    const textarea = dom.teamPlayers[i];
-    if (textarea) textarea.addEventListener('input', recomputeAllTeamMetrics);
-  }
+function init() {
+  if (!cacheDom()) return;
+  initModeListener();
+  attachEvents();
+  loadLeague();
 }
 
-async function refreshTournamentsList() {
-  const leagueSelect = document.getElementById('league');
-  const league = leagueSelect ? leagueSelect.value : 'sundaygames';
-  const selectEl = document.getElementById('tournament-select');
-  if (!selectEl) return;
-  selectEl.innerHTML = '<option value="">— Оберіть турнір —</option>';
-  try {
-    const tournaments = await fetchTournaments({ league, status: 'ACTIVE' });
-    tournaments.forEach(t => {
-      const option = document.createElement('option');
-      option.value = t.tournamentId;
-      option.textContent = `${t.name || t.tournamentId} (${t.league || ''})`;
-      selectEl.appendChild(option);
-    });
-  } catch (err) {
-    console.error(err);
-    showMessage('Не вдалося отримати список турнірів', 'error');
-  }
-}
-
-function initTournamentMode() {
-  if (!cacheDomRefs()) return;
-
-  const regularBtn = document.getElementById('mode-regular');
-  const tournamentBtn = document.getElementById('mode-tournament');
-  if (regularBtn) regularBtn.addEventListener('click', () => setAppMode('regular'));
-  if (tournamentBtn) tournamentBtn.addEventListener('click', () => setAppMode('tournament'));
-
-  const refreshBtn = document.getElementById('refresh-tournaments');
-  if (refreshBtn) refreshBtn.addEventListener('click', refreshTournamentsList);
-
-  const selectEl = document.getElementById('tournament-select');
-  if (selectEl) selectEl.addEventListener('change', handleTournamentChange);
-
-  const toggleCreate = document.getElementById('open-create-tournament');
-  if (toggleCreate) toggleCreate.addEventListener('click', handleCreateTournament);
-
-  const submitCreate = document.getElementById('create-tournament-submit');
-  if (submitCreate) submitCreate.addEventListener('click', submitCreateTournament);
-
-  const autoBtn = document.getElementById('btn-autofill-teams');
-  if (autoBtn) autoBtn.addEventListener('click', fillTeamsFromAutoBalance);
-
-  const saveTeamsBtn = document.getElementById('btn-save-teams');
-  if (saveTeamsBtn) saveTeamsBtn.addEventListener('click', handleSaveTeams);
-
-  const genGamesBtn = document.getElementById('btn-generate-games');
-  if (genGamesBtn) genGamesBtn.addEventListener('click', handleGenerateGames);
-
-  const saveGameBtn = document.getElementById('tournament-save-game');
-  if (saveGameBtn) saveGameBtn.addEventListener('click', handleSaveGame);
-
-  const refreshGames = document.getElementById('refresh-games');
-  if (refreshGames) refreshGames.addEventListener('click', refreshTournamentData);
-
-  if (dom.gameSelect) dom.gameSelect.addEventListener('change', handleGameSelection);
-  if (dom.teamCountSelect) dom.teamCountSelect.addEventListener('change', applyTeamCountVisibility);
-
-  const lobbyLoadBtn = document.getElementById('tournament-load-lobby');
-  if (lobbyLoadBtn) lobbyLoadBtn.addEventListener('click', loadLobbyPlayers);
-  const lobbySearch = dom.lobbySearch;
-  if (lobbySearch) lobbySearch.addEventListener('input', () => renderLobbyTable(tournamentState.lobby));
-  const lobbySelectAll = dom.lobbySelectAll;
-  if (lobbySelectAll) lobbySelectAll.addEventListener('change', (e) => toggleLobbySelection(e.target));
-  const lobbyAddBtn = document.getElementById('tournament-lobby-add');
-  if (lobbyAddBtn) lobbyAddBtn.addEventListener('click', addSelectedLobbyToPool);
-
-  bindResultButtons();
-  bindTeamInputs();
-  setAppMode('regular');
-  applyTeamCountVisibility();
-  recomputeAllTeamMetrics();
-  refreshTournamentsList();
-}
-
-window.addEventListener('DOMContentLoaded', initTournamentMode);
+document.addEventListener('DOMContentLoaded', init);

@@ -16,6 +16,7 @@ import { state } from './state.js?v=2025-09-19-balance-hotfix-1';
 const DEFAULT_TEAMS = 3;
 const MIN_TEAMS = 2;
 const MAX_TEAMS = 5;
+const TOURNAMENT_GAME_MODES = ['DM', 'KT', 'TR'];
 const tournamentState = {
   appMode: 'regular',
   currentId: '',
@@ -570,7 +571,7 @@ async function handleSaveTeams() {
 
 function generateRoundRobinGames(teams) {
   const result = [];
-  const modes = ['DM', 'KT', 'TR'];
+  const modes = TOURNAMENT_GAME_MODES;
   let idx = 1;
   if (teams.length === 2) {
     modes.forEach(mode => {

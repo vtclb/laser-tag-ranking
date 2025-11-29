@@ -45,6 +45,7 @@ const dom = {
   teamNames: new Map(),
   teamLists: new Map(),
   teamMetrics: new Map(),
+  teamTextareas: new Map(),
 };
 
 function showMessage(msg, type = 'info') {
@@ -242,6 +243,7 @@ function renderTeams() {
   dom.teamNames.clear();
   dom.teamLists.clear();
   dom.teamMetrics.clear();
+  dom.teamTextareas.clear();
 
   Object.entries(tournamentState.teams).forEach(([slot, team]) => {
     const card = document.createElement('div');
@@ -258,7 +260,7 @@ function renderTeams() {
     nameInput.className = 'team-name';
     nameInput.value = team.teamName;
     nameInput.addEventListener('input', () => {
-      team.teamName = nameInput.value || `Команда ${slot}`;
+      team.teamName = nameInput.value.trim() || `Команда ${slot}`;
       renderGameOptions();
       persistState();
     });
@@ -313,7 +315,21 @@ function renderTeams() {
     dom.teamMetrics.set(slot, metrics);
     renderTeamMetrics(slot, calculateTeamMetrics(team.players));
 
-    card.append(header, tools, list, metrics);
+    const textarea = document.createElement('textarea');
+    textarea.id = `t-team-players-${slot}`;
+    textarea.value = team.players.join(', ');
+    textarea.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    textarea.addEventListener('drop', e => handleTextareaDrop(e, slot));
+    textarea.addEventListener('input', () => {
+      setTeamPlayersFromInput(slot, textarea.value);
+    });
+
+    dom.teamTextareas.set(slot, textarea);
+
+    card.append(header, tools, list, textarea, metrics);
     dom.teamsWrap.appendChild(card);
     dom.teamCards.set(slot, card);
     dom.teamNames.set(slot, nameInput);
@@ -327,6 +343,31 @@ function removePlayerFromTeams(nick) {
     if (idx >= 0) team.players.splice(idx, 1);
   });
   syncLobbyWithTeams();
+  persistState();
+}
+
+function removePlayerFromOtherTeams(nick, keepSlot) {
+  Object.entries(tournamentState.teams).forEach(([slot, team]) => {
+    if (String(slot) === String(keepSlot)) return;
+    const idx = team.players.indexOf(nick);
+    if (idx >= 0) team.players.splice(idx, 1);
+  });
+}
+
+function setTeamPlayersFromInput(slot, rawValue) {
+  const team = tournamentState.teams[slot];
+  if (!team) return;
+  const parsed = parsePlayerList(rawValue);
+  const unique = [];
+  parsed.forEach(nick => {
+    if (!nick || unique.includes(nick)) return;
+    unique.push(nick);
+  });
+  unique.forEach(nick => removePlayerFromOtherTeams(nick, slot));
+  team.players = unique;
+  syncLobbyWithTeams();
+  renderLobby();
+  renderTeams();
   persistState();
 }
 
@@ -373,6 +414,15 @@ function handleTeamDrop(e, slot) {
     }
   }
   movePlayerToTeam(nick, slot, insertIndex);
+}
+
+function handleTextareaDrop(e, slot) {
+  e.preventDefault();
+  const nick = e.dataTransfer.getData('text/plain');
+  if (!nick) return;
+  movePlayerToTeam(nick, slot);
+  const textarea = dom.teamTextareas.get(slot);
+  if (textarea) textarea.value = tournamentState.teams[slot]?.players.join(', ');
 }
 
 function filteredLobby() {
@@ -583,14 +633,58 @@ async function refreshTournamentsList() {
   }
 }
 
+function filterValidGames(games = []) {
+  if (!Array.isArray(games)) return [];
+  const seen = new Set();
+  return games.reduce((acc, raw) => {
+    const gameId = String(raw?.gameId || '').trim();
+    const mode = (raw?.mode || 'TR').toUpperCase();
+    const teamAId = String(raw?.teamAId || '').trim();
+    const teamBId = String(raw?.teamBId || '').trim();
+    if (!gameId || !teamAId || !teamBId || seen.has(gameId)) return acc;
+    seen.add(gameId);
+    acc.push({ ...raw, gameId, mode, teamAId, teamBId });
+    return acc;
+  }, []);
+}
+
+function normalizeGeneratedGames(games = []) {
+  if (!Array.isArray(games) || !games.length) {
+    return { games: [], error: 'Список матчів порожній' };
+  }
+  const normalized = [];
+  games.forEach((game, idx) => {
+    const teamAId = String(game?.teamAId || '').trim();
+    const teamBId = String(game?.teamBId || '').trim();
+    if (!teamAId || !teamBId || teamAId === teamBId) return;
+    normalized.push({
+      gameId: `G${idx + 1}`,
+      mode: (game?.mode || 'TR').toUpperCase(),
+      teamAId,
+      teamBId,
+    });
+  });
+  if (!normalized.length) {
+    return { games: [], error: 'Не вдалося сформувати матчі: відсутні коректні команди' };
+  }
+  const unique = new Set(normalized.map(g => g.gameId));
+  if (unique.size !== normalized.length) {
+    return { games: [], error: 'Дублікати gameId у списку матчів' };
+  }
+  return { games: normalized, error: '' };
+}
+
 function renderGameOptions() {
   if (!dom.gamesSelect || !dom.gamesList) return;
   dom.gamesSelect.innerHTML = '<option value="">— оберіть матч —</option>';
   dom.gamesList.innerHTML = '';
-  const games = tournamentState.data?.games || [];
+  const games = filterValidGames(tournamentState.data?.games || tournamentState.games || []);
+  tournamentState.games = games;
+  if (tournamentState.data) tournamentState.data.games = games;
   const teams = tournamentState.data?.teams || collectTeamsFromForm();
   const teamNames = Object.fromEntries(teams.map(t => [t.teamId, t.teamName || t.teamId]));
   games.forEach((game, idx) => {
+    if (!game.gameId) return;
     const label = `${teamNames[game.teamAId] || game.teamAId} vs ${teamNames[game.teamBId] || game.teamBId} — ${game.mode}`;
     const status = game.isDraw === 'TRUE' ? 'нічия' : game.winnerTeamId ? `переможець ${teamNames[game.winnerTeamId] || game.winnerTeamId}` : 'не зіграно';
     const opt = document.createElement('option');
@@ -608,7 +702,19 @@ function renderGameOptions() {
     });
     dom.gamesList.appendChild(row);
   });
-  if (games.length) dom.gamesSelect.value = games[0].gameId;
+
+  if (!games.length) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Матчі відсутні';
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    dom.gamesSelect.appendChild(placeholder);
+    return;
+  }
+
+  const preferred = games.find(g => g.gameId === tournamentState.selectedGame)?.gameId || games[0]?.gameId || '';
+  dom.gamesSelect.value = preferred;
 }
 
 function renderAwards(game) {
@@ -715,7 +821,8 @@ function updateDrawAvailability(game) {
 
 function handleGameSelection() {
   const gameId = dom.gamesSelect?.value;
-  const game = (tournamentState.data?.games || []).find(g => g.gameId === gameId);
+  tournamentState.selectedGame = gameId;
+  const game = (tournamentState.data?.games || tournamentState.games || []).find(g => g.gameId === gameId);
   renderMatchPanel(game);
   renderAwards(game);
   updateDrawAvailability(game);
@@ -725,9 +832,11 @@ async function refreshTournamentData() {
   if (!tournamentState.currentId) return;
   try {
     const data = await fetchTournamentData(tournamentState.currentId);
-    tournamentState.data = data;
-    setTeamsToForm(data?.teams || []);
-    tournamentState.games = data?.games || [];
+    const teams = Array.isArray(data?.teams) ? data.teams : [];
+    const games = filterValidGames(data?.games);
+    tournamentState.data = { ...data, teams, games };
+    setTeamsToForm(teams);
+    tournamentState.games = games;
     renderGameOptions();
     handleGameSelection();
   } catch (err) {
@@ -858,9 +967,13 @@ async function handleGenerateGames() {
     return;
   }
   const games = generateRoundRobinGames(teams);
-  if (!games.length) return;
+  const prepared = normalizeGeneratedGames(games);
+  if (prepared.error) {
+    showMessage(prepared.error, 'warn');
+    return;
+  }
   try {
-    await createTournamentGames({ tournamentId: tournamentState.currentId, games });
+    await createTournamentGames({ tournamentId: tournamentState.currentId, games: prepared.games });
     showMessage('Матчі створено', 'success');
     await refreshTournamentData();
   } catch (err) {
@@ -883,25 +996,38 @@ async function handleSaveGame() {
     showMessage('Оберіть результат матчу', 'warn');
     return;
   }
-  const game = (tournamentState.data?.games || []).find(g => g.gameId === gameId);
-  if (!game) {
+  const game = (tournamentState.data?.games || tournamentState.games || []).find(g => g.gameId === gameId);
+  if (!game || !game.gameId) {
     showMessage('Матч не знайдено', 'error');
     return;
   }
   const payload = {
     tournamentId: tournamentState.currentId,
     gameId,
-    mode: game.mode,
+    mode: (game.mode || '').toUpperCase(),
     teamAId: game.teamAId,
     teamBId: game.teamBId,
     result: tournamentState.selectedResult,
-    mvp: dom.awards.mvp?.value || '',
-    second: dom.awards.second?.value || '',
-    third: dom.awards.third?.value || '',
     exportAsRegularGame: !!dom.exportRegular?.checked,
   };
+  if (!payload.mode || !payload.teamAId || !payload.teamBId) {
+    showMessage('Некоректні дані матчу', 'error');
+    return;
+  }
+  const awards = {
+    mvp: dom.awards.mvp?.value.trim(),
+    second: dom.awards.second?.value.trim(),
+    third: dom.awards.third?.value.trim(),
+  };
+  Object.entries(awards).forEach(([key, value]) => {
+    if (value) payload[key] = value;
+  });
+  const cleanedPayload = Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== '' && value !== null && value !== undefined));
+  const rowsPayload = { ...cleanedPayload };
+  cleanedPayload.rows = [rowsPayload];
+  console.log('Saving tournament game payload', cleanedPayload);
   try {
-    await saveTournamentGame(payload);
+    await saveTournamentGame(cleanedPayload);
     showMessage('Результат збережено', 'success');
     await refreshTournamentData();
   } catch (err) {

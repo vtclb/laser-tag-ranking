@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Турнір</title>
+  <link rel="stylesheet" href="balancer.css">
+  <link rel="stylesheet" href="styles/balance.css">
+</head>
+<body class="bal" data-app-mode="tournament">
+  <main class="bal__main" id="tournament-view">
+    <header class="bal__card">
+      <h1 id="tournament-title">Турнір</h1>
+      <p id="tournament-meta" class="text-muted"></p>
+      <div class="actions">
+        <button id="refresh-tournament" class="btn">Оновити</button>
+      </div>
+    </header>
+
+    <section class="bal__card" id="tournament-teams-section">
+      <h2>Команди</h2>
+      <div class="table-responsive">
+        <table id="teams-table">
+          <thead>
+            <tr>
+              <th>Команда</th>
+              <th>Гравці</th>
+              <th>W-L-D</th>
+              <th>Очки</th>
+              <th>MMR</th>
+              <th>Ранг</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bal__card" id="tournament-players-section">
+      <h2>Гравці</h2>
+      <div class="table-responsive">
+        <table id="players-table">
+          <thead>
+            <tr>
+              <th>Нік</th>
+              <th>Команда</th>
+              <th>Ігор</th>
+              <th>W-L-D</th>
+              <th>MVP</th>
+              <th>2 місце</th>
+              <th>3 місце</th>
+              <th>Impact</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bal__card" id="tournament-games-section">
+      <h2>Матчі</h2>
+      <div class="table-responsive">
+        <table id="games-table">
+          <thead>
+            <tr>
+              <th>Режим</th>
+              <th>Матч</th>
+              <th>Статус</th>
+              <th>MVP / 2 / 3</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="scripts/config.js?v=2025-09-19-balance-hotfix-1"></script>
+  <script type="module" src="scripts/logger.js?v=2025-09-19-balance-hotfix-1"></script>
+  <script type="module" src="scripts/api.js?v=2025-09-19-balance-hotfix-1"></script>
+  <script type="module" src="scripts/tournamentView.js?v=2025-10-01"></script>
+</body>
+</html>

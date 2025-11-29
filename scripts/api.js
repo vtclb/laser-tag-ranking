@@ -986,6 +986,48 @@ export async function updateAbonement({ nick, league, type }) {
   return res.json ? res.json() : res.text();
 }
 
+// ==================== TOURNAMENT ACTIONS ====================
+async function callTournament(action, payload = {}) {
+  const req = { mode: 'tournament', action, ...payload };
+  if (req.league) req.league = normalizeLeague(req.league);
+  const res = await gasPost('', req);
+  if (!res || res.status === 'ERR' || res.status === 'ERROR') {
+    const message = res?.message || res?.status || 'ERR_STATUS';
+    throw new Error(message);
+  }
+  return res;
+}
+
+export async function fetchTournaments({ league, status } = {}) {
+  const resp = await callTournament('listTournaments', { league, status });
+  return Array.isArray(resp.tournaments) ? resp.tournaments : [];
+}
+
+export async function createTournament(data) {
+  const resp = await callTournament('createTournament', data || {});
+  return resp.tournamentId;
+}
+
+export async function saveTournamentTeams(data) {
+  const resp = await callTournament('saveTeams', data || {});
+  return resp.status === 'OK';
+}
+
+export async function createTournamentGames(data) {
+  const resp = await callTournament('createGames', data || {});
+  return resp.status === 'OK';
+}
+
+export async function saveTournamentGame(data) {
+  const resp = await callTournament('saveGame', data || {});
+  return resp;
+}
+
+export async function fetchTournamentData(tournamentId) {
+  const resp = await callTournament('getTournamentData', { tournamentId });
+  return resp;
+}
+
 // ===== Optional small helpers (UI aliases) =====
 window.uiLeagueToCsv = window.uiLeagueToCsv || function(v){ return String(v).toLowerCase()==='kids' ? 'kids' : 'sundaygames'; };
 window.uiLeagueToGas = window.uiLeagueToGas || function(v){ return String(v).toLowerCase()==='kids' ? 'kids' : 'sundaygames'; };

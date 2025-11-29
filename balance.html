@@ -31,7 +31,15 @@
           </div>
         </section>
 
-        <section class="bal__card blc-accordion" id="sec-player-picker">
+        <section class="panel" id="mode-switcher">
+          <div class="panel__controls mode-switch global-mode">
+            <button type="button" id="mode-regular" class="btn btn-primary">Індивідуальна гра</button>
+            <button type="button" id="mode-tournament" class="btn">Турнір</button>
+          </div>
+          <small>Перемикач дозволяє працювати з турнірними матчами без впливу на звичайні ігри.</small>
+        </section>
+
+        <section class="bal__card blc-accordion regular-only" id="sec-player-picker">
           <h2 class="bal__acc-head">Вибір гравців</h2>
           <div class="bal__acc-body scroll-pane">
             <!-- РОЗБЛОКОВАНО: без hidden -->
@@ -53,7 +61,101 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="bal__card tournament-only" id="tournament-panel">
+          <h2>Турнірний режим</h2>
+          <div class="tournament-block">
+            <div class="tournament-row">
+              <label for="tournament-select">Активні турніри</label>
+              <select id="tournament-select">
+                <option value="">— Оберіть турнір —</option>
+              </select>
+              <button type="button" id="refresh-tournaments">Оновити</button>
+            </div>
+            <div class="tournament-row create-row">
+              <button type="button" id="open-create-tournament">Створити турнір</button>
+              <div id="create-tournament-form" hidden>
+                <input type="text" id="tournament-name" placeholder="Назва турніру">
+                <select id="tournament-league">
+                  <option value="kids">Молодша ліга</option>
+                  <option value="sundaygames">Старша ліга</option>
+                </select>
+                <button type="button" id="create-tournament-submit">Створити</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tournament-block">
+            <h3>Склади команд</h3>
+            <p class="text-muted">Заповніть списки гравців або використайте автопідбір.</p>
+            <label for="tournament-player-pool" class="text-muted">Пул гравців (через кому або з нового рядка)</label>
+            <textarea id="tournament-player-pool" rows="2" placeholder="Sem,Justy,Voron..."></textarea>
+            <div class="teams-grid" id="tournament-team-grid">
+              <div class="team-card" data-slot="1">
+                <input type="text" class="team-name" id="t-team-name-1" placeholder="Команда 1">
+                <textarea id="t-team-players-1" rows="3" placeholder="Гравці через кому"></textarea>
+              </div>
+              <div class="team-card" data-slot="2">
+                <input type="text" class="team-name" id="t-team-name-2" placeholder="Команда 2">
+                <textarea id="t-team-players-2" rows="3" placeholder="Гравці через кому"></textarea>
+              </div>
+              <div class="team-card" data-slot="3">
+                <input type="text" class="team-name" id="t-team-name-3" placeholder="Команда 3">
+                <textarea id="t-team-players-3" rows="3" placeholder="Гравці через кому"></textarea>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" id="btn-autofill-teams">Автобаланс 3×3</button>
+              <button type="button" id="btn-save-teams" class="btn btn-primary">Зберегти склади</button>
+            </div>
+          </div>
+
+          <div class="tournament-block">
+            <h3>Матчі</h3>
+            <div class="actions">
+              <button type="button" id="btn-generate-games">Згенерувати матчі (DM/KT/TR)</button>
+            </div>
+            <div class="tournament-row">
+              <label for="tournament-game-select">Оберіть матч</label>
+              <select id="tournament-game-select">
+                <option value="">— Немає матчів —</option>
+              </select>
+              <button type="button" id="refresh-games">Оновити</button>
+            </div>
+            <p id="tournament-game-status" class="text-muted"></p>
+
+            <div class="result-grid">
+              <div class="field">
+                <span>Результат</span>
+                <div class="btn-group" id="tournament-result-buttons">
+                  <button type="button" data-result="A">Перемога команди A</button>
+                  <button type="button" data-result="DRAW">Нічия</button>
+                  <button type="button" data-result="B">Перемога команди B</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="t-mvp">MVP</label>
+                <select id="t-mvp"></select>
+              </div>
+              <div class="field">
+                <label for="t-second">2 місце</label>
+                <select id="t-second"></select>
+              </div>
+              <div class="field">
+                <label for="t-third">3 місце</label>
+                <select id="t-third"></select>
+              </div>
+              <label class="checkbox-row">
+                <input type="checkbox" id="t-export-regular"> Експортувати у сезонний рейтинг
+              </label>
+            </div>
+
+            <div class="actions">
+              <button type="button" id="tournament-save-game" class="btn btn-primary">Зберегти результат</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel regular-only">
           <div class="panel__controls mode-switch">
             <button type="button" id="mode-auto" class="btn btn-primary">Авто-баланс</button>
             <button type="button" id="mode-manual" class="btn">Ручне формування</button>
@@ -61,7 +163,7 @@
           <small>Оберіть автоматичний режим для швидкого розподілу або ручний, щоб налаштувати склади команд самостійно.</small>
         </section>
 
-        <section class="bal__card blc-accordion open" id="sec-lobby">
+        <section class="bal__card blc-accordion open regular-only" id="sec-lobby">
           <h2 class="bal__acc-head">Лоббі дня</h2>
           <div class="bal__acc-body">
             <section id="lobby-area" class="card">
@@ -114,7 +216,7 @@
         </section>
 
         <!-- СТАРИЙ сценарій ховаємо, щоб не конфліктував з новими кнопками -->
-        <section class="bal__card blc-accordion" id="sec-scenario" hidden>
+        <section class="bal__card blc-accordion regular-only" id="sec-scenario" hidden>
           <h2 class="bal__acc-head">Режим гри</h2>
           <div class="bal__acc-body">
             <section id="scenario-area" class="card hidden">
@@ -134,7 +236,7 @@
 
         <section id="teams-area" class="bal__card grid hidden"></section>
 
-        <section id="arena-select" class="bal__card card hidden">
+        <section id="arena-select" class="bal__card card hidden regular-only">
           <h2>Виберіть дві команди</h2>
           <div id="arena-checkboxes" class="flex gap-2"></div>
           <div class="actions">
@@ -142,7 +244,7 @@
           </div>
         </section>
 
-        <section id="arena-area" class="bal__card card hidden">
+        <section id="arena-area" class="bal__card card hidden regular-only">
           <h2>Арена: <span id="arena-vs"></span></h2>
           <div class="field">
             <label for="mvp1">MVP:</label>
@@ -238,5 +340,6 @@
   <script type="module" src="scripts/api.js?v=2025-09-19-balance-hotfix-1"></script>
   <script type="module" src="scripts/state.js?v=2025-09-19-balance-hotfix-1"></script>
   <script type="module" src="scripts/balance.js?v=2025-09-19-balance-hotfix-1"></script>
+  <script type="module" src="scripts/tournamentMode.js?v=2025-10-01"></script>
 </body>
 </html>

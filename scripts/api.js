@@ -483,7 +483,7 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
 // ==================== LEAGUES ====================
 const LEAGUE_ALIASES = {
   kids: 'kids', kid: 'kids', junior: 'kids',
-  olds: 'olds', adult: 'olds', adults: 'olds',
+  olds: 'sundaygames', adult: 'sundaygames', adults: 'sundaygames',
   sundaygames: 'sundaygames', sunday: 'sundaygames', sundaygame: 'sundaygames',
   'старшаліга': 'sundaygames', 'старша ліга': 'sundaygames'
 };

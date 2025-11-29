@@ -481,10 +481,20 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
 }
 
 // ==================== LEAGUES ====================
+const LEAGUE_ALIASES = {
+  kids: 'kids', kid: 'kids', junior: 'kids',
+  olds: 'olds', adult: 'olds', adults: 'olds',
+  sundaygames: 'sundaygames', sunday: 'sundaygames', sundaygame: 'sundaygames',
+  'старшаліга': 'sundaygames', 'старша ліга': 'sundaygames'
+};
 export function normalizeLeague(v) {
+
+  const key = String(v ?? '').trim().toLowerCase();
+  return LEAGUE_ALIASES[key] || 'kids';
+
   const x = String(v || '').toLowerCase();
   if (x === 'kids' || x === 'kid' || x === 'junior') return 'kids';
- codex/fix-and-enhance-tournament-mode-ui-t0zcxw
+
   if (x === 'sundaygames' || x === 'sunday' || x === 'sundaygame') return 'sundaygames';
   if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
 
@@ -492,6 +502,7 @@ export function normalizeLeague(v) {
   if (x === 'sundaygames') return 'olds';
  main
   return 'kids';
+ main
 }
 export function getLeagueFeedUrl(league) {
   const key = normalizeLeague(league);

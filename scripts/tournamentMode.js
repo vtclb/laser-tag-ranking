@@ -1,5 +1,5 @@
 // Tournament mode controller
-import { fetchLeagueCsv, parsePlayersFromCsv } from './api.js';
+import { fetchLeagueCsv, normalizeLeague, parsePlayersFromCsv } from './api.js';
 import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js';
 import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
 
@@ -84,6 +84,9 @@ function setModeActive(isActive) {
 }
 
 function parseLeague(value) {
+
+  return normalizeLeague(value);
+
   if (value === 'olds') return 'olds';
   if (value === 'sundaygames') return 'sundaygames';
   return 'kids';
@@ -202,6 +205,7 @@ function applySavedState(saved) {
   tournamentState.selectedGame = '';
   tournamentState.sort = saved.sort || tournamentState.sort;
   syncLobbyWithTeams();
+
 }
 
 function clampTeamsCount(raw) {
@@ -322,6 +326,25 @@ function applySavedState(saved) {
 async function loadLeague() {
   const league = parseLeague(dom.league?.value);
   tournamentState.league = league;
+
+  try {
+    const csv = await fetchLeagueCsv(league);
+    const players = parsePlayersFromCsv(csv);
+    tournamentState.players = players;
+    buildPlayerMap(players);
+    tournamentState.lobby = new Map(players.map(p => [p.nick, p]));
+    const saved = restoreState();
+    applySavedState(saved);
+    renderLobby();
+    renderPool();
+    renderTeams();
+    renderGames();
+    renderMatchPanel();
+  } catch (err) {
+    console.error('Tournament league load failed', err);
+    showToast?.('Не вдалося завантажити лігу', 'error');
+  }
+
   const csv = await fetchLeagueCsv(league);
   const players = parsePlayersFromCsv(csv);
   tournamentState.players = players;
@@ -334,6 +357,7 @@ async function loadLeague() {
   renderTeams();
   renderGames();
   renderMatchPanel();
+ main
 }
 
 function syncLobbyWithTeams() {
@@ -725,6 +749,7 @@ function renderGames() {
   if (tournamentState.selectedGame !== '') {
     dom.games.value = String(tournamentState.selectedGame);
   }
+
 }
 
 function playersForGame(game) {
@@ -736,6 +761,19 @@ function playersForGame(game) {
     .filter(Boolean);
 }
 
+
+}
+
+function playersForGame(game) {
+  if (!game) return [];
+  const teamA = tournamentState.teams[game.teamA]?.players || [];
+  const teamB = tournamentState.teams[game.teamB]?.players || [];
+  return [...teamA, ...teamB]
+    .map(nick => tournamentState.playerMap.get(nick))
+    .filter(Boolean);
+}
+
+main
 function renderMatchPanel() {
   if (!dom.match) return;
   dom.match.innerHTML = '';

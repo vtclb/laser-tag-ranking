@@ -16,7 +16,10 @@ import { state } from './state.js?v=2025-09-19-balance-hotfix-1';
 const DEFAULT_TEAMS = 3;
 const MIN_TEAMS = 2;
 const MAX_TEAMS = 5;
+ codex/implement-full-tournament-mode-upgrade-aklmzu
 const TOURNAMENT_GAME_MODES = ['DM', 'KT', 'TR'];
+=======
+ main
 const tournamentState = {
   appMode: 'regular',
   currentId: '',
@@ -143,7 +146,12 @@ function fillTeamsFromAutoBalance() {
     showMessage('Додайте гравців у пул для автопідбору', 'warn');
     return;
   }
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
+=======
+  const countSelect = document.getElementById('tournament-team-count');
+  const desiredCount = Number(countSelect?.value || DEFAULT_TEAMS);
+ main
   const teamCount = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
   const balanced = autoBalance(players, teamCount);
   Object.entries(balanced).forEach(([idx, members]) => {
@@ -156,6 +164,7 @@ function fillTeamsFromAutoBalance() {
 }
 
 function collectTeamsFromForm() {
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
   const total = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
   const teams = [];
@@ -163,6 +172,16 @@ function collectTeamsFromForm() {
     const nameInput = dom.teamNames[i];
     const playersInput = dom.teamPlayers[i];
     const slotEl = dom.teamCards[i];
+=======
+  const countSelect = document.getElementById('tournament-team-count');
+  const desiredCount = Number(countSelect?.value || DEFAULT_TEAMS);
+  const total = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
+  const teams = [];
+  for (let i = 1; i <= total; i++) {
+    const nameInput = document.getElementById(`t-team-name-${i}`);
+    const playersInput = document.getElementById(`t-team-players-${i}`);
+    const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+ main
     const teamId = slotEl?.dataset.teamId || `${tournamentState.currentId || 'T'}_TEAM${i}`;
     const teamName = (nameInput?.value || '').trim() || `Команда ${i}`;
     const players = parsePlayerList(playersInput?.value || '');
@@ -172,11 +191,20 @@ function collectTeamsFromForm() {
 }
 
 function setTeamsToForm(teams = []) {
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   const total = Array.isArray(teams) ? Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teams.length || DEFAULT_TEAMS)) : DEFAULT_TEAMS;
   if (dom.teamCountSelect) dom.teamCountSelect.value = total;
 
   for (let i = 1; i <= MAX_TEAMS; i++) {
     const slotEl = dom.teamCards[i];
+=======
+  const countSelect = document.getElementById('tournament-team-count');
+  const total = Array.isArray(teams) ? Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teams.length || DEFAULT_TEAMS)) : DEFAULT_TEAMS;
+  if (countSelect) countSelect.value = total;
+
+  for (let i = 1; i <= MAX_TEAMS; i++) {
+    const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+ main
     const team = teams[i - 1];
     if (!slotEl) continue;
     slotEl.hidden = i > total;
@@ -199,14 +227,24 @@ function setTeamsToForm(teams = []) {
 }
 
 function applyTeamCountVisibility() {
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   const total = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
   for (let i = 1; i <= MAX_TEAMS; i++) {
     const slotEl = dom.teamCards[i];
+=======
+  const countSelect = document.getElementById('tournament-team-count');
+  const total = Number(countSelect?.value || DEFAULT_TEAMS);
+  for (let i = 1; i <= MAX_TEAMS; i++) {
+    const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+ main
     if (slotEl) {
       slotEl.hidden = i > total;
     }
   }
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   recomputeAllTeamMetrics();
+=======
+ main
 }
 
 function validateTeamsBeforeSave(teams) {
@@ -215,6 +253,7 @@ function validateTeamsBeforeSave(teams) {
     return 'Мінімум дві команди мають містити гравців';
   }
 
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   const lookup = buildPlayerLookup();
   const duplicates = new Map();
   const missing = new Set();
@@ -222,13 +261,20 @@ function validateTeamsBeforeSave(teams) {
   filled.forEach(team => {
     const metrics = calculateTeamMetrics(team.players || []);
     strengths.push(metrics.strengthIndex);
+=======
+  const duplicates = new Map();
+  filled.forEach(team => {
+ main
     (team.players || []).forEach(nick => {
       const key = nick.toLowerCase();
       if (!duplicates.has(key)) {
         duplicates.set(key, []);
       }
       duplicates.get(key).push(team.teamName || team.teamId);
+ codex/implement-full-tournament-mode-upgrade-aklmzu
       if (!lookup.has(key)) missing.add(nick);
+=======
+ main
     });
   });
 
@@ -237,6 +283,7 @@ function validateTeamsBeforeSave(teams) {
     return `Гравець ${offender[0]} дублюється у командах: ${offender[1].join(', ')}`;
   }
 
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   if (missing.size) {
     return `Невідомі гравці: ${Array.from(missing).join(', ')}`;
   }
@@ -250,6 +297,8 @@ function validateTeamsBeforeSave(teams) {
     }
   }
 
+=======
+ main
   return '';
 }
 
@@ -569,6 +618,7 @@ async function handleSaveTeams() {
   }
 }
 
+ codex/implement-full-tournament-mode-upgrade-aklmzu
 function generateRoundRobinGames(teams, selectedModes = ['TR']) {
   const result = [];
   let idx = 1;
@@ -585,11 +635,27 @@ function generateRoundRobinGames(teams, selectedModes = ['TR']) {
         teamBId: teams[1].teamId,
       });
     });
+=======
+function generateRoundRobinGames(teams) {
+  const result = [];
+  let idx = 1;
+  if (teams.length === 2) {
+    const bestOf = 3;
+    for (let i = 0; i < bestOf; i++) {
+      result.push({
+        gameId: `G${idx++}`,
+        mode: 'TR',
+        teamAId: teams[0].teamId,
+        teamBId: teams[1].teamId,
+      });
+    }
+ main
     return result;
   }
 
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
+ codex/implement-full-tournament-mode-upgrade-aklmzu
       gameModes.forEach(mode => {
         result.push({
           gameId: `G${idx++}`,
@@ -597,6 +663,13 @@ function generateRoundRobinGames(teams, selectedModes = ['TR']) {
           teamAId: teams[i].teamId,
           teamBId: teams[j].teamId,
         });
+=======
+      result.push({
+        gameId: `G${idx++}`,
+        mode: 'TR',
+        teamAId: teams[i].teamId,
+        teamBId: teams[j].teamId,
+ main
       });
     }
   }
@@ -736,10 +809,16 @@ function initTournamentMode() {
     if (textarea) textarea.addEventListener('input', recomputeAllTeamMetrics);
   }
 
+  const teamCountSelect = document.getElementById('tournament-team-count');
+  if (teamCountSelect) teamCountSelect.addEventListener('change', applyTeamCountVisibility);
+
   bindResultButtons();
   setAppMode('regular');
   applyTeamCountVisibility();
+ codex/implement-full-tournament-mode-upgrade-aklmzu
   recomputeAllTeamMetrics();
+=======
+ main
   refreshTournamentsList();
 }
 window.addEventListener('DOMContentLoaded', initTournamentMode);

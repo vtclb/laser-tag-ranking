@@ -570,27 +570,29 @@ async function handleSaveTeams() {
 
 function generateRoundRobinGames(teams) {
   const result = [];
+  const modes = ['DM', 'KT', 'TR'];
   let idx = 1;
   if (teams.length === 2) {
-    const bestOf = 3;
-    for (let i = 0; i < bestOf; i++) {
+    modes.forEach(mode => {
       result.push({
         gameId: `G${idx++}`,
-        mode: 'TR',
+        mode,
         teamAId: teams[0].teamId,
         teamBId: teams[1].teamId,
       });
-    }
+    });
     return result;
   }
 
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
-      result.push({
-        gameId: `G${idx++}`,
-        mode: 'TR',
-        teamAId: teams[i].teamId,
-        teamBId: teams[j].teamId,
+      modes.forEach(mode => {
+        result.push({
+          gameId: `G${idx++}`,
+          mode,
+          teamAId: teams[i].teamId,
+          teamBId: teams[j].teamId,
+        });
       });
     }
   }

@@ -11,6 +11,8 @@ import { autoBalance } from './balance.js?v=2025-09-19-balance-hotfix-1';
 import { state } from './state.js?v=2025-09-19-balance-hotfix-1';
 
 const DEFAULT_TEAMS = 3;
+const MIN_TEAMS = 2;
+const MAX_TEAMS = 5;
 const tournamentState = {
   appMode: 'regular',
   currentId: '',
@@ -62,7 +64,10 @@ function fillTeamsFromAutoBalance() {
     showMessage('Додайте гравців у пул для автопідбору', 'warn');
     return;
   }
-  const balanced = autoBalance(players, DEFAULT_TEAMS);
+  const countSelect = document.getElementById('tournament-team-count');
+  const desiredCount = Number(countSelect?.value || DEFAULT_TEAMS);
+  const teamCount = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
+  const balanced = autoBalance(players, teamCount);
   Object.entries(balanced).forEach(([idx, members]) => {
     const slot = Number(idx);
     const textarea = document.getElementById(`t-team-players-${slot}`);
@@ -73,8 +78,11 @@ function fillTeamsFromAutoBalance() {
 }
 
 function collectTeamsFromForm() {
+  const countSelect = document.getElementById('tournament-team-count');
+  const desiredCount = Number(countSelect?.value || DEFAULT_TEAMS);
+  const total = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
   const teams = [];
-  for (let i = 1; i <= DEFAULT_TEAMS; i++) {
+  for (let i = 1; i <= total; i++) {
     const nameInput = document.getElementById(`t-team-name-${i}`);
     const playersInput = document.getElementById(`t-team-players-${i}`);
     const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
@@ -87,10 +95,15 @@ function collectTeamsFromForm() {
 }
 
 function setTeamsToForm(teams = []) {
-  for (let i = 1; i <= DEFAULT_TEAMS; i++) {
+  const countSelect = document.getElementById('tournament-team-count');
+  const total = Array.isArray(teams) ? Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teams.length || DEFAULT_TEAMS)) : DEFAULT_TEAMS;
+  if (countSelect) countSelect.value = total;
+
+  for (let i = 1; i <= MAX_TEAMS; i++) {
     const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
     const team = teams[i - 1];
     if (!slotEl) continue;
+    slotEl.hidden = i > total;
     if (team) {
       slotEl.dataset.teamId = team.teamId || '';
       const nameInput = document.getElementById(`t-team-name-${i}`);
@@ -105,6 +118,42 @@ function setTeamsToForm(teams = []) {
       if (playersInput) playersInput.value = '';
     }
   }
+}
+
+function applyTeamCountVisibility() {
+  const countSelect = document.getElementById('tournament-team-count');
+  const total = Number(countSelect?.value || DEFAULT_TEAMS);
+  for (let i = 1; i <= MAX_TEAMS; i++) {
+    const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+    if (slotEl) {
+      slotEl.hidden = i > total;
+    }
+  }
+}
+
+function validateTeamsBeforeSave(teams) {
+  const filled = teams.filter(t => (t.players || []).length);
+  if (filled.length < MIN_TEAMS) {
+    return 'Мінімум дві команди мають містити гравців';
+  }
+
+  const duplicates = new Map();
+  filled.forEach(team => {
+    (team.players || []).forEach(nick => {
+      const key = nick.toLowerCase();
+      if (!duplicates.has(key)) {
+        duplicates.set(key, []);
+      }
+      duplicates.get(key).push(team.teamName || team.teamId);
+    });
+  });
+
+  const offender = Array.from(duplicates.entries()).find(([, list]) => list.length > 1);
+  if (offender) {
+    return `Гравець ${offender[0]} дублюється у командах: ${offender[1].join(', ')}`;
+  }
+
+  return '';
 }
 
 async function refreshTournamentsList() {
@@ -286,8 +335,14 @@ async function handleSaveTeams() {
     showMessage('Оберіть турнір перед збереженням складів', 'warn');
     return;
   }
+  const teams = collectTeamsFromForm();
+  const validationError = validateTeamsBeforeSave(teams);
+  if (validationError) {
+    showMessage(validationError, 'warn');
+    return;
+  }
   try {
-    await saveTournamentTeams({ tournamentId: tournamentState.currentId, teams: collectTeamsFromForm() });
+    await saveTournamentTeams({ tournamentId: tournamentState.currentId, teams });
     showMessage('Склади команд оновлено', 'success');
     await refreshTournamentData();
   } catch (err) {
@@ -297,18 +352,28 @@ async function handleSaveTeams() {
 }
 
 function generateRoundRobinGames(teams) {
-  const modes = ['DM', 'KT', 'TR'];
   const result = [];
   let idx = 1;
+  if (teams.length === 2) {
+    const bestOf = 3;
+    for (let i = 0; i < bestOf; i++) {
+      result.push({
+        gameId: `G${idx++}`,
+        mode: 'TR',
+        teamAId: teams[0].teamId,
+        teamBId: teams[1].teamId,
+      });
+    }
+    return result;
+  }
+
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
-      modes.forEach(mode => {
-        result.push({
-          gameId: `G${idx++}`,
-          mode,
-          teamAId: teams[i].teamId,
-          teamBId: teams[j].teamId,
-        });
+      result.push({
+        gameId: `G${idx++}`,
+        mode: 'TR',
+        teamAId: teams[i].teamId,
+        teamBId: teams[j].teamId,
       });
     }
   }
@@ -426,8 +491,12 @@ function initTournamentMode() {
   const gameSelect = document.getElementById('tournament-game-select');
   if (gameSelect) gameSelect.addEventListener('change', handleGameSelection);
 
+  const teamCountSelect = document.getElementById('tournament-team-count');
+  if (teamCountSelect) teamCountSelect.addEventListener('change', applyTeamCountVisibility);
+
   bindResultButtons();
   setAppMode('regular');
+  applyTeamCountVisibility();
   refreshTournamentsList();
 }
 window.addEventListener('DOMContentLoaded', initTournamentMode);

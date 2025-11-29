@@ -70,7 +70,15 @@ const {
   fetchLeagueCsv,
   parsePlayersFromCsv,
 } = await import('../scripts/api.js');
+const { GAS_PROXY_BASE } = await import('../scripts/config.js');
 
+const proxyKidsUrl = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=kids`;
+const proxySundayUrl = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=sundaygames`;
+
+csvByUrl.set(
+  proxyKidsUrl,
+  '\ufeffnick,pts,rank,games,avatar\nAlpha,123,A,5,https://example.com/a.png\n"Foxtrot, Kid",456,B,3,\n'
+);
 csvByUrl.set(
   CSV_URLS.kids.ranking,
   '\ufeff"Nickname","Points"\n"Alpha",123\n"Foxtrot, Kid",456\n'
@@ -78,6 +86,10 @@ csvByUrl.set(
 csvByUrl.set(
   CSV_URLS.sundaygames.ranking,
   '\ufeffNickname,Points\nBravo,789\n'
+);
+csvByUrl.set(
+  proxySundayUrl,
+  '\ufeffnick,pts,rank,games\nBravo,789,S,2\n'
 );
 
 const kidsRows = await fetchCsv(getLeagueFeedUrl('kids'));
@@ -99,6 +111,8 @@ const kidsPlayers = parsePlayersFromCsv(kidsCsv);
 assert.equal(kidsPlayers.length > 0, true);
 assert.equal(kidsPlayers[0].nick, 'Alpha');
 assert.equal(kidsPlayers[1].nick, 'Foxtrot, Kid');
+assert.equal(kidsPlayers[0].rank, 'A');
+assert.equal(kidsPlayers[0].games, 5);
 
 const sundayCsv = await fetchLeagueCsv('sundaygames');
 const sundayPlayers = parsePlayersFromCsv(sundayCsv);

@@ -24,6 +24,21 @@ const tournamentState = {
   lobby: [],
   lobbyLeague: 'kids',
 };
+const lobbyCache = new Map();
+
+const dom = {
+  teamCards: {},
+  teamNames: {},
+  teamPlayers: {},
+  teamMetrics: {},
+  teamCountSelect: null,
+  lobbyTableBody: null,
+  lobbySearch: null,
+  lobbySelectAll: null,
+  lobbyPool: null,
+  gameSelect: null,
+  resultButtons: null,
+};
 
 function showMessage(msg, type = 'info') {
   if (typeof showToast === 'function') {
@@ -42,6 +57,23 @@ function setAppMode(mode) {
   const tournamentBtn = document.getElementById('mode-tournament');
   if (regularBtn) regularBtn.classList.toggle('btn-primary', tournamentState.appMode === 'regular');
   if (tournamentBtn) tournamentBtn.classList.toggle('btn-primary', tournamentState.appMode === 'tournament');
+}
+
+function cacheDomRefs() {
+  dom.teamCountSelect = document.getElementById('tournament-team-count');
+  dom.lobbyTableBody = document.querySelector('#tournament-lobby-table tbody');
+  dom.lobbySearch = document.getElementById('tournament-lobby-search');
+  dom.lobbySelectAll = document.getElementById('tournament-lobby-select-all');
+  dom.lobbyPool = document.getElementById('tournament-player-pool');
+  dom.gameSelect = document.getElementById('tournament-game-select');
+  dom.resultButtons = document.querySelector('#tournament-result-buttons');
+
+  for (let i = 1; i <= MAX_TEAMS; i++) {
+    dom.teamCards[i] = document.querySelector(`.team-card[data-slot="${i}"]`);
+    dom.teamNames[i] = document.getElementById(`t-team-name-${i}`);
+    dom.teamPlayers[i] = document.getElementById(`t-team-players-${i}`);
+    dom.teamMetrics[i] = document.getElementById(`t-team-metrics-${i}`);
+  }
 }
 
 function parsePlayerList(raw) {
@@ -70,7 +102,7 @@ function toBalanceObject(nick) {
 }
 
 function renderTeamMetrics(slot, metrics) {
-  const el = document.getElementById(`t-team-metrics-${slot}`);
+  const el = dom.teamMetrics[slot];
   if (!el) return;
   if (!metrics) {
     el.textContent = '';
@@ -96,27 +128,26 @@ function calculateTeamMetrics(players) {
 
 function recomputeAllTeamMetrics() {
   for (let i = 1; i <= MAX_TEAMS; i++) {
-    const textarea = document.getElementById(`t-team-players-${i}`);
+    const textarea = dom.teamPlayers[i];
     const metrics = textarea ? calculateTeamMetrics(textarea.value || '') : null;
     renderTeamMetrics(i, metrics);
   }
 }
 
 function fillTeamsFromAutoBalance() {
-  const poolEl = document.getElementById('tournament-player-pool');
+  const poolEl = dom.lobbyPool;
   const poolList = parsePlayerList(poolEl ? poolEl.value : '');
   const players = poolList.map(toBalanceObject);
   if (!players.length) {
     showMessage('Додайте гравців у пул для автопідбору', 'warn');
     return;
   }
-  const countSelect = document.getElementById('tournament-team-count');
-  const desiredCount = Number(countSelect?.value || DEFAULT_TEAMS);
+  const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
   const teamCount = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
   const balanced = autoBalance(players, teamCount);
   Object.entries(balanced).forEach(([idx, members]) => {
     const slot = Number(idx);
-    const textarea = document.getElementById(`t-team-players-${slot}`);
+    const textarea = dom.teamPlayers[slot];
     if (textarea) {
       textarea.value = members.map(p => p.nick).join(',');
     }
@@ -124,14 +155,13 @@ function fillTeamsFromAutoBalance() {
 }
 
 function collectTeamsFromForm() {
-  const countSelect = document.getElementById('tournament-team-count');
-  const desiredCount = Number(countSelect?.value || DEFAULT_TEAMS);
+  const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
   const total = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
   const teams = [];
   for (let i = 1; i <= total; i++) {
-    const nameInput = document.getElementById(`t-team-name-${i}`);
-    const playersInput = document.getElementById(`t-team-players-${i}`);
-    const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+    const nameInput = dom.teamNames[i];
+    const playersInput = dom.teamPlayers[i];
+    const slotEl = dom.teamCards[i];
     const teamId = slotEl?.dataset.teamId || `${tournamentState.currentId || 'T'}_TEAM${i}`;
     const teamName = (nameInput?.value || '').trim() || `Команда ${i}`;
     const players = parsePlayerList(playersInput?.value || '');
@@ -141,26 +171,25 @@ function collectTeamsFromForm() {
 }
 
 function setTeamsToForm(teams = []) {
-  const countSelect = document.getElementById('tournament-team-count');
   const total = Array.isArray(teams) ? Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teams.length || DEFAULT_TEAMS)) : DEFAULT_TEAMS;
-  if (countSelect) countSelect.value = total;
+  if (dom.teamCountSelect) dom.teamCountSelect.value = total;
 
   for (let i = 1; i <= MAX_TEAMS; i++) {
-    const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+    const slotEl = dom.teamCards[i];
     const team = teams[i - 1];
     if (!slotEl) continue;
     slotEl.hidden = i > total;
     if (team) {
       slotEl.dataset.teamId = team.teamId || '';
-      const nameInput = document.getElementById(`t-team-name-${i}`);
-      const playersInput = document.getElementById(`t-team-players-${i}`);
+      const nameInput = dom.teamNames[i];
+      const playersInput = dom.teamPlayers[i];
       if (nameInput) nameInput.value = team.teamName || '';
       if (playersInput) playersInput.value = parsePlayerList(team.players || '').join(',');
       renderTeamMetrics(i, calculateTeamMetrics(playersInput?.value || ''));
     } else {
       slotEl.dataset.teamId = '';
-      const nameInput = document.getElementById(`t-team-name-${i}`);
-      const playersInput = document.getElementById(`t-team-players-${i}`);
+      const nameInput = dom.teamNames[i];
+      const playersInput = dom.teamPlayers[i];
       if (nameInput) nameInput.value = '';
       if (playersInput) playersInput.value = '';
       renderTeamMetrics(i, calculateTeamMetrics(playersInput?.value || ''));
@@ -169,10 +198,9 @@ function setTeamsToForm(teams = []) {
 }
 
 function applyTeamCountVisibility() {
-  const countSelect = document.getElementById('tournament-team-count');
-  const total = Number(countSelect?.value || DEFAULT_TEAMS);
+  const total = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
   for (let i = 1; i <= MAX_TEAMS; i++) {
-    const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+    const slotEl = dom.teamCards[i];
     if (slotEl) {
       slotEl.hidden = i > total;
     }
@@ -245,7 +273,7 @@ async function refreshTournamentsList() {
 }
 
 function renderGameOptions() {
-  const selectEl = document.getElementById('tournament-game-select');
+  const selectEl = dom.gameSelect;
   if (!selectEl) return;
   selectEl.innerHTML = '<option value="">— Немає матчів —</option>';
   const games = Array.isArray(tournamentState.data?.games) ? tournamentState.data.games : [];
@@ -294,29 +322,38 @@ function renderMatchPanel(game) {
   const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
   const lookup = buildPlayerLookup();
 
-  const fillTeam = (containerId, teamId) => {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    const nameEl = container.querySelector('h4');
-    const listEl = container.querySelector('.match-player-list');
-    const strengthEl = container.querySelector('p');
-    const team = teamMap[teamId];
-    if (nameEl) nameEl.textContent = team?.teamName || teamId || '—';
-    if (listEl) listEl.innerHTML = '';
-    const members = parsePlayerList(team?.players || '');
-    const ptsValues = [];
-    members.forEach(nick => {
-      const li = document.createElement('li');
-      const record = lookup.get(nick.toLowerCase());
-      const pts = record?.pts || 0;
-      ptsValues.push(pts);
-      li.textContent = `${nick} — ${pts}`;
-      listEl?.appendChild(li);
-    });
-    const totalPts = ptsValues.reduce((s, v) => s + v, 0);
-    const avg = ptsValues.length ? totalPts / ptsValues.length : 0;
-    if (strengthEl) strengthEl.textContent = members.length ? `Σ ${totalPts.toFixed(0)} · Avg ${avg.toFixed(1)}` : '';
-  };
+    const fillTeam = (containerId, teamId) => {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const nameEl = container.querySelector('h4');
+      const listEl = container.querySelector('.match-player-list');
+      const strengthEl = container.querySelector('p');
+      const team = teamMap[teamId];
+      if (nameEl) nameEl.textContent = team?.teamName || teamId || '—';
+      if (listEl) listEl.innerHTML = '';
+      const members = parsePlayerList(team?.players || '');
+      const ptsValues = [];
+      members.forEach(nick => {
+        const li = document.createElement('li');
+        li.className = 'match-player-row';
+        const record = lookup.get(nick.toLowerCase());
+        const pts = record?.pts || 0;
+        ptsValues.push(pts);
+
+        const img = document.createElement('img');
+        img.className = 'avatar avatar-sm';
+        img.alt = nick;
+        img.src = record?.avatar || AVATAR_PLACEHOLDER;
+        const text = document.createElement('span');
+        text.textContent = `${nick} — ${pts}`;
+        li.appendChild(img);
+        li.appendChild(text);
+        listEl?.appendChild(li);
+      });
+      const totalPts = ptsValues.reduce((s, v) => s + v, 0);
+      const avg = ptsValues.length ? totalPts / ptsValues.length : 0;
+      if (strengthEl) strengthEl.textContent = members.length ? `Σ ${totalPts.toFixed(0)} · Avg ${avg.toFixed(1)}` : '';
+    };
 
   fillTeam('match-team-a', game?.teamAId);
   fillTeam('match-team-b', game?.teamBId);
@@ -369,7 +406,7 @@ function updateDrawAvailability(game) {
 }
 
 function handleGameSelection() {
-  const selectEl = document.getElementById('tournament-game-select');
+  const selectEl = dom.gameSelect;
   if (!selectEl) return;
   const gameId = selectEl.value;
   const game = (tournamentState.data?.games || []).find(g => g.gameId === gameId);
@@ -394,10 +431,10 @@ async function refreshTournamentData() {
 }
 
 function renderLobbyTable(players = []) {
-  const tbody = document.querySelector('#tournament-lobby-table tbody');
+  const tbody = dom.lobbyTableBody;
   if (!tbody) return;
   tbody.innerHTML = '';
-  const search = (document.getElementById('tournament-lobby-search')?.value || '').toLowerCase();
+  const search = (dom.lobbySearch?.value || '').toLowerCase();
   players
     .filter(p => !search || p.nick.toLowerCase().includes(search))
     .sort((a, b) => (Number(b.pts) || 0) - (Number(a.pts) || 0))
@@ -441,7 +478,7 @@ function addSelectedLobbyToPool() {
     .map(cb => cb.value)
     .filter(Boolean);
   if (!selected.length) return;
-  const pool = document.getElementById('tournament-player-pool');
+  const pool = dom.lobbyPool;
   if (!pool) return;
   const existing = parsePlayerList(pool.value);
   const merged = Array.from(new Set([...existing, ...selected]));
@@ -454,8 +491,12 @@ async function loadLobbyPlayers() {
     const select = document.getElementById('tournament-lobby-league');
     const league = select ? select.value : 'kids';
     tournamentState.lobbyLeague = league;
-    const csv = await fetchLeagueCsv(league);
-    const players = parsePlayersFromCsv(csv).map(p => ({ ...p, games: p.games || 0 }));
+    let players = lobbyCache.get(league);
+    if (!players) {
+      const csv = await fetchLeagueCsv(league);
+      players = parsePlayersFromCsv(csv).map(p => ({ ...p, games: p.games || 0 }));
+      lobbyCache.set(league, players);
+    }
     tournamentState.lobby = players;
     state.players = players;
     renderLobbyTable(players);
@@ -582,7 +623,7 @@ async function handleSaveGame() {
     showMessage('Оберіть турнір', 'warn');
     return;
   }
-  const gameSelect = document.getElementById('tournament-game-select');
+  const gameSelect = dom.gameSelect;
   const gameId = gameSelect ? gameSelect.value : '';
   if (!gameId) {
     showMessage('Оберіть матч для збереження', 'warn');
@@ -620,7 +661,7 @@ async function handleSaveGame() {
 }
 
 function bindResultButtons() {
-  const container = document.getElementById('tournament-result-buttons');
+  const container = dom.resultButtons;
   if (!container) return;
   container.addEventListener('click', (event) => {
     const target = event.target;
@@ -632,6 +673,7 @@ function bindResultButtons() {
 }
 
 function initTournamentMode() {
+  cacheDomRefs();
   const regularBtn = document.getElementById('mode-regular');
   const tournamentBtn = document.getElementById('mode-tournament');
   if (regularBtn) regularBtn.addEventListener('click', () => setAppMode('regular'));
@@ -664,23 +706,21 @@ function initTournamentMode() {
   const refreshGames = document.getElementById('refresh-games');
   if (refreshGames) refreshGames.addEventListener('click', refreshTournamentData);
 
-  const gameSelect = document.getElementById('tournament-game-select');
-  if (gameSelect) gameSelect.addEventListener('change', handleGameSelection);
+  if (dom.gameSelect) dom.gameSelect.addEventListener('change', handleGameSelection);
 
-  const teamCountSelect = document.getElementById('tournament-team-count');
-  if (teamCountSelect) teamCountSelect.addEventListener('change', applyTeamCountVisibility);
+  if (dom.teamCountSelect) dom.teamCountSelect.addEventListener('change', applyTeamCountVisibility);
 
   const lobbyLoadBtn = document.getElementById('tournament-load-lobby');
   if (lobbyLoadBtn) lobbyLoadBtn.addEventListener('click', loadLobbyPlayers);
-  const lobbySearch = document.getElementById('tournament-lobby-search');
+  const lobbySearch = dom.lobbySearch;
   if (lobbySearch) lobbySearch.addEventListener('input', () => renderLobbyTable(tournamentState.lobby));
-  const lobbySelectAll = document.getElementById('tournament-lobby-select-all');
+  const lobbySelectAll = dom.lobbySelectAll;
   if (lobbySelectAll) lobbySelectAll.addEventListener('change', (e) => toggleLobbySelection(e.target));
   const lobbyAddBtn = document.getElementById('tournament-lobby-add');
   if (lobbyAddBtn) lobbyAddBtn.addEventListener('click', addSelectedLobbyToPool);
 
   for (let i = 1; i <= MAX_TEAMS; i++) {
-    const textarea = document.getElementById(`t-team-players-${i}`);
+    const textarea = dom.teamPlayers[i];
     if (textarea) textarea.addEventListener('input', recomputeAllTeamMetrics);
   }
 

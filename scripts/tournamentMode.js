@@ -17,7 +17,6 @@ const DEFAULT_TEAMS = 3;
 const MIN_TEAMS = 2;
 const MAX_TEAMS = 5;
 const TOURNAMENT_GAME_MODES = ['DM', 'KT', 'TR'];
-const DEFAULT_MODE_FALLBACK = ['TR'];
 const tournamentState = {
   appMode: 'regular',
   currentId: '',
@@ -579,10 +578,8 @@ async function handleSaveTeams() {
   }
 }
 
-function generateRoundRobinGames(teams, selectedModes = DEFAULT_MODE_FALLBACK) {
-  const modes = (selectedModes || [])
-    .filter(mode => typeof mode === 'string' && mode.trim() !== '')
-    .filter(mode => TOURNAMENT_GAME_MODES.includes(mode));
+function generateRoundRobinGames(teams) {
+  const modes = getSelectedModesFromDom();
   if (!modes.length) {
     showMessage('Оберіть хоча б один режим', 'warn');
     return [];
@@ -616,13 +613,8 @@ async function handleGenerateGames() {
     showMessage('Потрібно щонайменше дві команди зі складами', 'warn');
     return;
   }
-  const selectedModes = getSelectedModesFromDom();
-  if (!selectedModes.length) {
-    showMessage('Оберіть хоча б один режим', 'warn');
-    return;
-  }
-
-  const games = generateRoundRobinGames(teams, selectedModes);
+  const games = generateRoundRobinGames(teams);
+  if (!games.length) return;
   try {
     await createTournamentGames({ tournamentId: tournamentState.currentId, games });
     showMessage('Матчі створено', 'success');

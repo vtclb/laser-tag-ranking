@@ -484,8 +484,13 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
 export function normalizeLeague(v) {
   const x = String(v || '').toLowerCase();
   if (x === 'kids' || x === 'kid' || x === 'junior') return 'kids';
+ codex/fix-and-enhance-tournament-mode-ui-t0zcxw
   if (x === 'sundaygames' || x === 'sunday' || x === 'sundaygame') return 'sundaygames';
   if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
+
+  if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
+  if (x === 'sundaygames') return 'olds';
+ main
   return 'kids';
 }
 export function getLeagueFeedUrl(league) {

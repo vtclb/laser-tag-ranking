@@ -16,12 +16,17 @@ import { state } from './state.js?v=2025-09-19-balance-hotfix-1';
 const DEFAULT_TEAMS = 3;
 const MIN_TEAMS = 2;
 const MAX_TEAMS = 5;
+
+codex/implement-full-tournament-mode-upgrade-hyexb2
+const TOURNAMENT_GAME_MODES = ['DM', 'KT', 'TR'];
+
  codex/implement-full-tournament-mode-upgrade-bys90f
 const TOURNAMENT_GAME_MODES = ['DM', 'KT', 'TR'];
 
  codex/implement-full-tournament-mode-upgrade-aklmzu
 const TOURNAMENT_GAME_MODES = ['DM', 'KT', 'TR'];
 
+ main
  main
  main
 const tournamentState = {
@@ -109,6 +114,17 @@ function toBalanceObject(nick) {
   return { nick, pts: 0 };
 }
 
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+function getSelectedModesFromDom() {
+  const inputs = Array.from(document.querySelectorAll('.t-mode:checked'));
+  const modes = inputs
+    .map(inp => inp.value)
+    .filter(mode => TOURNAMENT_GAME_MODES.includes(mode));
+  return modes;
+}
+
+
+ main
 function renderTeamMetrics(slot, metrics) {
   const el = dom.teamMetrics[slot];
   if (!el) return;
@@ -150,6 +166,9 @@ function fillTeamsFromAutoBalance() {
     showMessage('Додайте гравців у пул для автопідбору', 'warn');
     return;
   }
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+  const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
+
  codex/implement-full-tournament-mode-upgrade-bys90f
   const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
 
@@ -158,6 +177,7 @@ function fillTeamsFromAutoBalance() {
 
   const countSelect = document.getElementById('tournament-team-count');
   const desiredCount = Number(countSelect?.value || DEFAULT_TEAMS);
+ main
  main
  main
   const teamCount = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
@@ -169,9 +189,19 @@ function fillTeamsFromAutoBalance() {
       textarea.value = members.map(p => p.nick).join(',');
     }
   });
+  recomputeAllTeamMetrics();
 }
 
 function collectTeamsFromForm() {
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+  const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
+  const total = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
+  const teams = [];
+  for (let i = 1; i <= total; i++) {
+    const nameInput = dom.teamNames[i];
+    const playersInput = dom.teamPlayers[i];
+    const slotEl = dom.teamCards[i];
+
  codex/implement-full-tournament-mode-upgrade-bys90f
   const desiredCount = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
   const total = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, desiredCount));
@@ -200,6 +230,7 @@ function collectTeamsFromForm() {
     const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
  main
  main
+ main
     const teamId = slotEl?.dataset.teamId || `${tournamentState.currentId || 'T'}_TEAM${i}`;
     const teamName = (nameInput?.value || '').trim() || `Команда ${i}`;
     const players = parsePlayerList(playersInput?.value || '');
@@ -209,15 +240,20 @@ function collectTeamsFromForm() {
 }
 
 function setTeamsToForm(teams = []) {
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+
  codex/implement-full-tournament-mode-upgrade-bys90f
 
  codex/implement-full-tournament-mode-upgrade-aklmzu
+ main
  main
   const total = Array.isArray(teams) ? Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teams.length || DEFAULT_TEAMS)) : DEFAULT_TEAMS;
   if (dom.teamCountSelect) dom.teamCountSelect.value = total;
 
   for (let i = 1; i <= MAX_TEAMS; i++) {
     const slotEl = dom.teamCards[i];
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+
  codex/implement-full-tournament-mode-upgrade-bys90f
 
 
@@ -227,6 +263,7 @@ function setTeamsToForm(teams = []) {
 
   for (let i = 1; i <= MAX_TEAMS; i++) {
     const slotEl = document.querySelector(`.team-card[data-slot="${i}"]`);
+ main
  main
  main
     const team = teams[i - 1];
@@ -251,6 +288,59 @@ function setTeamsToForm(teams = []) {
 }
 
 function applyTeamCountVisibility() {
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+  const total = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
+  for (let i = 1; i <= MAX_TEAMS; i++) {
+    const slotEl = dom.teamCards[i];
+    if (slotEl) {
+      slotEl.hidden = i > total;
+    }
+  }
+  recomputeAllTeamMetrics();
+}
+
+function validateTeamsBeforeSave(teams) {
+  const filled = teams.filter(t => (t.players || []).length);
+  if (filled.length < MIN_TEAMS) {
+    return 'Мінімум дві команди мають містити гравців';
+  }
+
+  const lookup = buildPlayerLookup();
+  const duplicates = new Map();
+  const missing = new Set();
+  const strengths = [];
+  filled.forEach(team => {
+    const metrics = calculateTeamMetrics(team.players || []);
+    strengths.push(metrics.strengthIndex);
+    (team.players || []).forEach(nick => {
+      const key = nick.toLowerCase();
+      if (!duplicates.has(key)) {
+        duplicates.set(key, []);
+      }
+      duplicates.get(key).push(team.teamName || team.teamId);
+      if (!lookup.has(key)) missing.add(nick);
+    });
+  });
+
+  const offender = Array.from(duplicates.entries()).find(([, list]) => list.length > 1);
+  if (offender) {
+    return `Гравець ${offender[0]} дублюється у командах: ${offender[1].join(', ')}`;
+  }
+
+  if (missing.size) {
+    return `Невідомі гравці: ${Array.from(missing).join(', ')}`;
+  }
+
+  const minStrength = Math.min(...strengths);
+  const maxStrength = Math.max(...strengths);
+  if (strengths.length >= 2 && maxStrength > 0) {
+    const diffRatio = (maxStrength - minStrength) / maxStrength;
+    if (diffRatio > 0.4) {
+      showMessage('Попередження: різниця сили команд перевищує 40%', 'warn');
+    }
+  }
+
+
  codex/implement-full-tournament-mode-upgrade-bys90f
   const total = Number(dom.teamCountSelect?.value || DEFAULT_TEAMS);
   for (let i = 1; i <= MAX_TEAMS; i++) {
@@ -349,6 +439,7 @@ main
 
  main
  main
+ main
   return '';
 }
 
@@ -422,7 +513,10 @@ function renderMatchPanel(game) {
   const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
   const lookup = buildPlayerLookup();
 
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+
  codex/implement-full-tournament-mode-upgrade-bys90f
+ main
   const fillTeam = (containerId, teamId) => {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -455,6 +549,8 @@ function renderMatchPanel(game) {
     const avg = ptsValues.length ? totalPts / ptsValues.length : 0;
     if (strengthEl) strengthEl.textContent = members.length ? `Σ ${totalPts.toFixed(0)} · Avg ${avg.toFixed(1)}` : '';
   };
+
+codex/implement-full-tournament-mode-upgrade-hyexb2
 
     const fillTeam = (containerId, teamId) => {
       const container = document.getElementById(containerId);
@@ -490,6 +586,7 @@ function renderMatchPanel(game) {
     };
 main
 
+ main
   fillTeam('match-team-a', game?.teamAId);
   fillTeam('match-team-b', game?.teamBId);
 }
@@ -740,6 +837,15 @@ function generateRoundRobinGames(teams, selectedModes = ['TR']) {
     });
 
 function generateRoundRobinGames(teams) {
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+  const modes = getSelectedModesFromDom();
+  if (!modes.length) {
+    showMessage('Оберіть хоча б один режим', 'warn');
+    return [];
+  }
+
+
+ main
   const result = [];
   let idx = 1;
   if (teams.length === 2) {
@@ -770,7 +876,7 @@ function generateRoundRobinGames(teams) {
           teamAId: teams[i].teamId,
           teamBId: teams[j].teamId,
         });
-=======
+
       result.push({
         gameId: `G${idx++}`,
         mode: 'TR',
@@ -794,12 +900,17 @@ async function handleGenerateGames() {
     showMessage('Потрібно щонайменше дві команди зі складами', 'warn');
     return;
   }
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+  const games = generateRoundRobinGames(teams);
+  if (!games.length) return;
+
   const modeInputs = Array.from(document.querySelectorAll('.tournament-mode:checked'));
   const selectedModes = modeInputs
     .map(inp => inp.value)
     .filter(mode => TOURNAMENT_GAME_MODES.includes(mode));
 
   const games = generateRoundRobinGames(teams, selectedModes);
+ main
   try {
     await createTournamentGames({ tournamentId: tournamentState.currentId, games });
     showMessage('Матчі створено', 'success');
@@ -915,22 +1026,29 @@ function initTournamentMode() {
     const textarea = dom.teamPlayers[i];
     if (textarea) textarea.addEventListener('input', recomputeAllTeamMetrics);
   }
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+
  codex/implement-full-tournament-mode-upgrade-bys90f
 
 
   const teamCountSelect = document.getElementById('tournament-team-count');
   if (teamCountSelect) teamCountSelect.addEventListener('change', applyTeamCountVisibility);
  main
+ main
 
   bindResultButtons();
   setAppMode('regular');
   applyTeamCountVisibility();
+ codex/implement-full-tournament-mode-upgrade-hyexb2
+  recomputeAllTeamMetrics();
+
  codex/implement-full-tournament-mode-upgrade-bys90f
   recomputeAllTeamMetrics();
 
  codex/implement-full-tournament-mode-upgrade-aklmzu
   recomputeAllTeamMetrics();
 
+ main
  main
  main
   refreshTournamentsList();

@@ -560,32 +560,57 @@ export async function fetchCsv(url, ttlMs = 0) {
 
 // ==================== PLAYERS ====================
 export async function fetchLeagueCsv(league) {
-  const baseUrl = getLeagueFeedUrl(league);
-  let targetUrl = baseUrl;
+  const leagueParam = String(league || '').toLowerCase();
+  const normalized = normalizeLeague(league);
+  const targetLeague = leagueParam === 'olds' ? 'olds' : normalized;
+
+  let targetUrl = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=${targetLeague}`;
   try {
-    const urlObj = new URL(baseUrl);
+    const urlObj = new URL(targetUrl);
     urlObj.searchParams.set('cb', Date.now());
     targetUrl = urlObj.toString();
   } catch {
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    targetUrl = `${baseUrl}${separator}cb=${Date.now()}`;
+    const separator = targetUrl.includes('?') ? '&' : '?';
+    targetUrl = `${targetUrl}${separator}cb=${Date.now()}`;
   }
 
-  const response = await fetch(targetUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch league CSV: HTTP ${response.status}`);
+  let response;
+  try {
+    response = await fetch(targetUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch league CSV: HTTP ${response.status}`);
+    }
+    return response.text();
+  } catch (err) {
+    const fallbackBase = getLeagueFeedUrl(normalized);
+    let fallbackUrl = fallbackBase;
+    try {
+      const urlObj = new URL(fallbackBase);
+      urlObj.searchParams.set('cb', Date.now());
+      fallbackUrl = urlObj.toString();
+    } catch {
+      const separator = fallbackBase.includes('?') ? '&' : '?';
+      fallbackUrl = `${fallbackBase}${separator}cb=${Date.now()}`;
+    }
+    const res = await fetch(fallbackUrl);
+    if (!res.ok) {
+      throw err;
+    }
+    return res.text();
   }
-  return response.text();
 }
 
 export function parsePlayersFromCsv(csvText) {
   const rows = parseCsvText(typeof csvText === 'string' ? csvText : '');
   if (!Array.isArray(rows) || !rows.length) return [];
   return rows.map(r => {
-    const nick = String(r?.Nickname || '').trim();
+    const nick = String(r?.nick || r?.Nickname || r?.nickname || '').trim();
     if (!nick) return null;
-    const pts = Number(r.Points || 0);
-    const pl = { nick, pts, rank: rankFromPoints(pts) };
+    const pts = Number(r.pts ?? r.Points ?? r.points ?? 0);
+    const rank = String(r.rank ?? r.Rank ?? '').trim() || rankFromPoints(pts);
+    const games = Number(r.games ?? r.Games ?? r.gamesPlayed ?? r['Games Played'] ?? 0);
+    const avatar = String(r.avatar || r.Avatar || r.avatar_url || '').trim();
+    const pl = { nick, pts, rank, games, avatar };
     const ab = r.abonement_type ? String(r.abonement_type).trim() : '';
     if (ab) pl.abonement = ab;
     return pl;

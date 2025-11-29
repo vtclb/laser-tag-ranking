@@ -11,19 +11,38 @@ function formatRecordDate(start, end) {
   return start || end || '';
 }
 
+function computeTeamPlaces(teams = []) {
+  return [...teams]
+    .map(team => ({
+      ...team,
+      points: team.points ?? (Number(team.wins || 0) * 3 + Number(team.draws || 0)),
+      avgPts: team.avgPts ?? team.teamStrengthIndex ?? 0,
+      strength: team.teamTotalStrength ?? team.teamStrengthIndex ?? team.avgPts ?? 0,
+    }))
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if ((b.avgPts || 0) !== (a.avgPts || 0)) return (b.avgPts || 0) - (a.avgPts || 0);
+      return (b.strength || 0) - (a.strength || 0);
+    })
+    .map((team, index) => ({ ...team, place: index + 1 }));
+}
+
 function renderTeams(teams = []) {
   const tbody = qs('teams-table')?.querySelector('tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  teams.forEach(team => {
+  const enriched = computeTeamPlaces(teams);
+  enriched.forEach(team => {
     const tr = document.createElement('tr');
     const record = [
       team.teamName || team.teamId,
-      String(team.players || ''),
-      `${team.wins || 0}-${team.losses || 0}-${team.draws || 0}`,
+      team.wins || 0,
+      team.losses || 0,
+      team.draws || 0,
       team.points || 0,
-      team.mmrCurrent || team.mmrStart || 0,
-      team.rank || '',
+      (team.avgPts ?? team.teamStrengthIndex ?? 0).toFixed(1),
+      (team.teamTotalStrength ?? team.teamStrengthIndex ?? 0).toFixed(1),
+      team.place || 0,
     ];
     record.forEach(val => {
       const td = document.createElement('td');
@@ -45,7 +64,9 @@ function renderPlayers(players = [], teams = []) {
       p.playerNick,
       teamNames[p.teamId] || p.teamId,
       p.games || 0,
-      `${p.wins || 0}-${p.losses || 0}-${p.draws || 0}`,
+      p.wins || 0,
+      p.losses || 0,
+      p.draws || 0,
       p.mvpCount || 0,
       p.secondCount || 0,
       p.thirdCount || 0,
@@ -65,14 +86,14 @@ function renderGames(games = [], teams = []) {
   if (!tbody) return;
   const teamNames = Object.fromEntries(teams.map(t => [t.teamId, t.teamName || t.teamId]));
   tbody.innerHTML = '';
-  games.forEach(g => {
+  games.forEach((g, idx) => {
     const tr = document.createElement('tr');
     const match = `${teamNames[g.teamAId] || g.teamAId} vs ${teamNames[g.teamBId] || g.teamBId}`;
     const status = g.isDraw === 'TRUE'
       ? 'Нічия'
       : (g.winnerTeamId ? `Переможець: ${teamNames[g.winnerTeamId] || g.winnerTeamId}` : 'Не зіграно');
     const awards = [g.mvpNick, g.secondNick, g.thirdNick].filter(Boolean).join(' / ');
-    [g.mode, match, status, awards || '—'].forEach(val => {
+    [idx + 1, match, g.mode, status, awards || '—'].forEach(val => {
       const td = document.createElement('td');
       td.textContent = val;
       tr.appendChild(td);

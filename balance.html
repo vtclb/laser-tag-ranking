@@ -85,28 +85,105 @@
           </div>
 
           <div class="tournament-block">
+            <h3>Лоббі турніру</h3>
+            <div class="tournament-row">
+              <label for="tournament-lobby-league">Ліга</label>
+              <select id="tournament-lobby-league">
+                <option value="kids">Kids</option>
+                <option value="olds">Старша ліга</option>
+              </select>
+              <button type="button" id="tournament-load-lobby">Завантажити лоббі</button>
+            </div>
+            <div class="tournament-row">
+              <label class="checkbox-row">
+                <input type="checkbox" id="tournament-lobby-select-all"> Вибрати всіх
+              </label>
+              <input type="text" id="tournament-lobby-search" placeholder="Пошук...">
+              <button type="button" id="tournament-lobby-add">Add to pool</button>
+            </div>
+            <div class="table-responsive">
+              <table id="tournament-lobby-table" class="table-sm">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Avatar</th>
+                    <th>Nick</th>
+                    <th>PTS</th>
+                    <th>Rank</th>
+                    <th>Games</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tournament-block">
             <h3>Склади команд</h3>
             <p class="text-muted">Заповніть списки гравців або використайте автопідбір.</p>
+            <div class="tournament-row">
+              <label for="tournament-team-count">Кількість команд</label>
+              <select id="tournament-team-count">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
             <label for="tournament-player-pool" class="text-muted">Пул гравців (через кому або з нового рядка)</label>
             <textarea id="tournament-player-pool" rows="2" placeholder="Sem,Justy,Voron..."></textarea>
             <div class="teams-grid" id="tournament-team-grid">
               <div class="team-card" data-slot="1">
                 <input type="text" class="team-name" id="t-team-name-1" placeholder="Команда 1">
                 <textarea id="t-team-players-1" rows="3" placeholder="Гравці через кому"></textarea>
+                <div class="team-metrics" id="t-team-metrics-1"></div>
               </div>
               <div class="team-card" data-slot="2">
                 <input type="text" class="team-name" id="t-team-name-2" placeholder="Команда 2">
                 <textarea id="t-team-players-2" rows="3" placeholder="Гравці через кому"></textarea>
+                <div class="team-metrics" id="t-team-metrics-2"></div>
               </div>
               <div class="team-card" data-slot="3">
                 <input type="text" class="team-name" id="t-team-name-3" placeholder="Команда 3">
                 <textarea id="t-team-players-3" rows="3" placeholder="Гравці через кому"></textarea>
+                <div class="team-metrics" id="t-team-metrics-3"></div>
+              </div>
+              <div class="team-card" data-slot="4" hidden>
+                <input type="text" class="team-name" id="t-team-name-4" placeholder="Команда 4">
+                <textarea id="t-team-players-4" rows="3" placeholder="Гравці через кому"></textarea>
+                <div class="team-metrics" id="t-team-metrics-4"></div>
+              </div>
+              <div class="team-card" data-slot="5" hidden>
+                <input type="text" class="team-name" id="t-team-name-5" placeholder="Команда 5">
+                <textarea id="t-team-players-5" rows="3" placeholder="Гравці через кому"></textarea>
+                <div class="team-metrics" id="t-team-metrics-5"></div>
               </div>
             </div>
             <div class="actions">
-              <button type="button" id="btn-autofill-teams">Автобаланс 3×3</button>
+              <button type="button" id="btn-autofill-teams">Автобаланс</button>
               <button type="button" id="btn-save-teams" class="btn btn-primary">Зберегти склади</button>
             </div>
+          </div>
+
+          <div class="tournament-block">
+            <h3>Режими турніру</h3>
+            <p class="text-muted">Оберіть, у яких режимах команди будуть грати</p>
+            <div class="tournament-row mode-select-row">
+              <label class="checkbox-row">
+                <input type="checkbox" class="t-mode" value="TR" checked>
+                TR (Турнірний)
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" class="t-mode" value="DM">
+                DM (Дезматч)
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" class="t-mode" value="KT">
+                KT (Контроль точки)
+              </label>
+            </div>
+            <p class="text-muted">Можна вибрати один або кілька режимів</p>
+            <hr>
           </div>
 
           <div class="tournament-block">
@@ -122,6 +199,19 @@
               <button type="button" id="refresh-games">Оновити</button>
             </div>
             <p id="tournament-game-status" class="text-muted"></p>
+
+            <div class="match-panel" id="tournament-match-panel">
+              <div class="match-team" id="match-team-a">
+                <h4 id="match-team-a-name">Команда A</h4>
+                <ul id="match-team-a-players" class="match-player-list"></ul>
+                <p class="text-muted" id="match-team-a-strength"></p>
+              </div>
+              <div class="match-team" id="match-team-b">
+                <h4 id="match-team-b-name">Команда B</h4>
+                <ul id="match-team-b-players" class="match-player-list"></ul>
+                <p class="text-muted" id="match-team-b-strength"></p>
+              </div>
+            </div>
 
             <div class="result-grid">
               <div class="field">

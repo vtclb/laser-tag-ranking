@@ -1,5 +1,5 @@
 // Regular mode controller
-import { fetchLeagueCsv, parsePlayersFromCsv, safeSet } from './api.js';
+import { fetchLeagueCsv, normalizeLeague, parsePlayersFromCsv, safeSet } from './api.js';
 import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js';
 import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
 
@@ -39,18 +39,23 @@ function setModeActive(isActive) {
   }
 }
 
-function parseLeague(value) {
-  return value === 'olds' ? 'olds' : 'kids';
-}
+  function parseLeague(value) {
+    return normalizeLeague(value);
+  }
 
-async function loadLeague() {
-  const league = parseLeague(dom.league?.value);
-  regularState.league = league;
-  const csv = await fetchLeagueCsv(league);
-  regularState.players = parsePlayersFromCsv(csv);
-  safeSet(localStorage, 'regular-league', league);
-  renderPlayers();
-}
+  async function loadLeague() {
+    const league = parseLeague(dom.league?.value);
+    regularState.league = league;
+    try {
+      const csv = await fetchLeagueCsv(league);
+      regularState.players = parsePlayersFromCsv(csv);
+      safeSet(localStorage, 'regular-league', league);
+      renderPlayers();
+    } catch (err) {
+      console.error('League load failed', err);
+      showToast?.('Не вдалося завантажити лігу', 'error');
+    }
+  }
 
 function filteredPlayers() {
   const term = (dom.search?.value || '').trim().toLowerCase();

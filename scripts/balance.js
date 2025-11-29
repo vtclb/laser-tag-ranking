@@ -1263,6 +1263,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   pdfInputEl = document.getElementById('pdf-upload');
   parsePdfBtnEl = document.getElementById('btn-parse-pdf');
 
+  const avatarPanelEl = document.getElementById('avatar-panel');
+  const openAvatarBtn = document.getElementById('open-avatar-panel');
+  const closeAvatarBtn = document.getElementById('close-avatar-panel');
+
+  const closeAvatarPanel = () => {
+    if (avatarPanelEl) avatarPanelEl.hidden = true;
+  };
+
+  if (openAvatarBtn && avatarPanelEl) {
+    openAvatarBtn.addEventListener('click', () => { avatarPanelEl.hidden = false; });
+  }
+  if (closeAvatarBtn && avatarPanelEl) {
+    closeAvatarBtn.addEventListener('click', closeAvatarPanel);
+  }
+  if (avatarPanelEl) {
+    avatarPanelEl.addEventListener('click', (event) => {
+      if (event.target === avatarPanelEl) closeAvatarPanel();
+    });
+  }
+
   if (leagueSelectEl) {
     leagueSelectEl.value = state.league;
     leagueSelectEl.addEventListener('change', () => loadPlayersForLeague(leagueSelectEl));

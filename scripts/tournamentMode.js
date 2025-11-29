@@ -63,7 +63,10 @@ function clampTeamsCount(count) {
 
 function cacheDomRefs() {
   dom.panel = document.getElementById('tournament-panel');
+
   dom.regularPanel = document.getElementById('regular-panel');
+
+ main
   dom.league = document.getElementById('tournament-league');
   dom.tournamentSelect = document.getElementById('tournament-select');
   dom.tournamentName = document.getElementById('tournament-name');
@@ -78,7 +81,11 @@ function cacheDomRefs() {
 
   dom.lobbySearch = document.getElementById('tournament-lobby-search');
   dom.lobbySelectAll = document.getElementById('tournament-lobby-select-all');
+
   dom.lobbyTableBody = document.querySelector('#tournament-table tbody');
+
+  dom.lobbyTableBody = document.querySelector('#tournament-lobby-table tbody');
+ main
   dom.lobbyAdd = document.getElementById('tournament-add-pool');
   dom.lobbyClear = document.getElementById('tournament-clear');
 
@@ -109,8 +116,11 @@ function setAppMode(mode) {
   }
   const buttons = Array.from(document.querySelectorAll('#mode-switch [data-mode]'));
   buttons.forEach(btn => btn.classList.toggle('btn-primary', btn.dataset.mode === tournamentState.appMode));
+
   dom.regularPanel?.classList.toggle('active', tournamentState.appMode === 'regular');
   dom.panel?.classList.toggle('active', tournamentState.appMode === 'tournament');
+
+ main
   const avatarModal = document.getElementById('avatar-modal');
   if (avatarModal) {
     avatarModal.classList.remove('active');

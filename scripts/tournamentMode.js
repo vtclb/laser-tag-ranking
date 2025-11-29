@@ -84,128 +84,7 @@ function setModeActive(isActive) {
 }
 
 function parseLeague(value) {
-
   return normalizeLeague(value);
-
-  if (value === 'olds') return 'olds';
-  if (value === 'sundaygames') return 'sundaygames';
-  return 'kids';
-}
-
-function clampTeamsCount(raw) {
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isInteger(value)) return MIN_TEAMS;
-  return Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, value));
-}
-
-function rankKey(rank) {
-  return String(rank || '').trim().toLowerCase();
-}
-
-function rankColor(rank) {
-  const color = RANK_COLORS[rankKey(rank)];
-  return color || '';
-}
-
-function addRankClass(el, rank) {
-  const key = rankKey(rank);
-  if (!key) return;
-  el.dataset.rank = key;
-  const color = rankColor(rank);
-  if (color) {
-    el.style.boxShadow = `inset 0 0 0 1px ${color}30`;
-    el.style.background = `${color}0f`;
-  }
-}
-
-function persistState() {
-  try {
-    const payload = {
-      league: tournamentState.league,
-      teamCount: tournamentState.teamCount,
-      sort: tournamentState.sort,
-      teams: Object.values(tournamentState.teams).map(team => ({
-        teamId: team.teamId,
-        teamName: team.teamName,
-        players: [...team.players]
-      })),
-      games: tournamentState.games,
-      pool: [...tournamentState.pool.keys()]
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch (err) {
-    console.error('Persist tournament state failed', err);
-  }
-}
-
-function restoreState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    console.warn('Restore tournament state failed', err);
-    return null;
-  }
-}
-
-function buildPlayerMap(players) {
-  tournamentState.playerMap = new Map(players.map(p => [p.nick, p]));
-}
-
-function createTeam(index, existing) {
-  const suffix = index + 1;
-  return {
-    teamId: existing?.teamId || `team-${suffix}`,
-    teamName: existing?.teamName || existing?.name || `Команда ${suffix}`,
-    players: Array.isArray(existing?.players) ? [...existing.players] : []
-  };
-}
-
-function ensureTeams() {
-  const count = clampTeamsCount(dom.teamSelect?.value || tournamentState.teamCount);
-  tournamentState.teamCount = count;
-  const next = {};
-  const currentTeams = Object.values(tournamentState.teams);
-  for (let i = 0; i < count; i++) {
-    next[i + 1] = createTeam(i, currentTeams[i]);
-  }
-
-  const removed = currentTeams.slice(count);
-  removed.forEach(team => {
-    team?.players?.forEach(nick => {
-      const player = tournamentState.playerMap.get(nick);
-      if (player) tournamentState.lobby.set(nick, player);
-    });
-  });
-  tournamentState.teams = next;
-}
-
-function applySavedState(saved) {
-  if (!saved || saved.league !== tournamentState.league) return;
-  tournamentState.teamCount = clampTeamsCount(saved.teamCount || tournamentState.teamCount);
-  if (dom.teamSelect) dom.teamSelect.value = String(tournamentState.teamCount);
-  const savedTeams = Array.isArray(saved.teams) ? saved.teams : [];
-  tournamentState.teams = {};
-  for (let i = 0; i < tournamentState.teamCount; i++) {
-    const existing = savedTeams[i];
-    const team = createTeam(i, existing);
-    team.players = team.players.filter(nick => tournamentState.playerMap.has(nick));
-    tournamentState.teams[i + 1] = team;
-  }
-  const poolPairs = Array.isArray(saved.pool)
-    ? saved.pool
-        .map(nick => {
-          const player = tournamentState.playerMap.get(nick);
-          return player ? [nick, player] : null;
-        })
-        .filter(Boolean)
-    : [];
-  tournamentState.pool = new Map(poolPairs);
-  tournamentState.games = Array.isArray(saved.games) ? saved.games : [];
-  tournamentState.selectedGame = '';
-  tournamentState.sort = saved.sort || tournamentState.sort;
-  syncLobbyWithTeams();
-
 }
 
 function clampTeamsCount(raw) {
@@ -344,20 +223,6 @@ async function loadLeague() {
     console.error('Tournament league load failed', err);
     showToast?.('Не вдалося завантажити лігу', 'error');
   }
-
-  const csv = await fetchLeagueCsv(league);
-  const players = parsePlayersFromCsv(csv);
-  tournamentState.players = players;
-  buildPlayerMap(players);
-  tournamentState.lobby = new Map(players.map(p => [p.nick, p]));
-  const saved = restoreState();
-  applySavedState(saved);
-  renderLobby();
-  renderPool();
-  renderTeams();
-  renderGames();
-  renderMatchPanel();
- main
 }
 
 function syncLobbyWithTeams() {

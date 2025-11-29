@@ -202,7 +202,14 @@ function initModeToggle() {
     document.dispatchEvent(new CustomEvent('mode:change', { detail: { mode } }));
   }
   buttons.forEach(btn => btn.addEventListener('click', () => apply(btn.dataset.mode)));
-  apply(document.body.dataset.appMode || 'regular');
+  const params = new URLSearchParams(window.location.search);
+  const searchMode = params.get('mode');
+  const hintMode = document.body.dataset.mode;
+  const initialMode =
+    (searchMode && searchMode.toLowerCase() === 'tournament') || hintMode === 'tournament'
+      ? 'tournament'
+      : (document.body.dataset.appMode || 'regular');
+  apply(initialMode);
 }
 
 function init() {

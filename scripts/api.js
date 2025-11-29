@@ -488,21 +488,8 @@ const LEAGUE_ALIASES = {
   'старшаліга': 'sundaygames', 'старша ліга': 'sundaygames'
 };
 export function normalizeLeague(v) {
-
   const key = String(v ?? '').trim().toLowerCase();
   return LEAGUE_ALIASES[key] || 'kids';
-
-  const x = String(v || '').toLowerCase();
-  if (x === 'kids' || x === 'kid' || x === 'junior') return 'kids';
-
-  if (x === 'sundaygames' || x === 'sunday' || x === 'sundaygame') return 'sundaygames';
-  if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
-
-  if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
-  if (x === 'sundaygames') return 'olds';
- main
-  return 'kids';
- main
 }
 export function getLeagueFeedUrl(league) {
   const key = normalizeLeague(league);
@@ -579,6 +566,10 @@ export async function fetchCsv(url, ttlMs = 0) {
 }
 
 // ==================== PLAYERS ====================
+const LEAGUE_DIRECT_URLS = {
+  kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=0&single=true&output=csv',
+  olds: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
+};
 export async function fetchLeagueCsv(league) {
   const targetLeague = normalizeLeague(league);
 
@@ -600,7 +591,7 @@ export async function fetchLeagueCsv(league) {
     }
     return response.text();
   } catch (err) {
-    const fallbackBase = getLeagueFeedUrl(targetLeague);
+    const fallbackBase = LEAGUE_DIRECT_URLS[targetLeague] || getLeagueFeedUrl(targetLeague);
     let fallbackUrl = fallbackBase;
     try {
       const urlObj = new URL(fallbackBase);

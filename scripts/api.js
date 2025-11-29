@@ -229,6 +229,10 @@ export const CSV_URLS = {
     ranking: LEAGUE_CSV.kids,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   },
+  olds: {
+    ranking: LEAGUE_CSV.olds,
+    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
+  },
   sundaygames: {
     ranking: LEAGUE_CSV.sundaygames,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
@@ -479,10 +483,10 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
 // ==================== LEAGUES ====================
 export function normalizeLeague(v) {
   const x = String(v || '').toLowerCase();
-  if (x === 'sundaygames' || x === 'olds' || x === 'adult' || x === 'adults') return 'sundaygames';
-  if (x === 'kid' || x === 'junior') return 'kids';
-  if (x === 'kids') return 'kids';
-  return 'sundaygames';
+  if (x === 'kids' || x === 'kid' || x === 'junior') return 'kids';
+  if (x === 'sundaygames' || x === 'sunday' || x === 'sundaygame') return 'sundaygames';
+  if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
+  return 'kids';
 }
 export function getLeagueFeedUrl(league) {
   const key = normalizeLeague(league);
@@ -560,9 +564,7 @@ export async function fetchCsv(url, ttlMs = 0) {
 
 // ==================== PLAYERS ====================
 export async function fetchLeagueCsv(league) {
-  const leagueParam = String(league || '').toLowerCase();
-  const normalized = normalizeLeague(league);
-  const targetLeague = leagueParam === 'olds' ? 'olds' : normalized;
+  const targetLeague = normalizeLeague(league);
 
   let targetUrl = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=${targetLeague}`;
   try {
@@ -582,7 +584,7 @@ export async function fetchLeagueCsv(league) {
     }
     return response.text();
   } catch (err) {
-    const fallbackBase = getLeagueFeedUrl(normalized);
+    const fallbackBase = getLeagueFeedUrl(targetLeague);
     let fallbackUrl = fallbackBase;
     try {
       const urlObj = new URL(fallbackBase);

@@ -411,6 +411,15 @@ body.bal[data-app-mode="tournament"] #tournament-panel {
   border: 1px solid #ececec;
 }
 
+.tournament-lobby::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tournament-lobby::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
 .tournament-block {
   margin-bottom: 16px;
   padding: 12px;
@@ -455,6 +464,11 @@ body.bal[data-app-mode="tournament"] #tournament-panel {
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
+.bal .team-card {
+  background: #141414;
+  border-color: var(--border);
+}
+
 .team-card .team-name {
   width: 100%;
   margin-bottom: 8px;
@@ -463,6 +477,10 @@ body.bal[data-app-mode="tournament"] #tournament-panel {
 .team-card textarea {
   width: 100%;
   resize: vertical;
+}
+
+.team-card ul {
+  min-height: 44px;
 }
 
 .result-grid {
@@ -477,6 +495,111 @@ body.bal[data-app-mode="tournament"] #tournament-panel {
   flex-direction: column;
   gap: 6px;
 }
+
+.tournament-lobby {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.tournament-lobby table {
+  width: 100%;
+}
+
+.teams {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.team-name {
+  flex: 1;
+  min-width: 160px;
+}
+
+.ghost-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.team-card ul li {
+  align-items: center;
+  gap: 8px;
+}
+
+.team-card .player-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.games-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.game-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #0f0f0f;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+}
+
+.game-row__label {
+  font-weight: 600;
+}
+
+.game-row__meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.result-panel {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 10px;
+  background: #0f0f0f;
+}
+
+.result-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+tr[data-rank] {
+  transition: background 0.2s ease;
+}
+
+tr[data-rank="bronze"] { background: #8d552410; }
+tr[data-rank="silver"] { background: #d3d3d310; }
+tr[data-rank="gold"] { background: #ffd70012; }
+tr[data-rank="platinum"] { background: #00eaff12; }
+tr[data-rank="diamond"] { background: #27e0ff12; }
+tr[data-rank="master"] { background: #ff27e012; }
+tr[data-rank="grandmaster"] { background: #ff000012; }
+
+.team-card li[data-rank="bronze"] { background: #8d552418; }
+.team-card li[data-rank="silver"] { background: #d3d3d318; }
+.team-card li[data-rank="gold"] { background: #ffd70018; }
+.team-card li[data-rank="platinum"] { background: #00eaff18; }
+.team-card li[data-rank="diamond"] { background: #27e0ff18; }
+.team-card li[data-rank="master"] { background: #ff27e018; }
+.team-card li[data-rank="grandmaster"] { background: #ff000018; }
 
 .btn-group {
   display: flex;

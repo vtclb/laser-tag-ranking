@@ -63,20 +63,15 @@ function clampTeamsCount(count) {
 
 function cacheDomRefs() {
   dom.panel = document.getElementById('tournament-panel');
-
   dom.regularPanel = document.getElementById('regular-panel');
-
-
-  dom.regularPanel = document.getElementById('regular-panel');
-
-
   dom.league = document.getElementById('tournament-league');
   dom.tournamentSelect = document.getElementById('tournament-select');
   dom.tournamentName = document.getElementById('tournament-name');
   dom.tournamentCreate = document.getElementById('tournament-create');
   dom.tournamentRefresh = document.getElementById('tournament-refresh');
 
-  dom.teamCountSelect = document.getElementById('tournament-teams');
+  dom.teamCountSelect = document.getElementById('tournament-team-count')
+    || document.getElementById('tournament-teams');
   dom.teamsWrap = document.getElementById('tournament-teams-wrap');
   dom.auto = document.getElementById('tournament-auto');
   dom.saveTeams = document.getElementById('tournament-save-teams');
@@ -84,14 +79,8 @@ function cacheDomRefs() {
 
   dom.lobbySearch = document.getElementById('tournament-lobby-search');
   dom.lobbySelectAll = document.getElementById('tournament-lobby-select-all');
-
-  dom.lobbyTableBody = document.getElementById('tournament-table')?.querySelector('tbody');
-
-
-  dom.lobbyTableBody = document.querySelector('#tournament-table tbody');
-
-  dom.lobbyTableBody = document.querySelector('#tournament-lobby-table tbody');
-
+  dom.lobbyTableBody = document.getElementById('tournament-lobby-table')?.querySelector('tbody')
+    || document.getElementById('tournament-table')?.querySelector('tbody');
   dom.lobbyAdd = document.getElementById('tournament-add-pool');
   dom.lobbyClear = document.getElementById('tournament-clear');
 
@@ -100,7 +89,8 @@ function cacheDomRefs() {
 
   dom.generate = document.getElementById('tournament-generate');
   dom.gamesList = document.getElementById('tournament-games-list');
-  dom.gamesSelect = document.getElementById('tournament-games');
+  dom.gamesSelect = document.getElementById('tournament-game-select')
+    || document.getElementById('tournament-games');
   dom.match = document.getElementById('tournament-match');
   dom.resultButtons = document.getElementById('tournament-result-buttons');
   dom.resultStatus = document.getElementById('tournament-game-status');
@@ -112,11 +102,7 @@ function cacheDomRefs() {
   dom.exportRegular = document.getElementById('t-export-regular');
   dom.saveGame = document.getElementById('tournament-save-game');
   dom.refreshData = document.getElementById('tournament-refresh-data');
-
   dom.sortButtons = Array.from((dom.panel || document).querySelectorAll('[data-sort]'));
-
-  dom.sortButtons = Array.from(document.querySelectorAll('[data-sort]'));
-
 }
 
 function setAppMode(mode) {
@@ -126,15 +112,8 @@ function setAppMode(mode) {
   }
   const buttons = Array.from(document.querySelectorAll('#mode-switch [data-mode]'));
   buttons.forEach(btn => btn.classList.toggle('btn-primary', btn.dataset.mode === tournamentState.appMode));
- codex/fix-tournament-mode-implementation-nxhohu
   dom.regularPanel?.classList.toggle('active', tournamentState.appMode === 'regular');
   dom.panel?.classList.toggle('active', tournamentState.appMode === 'tournament');
-
-
-  dom.regularPanel?.classList.toggle('active', tournamentState.appMode === 'regular');
-  dom.panel?.classList.toggle('active', tournamentState.appMode === 'tournament');
-
-
   const avatarModal = document.getElementById('avatar-modal');
   if (avatarModal) {
     avatarModal.classList.remove('active');
@@ -177,7 +156,6 @@ function parsePlayerList(raw) {
 
 function findPlayerRecord(nick) {
   return tournamentState.playerLookup.get(String(nick || '').toLowerCase());
- codex/fix-tournament-mode-implementation-nxhohu
 }
 
 function buildPlayerLookup(list) {
@@ -201,32 +179,6 @@ function addRankClass(el, rank) {
   const key = rankKey(rank);
   if (key) el.dataset.rank = key;
 }
-
-
-}
-
-function buildPlayerLookup(list) {
-  const lookup = new Map();
-  (list || []).forEach(p => {
-    if (p?.nick) lookup.set(p.nick.toLowerCase(), p);
-  });
-  return lookup;
-}
-
-function toBalanceObject(nick) {
-  return findPlayerRecord(nick) || { nick, pts: 0 };
-}
-
-function rankKey(rank) {
-  return String(rank || '').trim().toLowerCase();
-}
-
-function addRankClass(el, rank) {
-  if (!el) return;
-  const key = rankKey(rank);
-  if (key) el.dataset.rank = key;
-}
-
 
 function calculateTeamMetrics(players) {
   const list = Array.isArray(players) ? players : parsePlayerList(players);
@@ -275,23 +227,12 @@ function ensureTeamObjects() {
     .forEach(k => delete tournamentState.teams[k]);
 }
 
-
 function syncLobbyWithTeams() {
   const assigned = new Set(Object.values(tournamentState.teams).flatMap(team => team.players));
   tournamentState.lobbySelection.forEach(nick => {
     if (assigned.has(nick)) tournamentState.lobbySelection.delete(nick);
   });
 }
-
-
-
-function syncLobbyWithTeams() {
-  const assigned = new Set(Object.values(tournamentState.teams).flatMap(team => team.players));
-  tournamentState.lobbySelection.forEach(nick => {
-    if (assigned.has(nick)) tournamentState.lobbySelection.delete(nick);
-  });
-}
-
 
 function renderTeams() {
   ensureTeamObjects();
@@ -341,7 +282,6 @@ function renderTeams() {
     list.addEventListener('dragover', e => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
- 
     });
     list.addEventListener('drop', e => handleTeamDrop(e, slot));
 
@@ -367,33 +307,6 @@ function renderTeams() {
       li.appendChild(removeBtn);
       list.appendChild(li);
     });
-
-    });
-    list.addEventListener('drop', e => handleTeamDrop(e, slot));
-
-    team.players.forEach(nick => {
-      const player = findPlayerRecord(nick);
-      const li = document.createElement('li');
-      li.draggable = true;
-      li.dataset.nick = nick;
-      li.addEventListener('dragstart', handleDragFromTeam);
-      li.innerHTML = `<span class="player-name">${nick}</span><span>${Number(player?.pts || 0).toFixed(0)}</span>`;
-      addRankClass(li, player?.rank);
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'ghost-btn';
-      removeBtn.textContent = '×';
-      removeBtn.title = 'Повернути у лоббі';
-      removeBtn.addEventListener('click', () => {
-        removePlayerFromTeams(nick);
-        renderLobby();
-        renderTeams();
-        persistState();
-      });
-      li.appendChild(removeBtn);
-      list.appendChild(li);
-    });
-
 
     const metrics = document.createElement('div');
     metrics.className = 'metrics';

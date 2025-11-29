@@ -488,8 +488,21 @@ const LEAGUE_ALIASES = {
   'старшаліга': 'sundaygames', 'старша ліга': 'sundaygames'
 };
 export function normalizeLeague(v) {
+
   const key = String(v ?? '').trim().toLowerCase();
   return LEAGUE_ALIASES[key] || 'kids';
+
+  const x = String(v || '').toLowerCase();
+  if (x === 'kids' || x === 'kid' || x === 'junior') return 'kids';
+
+  if (x === 'sundaygames' || x === 'sunday' || x === 'sundaygame') return 'sundaygames';
+  if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
+
+  if (x === 'olds' || x === 'adult' || x === 'adults') return 'olds';
+  if (x === 'sundaygames') return 'olds';
+ main
+  return 'kids';
+ main
 }
 export function getLeagueFeedUrl(league) {
   const key = normalizeLeague(league);

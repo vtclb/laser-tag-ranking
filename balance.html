@@ -87,6 +87,15 @@
           <div class="tournament-block">
             <h3>Склади команд</h3>
             <p class="text-muted">Заповніть списки гравців або використайте автопідбір.</p>
+            <div class="tournament-row">
+              <label for="tournament-team-count">Кількість команд</label>
+              <select id="tournament-team-count">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
             <label for="tournament-player-pool" class="text-muted">Пул гравців (через кому або з нового рядка)</label>
             <textarea id="tournament-player-pool" rows="2" placeholder="Sem,Justy,Voron..."></textarea>
             <div class="teams-grid" id="tournament-team-grid">
@@ -102,9 +111,17 @@
                 <input type="text" class="team-name" id="t-team-name-3" placeholder="Команда 3">
                 <textarea id="t-team-players-3" rows="3" placeholder="Гравці через кому"></textarea>
               </div>
+              <div class="team-card" data-slot="4" hidden>
+                <input type="text" class="team-name" id="t-team-name-4" placeholder="Команда 4">
+                <textarea id="t-team-players-4" rows="3" placeholder="Гравці через кому"></textarea>
+              </div>
+              <div class="team-card" data-slot="5" hidden>
+                <input type="text" class="team-name" id="t-team-name-5" placeholder="Команда 5">
+                <textarea id="t-team-players-5" rows="3" placeholder="Гравці через кому"></textarea>
+              </div>
             </div>
             <div class="actions">
-              <button type="button" id="btn-autofill-teams">Автобаланс 3×3</button>
+              <button type="button" id="btn-autofill-teams">Автобаланс</button>
               <button type="button" id="btn-save-teams" class="btn btn-primary">Зберегти склади</button>
             </div>
           </div>

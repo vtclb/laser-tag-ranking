@@ -147,7 +147,11 @@
               <option value="olds">Olds</option>
             </select>
           </div>
-          <button class="btn-primary btn" id="tournament-load">Завантажити лоббі</button>
+          <div class="row" style="flex:2; gap:8px; align-items:flex-end;">
+            <button class="btn-primary btn" id="tournament-load">Завантажити лоббі</button>
+            <button class="btn" id="tournament-reload-lobby">Reload lobby</button>
+            <button class="btn" id="tournament-reload-state">Reload tournament data</button>
+          </div>
         </div>
       </div>
 
@@ -156,16 +160,24 @@
           <h3>Лоббі турніру</h3>
           <div class="row" style="flex:2;">
             <input id="tournament-search" placeholder="Пошук" aria-label="Пошук турнір">
+            <div class="row" style="gap:6px;">
+              <button class="btn" data-sort="nick">Sort by Nick</button>
+              <button class="btn" data-sort="pts">Sort by PTS</button>
+              <button class="btn" data-sort="rank">Sort by Rank</button>
+              <button class="btn" data-sort="games">Sort by Games</button>
+            </div>
             <button class="btn" id="tournament-add-pool">Add to Pool</button>
             <button class="btn" id="tournament-clear">Очистити</button>
           </div>
         </div>
-        <table class="table" id="tournament-table">
-          <thead>
-            <tr><th></th><th>Гравець</th><th>PTS</th><th>Ігор</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="tournament-lobby">
+          <table class="table" id="tournament-table">
+            <thead>
+              <tr><th></th><th>Гравець</th><th>PTS</th><th>Ігор</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="panel">
@@ -179,7 +191,11 @@
               <option value="5">5</option>
             </select>
           </div>
-          <button class="btn-primary btn" id="tournament-auto">Автобаланс</button>
+          <div class="row" style="flex:2; gap:8px; align-items:flex-end;">
+            <button class="btn-primary btn" id="tournament-auto">Автобаланс</button>
+            <button class="btn" id="tournament-save-teams">Зберегти команди</button>
+            <button class="btn" id="tournament-clear-teams">Очистити команди</button>
+          </div>
         </div>
         <label>Пул гравців</label>
         <div id="tournament-pool" class="pill" style="min-height:44px; display:flex; flex-wrap:wrap; gap:8px;"></div>
@@ -193,11 +209,42 @@
           <label class="checkbox-row"><input type="checkbox" class="mode-check" value="KT" checked> KT</label>
           <label class="checkbox-row"><input type="checkbox" class="mode-check" value="TR" checked> TR</label>
         </div>
-        <div class="row" style="margin-top:12px;">
+        <div class="row" style="margin-top:12px; gap:12px; align-items:flex-end;">
+          <div>
+            <label for="tournament-bestof">Матчів за режимом</label>
+            <input id="tournament-bestof" type="number" value="1" min="1" max="5" aria-label="Кількість матчів на режим">
+          </div>
           <button class="btn-primary btn" id="tournament-generate">Згенерувати матчі</button>
         </div>
+        <div id="tournament-games-list" class="games-list"></div>
         <div class="row" style="margin-top:12px;">
           <select id="tournament-games"></select>
+        </div>
+        <div class="result-panel">
+          <div class="result-options">
+            <label><input type="radio" name="match-result" id="result-team-a"> Перемога A</label>
+            <label><input type="radio" name="match-result" id="result-team-b"> Перемога B</label>
+            <label><input type="radio" name="match-result" id="result-draw"> Нічия</label>
+          </div>
+          <div class="grid grid-2">
+            <div>
+              <label for="result-mvp">MVP</label>
+              <select id="result-mvp"></select>
+            </div>
+            <div>
+              <label for="result-second">2 місце</label>
+              <select id="result-second"></select>
+            </div>
+            <div>
+              <label for="result-third">3 місце</label>
+              <select id="result-third"></select>
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px; gap:8px;">
+            <button class="btn-primary btn" id="tournament-save-result">Зберегти результат</button>
+            <button class="btn" id="tournament-refresh">Оновити</button>
+          </div>
+          <p id="tournament-result-status" class="muted"></p>
         </div>
         <div id="tournament-match" class="grid grid-2" style="margin-top:12px;"></div>
       </div>

@@ -174,6 +174,25 @@ img.avatar {
   overflow: auto;
 }
 
+body[data-app-mode="regular"] .tournament-only { display: none !important; }
+body[data-app-mode="tournament"] .regular-only { display: none !important; }
+
+.tournament-lobby {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+tr[data-rank="s"], [data-rank="s"] .player-name { color: #ffd700; }
+tr[data-rank="a"], [data-rank="a"] .player-name { color: #c2e812; }
+tr[data-rank="b"], [data-rank="b"] .player-name { color: #66b3ff; }
+tr[data-rank="c"], [data-rank="c"] .player-name { color: #c18aff; }
+
+#tournament-result-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+#tournament-result-buttons .btn.is-selected { background: var(--primary); color: #fff; }
+
+.avatar-panel { display: none; }
+.avatar-panel.is-open { display: block; }
+
 .bal__table-wrap { overflow-x: auto; }
 .bal__table thead th { position: sticky; top: 0; }
 

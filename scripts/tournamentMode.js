@@ -569,12 +569,15 @@ async function handleSaveTeams() {
   }
 }
 
-function generateRoundRobinGames(teams) {
+function generateRoundRobinGames(teams, selectedModes = ['TR']) {
   const result = [];
-  const modes = TOURNAMENT_GAME_MODES;
   let idx = 1;
+
+  const modes = (selectedModes || []).filter(mode => typeof mode === 'string' && mode.trim() !== '');
+  const gameModes = modes.length ? modes : ['TR'];
+
   if (teams.length === 2) {
-    modes.forEach(mode => {
+    gameModes.forEach(mode => {
       result.push({
         gameId: `G${idx++}`,
         mode,
@@ -587,7 +590,7 @@ function generateRoundRobinGames(teams) {
 
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
-      modes.forEach(mode => {
+      gameModes.forEach(mode => {
         result.push({
           gameId: `G${idx++}`,
           mode,
@@ -597,6 +600,7 @@ function generateRoundRobinGames(teams) {
       });
     }
   }
+
   return result;
 }
 
@@ -610,7 +614,12 @@ async function handleGenerateGames() {
     showMessage('Потрібно щонайменше дві команди зі складами', 'warn');
     return;
   }
-  const games = generateRoundRobinGames(teams);
+  const modeInputs = Array.from(document.querySelectorAll('.tournament-mode:checked'));
+  const selectedModes = modeInputs
+    .map(inp => inp.value)
+    .filter(mode => TOURNAMENT_GAME_MODES.includes(mode));
+
+  const games = generateRoundRobinGames(teams, selectedModes);
   try {
     await createTournamentGames({ tournamentId: tournamentState.currentId, games });
     showMessage('Матчі створено', 'success');

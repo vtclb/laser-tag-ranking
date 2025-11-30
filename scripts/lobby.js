@@ -16,6 +16,7 @@ import {
   setTeamsCount,
   setTeams,
   setPlayers,
+  setBalanceMode,
   getTeamKey,
   getTeamKeys,
   getTeamNumber,
@@ -535,6 +536,7 @@ function takePlayer(nick) {
 }
 
 async function movePlayer(nick, targetKey) {
+  setBalanceMode('manual');
   const player = takePlayer(nick);
   if (!player) return;
 
@@ -702,6 +704,7 @@ function renderLobbyCards() {
 async function onLobbyAction(e) {
   const assign = e.target.closest('.assign');
   if (assign) {
+    setBalanceMode('manual');
     const idx = +assign.dataset.i;
     const teamNo = +assign.dataset.team;
     const p = lobby.splice(idx, 1)[0];

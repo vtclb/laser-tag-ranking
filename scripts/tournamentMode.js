@@ -265,6 +265,11 @@ function renderTeams() {
     card.className = 'team-card droppable';
     card.dataset.teamId = team.teamId;
     card.dataset.slot = slot;
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    card.addEventListener('drop', e => handleTeamDrop(e, slot));
 
     const header = document.createElement('div');
     header.className = 'team-header';
@@ -524,6 +529,7 @@ function renderLobby() {
     tdGames.textContent = player.games || player.matches || 0;
 
     tr.append(tdCheck, tdNick, tdPts, tdGames);
+    tr.addEventListener('dblclick', () => quickAssignFromLobby(player.nick));
     tbody.appendChild(tr);
   });
 }
@@ -533,6 +539,16 @@ function renderLobbyTable(players = []) {
     tournamentState.lobby = players;
   }
   renderLobby();
+}
+
+function quickAssignFromLobby(nick) {
+  const slotCount = clampTeamsCount(dom.teamCountSelect?.value || tournamentState.teamCount);
+  if (!slotCount) return;
+  const choice = prompt(`До якої команди додати ${nick}? (1-${slotCount})`);
+  const slot = Number.parseInt(choice, 10);
+  if (Number.isInteger(slot) && slot >= 1 && slot <= slotCount) {
+    movePlayerToTeam(nick, slot);
+  }
 }
 
 function renderPool() {
@@ -671,7 +687,13 @@ async function refreshTournamentsList() {
       opt.textContent = `${t.name || t.tournamentId} (${t.league || ''})`;
       selectEl.appendChild(opt);
     });
-    if (tournamentState.currentId) selectEl.value = tournamentState.currentId;
+    if (tournamentState.currentId) {
+      selectEl.value = tournamentState.currentId;
+    } else if (tournaments[0]) {
+      selectEl.value = tournaments[0].tournamentId;
+      tournamentState.currentId = tournaments[0].tournamentId;
+      await refreshTournamentData();
+    }
   } catch (err) {
     console.error(err);
     showMessage('Не вдалося отримати список турнірів', 'error');
@@ -721,6 +743,7 @@ function normalizeGeneratedGames(games = []) {
 
 function renderGameOptions() {
   if (!dom.gamesSelect || !dom.gamesList) return;
+  const prevSelection = dom.gamesSelect.value || tournamentState.selectedGame || '';
   dom.gamesSelect.innerHTML = '<option value="">— оберіть матч —</option>';
   dom.gamesList.innerHTML = '';
   const games = filterValidGames(tournamentState.data?.games || tournamentState.games || []);
@@ -758,8 +781,12 @@ function renderGameOptions() {
     return;
   }
 
-  const preferred = games.find(g => g.gameId === tournamentState.selectedGame)?.gameId || games[0]?.gameId || '';
+  const preferred = prevSelection && games.some(g => g.gameId === prevSelection)
+    ? prevSelection
+    : games[0]?.gameId || '';
   dom.gamesSelect.value = preferred;
+  tournamentState.selectedGame = preferred;
+  handleGameSelection();
 }
 
 function renderAwards(game) {

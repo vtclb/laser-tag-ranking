@@ -310,7 +310,22 @@ function renderTeams() {
         renderTeams();
         persistState();
       });
-      li.appendChild(removeBtn);
+      const moveUp = document.createElement('button');
+      moveUp.type = 'button';
+      moveUp.className = 'ghost-btn';
+      moveUp.textContent = '↑';
+      moveUp.title = 'Вище в команді';
+      moveUp.addEventListener('click', () => movePlayerWithinTeam(slot, nick, -1));
+      const moveDown = document.createElement('button');
+      moveDown.type = 'button';
+      moveDown.className = 'ghost-btn';
+      moveDown.textContent = '↓';
+      moveDown.title = 'Нижче в команді';
+      moveDown.addEventListener('click', () => movePlayerWithinTeam(slot, nick, 1));
+      const actions = document.createElement('span');
+      actions.className = 'team-actions';
+      actions.append(moveUp, moveDown, removeBtn);
+      li.appendChild(actions);
       list.appendChild(li);
     });
 
@@ -384,6 +399,19 @@ function movePlayerToTeam(nick, slot, index = null) {
   team.players.splice(targetIndex, 0, nick);
   tournamentState.lobbySelection.delete(nick);
   renderLobby();
+  renderTeams();
+  persistState();
+}
+
+function movePlayerWithinTeam(slot, nick, direction = 0) {
+  const team = tournamentState.teams[slot];
+  if (!team) return;
+  const idx = team.players.indexOf(nick);
+  if (idx < 0) return;
+  const target = idx + direction;
+  if (target < 0 || target >= team.players.length) return;
+  const [player] = team.players.splice(idx, 1);
+  team.players.splice(target, 0, player);
   renderTeams();
   persistState();
 }
@@ -934,28 +962,29 @@ async function handleSaveTeams() {
   }
 }
 
-function generateRoundRobinGames(teams) {
+function getSelectedModes() {
+  const checks = Array.from(dom.root?.querySelectorAll('.mode-check') || []);
+  const enabled = checks.filter(cb => cb.checked).map(cb => (cb.value || '').toUpperCase()).filter(Boolean);
+  return enabled.length ? enabled : [...TOURNAMENT_GAME_MODES];
+}
+
+function generateRoundRobinGames(teams, modes, bestOf = 1) {
   if (!Array.isArray(teams) || teams.length < 2) return [];
+  const validModes = (modes && modes.length ? modes : TOURNAMENT_GAME_MODES).map(m => m.toUpperCase());
+  const series = Number.isFinite(bestOf) && bestOf > 0 ? Math.max(1, Math.min(5, Math.trunc(bestOf))) : 1;
   const games = [];
-  if (teams.length === 2) {
-    for (let i = 0; i < 3; i++) {
-      games.push({
-        gameId: `G${i + 1}`,
-        mode: 'TR',
-        teamAId: teams[0].teamId,
-        teamBId: teams[1].teamId,
-      });
-    }
-    return games;
-  }
   let idx = 1;
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
-      games.push({
-        gameId: `G${idx++}`,
-        mode: 'TR',
-        teamAId: teams[i].teamId,
-        teamBId: teams[j].teamId,
+      validModes.forEach(mode => {
+        for (let k = 0; k < series; k++) {
+          games.push({
+            gameId: `G${idx++}`,
+            mode,
+            teamAId: teams[i].teamId,
+            teamBId: teams[j].teamId,
+          });
+        }
       });
     }
   }
@@ -972,7 +1001,9 @@ async function handleGenerateGames() {
     showMessage('Потрібно щонайменше дві команди зі складами', 'warn');
     return;
   }
-  const games = generateRoundRobinGames(teams);
+  const modes = getSelectedModes();
+  const bestOf = Number(dom.root?.querySelector('#tournament-bestof')?.value || 1);
+  const games = generateRoundRobinGames(teams, modes, bestOf);
   const prepared = normalizeGeneratedGames(games);
   if (prepared.error) {
     showMessage(prepared.error, 'warn');

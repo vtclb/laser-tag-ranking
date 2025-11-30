@@ -146,14 +146,21 @@ if (GAS_PROXY_BASE_VALUE) {
 export const GAS_PROXY_ORIGIN = gasProxyOrigin;
 const GAS_PROXY_URL = gasProxyUrl;
 let gasProxyJsonUrl = '';
-if (GAS_PROXY_URL) {
+const buildJsonUrl = (baseUrl) => {
+  if (!baseUrl) return '';
   try {
-    gasProxyJsonUrl = new URL('json', GAS_PROXY_URL).toString();
+    return new URL('json', baseUrl).toString();
   } catch {
-    gasProxyJsonUrl = '';
+    try {
+      return baseUrl.endsWith('/') ? `${baseUrl}json` : `${baseUrl}/json`;
+    } catch {
+      return '';
+    }
   }
+};
+if (GAS_PROXY_URL) {
+  gasProxyJsonUrl = buildJsonUrl(GAS_PROXY_URL);
 }
-const GAS_PROXY_JSON_URL = gasProxyJsonUrl;
 
 // ==================== PROXY (Cloudflare Worker) ====================
 // Можеш переозначити в index.html ПЕРЕД підключенням api.js:
@@ -174,6 +181,8 @@ export const PROXY_ORIGIN = proxyConf.proxyOrigin; // без кінцевого 
 window.WEB_APP_URL  = WEB_APP_URL;
 window.PROXY_URL    = PROXY_URL;
 window.PROXY_ORIGIN = PROXY_ORIGIN;
+
+const GAS_PROXY_JSON_URL = buildJsonUrl(PROXY_URL) || gasProxyJsonUrl;
 
 // Додатковий прямий бекап налаштовується через GAS_PROXY_BASE у config.js
 
@@ -1025,6 +1034,9 @@ export async function updateAbonement({ nick, league, type }) {
 async function callTournament(action, payload = {}) {
   const req = { mode: 'tournament', action, ...payload };
   if (req.league) req.league = normalizeLeague(req.league);
+  if (req.status) req.status = String(req.status).toUpperCase();
+  if (!req.league) delete req.league;
+  if (!req.status) delete req.status;
   const res = await gasPost('', req);
   if (!res || res.status === 'ERR' || res.status === 'ERROR') {
     const message = res?.message || res?.status || 'ERR_STATUS';
@@ -1034,7 +1046,10 @@ async function callTournament(action, payload = {}) {
 }
 
 export async function fetchTournaments({ league, status } = {}) {
-  const resp = await callTournament('listTournaments', { league, status });
+  const filters = {};
+  if (league) filters.league = normalizeLeague(league);
+  if (status) filters.status = String(status).toUpperCase();
+  const resp = await callTournament('listTournaments', filters);
   return Array.isArray(resp.tournaments) ? resp.tournaments : [];
 }
 

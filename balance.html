@@ -220,17 +220,25 @@
       </div>
 
       <div class="panel">
-        <div class="row" style="gap:12px; align-items:flex-end;">
-          <div>
-            <label for="tournament-select">Турнір</label>
-            <select id="tournament-select"></select>
-          </div>
+          <div class="row" style="gap:12px; align-items:flex-end;">
+            <div>
+              <label for="tournament-select">Турнір</label>
+              <select id="tournament-select"></select>
+            </div>
           <div class="row" style="flex:2; gap:8px; align-items:flex-end;">
             <input id="tournament-name" placeholder="Нова назва турніру">
+            <input id="tournament-notes" placeholder="Нотатки / опис" aria-label="Нотатки про турнір">
             <button class="btn" id="tournament-create">Створити</button>
             <button class="btn" id="tournament-refresh">Оновити список</button>
           </div>
         </div>
+        <p class="muted required-hint">* Обов'язково: вкажіть назву турніру та оберіть лігу</p>
+        <ul class="muted" style="margin:6px 0 0 18px; list-style:disc;">
+          <li>Додайте гравців у лоббі та пул</li>
+          <li>Розподіліть їх по командах вручну або авто</li>
+          <li>Згенеруйте матчі та відкрийте потрібний</li>
+          <li>Заповніть результати боїв і натисніть «Зберегти результат»</li>
+        </ul>
       </div>
 
       <div class="panel" style="padding:0; margin-top:12px;">
@@ -238,20 +246,22 @@
           <h3>Лоббі турніру</h3>
           <div class="row" style="flex:2;">
             <input id="tournament-lobby-search" placeholder="Пошук" aria-label="Пошук турнір">
-            <div class="row" style="gap:6px;">
-              <button class="btn" data-sort="nick">Sort by Nick</button>
-              <button class="btn" data-sort="pts">Sort by PTS</button>
-              <button class="btn" data-sort="rank">Sort by Rank</button>
-              <button class="btn" data-sort="games">Sort by Games</button>
-            </div>
-            <button class="btn" id="tournament-add-pool">Add to Pool</button>
+            <p class="muted required-hint" style="margin:0;">* Сортуйте клацанням по заголовках таблиці</p>
+            <button class="btn-primary btn" id="tournament-add-pool">Додати у пул</button>
             <button class="btn" id="tournament-clear">Очистити</button>
           </div>
         </div>
         <div class="tournament-lobby">
           <table class="table" id="tournament-lobby-table">
             <thead>
-              <tr><th><input type="checkbox" id="tournament-lobby-select-all" aria-label="Виділити всіх"></th><th>Гравець</th><th>PTS</th><th>Ігор</th></tr>
+              <tr>
+                <th><input type="checkbox" id="tournament-lobby-select-all" aria-label="Виділити всіх"></th>
+                <th class="sortable" data-sort="nick">Гравець <span class="sort-arrow">⇅</span></th>
+                <th class="sortable" data-sort="pts">PTS <span class="sort-arrow">⇅</span></th>
+                <th class="sortable" data-sort="rank">Ранг <span class="sort-arrow">⇅</span></th>
+                <th class="sortable" data-sort="games">Ігор <span class="sort-arrow">⇅</span></th>
+                <th>Команда</th>
+              </tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -275,6 +285,7 @@
             <button class="btn" id="tournament-clear-teams">Очистити команди</button>
           </div>
         </div>
+        <p class="muted required-hint">* Обов'язково: сформуйте щонайменше дві команди перед збереженням</p>
         <label>Пул гравців</label>
         <div id="tournament-pool" class="pill" style="min-height:44px; display:flex; flex-wrap:wrap; gap:8px;"></div>
         <textarea id="tournament-player-pool" class="tournament-only" placeholder="Ніки через кому" style="margin-top:8px;"></textarea>
@@ -300,11 +311,20 @@
           <select id="tournament-game-select"></select>
         </div>
         <div class="result-panel">
+          <div class="grid grid-2" style="margin-bottom:8px; align-items:flex-end;">
+            <div>
+              <label for="t-round-count">Кількість боїв у матчі</label>
+              <input id="t-round-count" type="number" min="1" max="9" value="3">
+            </div>
+            <p class="muted required-hint" style="margin:0;">* Заповніть результати всіх боїв для автоматичного підрахунку переможця</p>
+          </div>
+          <div id="t-rounds" class="rounds-grid"></div>
           <div class="result-options" id="tournament-result-buttons">
             <button class="btn" data-result="A">Перемога команди A</button>
             <button class="btn" data-result="DRAW">Нічия</button>
             <button class="btn" data-result="B">Перемога команди B</button>
           </div>
+          <p class="muted required-hint">* Обов'язково: оберіть матч, результат та команди</p>
           <div class="grid grid-2">
             <div>
               <label for="t-mvp">MVP</label>

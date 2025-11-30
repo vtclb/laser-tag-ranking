@@ -37,6 +37,7 @@ const tournamentState = {
   selectedGame: '',
   selectedResult: '',
   sort: { key: 'pts', dir: 'desc' },
+  notes: '',
 };
 
 const lobbyCache = new Map();
@@ -77,6 +78,7 @@ function cacheDomRefs() {
   dom.tournamentName = qs('#tournament-name');
   dom.tournamentCreate = qs('#tournament-create');
   dom.tournamentRefresh = qs('#tournament-refresh');
+  dom.tournamentNotes = qs('#tournament-notes');
 
   dom.teamCountSelect = qs('#tournament-team-count');
   dom.teamsWrap = qs('#tournament-teams-wrap');
@@ -792,6 +794,12 @@ function getAllowedAwardSet(game) {
   return new Set(players);
 }
 
+function getTeamPlayers(teamId) {
+  const teams = tournamentState.data?.teams || collectTeamsFromForm();
+  const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
+  return parsePlayerList(teamMap[teamId]?.players || '');
+}
+
 function buildSaveHints(game) {
   if (!dom.resultStatus) return '';
   if (!game) return 'Оберіть матч та результат, щоб розблокувати збереження.';
@@ -959,10 +967,22 @@ async function handleCreateTournament() {
     showMessage('Вкажіть назву турніру', 'warn');
     return;
   }
+  const notes = dom.tournamentNotes?.value.trim() || '';
+  const teamCount = clampTeamsCount(dom.teamCountSelect?.value || tournamentState.teamCount);
+  tournamentState.teamCount = teamCount;
+  ensureTeamObjects();
+  renderTeams();
   try {
-    const tournamentId = await createTournament({ name, league: tournamentState.league });
+    const tournamentId = await createTournament({
+      name,
+      league: tournamentState.league,
+      notes,
+      teamCount,
+      modes: getSelectedModes(),
+    });
     showMessage('Турнір створено', 'success');
     if (dom.tournamentName) dom.tournamentName.value = '';
+    if (dom.tournamentNotes) dom.tournamentNotes.value = '';
     await refreshTournamentsList();
     if (dom.tournamentSelect) dom.tournamentSelect.value = tournamentId;
     tournamentState.currentId = tournamentId;
@@ -1046,7 +1066,7 @@ async function handleGenerateGames() {
     return;
   }
   try {
-    await createTournamentGames({ tournamentId: tournamentState.currentId, games: prepared.games });
+    await createTournamentGames({ tournamentId: tournamentState.currentId, games: prepared.games, league: tournamentState.league });
     showMessage('Матчі створено', 'success');
     await refreshTournamentData();
   } catch (err) {
@@ -1084,6 +1104,12 @@ async function handleSaveGame() {
     showMessage('Нічия недоступна для цього режиму', 'warn');
     return;
   }
+  const teamAPlayers = getTeamPlayers(game.teamAId);
+  const teamBPlayers = getTeamPlayers(game.teamBId);
+  if (!teamAPlayers.length || !teamBPlayers.length) {
+    showMessage('Обидві команди мають містити гравців перед збереженням результату', 'warn');
+    return;
+  }
   const awards = {
     mvp: dom.awards.mvp?.value.trim() || '',
     second: dom.awards.second?.value.trim() || '',
@@ -1113,10 +1139,15 @@ async function handleSaveGame() {
     gameMode: mode,
     teamAId: game.teamAId,
     teamBId: game.teamBId,
+    teamAPlayers,
+    teamBPlayers,
+    winnerTeamId: tournamentState.selectedResult === 'A' ? game.teamAId : tournamentState.selectedResult === 'B' ? game.teamBId : '',
+    isDraw: tournamentState.selectedResult === 'DRAW',
     mvp: awards.mvp,
     second: awards.second,
     third: awards.third,
     exportAsRegularGame: !!dom.exportRegular?.checked,
+    league: tournamentState.league,
   };
   if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');

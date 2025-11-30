@@ -199,6 +199,10 @@ tr[data-rank="c"], [data-rank="c"] .player-name { color: #c18aff; }
 .bal__players { display: none; }
 .only-mobile { display: none; }
 
+#lobby-list { max-height: 420px; overflow-y: auto; }
+
+.required-hint { margin: 4px 0 0; font-size: 12px; }
+
 #player-table {
   width: 100%;
   border-collapse: collapse;

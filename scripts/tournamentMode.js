@@ -772,6 +772,30 @@ function renderAwards(game) {
   });
 }
 
+function getAllowedAwardSet(game) {
+  const teams = tournamentState.data?.teams || collectTeamsFromForm();
+  const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
+  const players = [];
+  if (game) {
+    parsePlayerList(teamMap[game.teamAId]?.players || []).forEach(n => players.push(n));
+    parsePlayerList(teamMap[game.teamBId]?.players || []).forEach(n => players.push(n));
+  }
+  return new Set(players);
+}
+
+function buildSaveHints(game) {
+  if (!dom.resultStatus) return '';
+  if (!game) return 'Оберіть матч та результат, щоб розблокувати збереження.';
+  const mode = (game.mode || '').toUpperCase();
+  const allowDraw = mode !== 'KT';
+  const requirements = [`Результат: A/B${allowDraw ? '/DRAW' : ''}`];
+  requirements.push('Команди мають містити гравців');
+  const allowed = getAllowedAwardSet(game);
+  if (allowed.size) requirements.push('MVP/2/3 лише з учасників матчу, без повторів');
+  requirements.push(`Режим: ${mode || '—'}`);
+  return requirements.join(' · ');
+}
+
 function renderMatchPanel(game) {
   if (!dom.match) return;
   dom.match.innerHTML = '';
@@ -822,24 +846,27 @@ function setSelectedResult(value) {
 
 function applyGameStatus(game) {
   if (!dom.resultStatus) return;
+  let statusText = '';
   if (!game) {
-    dom.resultStatus.textContent = '';
+    dom.resultStatus.textContent = buildSaveHints(null);
     return;
   }
   const teams = tournamentState.data?.teams || collectTeamsFromForm();
   const teamNames = Object.fromEntries(teams.map(t => [t.teamId, t.teamName || t.teamId]));
   if (game.isDraw === 'TRUE' || game.isDraw === true || tournamentState.selectedResult === 'DRAW') {
-    dom.resultStatus.textContent = 'Статус: нічия';
+    statusText = 'Статус: нічия';
     setSelectedResult('DRAW');
   } else if (game.winnerTeamId) {
     const winnerLabel = teamNames[game.winnerTeamId] || game.winnerTeamId;
-    dom.resultStatus.textContent = `Статус: переможець ${winnerLabel}`;
+    statusText = `Статус: переможець ${winnerLabel}`;
     const winner = game.winnerTeamId === game.teamAId ? 'A' : game.winnerTeamId === game.teamBId ? 'B' : '';
     setSelectedResult(winner);
   } else {
-    dom.resultStatus.textContent = 'Статус: не зіграно';
+    statusText = 'Статус: не зіграно';
     setSelectedResult('');
   }
+  const hints = buildSaveHints(game);
+  dom.resultStatus.textContent = hints ? `${statusText} · ${hints}` : statusText;
 }
 
 function updateDrawAvailability(game) {
@@ -1038,17 +1065,41 @@ async function handleSaveGame() {
     showMessage('Матч не знайдено', 'error');
     return;
   }
+  const mode = (game.mode || '').toUpperCase();
+  if (tournamentState.selectedResult === 'DRAW' && mode === 'KT') {
+    showMessage('Нічия недоступна для режиму KT', 'warn');
+    return;
+  }
   const awards = {
     mvp: dom.awards.mvp?.value.trim() || '',
     second: dom.awards.second?.value.trim() || '',
     third: dom.awards.third?.value.trim() || '',
   };
 
+  const allowedPlayers = getAllowedAwardSet(game);
+  const seenAwards = new Set();
+  for (const [label, nick] of Object.entries(awards)) {
+    if (!nick) continue;
+    if (!allowedPlayers.has(nick)) {
+      showMessage(`Гравець ${nick} не входить до складу матчу`, 'warn');
+      return;
+    }
+    if (seenAwards.has(nick)) {
+      showMessage('Один гравець не може отримати кілька нагород', 'warn');
+      return;
+    }
+    seenAwards.add(nick);
+  }
+
   const payload = {
     tournamentId: tournamentState.currentId,
     gameId,
     result: tournamentState.selectedResult,
+ codex/restore-regular-mode-functionality-mxqqdv
+    gameMode: mode,
+
     gameMode: (game.mode || '').toUpperCase(),
+
     teamAId: game.teamAId,
     teamBId: game.teamBId,
     mvp: awards.mvp,
@@ -1077,6 +1128,9 @@ function bindResultButtons() {
     const result = target.dataset.result;
     if (!result || target.disabled) return;
     setSelectedResult(result);
+    const gameId = dom.gamesSelect?.value;
+    const game = (tournamentState.data?.games || tournamentState.games || []).find(g => g.gameId === gameId);
+    if (game) applyGameStatus(game);
   });
 }
 

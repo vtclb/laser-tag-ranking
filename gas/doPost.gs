@@ -719,7 +719,11 @@ function saveTournamentGame_(payload) {
   const teamsSheet = ss.getSheetByName('tournament_teams');
   if (!teamsSheet) throw new Error('tournament_teams not found');
   const teamsHdrInfo = buildHeaderIndex_(teamsSheet);
-  const teamsData = teamsSheet.getRange(2, 1, Math.max(teamsSheet.getLastRow() - 1, 0), teamsSheet.getLastColumn()).getValues();
+  let teamsData = [];
+  const lastTeamsRow = teamsSheet.getLastRow();
+  if (lastTeamsRow > 1) {
+    teamsData = teamsSheet.getRange(2, 1, lastTeamsRow - 1, teamsSheet.getLastColumn()).getValues();
+  }
   const teams = rowsToObjects_(teamsHdrInfo.hdr, teamsData)
     .filter(r => String(r.tournamentId || '') === tournamentId);
 
@@ -816,7 +820,11 @@ function saveTournamentGame_(payload) {
   const gamesSheet = ss.getSheetByName('tournament_games');
   if (!gamesSheet) throw new Error('tournament_games not found');
   const gamesHdrInfo = buildHeaderIndex_(gamesSheet);
-  const gamesData = gamesSheet.getRange(2, 1, Math.max(gamesSheet.getLastRow() - 1, 0), gamesSheet.getLastColumn()).getValues();
+  let gamesData = [];
+  const lastGamesRow = gamesSheet.getLastRow();
+  if (lastGamesRow > 1) {
+    gamesData = gamesSheet.getRange(2, 1, lastGamesRow - 1, gamesSheet.getLastColumn()).getValues();
+  }
   const gamesMap = new Map();
   gamesData.forEach((row, i) => {
     const key = `${row[getIdx_(gamesHdrInfo.map, 'tournamentid')]}::${row[getIdx_(gamesHdrInfo.map, 'gameid')]}`;
@@ -851,7 +859,11 @@ function saveTournamentGame_(payload) {
   const playersSheet = ss.getSheetByName('tournament_players');
   if (!playersSheet) throw new Error('tournament_players not found');
   const playersHdrInfo = buildHeaderIndex_(playersSheet);
-  const playersData = playersSheet.getRange(2, 1, Math.max(playersSheet.getLastRow() - 1, 0), playersSheet.getLastColumn()).getValues();
+  let playersData = [];
+  const lastPlayersRow = playersSheet.getLastRow();
+  if (lastPlayersRow > 1) {
+    playersData = playersSheet.getRange(2, 1, lastPlayersRow - 1, playersSheet.getLastColumn()).getValues();
+  }
   const playersRows = rowsToObjects_(playersHdrInfo.hdr, playersData);
   const playerKeyToRow = new Map();
   playersRows.forEach((row, i) => {

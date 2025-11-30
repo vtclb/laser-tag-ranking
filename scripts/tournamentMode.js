@@ -37,6 +37,7 @@ const tournamentState = {
   selectedGame: '',
   selectedResult: '',
   sort: { key: 'pts', dir: 'desc' },
+  notes: '',
 };
 
 const lobbyCache = new Map();
@@ -77,6 +78,7 @@ function cacheDomRefs() {
   dom.tournamentName = qs('#tournament-name');
   dom.tournamentCreate = qs('#tournament-create');
   dom.tournamentRefresh = qs('#tournament-refresh');
+  dom.tournamentNotes = qs('#tournament-notes');
 
   dom.teamCountSelect = qs('#tournament-team-count');
   dom.teamsWrap = qs('#tournament-teams-wrap');
@@ -263,6 +265,11 @@ function renderTeams() {
     card.className = 'team-card droppable';
     card.dataset.teamId = team.teamId;
     card.dataset.slot = slot;
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    card.addEventListener('drop', e => handleTeamDrop(e, slot));
 
     const header = document.createElement('div');
     header.className = 'team-header';
@@ -522,6 +529,7 @@ function renderLobby() {
     tdGames.textContent = player.games || player.matches || 0;
 
     tr.append(tdCheck, tdNick, tdPts, tdGames);
+    tr.addEventListener('dblclick', () => quickAssignFromLobby(player.nick));
     tbody.appendChild(tr);
   });
 }
@@ -531,6 +539,16 @@ function renderLobbyTable(players = []) {
     tournamentState.lobby = players;
   }
   renderLobby();
+}
+
+function quickAssignFromLobby(nick) {
+  const slotCount = clampTeamsCount(dom.teamCountSelect?.value || tournamentState.teamCount);
+  if (!slotCount) return;
+  const choice = prompt(`До якої команди додати ${nick}? (1-${slotCount})`);
+  const slot = Number.parseInt(choice, 10);
+  if (Number.isInteger(slot) && slot >= 1 && slot <= slotCount) {
+    movePlayerToTeam(nick, slot);
+  }
 }
 
 function renderPool() {
@@ -669,7 +687,13 @@ async function refreshTournamentsList() {
       opt.textContent = `${t.name || t.tournamentId} (${t.league || ''})`;
       selectEl.appendChild(opt);
     });
-    if (tournamentState.currentId) selectEl.value = tournamentState.currentId;
+    if (tournamentState.currentId) {
+      selectEl.value = tournamentState.currentId;
+    } else if (tournaments[0]) {
+      selectEl.value = tournaments[0].tournamentId;
+      tournamentState.currentId = tournaments[0].tournamentId;
+      await refreshTournamentData();
+    }
   } catch (err) {
     console.error(err);
     showMessage('Не вдалося отримати список турнірів', 'error');
@@ -719,6 +743,7 @@ function normalizeGeneratedGames(games = []) {
 
 function renderGameOptions() {
   if (!dom.gamesSelect || !dom.gamesList) return;
+  const prevSelection = dom.gamesSelect.value || tournamentState.selectedGame || '';
   dom.gamesSelect.innerHTML = '<option value="">— оберіть матч —</option>';
   dom.gamesList.innerHTML = '';
   const games = filterValidGames(tournamentState.data?.games || tournamentState.games || []);
@@ -756,8 +781,12 @@ function renderGameOptions() {
     return;
   }
 
-  const preferred = games.find(g => g.gameId === tournamentState.selectedGame)?.gameId || games[0]?.gameId || '';
+  const preferred = prevSelection && games.some(g => g.gameId === prevSelection)
+    ? prevSelection
+    : games[0]?.gameId || '';
   dom.gamesSelect.value = preferred;
+  tournamentState.selectedGame = preferred;
+  handleGameSelection();
 }
 
 function renderAwards(game) {
@@ -790,6 +819,12 @@ function getAllowedAwardSet(game) {
     parsePlayerList(teamMap[game.teamBId]?.players || []).forEach(n => players.push(n));
   }
   return new Set(players);
+}
+
+function getTeamPlayers(teamId) {
+  const teams = tournamentState.data?.teams || collectTeamsFromForm();
+  const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
+  return parsePlayerList(teamMap[teamId]?.players || '');
 }
 
 function buildSaveHints(game) {
@@ -959,10 +994,22 @@ async function handleCreateTournament() {
     showMessage('Вкажіть назву турніру', 'warn');
     return;
   }
+  const notes = dom.tournamentNotes?.value.trim() || '';
+  const teamCount = clampTeamsCount(dom.teamCountSelect?.value || tournamentState.teamCount);
+  tournamentState.teamCount = teamCount;
+  ensureTeamObjects();
+  renderTeams();
   try {
-    const tournamentId = await createTournament({ name, league: tournamentState.league });
+    const tournamentId = await createTournament({
+      name,
+      league: tournamentState.league,
+      notes,
+      teamCount,
+      modes: getSelectedModes(),
+    });
     showMessage('Турнір створено', 'success');
     if (dom.tournamentName) dom.tournamentName.value = '';
+    if (dom.tournamentNotes) dom.tournamentNotes.value = '';
     await refreshTournamentsList();
     if (dom.tournamentSelect) dom.tournamentSelect.value = tournamentId;
     tournamentState.currentId = tournamentId;
@@ -1046,7 +1093,7 @@ async function handleGenerateGames() {
     return;
   }
   try {
-    await createTournamentGames({ tournamentId: tournamentState.currentId, games: prepared.games });
+    await createTournamentGames({ tournamentId: tournamentState.currentId, games: prepared.games, league: tournamentState.league });
     showMessage('Матчі створено', 'success');
     await refreshTournamentData();
   } catch (err) {
@@ -1084,6 +1131,12 @@ async function handleSaveGame() {
     showMessage('Нічия недоступна для цього режиму', 'warn');
     return;
   }
+  const teamAPlayers = getTeamPlayers(game.teamAId);
+  const teamBPlayers = getTeamPlayers(game.teamBId);
+  if (!teamAPlayers.length || !teamBPlayers.length) {
+    showMessage('Обидві команди мають містити гравців перед збереженням результату', 'warn');
+    return;
+  }
   const awards = {
     mvp: dom.awards.mvp?.value.trim() || '',
     second: dom.awards.second?.value.trim() || '',
@@ -1113,10 +1166,15 @@ async function handleSaveGame() {
     gameMode: mode,
     teamAId: game.teamAId,
     teamBId: game.teamBId,
+    teamAPlayers,
+    teamBPlayers,
+    winnerTeamId: tournamentState.selectedResult === 'A' ? game.teamAId : tournamentState.selectedResult === 'B' ? game.teamBId : '',
+    isDraw: tournamentState.selectedResult === 'DRAW',
     mvp: awards.mvp,
     second: awards.second,
     third: awards.third,
     exportAsRegularGame: !!dom.exportRegular?.checked,
+    league: tournamentState.league,
   };
   if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');

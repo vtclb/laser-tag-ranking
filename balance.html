@@ -220,17 +220,19 @@
       </div>
 
       <div class="panel">
-        <div class="row" style="gap:12px; align-items:flex-end;">
-          <div>
-            <label for="tournament-select">Турнір</label>
-            <select id="tournament-select"></select>
-          </div>
+          <div class="row" style="gap:12px; align-items:flex-end;">
+            <div>
+              <label for="tournament-select">Турнір</label>
+              <select id="tournament-select"></select>
+            </div>
           <div class="row" style="flex:2; gap:8px; align-items:flex-end;">
             <input id="tournament-name" placeholder="Нова назва турніру">
+            <input id="tournament-notes" placeholder="Нотатки / опис" aria-label="Нотатки про турнір">
             <button class="btn" id="tournament-create">Створити</button>
             <button class="btn" id="tournament-refresh">Оновити список</button>
           </div>
         </div>
+        <p class="muted required-hint">* Обов'язково: вкажіть назву турніру та оберіть лігу</p>
       </div>
 
       <div class="panel" style="padding:0; margin-top:12px;">
@@ -275,6 +277,7 @@
             <button class="btn" id="tournament-clear-teams">Очистити команди</button>
           </div>
         </div>
+        <p class="muted required-hint">* Обов'язково: сформуйте щонайменше дві команди перед збереженням</p>
         <label>Пул гравців</label>
         <div id="tournament-pool" class="pill" style="min-height:44px; display:flex; flex-wrap:wrap; gap:8px;"></div>
         <textarea id="tournament-player-pool" class="tournament-only" placeholder="Ніки через кому" style="margin-top:8px;"></textarea>
@@ -305,6 +308,7 @@
             <button class="btn" data-result="DRAW">Нічия</button>
             <button class="btn" data-result="B">Перемога команди B</button>
           </div>
+          <p class="muted required-hint">* Обов'язково: оберіть матч, результат та команди</p>
           <div class="grid grid-2">
             <div>
               <label for="t-mvp">MVP</label>

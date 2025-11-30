@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <title>Архів турнірів — Турнір 3×4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Якщо у тебе є головний style.css — можеш підключити його тут -->
+  <!-- <link rel="stylesheet" href="style.css?v=2025-11-30"> -->
+
+  <style>
+    :root {
+      --lt-bg: #050811;
+      --lt-bg-soft: #0b1020;
+      --lt-bg-alt: #0f1628;
+      --lt-border: #262f4a;
+      --lt-text: #f5f5f5;
+      --lt-text-soft: #a3b0d0;
+      --lt-accent: #39ff88;
+      --lt-accent-soft: rgba(57, 255, 136, 0.25);
+      --lt-danger: #ff4b6e;
+      --lt-warning: #ffd166;
+      --lt-pixel: #13c4a3;
+      --lt-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
+      --lt-radius-lg: 18px;
+      --lt-radius-md: 12px;
+      --lt-radius-sm: 8px;
+      --lt-transition-fast: 0.18s ease-out;
+      --lt-font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--lt-font-main);
+      background:
+          radial-gradient(circle at 10% 0, rgba(57, 255, 136, 0.08), transparent 55%),
+          radial-gradient(circle at 90% 100%, rgba(93, 109, 255, 0.12), transparent 55%),
+          linear-gradient(135deg, #030509, #050811 45%, #050a13 70%, #050509);
+      color: var(--lt-text);
+      min-height: 100vh;
+    }
+
+    .lt-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 12px 40px;
+    }
+
+    @media (min-width: 768px) {
+      .lt-page {
+        padding: 24px 24px 60px;
+      }
+    }
+
+    .lt-glitch-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.15;
+      mix-blend-mode: screen;
+      background-image:
+        linear-gradient(transparent 0, transparent 3px, rgba(0,255,128,0.08) 4px),
+        linear-gradient(90deg, rgba(0,0,0,0.6) 0, rgba(0,0,0,0.2) 1px, transparent 1px);
+      background-size: 100% 4px, 3px 100%;
+      z-index: -1;
+      animation: lt-scan 6s linear infinite;
+    }
+
+    @keyframes lt-scan {
+      0% { transform: translateY(-10px); }
+      50% { transform: translateY(10px); }
+      100% { transform: translateY(-10px); }
+    }
+
+    /* HEADER */
+
+    .lt-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .lt-breadcrumbs {
+      font-size: 0.82rem;
+      color: var(--lt-text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lt-breadcrumbs a {
+      color: var(--lt-text-soft);
+      text-decoration: none;
+      position: relative;
+    }
+
+    .lt-breadcrumbs a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -1px;
+      width: 0;
+      height: 1px;
+      background: var(--lt-accent);
+      transition: width var(--lt-transition-fast);
+    }
+
+    .lt-breadcrumbs a:hover::after {
+      width: 100%;
+    }
+
+    .lt-title-block h1 {
+      margin: 0;
+      font-size: 1.7rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lt-title-pill {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(57,255,136,0.6);
+      background: rgba(5, 14, 24, 0.9);
+      box-shadow: 0 0 12px rgba(57,255,136,0.3);
+    }
+
+    .lt-sub {
+      margin-top: 4px;
+      font-size: 0.9rem;
+      color: var(--lt-text-soft);
+    }
+
+    .lt-badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .lt-badge {
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--lt-border);
+      background: rgba(9, 15, 30, 0.9);
+      color: var(--lt-text-soft);
+    }
+
+    .lt-badge--hot {
+      border-color: var(--lt-accent);
+      color: var(--lt-accent);
+      box-shadow: 0 0 14px rgba(57,255,136,0.35);
+    }
+
+    /* LAYOUT GRID */
+
+    .lt-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr);
+      gap: 16px;
+    }
+
+    @media (min-width: 960px) {
+      .lt-layout {
+        grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.2fr);
+        align-items: flex-start;
+      }
+    }
+
+    .lt-card {
+      background: radial-gradient(circle at 0 0, rgba(57,255,136,0.04), transparent 55%),
+                  radial-gradient(circle at 100% 100%, rgba(93,109,255,0.12), transparent 60%),
+                  var(--lt-bg-soft);
+      border-radius: var(--lt-radius-lg);
+      border: 1px solid var(--lt-border);
+      padding: 14px 14px 16px;
+      position: relative;
+      box-shadow: var(--lt-shadow);
+      overflow: hidden;
+    }
+
+    .lt-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 1px solid transparent;
+      background:
+        linear-gradient(135deg, rgba(57,255,136,0.4), transparent 40%, rgba(93,109,255,0.5)),
+        linear-gradient(135deg, rgba(255,255,255,0.5), rgba(255,255,255,0));
+      background-size: 180% 180%;
+      mix-blend-mode: screen;
+      opacity: 0.2;
+      pointer-events: none;
+      animation: lt-border-glow 9s ease-in-out infinite alternate;
+    }
+
+    .lt-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    @keyframes lt-border-glow {
+      0% { background-position: 0 0, 100% 0; }
+      50% { background-position: 50% 100%, 0 50%; }
+      100% { background-position: 100% 0, 50% 100%; }
+    }
+
+    .lt-card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .lt-card-title {
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--lt-text-soft);
+    }
+
+    .lt-card-caption {
+      font-size: 0.8rem;
+      color: var(--lt-text-soft);
+    }
+
+    /* TEAM SUMMARY */
+
+    .lt-team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .lt-team-card {
+      border-radius: var(--lt-radius-md);
+      border: 1px solid var(--lt-border);
+      padding: 10px 10px 12px;
+      background: linear-gradient(135deg, rgba(7,17,30,0.95), rgba(5,9,18,0.9));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lt-team-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(135deg,
+        rgba(255,255,255,0.16) 0,
+        transparent 35%,
+        rgba(0,0,0,0.8) 60%);
+      mix-blend-mode: soft-light;
+      opacity: 0;
+      transition: opacity var(--lt-transition-fast);
+      pointer-events: none;
+    }
+
+    .lt-team-card:hover::after {
+      opacity: 1;
+    }
+
+    .lt-team-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .lt-team-name {
+      font-weight: 600;
+      font-size: 0.98rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lt-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .lt-team-total {
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .lt-team-total span {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      color: var(--lt-text-soft);
+      margin-left: 6px;
+    }
+
+    .lt-team-players {
+      font-size: 0.78rem;
+      color: var(--lt-text-soft);
+      margin-bottom: 4px;
+    }
+
+    .lt-mode-bars {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .lt-mode-bar {
+      flex: 1;
+      position: relative;
+      height: 34px;
+      border-radius: 7px;
+      overflow: hidden;
+      background: #050915;
+      border: 1px solid #1a2235;
+    }
+
+    .lt-mode-bar-fill {
+      position: absolute;
+      inset: 0;
+      transform-origin: bottom;
+      transform: scaleY(0);
+      background-image:
+        linear-gradient(
+          to top,
+          var(--lt-accent-soft),
+          rgba(57,255,136,0.9)
+        );
+      image-rendering: pixelated;
+      transition: transform 0.4s cubic-bezier(0.25, 0.9, 0.4, 1.3);
+    }
+
+    .lt-mode-bar-label {
+      position: relative;
+      z-index: 1;
+      font-size: 0.68rem;
+      text-align: center;
+      line-height: 1.1;
+      padding-top: 3px;
+      text-shadow: 0 0 6px rgba(0,0,0,0.9);
+    }
+
+    .lt-mode-bar-label strong {
+      display: block;
+      font-size: 0.8rem;
+    }
+
+    .lt-team-card--winner {
+      border-color: var(--lt-accent);
+      box-shadow: 0 0 20px rgba(57,255,136,0.4);
+    }
+
+    /* PLAYERS TABLE */
+
+    .lt-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .lt-tab {
+      font-size: 0.8rem;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--lt-border);
+      background: var(--lt-bg-alt);
+      color: var(--lt-text-soft);
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--lt-transition-fast), color var(--lt-transition-fast), border-color var(--lt-transition-fast);
+    }
+
+    .lt-tab--active {
+      border-color: var(--lt-accent);
+      color: var(--lt-accent);
+      box-shadow: 0 0 12px rgba(57,255,136,0.35);
+    }
+
+    .lt-table-wrap {
+      border-radius: var(--lt-radius-md);
+      border: 1px solid var(--lt-border);
+      background: rgba(8, 14, 28, 0.95);
+      overflow: hidden;
+      max-height: 420px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .lt-table-scroll {
+      overflow: auto;
+    }
+
+    table.lt-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.82rem;
+      min-width: 100%;
+    }
+
+    .lt-table thead {
+      background: linear-gradient(90deg, rgba(5, 14, 30, 0.95), rgba(23, 41, 80, 0.95));
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .lt-table th,
+    .lt-table td {
+      padding: 7px 9px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      white-space: nowrap;
+    }
+
+    .lt-table th {
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.7rem;
+      color: var(--lt-text-soft);
+    }
+
+    .lt-table tbody tr:nth-child(even) {
+      background: rgba(8, 14, 32, 0.9);
+    }
+
+    .lt-table tbody tr:hover {
+      background: rgba(12, 24, 52, 0.95);
+    }
+
+    .lt-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      border: 1px solid var(--lt-border);
+      background: rgba(6,12,24,0.9);
+    }
+
+    .lt-chip--rank {
+      border-color: rgba(255,255,255,0.15);
+    }
+
+    .lt-chip--team {
+      border: 1px solid currentColor;
+      background: rgba(5,10,24,0.9);
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .lt-chip--mvp {
+      border-color: var(--lt-warning);
+      color: var(--lt-warning);
+    }
+
+    .lt-player-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lt-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: radial-gradient(circle at 20% 0, rgba(57,255,136,0.55), #050814);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lt-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .lt-avatar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(120deg, transparent 0, rgba(255,255,255,0.3) 40%, transparent 80%);
+      opacity: 0;
+      transform: translateX(-100%);
+      transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+    }
+
+    tr:hover .lt-avatar::after {
+      opacity: 1;
+      transform: translateX(40%);
+    }
+
+    .lt-player-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .lt-player-alias {
+      font-size: 0.7rem;
+      color: var(--lt-text-soft);
+    }
+
+    .lt-modes-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+      font-size: 0.7rem;
+      color: var(--lt-text-soft);
+    }
+
+    .lt-modes-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .lt-square {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .lt-square--dm { background: #ff4b6e; }
+    .lt-square--kt { background: #ffd166; }
+    .lt-square--tdm { background: #39ff88; }
+
+    /* FOOTNOTE */
+
+    .lt-footnote {
+      margin-top: 16px;
+      font-size: 0.74rem;
+      color: var(--lt-text-soft);
+      opacity: 0.85;
+    }
+
+    .lt-footnote code {
+      font-size: 0.74rem;
+      background: rgba(0,0,0,0.5);
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+  </style>
+</head>
+<body>
+<div class="lt-glitch-bg"></div>
+
+<div class="lt-page">
+  <header class="lt-header">
+    <div class="lt-title-block">
+      <div class="lt-breadcrumbs">
+        <a href="index.html">Рейтинг</a>
+        <span>›</span>
+        <span>Архів турнірів</span>
+      </div>
+      <h1>
+        Перший турнір 3×4
+        <span class="lt-title-pill">Архів події</span>
+      </h1>
+      <div class="lt-sub">
+        Формат: 3 команди по 4 гравці · Режими: DM, КТ, TDM · Дані внесені вручну за підсумками турніру.
+      </div>
+    </div>
+    <div class="lt-badge-bar">
+      <div class="lt-badge lt-badge--hot">Beta · Візуалізація турнірів</div>
+      <div class="lt-badge">Гравців: <span id="lt-badge-players">–</span></div>
+      <div class="lt-badge">Матчів: <span id="lt-badge-matches">–</span></div>
+    </div>
+  </header>
+
+  <div class="lt-layout">
+    <!-- LEFT: TEAMS -->
+    <section class="lt-card">
+      <div class="lt-card-header">
+        <div>
+          <div class="lt-card-title">Командний підсумок</div>
+          <div class="lt-card-caption">DM = 1 бал за раунд, КТ та TDM — турнірні поінти.</div>
+        </div>
+      </div>
+
+      <div id="lt-team-grid" class="lt-team-grid"></div>
+
+      <div class="lt-modes-legend">
+        <span><span class="lt-square lt-square--dm"></span> DM (класичний дезматч)</span>
+        <span><span class="lt-square lt-square--kt"></span> КТ (контроль точки по часу)</span>
+        <span><span class="lt-square lt-square--tdm"></span> TDM (турнірний ДМ з базами)</span>
+      </div>
+    </section>
+
+    <!-- RIGHT: PLAYERS -->
+    <section class="lt-card">
+      <div class="lt-card-header">
+        <div>
+          <div class="lt-card-title">Гравці та MVP</div>
+          <div class="lt-card-caption">3 / 2 / 1 очко за 1 / 2 / 3 місце в MVP (DM + КТ).</div>
+        </div>
+      </div>
+
+      <div class="lt-tabs">
+        <button class="lt-tab lt-tab--active" data-tab="impact">MVP рейтинг</button>
+        <button class="lt-tab" data-tab="dm">DM</button>
+        <button class="lt-tab" data-tab="kt">КТ</button>
+      </div>
+
+      <div class="lt-table-wrap">
+        <div class="lt-table-scroll">
+          <table class="lt-table" id="lt-players-table">
+            <thead>
+              <tr>
+                <th>Гравець</th>
+                <th>Команда</th>
+                <th>MVP&nbsp;індекс</th>
+                <th>DM MVP</th>
+                <th>КТ MVP</th>
+                <th>Алiаси</th>
+              </tr>
+            </thead>
+            <tbody>
+            <!-- JS вставить рядки -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="lt-footnote">
+        Примітка: нікнейми <code>Юра/Сегедин/Морті</code>, <code>Вова/Лерес/Ластон</code>,
+        <code>Остап/Сем</code> та <code>Валя/Кокосік</code> зведені в одного гравця для статистики.
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  // --- СТАТИЧНІ ДАНІ ТУРНІРУ (з того, що ти дав) ---
+
+  const LT_TOURNAMENT = {
+    id: "club-3x4-001",
+    name: "Перший турнір 3×4",
+    date: "2025-11-??",
+    modes: ["DM", "KT", "TDM"],
+    teams: [
+      {
+        id: "green",
+        name: "Зелені",
+        color: "#3cec6c",
+        players: ["Морті", "Ворон", "Оксана", "Happser"],
+        scores: { DM: 2, KT: 1, TDM: 4 }
+      },
+      {
+        id: "blue",
+        name: "Сині",
+        color: "#3f89ff",
+        players: ["Ластон", "Лерес", "Кіцюня", "Кокосік"],
+        scores: { DM: 10, KT: 4, TDM: 8 }
+      },
+      {
+        id: "red",
+        name: "Червоні",
+        color: "#ff596c",
+        players: ["Сем", "Джасті", "Олег", "Темофій"],
+        scores: { DM: 6, KT: 9, TDM: 7 }
+      }
+    ],
+    // Дуже приблизний підрахунок матчів:
+    meta: {
+      matchesDM: 7 + 6 + 8,
+      matchesKT: 3,
+      matchesTDM: 3
+    }
+  };
+
+  // MVP по гравцях (DM + KT, з урахуванням аліасів)
+  // 3 / 2 / 1 очко за 1 / 2 / 3 місце.
+  const LT_PLAYERS = [
+    {
+      nick: "Ластон",
+      teamId: "blue",
+      teamName: "Сині",
+      teamColor: "#3f89ff",
+      rank: null,     // Codex підставить актуальний ранг
+      rating: null,   // Codex підставить рейтинг з таблиці
+      avatarUrl: null,// Codex підставить URL
+      aliases: ["Вова", "Лерес"],
+      impact: 14,
+      dmMvpTotal: 4,
+      dmMvpFirst: 2,
+      ktMvpTotal: 2,
+      ktMvpFirst: 0
+    },
+    {
+      nick: "Морті",
+      teamId: "green",
+      teamName: "Зелені",
+      teamColor: "#3cec6c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: ["Юра", "Сегедин"],
+      impact: 10,
+      dmMvpTotal: 2,
+      dmMvpFirst: 1,
+      ktMvpTotal: 2,
+      ktMvpFirst: 2
+    },
+    {
+      nick: "Сем",
+      teamId: "red",
+      teamName: "Червоні",
+      teamColor: "#ff596c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: ["Остап"],
+      impact: 6,
+      dmMvpTotal: 1,
+      dmMvpFirst: 0,
+      ktMvpTotal: 2,
+      ktMvpFirst: 1
+    },
+    {
+      nick: "Темофій",
+      teamId: "red",
+      teamName: "Червоні",
+      teamColor: "#ff596c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: [],
+      impact: 4,
+      dmMvpTotal: 1,
+      dmMvpFirst: 0,
+      ktMvpTotal: 2,
+      ktMvpFirst: 0
+    },
+    {
+      nick: "Олег",
+      teamId: "red",
+      teamName: "Червоні",
+      teamColor: "#ff596c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: [],
+      impact: 1,
+      dmMvpTotal: 1,
+      dmMvpFirst: 0,
+      ktMvpTotal: 0,
+      ktMvpFirst: 0
+    },
+    {
+      nick: "Ворон",
+      teamId: "green",
+      teamName: "Зелені",
+      teamColor: "#3cec6c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: [],
+      impact: 1,
+      dmMvpTotal: 0,
+      dmMvpFirst: 0,
+      ktMvpTotal: 1,
+      ktMvpFirst: 0
+    },
+    // Решта гравців без MVP — для повноти списку
+    {
+      nick: "Оксана",
+      teamId: "green",
+      teamName: "Зелені",
+      teamColor: "#3cec6c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: ["Оксанка"],
+      impact: 0,
+      dmMvpTotal: 0,
+      dmMvpFirst: 0,
+      ktMvpTotal: 0,
+      ktMvpFirst: 0
+    },
+    {
+      nick: "Happser",
+      teamId: "green",
+      teamName: "Зелені",
+      teamColor: "#3cec6c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: ["Даня"],
+      impact: 0,
+      dmMvpTotal: 0,
+      dmMvpFirst: 0,
+      ktMvpTotal: 0,
+      ktMvpFirst: 0
+    },
+    {
+      nick: "Кіцюня",
+      teamId: "blue",
+      teamName: "Сині",
+      teamColor: "#3f89ff",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: [],
+      impact: 0,
+      dmMvpTotal: 0,
+      dmMvpFirst: 0,
+      ktMvpTotal: 0,
+      ktMvpFirst: 0
+    },
+    {
+      nick: "Кокосік",
+      teamId: "blue",
+      teamName: "Сині",
+      teamColor: "#3f89ff",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: ["Валя"],
+      impact: 0,
+      dmMvpTotal: 0,
+      dmMvpFirst: 0,
+      ktMvpTotal: 0,
+      ktMvpFirst: 0
+    },
+    {
+      nick: "Джасті",
+      teamId: "red",
+      teamName: "Червоні",
+      teamColor: "#ff596c",
+      rank: null,
+      rating: null,
+      avatarUrl: null,
+      aliases: [],
+      impact: 0,
+      dmMvpTotal: 0,
+      dmMvpFirst: 0,
+      ktMvpTotal: 0,
+      ktMvpFirst: 0
+    }
+  ];
+
+  // --- Рендер команд ---
+
+  function renderTeams() {
+    const container = document.getElementById("lt-team-grid");
+    if (!container) return;
+
+    const totals = LT_TOURNAMENT.teams.map(t => {
+      const s = t.scores;
+      return {
+        id: t.id,
+        total: (s.DM || 0) + (s.KT || 0) + (s.TDM || 0)
+      };
+    });
+    const maxTotal = Math.max(...totals.map(t => t.total), 1);
+    const topTotal = maxTotal;
+
+    container.innerHTML = "";
+    LT_TOURNAMENT.teams.forEach(team => {
+      const sum = (team.scores.DM || 0) + (team.scores.KT || 0) + (team.scores.TDM || 0);
+      const isWinner = sum === topTotal;
+
+      const card = document.createElement("article");
+      card.className = "lt-team-card" + (isWinner ? " lt-team-card--winner" : "");
+      card.style.setProperty("--lt-team-color", team.color);
+
+      const dmRatio = (team.scores.DM || 0) / maxTotal;
+      const ktRatio = (team.scores.KT || 0) / maxTotal;
+      const tdmRatio = (team.scores.TDM || 0) / maxTotal;
+
+      card.innerHTML = `
+        <div class="lt-team-header">
+          <div class="lt-team-name">
+            <span class="lt-dot" style="background:${team.color}"></span>
+            <span>${team.name}</span>
+          </div>
+          <div class="lt-team-total">
+            ${sum}<span>балів</span>
+          </div>
+        </div>
+        <div class="lt-team-players">
+          ${team.players.map(p => `<span>${p}</span>`).join(" · ")}
+        </div>
+        <div class="lt-mode-bars">
+          <div class="lt-mode-bar">
+            <div class="lt-mode-bar-fill" data-val="${dmRatio}" style="background-image:linear-gradient(to top,#ff4b6e99,#ff4b6e);"></div>
+            <div class="lt-mode-bar-label">
+              <span>DM</span>
+              <strong>${team.scores.DM || 0}</strong>
+            </div>
+          </div>
+          <div class="lt-mode-bar">
+            <div class="lt-mode-bar-fill" data-val="${ktRatio}" style="background-image:linear-gradient(to top,#ffd16699,#ffd166);"></div>
+            <div class="lt-mode-bar-label">
+              <span>КТ</span>
+              <strong>${team.scores.KT || 0}</strong>
+            </div>
+          </div>
+          <div class="lt-mode-bar">
+            <div class="lt-mode-bar-fill" data-val="${tdmRatio}" style="background-image:linear-gradient(to top,#39ff8899,#39ff88);"></div>
+            <div class="lt-mode-bar-label">
+              <span>TDM</span>
+              <strong>${team.scores.TDM || 0}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+
+    // Анімація колонок
+    requestAnimationFrame(() => {
+      container.querySelectorAll(".lt-mode-bar-fill").forEach(el => {
+        const v = parseFloat(el.getAttribute("data-val") || "0");
+        const clamped = Math.max(0.1, Math.min(v || 0, 1)); // мінімум 0.1 щоб не зникали
+        el.style.transform = `scaleY(${clamped})`;
+      });
+    });
+  }
+
+  // --- Рендер гравців ---
+
+  function renderPlayersTable(mode = "impact") {
+    const tbody = document.querySelector("#lt-players-table tbody");
+    if (!tbody) return;
+
+    let sorted = [...LT_PLAYERS];
+    if (mode === "impact") {
+      sorted.sort((a,b) => b.impact - a.impact);
+    } else if (mode === "dm") {
+      sorted.sort((a,b) => (b.dmMvpTotal || 0) - (a.dmMvpTotal || 0));
+    } else if (mode === "kt") {
+      sorted.sort((a,b) => (b.ktMvpTotal || 0) - (a.ktMvpTotal || 0));
+    }
+
+    tbody.innerHTML = "";
+    sorted.forEach(player => {
+      const tr = document.createElement("tr");
+
+      const aliases = player.aliases && player.aliases.length
+        ? player.aliases.join(", ")
+        : "—";
+
+      const rankLabel = player.rank ? player.rank : "?";
+      const ratingLabel = player.rating != null ? player.rating : "—";
+
+      tr.innerHTML = `
+        <td>
+          <div class="lt-player-cell">
+            <div class="lt-avatar" style="border-color:${player.teamColor}; box-shadow:0 0 8px ${player.teamColor}55;">
+              ${player.avatarUrl
+                ? `<img src="${player.avatarUrl}" alt="${player.nick}">`
+                : ""}
+            </div>
+            <div>
+              <div class="lt-player-name">${player.nick}</div>
+              <div class="lt-player-alias">Rank: <span class="lt-chip lt-chip--rank">${rankLabel}</span> · Rating: ${ratingLabel}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="lt-chip lt-chip--team" style="color:${player.teamColor};">
+            ${player.teamName}
+          </span>
+        </td>
+        <td>
+          <span class="lt-chip lt-chip--mvp">${player.impact}</span>
+        </td>
+        <td>${player.dmMvpTotal} ${player.dmMvpFirst ? `(<b>${player.dmMvpFirst}</b> MVP)` : ""}</td>
+        <td>${player.ktMvpTotal} ${player.ktMvpFirst ? `(<b>${player.ktMvpFirst}</b> MVP)` : ""}</td>
+        <td>${aliases}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function initTabs() {
+    const tabs = document.querySelectorAll(".lt-tab");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        tabs.forEach(t => t.classList.remove("lt-tab--active"));
+        tab.classList.add("lt-tab--active");
+        const mode = tab.getAttribute("data-tab");
+        renderPlayersTable(mode);
+      });
+    });
+  }
+
+  function renderBadges() {
+    const playersBadge = document.getElementById("lt-badge-players");
+    const matchesBadge = document.getElementById("lt-badge-matches");
+    if (playersBadge) {
+      playersBadge.textContent = LT_PLAYERS.length;
+    }
+    if (matchesBadge) {
+      const m = LT_TOURNAMENT.meta;
+      matchesBadge.textContent = (m.matchesDM + m.matchesKT + m.matchesTDM) + " (формально)";
+    }
+  }
+
+  // --- Місце для інтеграції з бекендом (Codex) ---
+  // Тут Codex може підтягувати ранг / рейтинг / аватар із Apps Script.
+
+  async function fetchPlayerProfile(nick) {
+    // TODO (Codex): замінити на реальний виклик до api.js / Apps Script:
+    // return callApi('getProfile', { nick });
+    return null;
+  }
+
+  // Приклад: масовий фетч (Codex може доопрацювати)
+  async function enrichPlayersFromBackend() {
+    // Зараз заглушка, щоб не ламати сторінку.
+    // Codex може:
+    // 1) пройтись по LT_PLAYERS,
+    // 2) зробити запит до бекенду,
+    // 3) оновити rank / rating / avatarUrl,
+    // 4) заново викликати renderPlayersTable().
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    renderTeams();
+    renderPlayersTable("impact");
+    initTabs();
+    renderBadges();
+    // enrichPlayersFromBackend(); // коли Codex реалізує бекенд
+  });
+</script>
+</body>
+</html>

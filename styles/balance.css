@@ -198,6 +198,46 @@ tr[data-rank="c"], [data-rank="c"] .player-name { color: #c18aff; }
 
 .bal__players { display: none; }
 .only-mobile { display: none; }
+
+#player-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+#player-table thead,
+#player-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+#player-table .avatar-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#player-table .player-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+#player-table .player-name .muted {
+  font-size: 12px;
+}
+
+#player-table tbody {
+  max-height: 350px;
+  overflow-y: auto;
+  display: block;
+}
+
+#player-table th,
+#player-table td {
+  padding: 8px 10px;
+}
 .only-desktop { display: inline-block; }
 
 .bal__lobby-layout {

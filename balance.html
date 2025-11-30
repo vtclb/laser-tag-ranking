@@ -109,7 +109,7 @@
             <button class="btn" id="regular-clear">Очистити</button>
           </div>
         </div>
-        <table class="table" id="regular-table">
+        <table class="table" id="player-table">
           <thead>
             <tr><th></th><th>Гравець</th><th>PTS</th><th>Ігор</th></tr>
           </thead>
@@ -186,7 +186,7 @@
           </div>
         </div>
         <div class="tournament-lobby">
-          <table class="table" id="tournament-table">
+          <table class="table" id="tournament-lobby-table">
             <thead>
               <tr><th><input type="checkbox" id="tournament-lobby-select-all" aria-label="Виділити всіх"></th><th>Гравець</th><th>PTS</th><th>Ігор</th></tr>
             </thead>
@@ -198,8 +198,8 @@
       <div class="panel">
         <div class="row">
           <div>
-            <label for="tournament-teams">Кількість команд</label>
-            <select id="tournament-teams">
+            <label for="tournament-team-count">Кількість команд</label>
+            <select id="tournament-team-count">
               <option value="2">2</option>
               <option value="3" selected>3</option>
               <option value="4">4</option>
@@ -234,7 +234,7 @@
         </div>
         <div id="tournament-games-list" class="games-list"></div>
         <div class="row" style="margin-top:12px;">
-          <select id="tournament-games"></select>
+          <select id="tournament-game-select"></select>
         </div>
         <div class="result-panel">
           <div class="result-options" id="tournament-result-buttons">
@@ -298,8 +298,8 @@
   <script type="module" src="scripts/config.js"></script>
   <script type="module" src="scripts/logger.js"></script>
   <script type="module" src="scripts/api.js"></script>
-  <script type="module" src="scripts/state.js"></script>
-  <script type="module" src="scripts/balance.js"></script>
+  <script type="module" src="scripts/balanceUtils.js"></script>
   <script type="module" src="scripts/tournamentMode.js"></script>
+  <script type="module" src="scripts/balance.js"></script>
 </body>
 </html>

@@ -199,6 +199,15 @@ function calculateTeamMetrics(players) {
   };
 }
 
+function isDrawAllowed(mode) {
+  const key = (mode || '').toUpperCase();
+  const config = tournamentState.data?.config || {};
+  if (Object.prototype.hasOwnProperty.call(config, key)) {
+    return config[key] !== false;
+  }
+  return key !== 'KT';
+}
+
 function renderTeamMetrics(slot, metrics) {
   const el = dom.teamMetrics.get(slot);
   if (!el) return;
@@ -787,7 +796,7 @@ function buildSaveHints(game) {
   if (!dom.resultStatus) return '';
   if (!game) return 'Оберіть матч та результат, щоб розблокувати збереження.';
   const mode = (game.mode || '').toUpperCase();
-  const allowDraw = mode !== 'KT';
+  const allowDraw = isDrawAllowed(mode);
   const requirements = [`Результат: A/B${allowDraw ? '/DRAW' : ''}`];
   requirements.push('Команди мають містити гравців');
   const allowed = getAllowedAwardSet(game);
@@ -871,7 +880,7 @@ function applyGameStatus(game) {
 
 function updateDrawAvailability(game) {
   const mode = (game?.mode || '').toUpperCase();
-  const allowDraw = mode !== 'KT';
+  const allowDraw = isDrawAllowed(mode);
   const drawBtn = dom.resultButtons?.querySelector('[data-result="DRAW"]');
   if (drawBtn) {
     drawBtn.disabled = !allowDraw;
@@ -1020,7 +1029,7 @@ function generateRoundRobinGames(teams, modes, bestOf = 1) {
 
 async function handleGenerateGames() {
   if (!tournamentState.currentId) {
-    showMessage('Спочатку оберіть турнір', 'warn');
+    showMessage('Оберіть турнір перед генерацією матчів', 'warn');
     return;
   }
   const teams = collectTeamsFromForm().filter(t => t.teamId && t.players.length);
@@ -1048,7 +1057,12 @@ async function handleGenerateGames() {
 
 async function handleSaveGame() {
   if (!tournamentState.currentId) {
-    showMessage('Оберіть турнір', 'warn');
+    showMessage('Оберіть турнір перед збереженням результату', 'warn');
+    return;
+  }
+  const availableGames = tournamentState.data?.games || tournamentState.games || [];
+  if (!availableGames.length) {
+    showMessage('Спочатку згенеруйте матчі', 'warn');
     return;
   }
   const gameId = dom.gamesSelect?.value;
@@ -1060,14 +1074,14 @@ async function handleSaveGame() {
     showMessage('Оберіть результат матчу', 'warn');
     return;
   }
-  const game = (tournamentState.data?.games || tournamentState.games || []).find(g => g.gameId === gameId);
+  const game = availableGames.find(g => g.gameId === gameId);
   if (!game || !game.gameId) {
     showMessage('Матч не знайдено', 'error');
     return;
   }
   const mode = (game.mode || '').toUpperCase();
-  if (tournamentState.selectedResult === 'DRAW' && mode === 'KT') {
-    showMessage('Нічия недоступна для режиму KT', 'warn');
+  if (tournamentState.selectedResult === 'DRAW' && !isDrawAllowed(mode)) {
+    showMessage('Нічия недоступна для цього режиму', 'warn');
     return;
   }
   const awards = {
@@ -1095,16 +1109,14 @@ async function handleSaveGame() {
     tournamentId: tournamentState.currentId,
     gameId,
     result: tournamentState.selectedResult,
- codex/restore-regular-mode-functionality-mxqqdv
+    mode,
     gameMode: mode,
-
-    gameMode: (game.mode || '').toUpperCase(),
-
     teamAId: game.teamAId,
     teamBId: game.teamBId,
     mvp: awards.mvp,
     second: awards.second,
     third: awards.third,
+    exportAsRegularGame: !!dom.exportRegular?.checked,
   };
   if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');

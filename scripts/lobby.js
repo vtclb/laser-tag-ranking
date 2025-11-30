@@ -353,6 +353,7 @@ export async function setManualCount(n) {
   } catch (err) {
     log('[ranking]', err);
   }
+  refreshArenaTeams();
 }
 
 export async function clearLobby() {

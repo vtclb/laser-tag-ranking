@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VTCLB · Балансер</title>
+  <link rel="stylesheet" href="balancer.css">
   <link rel="stylesheet" href="styles/balance.css">
   <style>
     :root {
@@ -81,60 +82,122 @@
     </div>
   </header>
 
-  <main>
-    <section class="panel mode-panel active regular-only" id="regular-panel">
-      <div class="section-title">
-        <h2>Індивідуальний режим</h2>
-        <div class="row">
-          <div>
-            <label for="regular-league">Ліга</label>
-            <select id="regular-league">
-              <option value="kids">Kids</option>
-              <option value="olds">Olds</option>
-            </select>
+  <main id="tournament-mode">
+    <section class="mode-panel active regular-only" id="regular-panel">
+      <div id="ui-panel">
+        <div class="panel">
+          <div class="section-title">
+            <h2>Стандартний балансер</h2>
+            <div class="bal__actions">
+              <button class="btn" id="ui-burger" aria-label="Меню">☰</button>
+            </div>
           </div>
-          <div class="row" style="flex:2; gap:8px; align-items:flex-end;">
-            <button class="btn-primary btn" id="regular-load">Завантажити лоббі</button>
-            <button class="btn" id="open-avatar">Змінити аватар</button>
+          <div class="row" style="gap:12px; align-items:flex-end; flex-wrap:wrap;">
+            <div class="row-inline" style="flex:1 1 240px;">
+              <label for="league">Ліга</label>
+              <select id="league" class="select-lg">
+                <option value="kids">Kids</option>
+                <option value="sundaygames">Sunday Games</option>
+                <option value="olds">Olds</option>
+              </select>
+            </div>
+            <div class="bal__actions" style="flex:2 1 320px;">
+              <button class="btn-primary btn" id="btn-load">Завантажити гравців</button>
+              <button class="btn" id="btn-auto">Автобаланс</button>
+              <button class="btn" id="btn-manual">Ручний режим</button>
+              <select id="teamsize" class="select-lg" aria-label="Кількість команд">
+                <option value="2" selected>2 команди</option>
+                <option value="3">3 команди</option>
+                <option value="4">4 команди</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-inline" style="gap:12px; align-items:center; flex-wrap:wrap;">
+            <div class="metrics" style="flex:2;">
+              <span class="tag">Лоббі: <span id="lobby-count">0</span></span>
+              <span class="tag">Σ <span id="lobby-sum">0</span></span>
+              <span class="tag">Avg <span id="lobby-avg">0</span></span>
+            </div>
+            <button class="btn" id="btn-clear-lobby">Очистити лоббі</button>
           </div>
         </div>
-      </div>
 
-      <div class="panel" style="padding:0; margin-top:12px;">
-        <div class="section-title" style="padding:16px;">
-          <h3>Лоббі</h3>
-          <div class="row" style="flex:2;">
-            <input id="regular-search" placeholder="Пошук гравців" aria-label="Пошук">
-            <button class="btn" id="regular-add">Add to Team</button>
-            <button class="btn" id="regular-clear">Очистити</button>
-          </div>
-        </div>
-        <table class="table" id="player-table">
-          <thead>
-            <tr><th></th><th>Гравець</th><th>PTS</th><th>Ігор</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+        <div id="players" class="page-wrap">
+          <section id="sec-player-picker" class="panel open">
+            <div class="section-title">
+              <h3>Список гравців</h3>
+              <div class="bal__actions">
+                <input id="player-search" placeholder="Пошук гравців" aria-label="Пошук" />
+                <button class="btn" id="btn-sort-name">A → Я</button>
+                <button class="btn" id="btn-sort-pts">PTS</button>
+              </div>
+            </div>
+            <div id="select-area">
+              <div id="player-list" class="list"></div>
+              <div class="bal__actions">
+                <button class="btn-primary btn" id="add-to-lobby">Додати в лоббі</button>
+                <button class="btn" id="btn-add-selected" aria-label="Додати вибраних">→</button>
+                <button class="btn" id="btn-clear-selected">Очистити вибір</button>
+              </div>
+            </div>
+            <div class="bal__row">
+              <input id="addPlayerInput" placeholder="Додати гравця по ніку" />
+              <button class="btn" id="addPlayerBtn">Додати</button>
+            </div>
+            <div class="bal__row">
+              <input id="new-nick" placeholder="Новий нік" />
+              <input id="new-age" type="number" min="0" placeholder="Вік" />
+              <button class="btn" id="btn-create">Створити гравця</button>
+            </div>
+          </section>
 
-      <div class="panel">
-        <div class="row">
-          <div>
-            <label for="regular-teams">Кількість команд</label>
-            <select id="regular-teams">
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-            </select>
-          </div>
-          <div class="row" style="flex:2;">
-            <button class="btn-primary btn" id="regular-auto">Автобаланс</button>
-          </div>
-          <div class="metrics" id="regular-summary"></div>
+          <section class="panel" id="lobby-area">
+            <h3>Лоббі</h3>
+            <div id="lobby-list" class="lobby-list"></div>
+          </section>
+
+          <section class="panel hidden" id="scenario-area">
+            <div class="section-title">
+              <h3>Команди</h3>
+              <div class="team-buttons">
+                <button class="btn" data-teams="2">2</button>
+                <button class="btn" data-teams="3">3</button>
+                <button class="btn" data-teams="4">4</button>
+              </div>
+            </div>
+            <div id="lobby" class="lobby-teams">
+              <div id="teams-area" class="lobby-teams"></div>
+            </div>
+            <div id="arena-select" class="panel" style="margin-top:12px;">
+              <h4>Обрати команди для бою</h4>
+              <div id="arena-checkboxes" class="lobby-list"></div>
+              <button class="btn-primary btn" id="btn-start-match" disabled>Почати бій</button>
+            </div>
+            <div id="arena-area" class="panel hidden" style="margin-top:12px;">
+              <h4 id="arena-vs">Арена</h4>
+              <div id="arena-rounds" class="rounds-grid"></div>
+              <div class="bal__row">
+                <input id="mvp1" list="players-datalist" placeholder="MVP" />
+                <input id="mvp2" list="players-datalist" placeholder="2 місце" />
+                <input id="mvp3" list="players-datalist" placeholder="3 місце" />
+              </div>
+              <input id="penalty" placeholder="Штрафи (nick:delta,...)" />
+              <div class="bal__actions arena-actions">
+                <input type="file" id="pdf-upload" accept="application/pdf" class="pdf-input" />
+                <button class="btn" id="btn-parse-pdf">Імпорт PDF</button>
+              </div>
+              <div class="bal__actions arena-actions">
+                <button class="btn-primary btn" id="btn-save-match">Зберегти гру</button>
+                <button class="btn" id="btn-clear-arena">Скинути арену</button>
+              </div>
+            </div>
+          </section>
         </div>
-        <div class="teams" id="regular-teams-wrap"></div>
       </div>
+      <datalist id="players-datalist"></datalist>
     </section>
+    <div id="ui-overlay" hidden></div>
+    <button id="ui-clear-lobby" class="hidden" aria-hidden="true"></button>
 
     <section class="panel mode-panel tournament-only" id="tournament-panel">
       <div class="section-title">
@@ -299,6 +362,8 @@
   <script type="module" src="scripts/logger.js"></script>
   <script type="module" src="scripts/api.js"></script>
   <script type="module" src="scripts/balanceUtils.js"></script>
+  <script type="module" src="scripts/main.js?v=2025-09-19-avatars-2"></script>
+  <script type="module" src="scripts/arena.js?v=2025-09-19-avatars-2"></script>
   <script type="module" src="scripts/tournamentMode.js"></script>
   <script type="module" src="scripts/balance.js"></script>
 </body>

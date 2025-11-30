@@ -329,7 +329,7 @@ async function showSelector() {
   setMeta('Завантажте наявні турніри, щоб переглянути результати');
 
   try {
-    const tournaments = await fetchTournaments();
+    const tournaments = await fetchTournaments({ status: 'ACTIVE' });
     if (!tournaments.length) {
       emptyEl.classList.remove('hidden');
       return;

@@ -757,7 +757,7 @@ async function refreshTournamentsList() {
   if (!selectEl) return;
   selectEl.innerHTML = '<option value="">— Оберіть турнір —</option>';
   try {
-    const tournaments = await fetchTournaments({ league: tournamentState.league, status: 'ACTIVE' });
+    const tournaments = await fetchTournaments({ status: 'ACTIVE' });
     tournamentState.tournaments = tournaments;
     tournaments.forEach(t => {
       const opt = document.createElement('option');
@@ -1338,6 +1338,16 @@ async function handleSaveGame() {
 
 
   };
+  const requiredFields = ['tournamentId', 'gameId', 'result', 'teamAId', 'teamBId'];
+  const missingField = requiredFields.find(key => !payload[key]);
+  if (missingField) {
+    showMessage('Оберіть матч та результат перед збереженням', 'warn');
+    return;
+  }
+  if (!['A', 'B', 'DRAW'].includes(payload.result)) {
+    showMessage('Некоректний результат матчу', 'warn');
+    return;
+  }
   if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');
     return;

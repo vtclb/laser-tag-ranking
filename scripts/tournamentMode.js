@@ -1095,7 +1095,11 @@ async function handleSaveGame() {
     tournamentId: tournamentState.currentId,
     gameId,
     result: tournamentState.selectedResult,
+ codex/restore-regular-mode-functionality-mxqqdv
     gameMode: mode,
+
+    gameMode: (game.mode || '').toUpperCase(),
+
     teamAId: game.teamAId,
     teamBId: game.teamBId,
     mvp: awards.mvp,

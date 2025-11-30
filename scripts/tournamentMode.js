@@ -310,7 +310,22 @@ function renderTeams() {
         renderTeams();
         persistState();
       });
-      li.appendChild(removeBtn);
+      const moveUp = document.createElement('button');
+      moveUp.type = 'button';
+      moveUp.className = 'ghost-btn';
+      moveUp.textContent = '↑';
+      moveUp.title = 'Вище в команді';
+      moveUp.addEventListener('click', () => movePlayerWithinTeam(slot, nick, -1));
+      const moveDown = document.createElement('button');
+      moveDown.type = 'button';
+      moveDown.className = 'ghost-btn';
+      moveDown.textContent = '↓';
+      moveDown.title = 'Нижче в команді';
+      moveDown.addEventListener('click', () => movePlayerWithinTeam(slot, nick, 1));
+      const actions = document.createElement('span');
+      actions.className = 'team-actions';
+      actions.append(moveUp, moveDown, removeBtn);
+      li.appendChild(actions);
       list.appendChild(li);
     });
 
@@ -384,6 +399,19 @@ function movePlayerToTeam(nick, slot, index = null) {
   team.players.splice(targetIndex, 0, nick);
   tournamentState.lobbySelection.delete(nick);
   renderLobby();
+  renderTeams();
+  persistState();
+}
+
+function movePlayerWithinTeam(slot, nick, direction = 0) {
+  const team = tournamentState.teams[slot];
+  if (!team) return;
+  const idx = team.players.indexOf(nick);
+  if (idx < 0) return;
+  const target = idx + direction;
+  if (target < 0 || target >= team.players.length) return;
+  const [player] = team.players.splice(idx, 1);
+  team.players.splice(target, 0, player);
   renderTeams();
   persistState();
 }
@@ -744,6 +772,30 @@ function renderAwards(game) {
   });
 }
 
+function getAllowedAwardSet(game) {
+  const teams = tournamentState.data?.teams || collectTeamsFromForm();
+  const teamMap = Object.fromEntries(teams.map(t => [t.teamId, t]));
+  const players = [];
+  if (game) {
+    parsePlayerList(teamMap[game.teamAId]?.players || []).forEach(n => players.push(n));
+    parsePlayerList(teamMap[game.teamBId]?.players || []).forEach(n => players.push(n));
+  }
+  return new Set(players);
+}
+
+function buildSaveHints(game) {
+  if (!dom.resultStatus) return '';
+  if (!game) return 'Оберіть матч та результат, щоб розблокувати збереження.';
+  const mode = (game.mode || '').toUpperCase();
+  const allowDraw = mode !== 'KT';
+  const requirements = [`Результат: A/B${allowDraw ? '/DRAW' : ''}`];
+  requirements.push('Команди мають містити гравців');
+  const allowed = getAllowedAwardSet(game);
+  if (allowed.size) requirements.push('MVP/2/3 лише з учасників матчу, без повторів');
+  requirements.push(`Режим: ${mode || '—'}`);
+  return requirements.join(' · ');
+}
+
 function renderMatchPanel(game) {
   if (!dom.match) return;
   dom.match.innerHTML = '';
@@ -794,24 +846,27 @@ function setSelectedResult(value) {
 
 function applyGameStatus(game) {
   if (!dom.resultStatus) return;
+  let statusText = '';
   if (!game) {
-    dom.resultStatus.textContent = '';
+    dom.resultStatus.textContent = buildSaveHints(null);
     return;
   }
   const teams = tournamentState.data?.teams || collectTeamsFromForm();
   const teamNames = Object.fromEntries(teams.map(t => [t.teamId, t.teamName || t.teamId]));
   if (game.isDraw === 'TRUE' || game.isDraw === true || tournamentState.selectedResult === 'DRAW') {
-    dom.resultStatus.textContent = 'Статус: нічия';
+    statusText = 'Статус: нічия';
     setSelectedResult('DRAW');
   } else if (game.winnerTeamId) {
     const winnerLabel = teamNames[game.winnerTeamId] || game.winnerTeamId;
-    dom.resultStatus.textContent = `Статус: переможець ${winnerLabel}`;
+    statusText = `Статус: переможець ${winnerLabel}`;
     const winner = game.winnerTeamId === game.teamAId ? 'A' : game.winnerTeamId === game.teamBId ? 'B' : '';
     setSelectedResult(winner);
   } else {
-    dom.resultStatus.textContent = 'Статус: не зіграно';
+    statusText = 'Статус: не зіграно';
     setSelectedResult('');
   }
+  const hints = buildSaveHints(game);
+  dom.resultStatus.textContent = hints ? `${statusText} · ${hints}` : statusText;
 }
 
 function updateDrawAvailability(game) {
@@ -934,28 +989,29 @@ async function handleSaveTeams() {
   }
 }
 
-function generateRoundRobinGames(teams) {
+function getSelectedModes() {
+  const checks = Array.from(dom.root?.querySelectorAll('.mode-check') || []);
+  const enabled = checks.filter(cb => cb.checked).map(cb => (cb.value || '').toUpperCase()).filter(Boolean);
+  return enabled.length ? enabled : [...TOURNAMENT_GAME_MODES];
+}
+
+function generateRoundRobinGames(teams, modes, bestOf = 1) {
   if (!Array.isArray(teams) || teams.length < 2) return [];
+  const validModes = (modes && modes.length ? modes : TOURNAMENT_GAME_MODES).map(m => m.toUpperCase());
+  const series = Number.isFinite(bestOf) && bestOf > 0 ? Math.max(1, Math.min(5, Math.trunc(bestOf))) : 1;
   const games = [];
-  if (teams.length === 2) {
-    for (let i = 0; i < 3; i++) {
-      games.push({
-        gameId: `G${i + 1}`,
-        mode: 'TR',
-        teamAId: teams[0].teamId,
-        teamBId: teams[1].teamId,
-      });
-    }
-    return games;
-  }
   let idx = 1;
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
-      games.push({
-        gameId: `G${idx++}`,
-        mode: 'TR',
-        teamAId: teams[i].teamId,
-        teamBId: teams[j].teamId,
+      validModes.forEach(mode => {
+        for (let k = 0; k < series; k++) {
+          games.push({
+            gameId: `G${idx++}`,
+            mode,
+            teamAId: teams[i].teamId,
+            teamBId: teams[j].teamId,
+          });
+        }
       });
     }
   }
@@ -972,7 +1028,9 @@ async function handleGenerateGames() {
     showMessage('Потрібно щонайменше дві команди зі складами', 'warn');
     return;
   }
-  const games = generateRoundRobinGames(teams);
+  const modes = getSelectedModes();
+  const bestOf = Number(dom.root?.querySelector('#tournament-bestof')?.value || 1);
+  const games = generateRoundRobinGames(teams, modes, bestOf);
   const prepared = normalizeGeneratedGames(games);
   if (prepared.error) {
     showMessage(prepared.error, 'warn');
@@ -1007,35 +1065,49 @@ async function handleSaveGame() {
     showMessage('Матч не знайдено', 'error');
     return;
   }
+  const mode = (game.mode || '').toUpperCase();
+  if (tournamentState.selectedResult === 'DRAW' && mode === 'KT') {
+    showMessage('Нічия недоступна для режиму KT', 'warn');
+    return;
+  }
   const awards = {
     mvp: dom.awards.mvp?.value.trim() || '',
     second: dom.awards.second?.value.trim() || '',
     third: dom.awards.third?.value.trim() || '',
   };
 
+  const allowedPlayers = getAllowedAwardSet(game);
+  const seenAwards = new Set();
+  for (const [label, nick] of Object.entries(awards)) {
+    if (!nick) continue;
+    if (!allowedPlayers.has(nick)) {
+      showMessage(`Гравець ${nick} не входить до складу матчу`, 'warn');
+      return;
+    }
+    if (seenAwards.has(nick)) {
+      showMessage('Один гравець не може отримати кілька нагород', 'warn');
+      return;
+    }
+    seenAwards.add(nick);
+  }
+
   const payload = {
     tournamentId: tournamentState.currentId,
     gameId,
-    gameMode: (game.mode || 'TR').toUpperCase(),
+    result: tournamentState.selectedResult,
+    gameMode: mode,
     teamAId: game.teamAId,
     teamBId: game.teamBId,
-    result: tournamentState.selectedResult,
-    league: tournamentState.league,
     mvp: awards.mvp,
     second: awards.second,
     third: awards.third,
-    exportAsRegularGame: !!dom.exportRegular?.checked,
   };
   if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');
     return;
   }
-  const cleanedPayload = Object.fromEntries(
-    Object.entries(payload).filter(([, value]) => value !== null && value !== undefined)
-  );
-  console.log('Saving tournament game payload', cleanedPayload);
   try {
-    await saveTournamentGame(cleanedPayload);
+    await saveTournamentGame(payload);
     showMessage('Результат збережено', 'success');
     await refreshTournamentData();
   } catch (err) {
@@ -1052,6 +1124,9 @@ function bindResultButtons() {
     const result = target.dataset.result;
     if (!result || target.disabled) return;
     setSelectedResult(result);
+    const gameId = dom.gamesSelect?.value;
+    const game = (tournamentState.data?.games || tournamentState.games || []).find(g => g.gameId === gameId);
+    if (game) applyGameStatus(game);
   });
 }
 

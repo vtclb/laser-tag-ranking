@@ -3,7 +3,7 @@
 import { teams, initTeams }          from './teams.js?v=2025-09-19-avatars-2';
 import { autoBalance2, autoBalanceN } from './balanceUtils.js?v=2025-09-19-avatars-2';
 import { lobby, setManualCount }      from './lobby.js?v=2025-09-19-avatars-2';
-import { state, getTeamNumber }       from './state.js?v=2025-09-19-avatars-2';
+import { state, getTeamNumber, setBalanceMode } from './state.js?v=2025-09-19-avatars-2';
 import {
   registerRecomputeAutoBalance,
   recomputeAutoBalance as triggerRecomputeAutoBalance,
@@ -70,6 +70,7 @@ export async function recomputeAutoBalance() {
 }
 
 async function handleAuto() {
+  setBalanceMode('auto');
   try {
     await triggerRecomputeAutoBalance();
   } catch (err) {
@@ -79,6 +80,7 @@ async function handleAuto() {
 
 /** Ручне формування команд */
 async function handleManual() {
+  setBalanceMode('manual');
   const n = +teamSizeSel.value;
   try {
     await setManualCount(n);    // скільки кнопок “→…” робити біля кожного гравця лоббі

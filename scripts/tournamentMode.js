@@ -41,6 +41,7 @@ const tournamentState = {
 
 const lobbyCache = new Map();
 const dom = {
+  root: null,
   teamCards: new Map(),
   teamNames: new Map(),
   teamLists: new Map(),
@@ -63,44 +64,50 @@ function clampTeamsCount(count) {
 }
 
 function cacheDomRefs() {
-  dom.panel = document.getElementById('tournament-panel');
+  dom.root = document.getElementById('tournament-mode');
+  if (!dom.root) return;
+
+  const qs = selector => dom.root?.querySelector(selector);
+  const qsAll = selector => (dom.root ? Array.from(dom.root.querySelectorAll(selector)) : []);
+
+  dom.panel = qs('#tournament-panel') || dom.root;
   dom.regularPanel = document.getElementById('regular-panel');
-  dom.league = document.getElementById('tournament-league');
-  dom.tournamentSelect = document.getElementById('tournament-select');
-  dom.tournamentName = document.getElementById('tournament-name');
-  dom.tournamentCreate = document.getElementById('tournament-create');
-  dom.tournamentRefresh = document.getElementById('tournament-refresh');
+  dom.league = qs('#tournament-league');
+  dom.tournamentSelect = qs('#tournament-select');
+  dom.tournamentName = qs('#tournament-name');
+  dom.tournamentCreate = qs('#tournament-create');
+  dom.tournamentRefresh = qs('#tournament-refresh');
 
-  dom.teamCountSelect = document.getElementById('tournament-team-count');
-  dom.teamsWrap = document.getElementById('tournament-teams-wrap');
-  dom.auto = document.getElementById('tournament-auto');
-  dom.saveTeams = document.getElementById('tournament-save-teams');
-  dom.clearTeams = document.getElementById('tournament-clear-teams');
+  dom.teamCountSelect = qs('#tournament-team-count');
+  dom.teamsWrap = qs('#tournament-teams-wrap');
+  dom.auto = qs('#tournament-auto');
+  dom.saveTeams = qs('#tournament-save-teams');
+  dom.clearTeams = qs('#tournament-clear-teams');
 
-  dom.lobbySearch = document.getElementById('tournament-lobby-search');
-  dom.lobbySelectAll = document.getElementById('tournament-lobby-select-all');
-  dom.lobbyTableBody = document.querySelector('#tournament-lobby-table tbody');
-  dom.lobbyAdd = document.getElementById('tournament-add-pool');
-  dom.lobbyClear = document.getElementById('tournament-clear');
+  dom.lobbySearch = qs('#tournament-lobby-search');
+  dom.lobbySelectAll = qs('#tournament-lobby-select-all');
+  dom.lobbyTableBody = qs('#tournament-lobby-table tbody');
+  dom.lobbyAdd = qs('#tournament-add-pool');
+  dom.lobbyClear = qs('#tournament-clear');
 
-  dom.pool = document.getElementById('tournament-pool');
-  dom.poolInput = document.getElementById('tournament-player-pool');
+  dom.pool = qs('#tournament-pool');
+  dom.poolInput = qs('#tournament-player-pool');
 
-  dom.generate = document.getElementById('tournament-generate');
-  dom.gamesList = document.getElementById('tournament-games-list');
-  dom.gamesSelect = document.getElementById('tournament-game-select');
-  dom.match = document.getElementById('tournament-match');
-  dom.resultButtons = document.getElementById('tournament-result-buttons');
-  dom.resultStatus = document.getElementById('tournament-game-status');
+  dom.generate = qs('#tournament-generate');
+  dom.gamesList = qs('#tournament-games-list');
+  dom.gamesSelect = qs('#tournament-game-select');
+  dom.match = qs('#tournament-match');
+  dom.resultButtons = qs('#tournament-result-buttons');
+  dom.resultStatus = qs('#tournament-game-status');
   dom.awards = {
-    mvp: document.getElementById('t-mvp'),
-    second: document.getElementById('t-second'),
-    third: document.getElementById('t-third'),
+    mvp: qs('#t-mvp'),
+    second: qs('#t-second'),
+    third: qs('#t-third'),
   };
-  dom.exportRegular = document.getElementById('t-export-regular');
-  dom.saveGame = document.getElementById('tournament-save-game');
-  dom.refreshData = document.getElementById('tournament-refresh-data');
-  dom.sortButtons = Array.from((dom.panel || document).querySelectorAll('[data-sort]'));
+  dom.exportRegular = qs('#t-export-regular');
+  dom.saveGame = qs('#tournament-save-game');
+  dom.refreshData = qs('#tournament-refresh-data');
+  dom.sortButtons = qsAll('[data-sort]');
 }
 
 function setAppMode(mode) {
@@ -1009,7 +1016,7 @@ async function handleSaveGame() {
   const payload = {
     tournamentId: tournamentState.currentId,
     gameId,
-    mode: (game.mode || 'TR').toUpperCase(),
+    gameMode: (game.mode || 'TR').toUpperCase(),
     teamAId: game.teamAId,
     teamBId: game.teamBId,
     result: tournamentState.selectedResult,
@@ -1019,7 +1026,7 @@ async function handleSaveGame() {
     third: awards.third,
     exportAsRegularGame: !!dom.exportRegular?.checked,
   };
-  if (!payload.mode || !payload.teamAId || !payload.teamBId) {
+  if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');
     return;
   }
@@ -1065,7 +1072,7 @@ async function loadLeague() {
 
 function initTournamentMode() {
   cacheDomRefs();
-  if (!dom.panel) return;
+  if (!dom.root || !dom.panel) return;
 
   const modeButtons = Array.from(document.querySelectorAll('#mode-switch [data-mode]'));
   modeButtons.forEach(btn => btn.addEventListener('click', () => setAppMode(btn.dataset.mode)));
@@ -1100,9 +1107,9 @@ function initTournamentMode() {
   dom.saveGame?.addEventListener('click', handleSaveGame);
   dom.refreshData?.addEventListener('click', refreshTournamentData);
 
-  document.getElementById('tournament-load')?.addEventListener('click', loadLeague);
-  document.getElementById('tournament-reload-lobby')?.addEventListener('click', loadLobbyPlayers);
-  document.getElementById('tournament-reload-state')?.addEventListener('click', refreshTournamentData);
+  dom.root.querySelector('#tournament-load')?.addEventListener('click', loadLeague);
+  dom.root.querySelector('#tournament-reload-lobby')?.addEventListener('click', loadLobbyPlayers);
+  dom.root.querySelector('#tournament-reload-state')?.addEventListener('click', refreshTournamentData);
 
   bindResultButtons();
   setAppMode('regular');

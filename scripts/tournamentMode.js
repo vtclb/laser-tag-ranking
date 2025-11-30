@@ -1016,26 +1016,20 @@ async function handleSaveGame() {
   const payload = {
     tournamentId: tournamentState.currentId,
     gameId,
-    gameMode: (game.mode || 'TR').toUpperCase(),
+    result: tournamentState.selectedResult,
+    gameMode: (game.mode || '').toUpperCase(),
     teamAId: game.teamAId,
     teamBId: game.teamBId,
-    result: tournamentState.selectedResult,
-    league: tournamentState.league,
     mvp: awards.mvp,
     second: awards.second,
     third: awards.third,
-    exportAsRegularGame: !!dom.exportRegular?.checked,
   };
   if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');
     return;
   }
-  const cleanedPayload = Object.fromEntries(
-    Object.entries(payload).filter(([, value]) => value !== null && value !== undefined)
-  );
-  console.log('Saving tournament game payload', cleanedPayload);
   try {
-    await saveTournamentGame(cleanedPayload);
+    await saveTournamentGame(payload);
     showMessage('Результат збережено', 'success');
     await refreshTournamentData();
   } catch (err) {

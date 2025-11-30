@@ -38,7 +38,7 @@ const tournamentState = {
   selectedResult: '',
   sort: { key: 'pts', dir: 'desc' },
   notes: '',
-  rounds: {},
+
 };
 
 const lobbyCache = new Map();
@@ -585,6 +585,7 @@ function renderLobby() {
     const tdGames = document.createElement('td');
     tdGames.textContent = player.games || player.matches || 0;
 
+
     const tdAssign = document.createElement('td');
     const assign = document.createElement('select');
     assign.innerHTML = '<option value="">—</option>';
@@ -602,6 +603,9 @@ function renderLobby() {
     tdAssign.appendChild(assign);
 
     tr.append(tdCheck, tdNick, tdPts, tdRank, tdGames, tdAssign);
+
+    tr.append(tdCheck, tdNick, tdPts, tdGames);
+
     tr.addEventListener('dblclick', () => quickAssignFromLobby(player.nick));
     tbody.appendChild(tr);
   });
@@ -1326,10 +1330,13 @@ async function handleSaveGame() {
     third: awards.third,
     exportAsRegularGame: !!dom.exportRegular?.checked,
     league: tournamentState.league,
+
     series: roundSummary.results.length ? `${roundSummary.winsA}-${roundSummary.winsB}` : '',
     rounds: roundSummary.results,
     roundCount: roundSummary.count,
     notes: buildRoundNote(roundSummary) || game.notes || '',
+
+
   };
   if (!payload.gameMode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');

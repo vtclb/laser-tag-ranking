@@ -19,7 +19,8 @@ function cacheDom() {
   dom.league = document.getElementById('regular-league');
   dom.load = document.getElementById('regular-load');
   dom.search = document.getElementById('regular-search');
-  dom.tableBody = document.querySelector('#regular-table tbody');
+  dom.tableBody = document.querySelector('#player-table tbody')
+    || document.querySelector('#regular-table tbody');
   dom.add = document.getElementById('regular-add');
   dom.clear = document.getElementById('regular-clear');
   dom.teamSelect = document.getElementById('regular-teams');
@@ -68,6 +69,8 @@ function renderPlayers() {
   dom.tableBody.innerHTML = '';
   filteredPlayers().forEach(player => {
     const tr = document.createElement('tr');
+    const rankKey = (player.rank || '').toLowerCase();
+    if (rankKey) tr.dataset.rank = rankKey;
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.dataset.nick = player.nick;
@@ -81,6 +84,7 @@ function renderPlayers() {
     img.src = player.avatar || AVATAR_PLACEHOLDER;
     img.alt = player.nick;
     const name = document.createElement('div');
+    name.className = 'player-name';
     name.innerHTML = `<strong>${player.nick}</strong><div class="muted">${player.rank || ''}</div>`;
     tdNick.append(img, name);
 

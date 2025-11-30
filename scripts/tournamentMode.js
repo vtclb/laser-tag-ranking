@@ -71,8 +71,7 @@ function cacheDomRefs() {
   dom.tournamentCreate = document.getElementById('tournament-create');
   dom.tournamentRefresh = document.getElementById('tournament-refresh');
 
-  dom.teamCountSelect = document.getElementById('tournament-team-count')
-    || document.getElementById('tournament-teams');
+  dom.teamCountSelect = document.getElementById('tournament-team-count');
   dom.teamsWrap = document.getElementById('tournament-teams-wrap');
   dom.auto = document.getElementById('tournament-auto');
   dom.saveTeams = document.getElementById('tournament-save-teams');
@@ -80,8 +79,7 @@ function cacheDomRefs() {
 
   dom.lobbySearch = document.getElementById('tournament-lobby-search');
   dom.lobbySelectAll = document.getElementById('tournament-lobby-select-all');
-  dom.lobbyTableBody = document.getElementById('tournament-lobby-table')?.querySelector('tbody')
-    || document.getElementById('tournament-table')?.querySelector('tbody');
+  dom.lobbyTableBody = document.querySelector('#tournament-lobby-table tbody');
   dom.lobbyAdd = document.getElementById('tournament-add-pool');
   dom.lobbyClear = document.getElementById('tournament-clear');
 
@@ -90,8 +88,7 @@ function cacheDomRefs() {
 
   dom.generate = document.getElementById('tournament-generate');
   dom.gamesList = document.getElementById('tournament-games-list');
-  dom.gamesSelect = document.getElementById('tournament-game-select')
-    || document.getElementById('tournament-games');
+  dom.gamesSelect = document.getElementById('tournament-game-select');
   dom.match = document.getElementById('tournament-match');
   dom.resultButtons = document.getElementById('tournament-result-buttons');
   dom.resultStatus = document.getElementById('tournament-game-status');
@@ -450,6 +447,7 @@ function renderLobby() {
     tr.draggable = true;
     tr.dataset.nick = player.nick;
     tr.addEventListener('dragstart', handleDragFromLobby);
+    addRankClass(tr, player.rank);
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
@@ -468,7 +466,9 @@ function renderLobby() {
     img.src = player.avatar || AVATAR_PLACEHOLDER;
     img.alt = player.nick;
     const name = document.createElement('div');
+    name.className = 'player-name';
     name.innerHTML = `<strong>${player.nick}</strong><div class="muted">${player.rank || ''}</div>`;
+    addRankClass(name, player.rank);
     tdNick.append(img, name);
 
     const tdPts = document.createElement('td');
@@ -477,7 +477,6 @@ function renderLobby() {
     const tdGames = document.createElement('td');
     tdGames.textContent = player.games || player.matches || 0;
 
-    addRankClass(tr, player.rank);
     tr.append(tdCheck, tdNick, tdPts, tdGames);
     tbody.appendChild(tr);
   });
@@ -1001,30 +1000,32 @@ async function handleSaveGame() {
     showMessage('Матч не знайдено', 'error');
     return;
   }
+  const awards = {
+    mvp: dom.awards.mvp?.value.trim() || '',
+    second: dom.awards.second?.value.trim() || '',
+    third: dom.awards.third?.value.trim() || '',
+  };
+
   const payload = {
     tournamentId: tournamentState.currentId,
     gameId,
-    mode: (game.mode || '').toUpperCase(),
+    mode: (game.mode || 'TR').toUpperCase(),
     teamAId: game.teamAId,
     teamBId: game.teamBId,
     result: tournamentState.selectedResult,
+    league: tournamentState.league,
+    mvp: awards.mvp,
+    second: awards.second,
+    third: awards.third,
     exportAsRegularGame: !!dom.exportRegular?.checked,
   };
   if (!payload.mode || !payload.teamAId || !payload.teamBId) {
     showMessage('Некоректні дані матчу', 'error');
     return;
   }
-  const awards = {
-    mvp: dom.awards.mvp?.value.trim(),
-    second: dom.awards.second?.value.trim(),
-    third: dom.awards.third?.value.trim(),
-  };
-  Object.entries(awards).forEach(([key, value]) => {
-    if (value) payload[key] = value;
-  });
-  const cleanedPayload = Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== '' && value !== null && value !== undefined));
-  const rowsPayload = { ...cleanedPayload };
-  cleanedPayload.rows = [rowsPayload];
+  const cleanedPayload = Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== null && value !== undefined)
+  );
   console.log('Saving tournament game payload', cleanedPayload);
   try {
     await saveTournamentGame(cleanedPayload);

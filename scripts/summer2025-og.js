@@ -208,7 +208,7 @@ async function generateOgImage(outPath) {
   await sharp(buffer, { density: 240 }).png({ compressionLevel: 9 }).toFile(outPath);
 }
 
-async function main() {
+async function runOgGenerator() {
   let args;
   try {
     args = parseArgs(process.argv.slice(2));
@@ -238,7 +238,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main();
+  runOgGenerator();
 }
 
 module.exports = {

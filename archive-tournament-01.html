@@ -14,11 +14,11 @@
       <div>
         <p class="eyebrow">Архів турнірів</p>
         <h1>Турнір VARTA — Архів #01</h1>
-        <p class="muted">Формат 3×4: DM · Control Point · TDM. Дані PDF будуть додані окремо.</p>
+        <p class="muted">Формат 3×4: DM · Control Point · TDM · Pixel-arena · Neon raid.</p>
         <div class="hero-tags">
+          <span class="tag">15 грудня 2024</span>
           <span class="tag">Pixel-arena</span>
           <span class="tag">Neon raid</span>
-          <span class="tag">Frontend only</span>
         </div>
       </div>
     </div>
@@ -104,20 +104,21 @@
     </section>
   </main>
 
-  <div class="player-modal" id="player-modal" hidden>
-    <div class="player-modal__backdrop" data-close="true"></div>
-    <div class="player-modal__card">
-      <button class="close-btn" type="button" aria-label="Закрити" data-close="true">×</button>
-      <div class="player-modal__header">
-        <div class="avatar-ring"><img id="modal-avatar" alt="Avatar" /></div>
-        <div>
-          <p class="eyebrow" id="modal-league"></p>
-          <h3 id="modal-nick"></h3>
-          <p class="muted" id="modal-team"></p>
+  <div class="player-popover" id="player-popover" hidden>
+    <div class="player-popover__card">
+      <div class="player-popover__header">
+        <div class="avatar-frame"><img id="popover-avatar" alt="Avatar" /></div>
+        <div class="popover-headings">
+          <p class="eyebrow" id="popover-league"></p>
+          <h3 id="popover-nick"></h3>
+          <p class="muted" id="popover-team"></p>
         </div>
-        <div class="rank-chip" id="modal-rank"></div>
+        <div class="rank-chip" id="popover-rank"></div>
       </div>
-      <div class="modal-stats" id="modal-stats"></div>
+      <div class="popover-stats" id="popover-stats"></div>
+      <div class="popover-actions">
+        <a class="btn ghost" id="popover-profile" href="#">Профіль</a>
+      </div>
     </div>
   </div>
 

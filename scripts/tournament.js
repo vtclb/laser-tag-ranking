@@ -1,18 +1,51 @@
+const NICK_MAP = {
+  "Юра": "Morti",
+  "Морті": "Morti",
+  "Сегедин": "Morti",
+
+  "Ворон": "Voron",
+
+  "Оксана": "Оксанка",
+  "Оксанка": "Оксанка",
+
+  "Даня": "hAppser",
+  "Happser": "hAppser",
+
+  "Ластон": "Laston",
+
+  "Лерес": "Leres",
+  "Вова": "Leres",
+
+  "Кіцюня": "Кицюня",
+
+  "Кокосік": "Сocosik",
+  "Валя": "Сocosik",
+
+  "Сем": "Sem",
+
+  "Джасті": "Justy",
+
+  "Олег": "Олег",
+
+  "Темофій": "Temostar",
+  "Темостар": "Temostar"
+};
+
 const TEAMS = {
   green: {
     name: "Green Team",
-    color: "#33ff77",
-    players: ["Морті", "Ворон", "Оксанка", "Happser"]
+    color: "#14db62",
+    players: ["Морті", "Ворон", "Оксанка", "hAppser"]
   },
   blue: {
     name: "Blue Team",
     color: "#4faaff",
-    players: ["Ластон", "Лерес", "Кіцюня", "Кокосік"]
+    players: ["Laston", "Leres", "Кицюня", "Сocosik"]
   },
   red: {
     name: "Red Team",
     color: "#ff4646",
-    players: ["Сем", "Джасті", "Олег", "Темофій"]
+    players: ["Sem", "Justy", "Олег", "Temostar"]
   }
 };
 
@@ -20,17 +53,17 @@ const DM = [
   {
     match: "Green vs Blue",
     results: ["2", "=", "2", "=", "2", "2", "2"],
-    mvp: { first: "Ластон", second: "Лерес", third: "Морті" }
+    mvp: { first: "Laston", second: "Leres", third: "Morti" }
   },
   {
     match: "Red vs Blue",
     results: ["2", "3", "2", "2", "2", "2"],
-    mvp: { first: "Лерес", second: "Ластон", third: "Сем" }
+    mvp: { first: "Leres", second: "Laston", third: "Sem" }
   },
   {
     match: "Red vs Green",
     results: ["3", "=", "3", "3", "1", "3", "1", "3"],
-    mvp: { first: "Морті", second: "Темофій", third: "Олег" }
+    mvp: { first: "Morti", second: "Temostar", third: "Олег" }
   }
 ];
 
@@ -39,17 +72,17 @@ const KT = [
     match: "Blue vs Green",
     rounds: [
       { winner: "Green", time: "4:07", points: 1 },
-      { winner: "Blue",  time: "3:56", points: 2 }
+      { winner: "Blue", time: "3:56", points: 2 }
     ],
-    mvp: ["Морті", "Ластон", "Лерес"]
+    mvp: ["Morti", "Laston", "Leres"]
   },
   {
     match: "Blue vs Red",
     rounds: [
       { winner: "Blue", time: "3:52", points: 2 },
-      { winner: "Red",  time: "3:13", points: 3 }
+      { winner: "Red", time: "3:13", points: 3 }
     ],
-    mvp: ["Остап", "Ластон", "Тимофій"]
+    mvp: ["Morti", "Laston", "Temostar"]
   },
   {
     match: "Red vs Green",
@@ -57,32 +90,32 @@ const KT = [
       { winner: "Red", time: "3:06", points: 3 },
       { winner: "Red", time: "3:09", points: 3 }
     ],
-    mvp: ["Морті", "Остап", "Тимофій"]
+    mvp: ["Morti", "Justy", "Temostar"]
   }
 ];
 
 const TDM = [
   { match: "Green vs Blue", green: 1, blue: 4 },
-  { match: "Blue vs Red",   blue: 4, red: 2 },
-  { match: "Green vs Red",  green: 3, red: 5 }
+  { match: "Blue vs Red", blue: 4, red: 2 },
+  { match: "Green vs Red", green: 3, red: 5 }
 ];
-
-const NICK_FIX = {
-  "Юра": "Морті",
-  "Сегедин": "Морті",
-  "Вова": "Лерес",
-  "Валя": "Кокосік"
-};
 
 const TEAM_CODE = { 1: "green", 2: "blue", 3: "red" };
 const DEFAULT_AVATAR = "assets/default_avatars/av0.png";
 const profileCache = new Map();
+let playerStats = {};
 
-const uniquePlayers = Object.values(TEAMS).flatMap((team) => team.players);
-const uniquePlayerSet = Array.from(new Set(uniquePlayers));
+const uniquePlayers = Array.from(
+  new Set(Object.values(TEAMS).flatMap((team) => team.players))
+);
 
-function normalizeNick(nick) {
-  return NICK_FIX[nick] || nick;
+function getApiNick(displayName) {
+  return NICK_MAP[displayName] || displayName;
+}
+
+function normalizeDisplayNick(name) {
+  const apiNick = getApiNick(name);
+  return uniquePlayers.find((player) => getApiNick(player) === apiNick) || name;
 }
 
 function rankFromPoints(points) {
@@ -96,33 +129,43 @@ function rankFromPoints(points) {
   return "F";
 }
 
-async function fetchProfile(nick) {
-  if (profileCache.has(nick)) return profileCache.get(nick);
+function rankTone(rank) {
+  const key = (rank || "").toString().trim().toUpperCase();
+  return `rank-${key || "f"}`;
+}
 
-  const normalized = normalizeNick(nick);
-  const url = `/api?action=getProfile&nick=${encodeURIComponent(normalized)}`;
-  const fallback = { nick, displayNick: normalized, avatar: DEFAULT_AVATAR, rank: "—", points: 0, league: "—" };
+async function fetchProfile(displayName) {
+  if (profileCache.has(displayName)) return profileCache.get(displayName);
 
-  let data;
+  const apiNick = getApiNick(displayName);
+  const url = `/api?action=getProfile&nick=${encodeURIComponent(apiNick)}`;
+  const fallback = {
+    nick: displayName,
+    apiNick,
+    avatar: DEFAULT_AVATAR,
+    rank: "—",
+    points: 0,
+    league: "—"
+  };
+
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(res.statusText || "HTTP error");
-    data = await res.json();
+    const data = await res.json();
+    const profile = data?.profile || data || {};
+    const league = (data?.league || profile.league || "").toString().trim() || "—";
+    const points = Number(profile.points ?? data?.points ?? 0) || 0;
+    const rank = profile.rank || rankFromPoints(points);
+    const avatar = profile.avatarUrl || profile.avatar || profile.photo || DEFAULT_AVATAR;
+
+    const normalizedProfile = { displayName, apiNick, avatar, rank, points, league };
+    profileCache.set(displayName, normalizedProfile);
+    return normalizedProfile;
   } catch (err) {
     const profile = { ...fallback, error: true };
-    profileCache.set(nick, profile);
+    profileCache.set(displayName, profile);
     return profile;
   }
-
-  const profile = data?.profile || data || {};
-  const league = (data?.league || profile.league || "").toString().trim() || "—";
-  const points = Number(profile.points ?? data?.points ?? 0) || 0;
-  const rank = profile.rank || rankFromPoints(points);
-  const avatar = profile.avatarUrl || profile.avatar || profile.photo || DEFAULT_AVATAR;
-
-  const normalizedProfile = { nick, displayNick: normalized, avatar, rank, points, league, status: data?.status || "OK" };
-  profileCache.set(nick, normalizedProfile);
-  return normalizedProfile;
 }
 
 function teamForPlayer(nick) {
@@ -131,16 +174,15 @@ function teamForPlayer(nick) {
 
 function createTeamCard(teamKey, team) {
   const card = document.createElement("article");
-  card.className = "team-card";
-  card.style.borderColor = `${team.color}55`;
-  card.style.boxShadow = `0 0 0 1px ${team.color}22, 0 0 24px ${team.color}22`;
+  card.className = `team-card team--${teamKey}`;
 
   const header = document.createElement("header");
   const title = document.createElement("div");
   title.innerHTML = `<p class="eyebrow">${team.name}</p><h3>${teamKey.toUpperCase()}</h3>`;
+
   const chip = document.createElement("div");
   chip.className = "team-chip";
-  chip.innerHTML = `<span class="team-dot" style="background:${team.color}"></span><span>${team.players.length} гравців</span>`;
+  chip.innerHTML = `<span class="team-dot"></span><span>${team.players.length} гравців</span>`;
   header.append(title, chip);
 
   const players = document.createElement("div");
@@ -154,22 +196,27 @@ function createTeamCard(teamKey, team) {
     btn.dataset.team = teamKey;
 
     btn.innerHTML = `
-      <span class="player-chip__avatar" style="border-color:${team.color}44">
+      <span class="player-chip__avatar">
         <img alt="${nick}" src="${DEFAULT_AVATAR}" />
       </span>
       <span class="player-chip__info">
         <span class="nick">${nick}</span>
         <span class="meta league">Ліга: —</span>
       </span>
-      <span class="rank-badge">...</span>
+      <span class="rank-badge">…</span>
     `;
 
-    btn.addEventListener("click", () => openModal(nick));
+    btn.addEventListener("click", (event) => openPopover(nick, event.currentTarget));
+    btn.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      openPopover(nick, event.currentTarget);
+    });
     players.append(btn);
   });
 
-  card.append(header, players);
-  card.appendChild(Object.assign(document.createElement("div"), { className: "team-card__bar" }));
+  const accent = document.createElement("div");
+  accent.className = "team-card__bar";
+  card.append(header, players, accent);
   return card;
 }
 
@@ -182,8 +229,7 @@ function renderTeams() {
 function roundBadge(symbol) {
   const teamKey = TEAM_CODE[Number(symbol)] || null;
   if (symbol === "=") return `<span class="round-badge equal">=</span>`;
-  const color = teamKey ? TEAMS[teamKey].color : "#8f9bbd";
-  return `<span class="round-badge" style="background:${color}22;border-color:${color}55">${symbol}</span>`;
+  return `<span class="round-badge team--${teamKey}">${symbol}</span>`;
 }
 
 function renderDmTable(summary) {
@@ -196,7 +242,7 @@ function renderDmTable(summary) {
     });
     const totals = Object.entries(roundCounts)
       .filter(([, count]) => count > 0)
-      .map(([k, count]) => `<span class="team-chip"><span class="team-dot" style="background:${TEAMS[k].color}"></span>${TEAMS[k].name}: ${count}</span>`) 
+      .map(([k, count]) => `<span class="team-chip team--${k}"><span class="team-dot"></span>${TEAMS[k].name}: ${count}</span>`)
       .join(" ");
 
     return `
@@ -204,9 +250,9 @@ function renderDmTable(summary) {
         <td>${game.match}</td>
         <td>${game.results.map(roundBadge).join(" ")}</td>
         <td>
-          <span class="mvp-pill"><strong>1</strong> ${game.mvp.first}</span>
-          <span class="mvp-pill"><strong>2</strong> ${game.mvp.second}</span>
-          <span class="mvp-pill"><strong>3</strong> ${game.mvp.third}</span>
+          <span class="mvp-pill"><strong>1</strong> ${normalizeDisplayNick(game.mvp.first)}</span>
+          <span class="mvp-pill"><strong>2</strong> ${normalizeDisplayNick(game.mvp.second)}</span>
+          <span class="mvp-pill"><strong>3</strong> ${normalizeDisplayNick(game.mvp.third)}</span>
         </td>
         <td>${totals || "—"}</td>
       </tr>
@@ -216,9 +262,11 @@ function renderDmTable(summary) {
   const totalsRow = `
     <tr class="tr-muted">
       <td colspan="4">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <div class="inline-row">
           <span class="muted">Підсумок раундів:</span>
-          ${Object.entries(summary.dmRounds).map(([team, count]) => `<span class="team-chip"><span class="team-dot" style="background:${TEAMS[team].color}"></span>${TEAMS[team].name}: ${count}</span>`).join(" ")}
+          ${Object.entries(summary.dmRounds)
+            .map(([team, count]) => `<span class="team-chip team--${team}"><span class="team-dot"></span>${TEAMS[team].name}: ${count}</span>`)
+            .join(" ")}
         </div>
       </td>
     </tr>`;
@@ -241,17 +289,16 @@ function renderDmTable(summary) {
 function renderKtTable(summary) {
   const container = document.getElementById("kt-table");
   const rows = KT.map((game) => {
-    const roundsHtml = game.rounds.map((r, idx) => {
-      const colorKey = r.winner.toLowerCase();
-      const color = TEAMS[colorKey]?.color || "#8f9bbd";
+    const roundsHtml = game.rounds.map((round, idx) => {
+      const colorKey = round.winner.toLowerCase();
       return `
         <tr>
           ${idx === 0 ? `<td rowspan="${game.rounds.length}">${game.match}</td>` : ""}
           <td>${idx + 1}</td>
-          <td>${r.time}</td>
-          <td>${r.points}</td>
-          <td><span class="team-chip"><span class="team-dot" style="background:${color}"></span>${r.winner}</span></td>
-          ${idx === 0 ? `<td rowspan="${game.rounds.length}">${game.mvp.map((nick, i) => `<span class="mvp-pill"><strong>${i + 1}</strong> ${nick}</span>`).join(" ")}</td>` : ""}
+          <td>${round.time}</td>
+          <td>${round.points}</td>
+          <td><span class="team-chip team--${colorKey}"><span class="team-dot"></span>${round.winner}</span></td>
+          ${idx === 0 ? `<td rowspan="${game.rounds.length}">${game.mvp.map((nick, i) => `<span class="mvp-pill"><strong>${i + 1}</strong> ${normalizeDisplayNick(nick)}</span>`).join(" ")}</td>` : ""}
         </tr>`;
     }).join("");
     return roundsHtml;
@@ -260,9 +307,11 @@ function renderKtTable(summary) {
   const totalsRow = `
     <tr class="tr-muted">
       <td colspan="6">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <div class="inline-row">
           <span class="muted">Сума очок:</span>
-          ${Object.entries(summary.ktPoints).map(([team, pts]) => `<span class="team-chip"><span class="team-dot" style="background:${TEAMS[team].color}"></span>${TEAMS[team].name}: ${pts}</span>`).join(" ")}
+          ${Object.entries(summary.ktPoints)
+            .map(([team, pts]) => `<span class="team-chip team--${team}"><span class="team-dot"></span>${TEAMS[team].name}: ${pts}</span>`)
+            .join(" ")}
         </div>
       </td>
     </tr>`;
@@ -290,12 +339,11 @@ function renderTdmBlock(summary) {
   const maxScore = Math.max(...Object.values(totals));
 
   const charts = Object.entries(totals).map(([team, score]) => {
-    const color = TEAMS[team].color;
     const width = maxScore ? Math.round((score / maxScore) * 100) : 0;
     return `
       <div class="chart-row">
         <div class="chart-label">${TEAMS[team].name}</div>
-        <div class="chart-bar"><span style="width:${width}%;background:${color}66"></span></div>
+        <div class="chart-bar"><span class="team--${team}" style="width:${width}%"></span></div>
         <div><strong>${score}</strong> очок</div>
       </div>
     `;
@@ -308,14 +356,14 @@ function renderTdmBlock(summary) {
       ["Red", Number(game.red) || 0]
     ];
     const winner = entries.sort((a, b) => b[1] - a[1])[0][0];
-    const color = TEAMS[winner.toLowerCase()]?.color || "#8f9bbd";
+    const colorKey = winner.toLowerCase();
     return `
       <tr>
         <td>${game.match}</td>
         <td>${game.green ?? "—"}</td>
         <td>${game.blue ?? "—"}</td>
         <td>${game.red ?? "—"}</td>
-        <td><span class="team-chip"><span class="team-dot" style="background:${color}"></span>${winner}</span></td>
+        <td><span class="team-chip team--${colorKey}"><span class="team-dot"></span>${winner}</span></td>
       </tr>
     `;
   }).join("");
@@ -342,7 +390,7 @@ function renderTdmBlock(summary) {
 
 function buildStats() {
   const stats = {};
-  uniquePlayerSet.forEach((nick) => {
+  uniquePlayers.forEach((nick) => {
     stats[nick] = {
       nick,
       team: teamForPlayer(nick),
@@ -354,6 +402,7 @@ function buildStats() {
       tdmWins: 0,
       tdmMatches: 0,
       mvpScore: 0,
+      mvpCount: 0,
       modes: new Set()
     };
   });
@@ -387,8 +436,12 @@ function buildStats() {
     const mvpWeights = [game.mvp.first, game.mvp.second, game.mvp.third];
     mvpWeights.forEach((nick, idx) => {
       if (!nick) return;
-      const st = stats[nick];
-      if (st) st.mvpScore += (3 - idx);
+      const displayNick = normalizeDisplayNick(nick);
+      const st = stats[displayNick];
+      if (st) {
+        st.mvpCount += 1;
+        st.mvpScore += 3 - idx;
+      }
     });
   });
 
@@ -409,8 +462,12 @@ function buildStats() {
     });
 
     game.mvp.forEach((nick, idx) => {
-      const st = stats[nick];
-      if (st) st.mvpScore += (idx === 0 ? 2 : 1);
+      const displayNick = normalizeDisplayNick(nick);
+      const st = stats[displayNick];
+      if (st) {
+        st.mvpCount += 1;
+        st.mvpScore += 2 - idx * 0.25;
+      }
     });
   });
 
@@ -438,141 +495,204 @@ function buildStats() {
   return stats;
 }
 
+function podiumClass(nick, leaderboard) {
+  const pos = leaderboard.indexOf(nick);
+  if (pos === 0) return "podium-1";
+  if (pos === 1) return "podium-2";
+  if (pos === 2) return "podium-3";
+  return "";
+}
+
 function renderPlayers(stats) {
   const grid = document.getElementById("player-grid");
   grid.innerHTML = "";
 
   const topMvp = Object.values(stats)
-    .sort((a, b) => b.mvpScore - a.mvpScore)
+    .sort((a, b) => b.mvpScore - a.mvpScore || b.mvpCount - a.mvpCount)
     .slice(0, 3)
     .map((st) => st.nick);
 
-  Object.values(stats).forEach((st) => {
-    const card = document.createElement("article");
-    card.className = "player-card";
-    card.dataset.nick = st.nick;
-    card.dataset.team = st.team || "";
-    card.innerHTML = `
-      <div class="player-card__header">
-        <div class="player-card__avatar"><img alt="${st.nick}" src="${DEFAULT_AVATAR}" /></div>
-        <div>
-          <div class="nick">${st.nick}</div>
-          <div class="player-card__meta">
-            <span>Команда: ${st.team ? TEAMS[st.team].name : "—"}</span>
-            <span class="league">Ліга: —</span>
-            <span>Режими: ${st.modes.size}</span>
+  Object.values(stats)
+    .sort((a, b) => b.mvpScore - a.mvpScore || b.tdmScore - a.tdmScore)
+    .forEach((st) => {
+      const card = document.createElement("article");
+      const podium = podiumClass(st.nick, topMvp);
+      card.className = `player-card ${podium}`.trim();
+      card.dataset.nick = st.nick;
+      card.dataset.team = st.team || "";
+
+      const apiNick = getApiNick(st.nick);
+      const profileUrl = `profile.html?nick=${encodeURIComponent(apiNick)}`;
+
+      card.innerHTML = `
+        <div class="player-card__header">
+          <div class="player-card__avatar"><img alt="${st.nick}" src="${DEFAULT_AVATAR}" /></div>
+          <div>
+            <div class="nick">${st.nick}</div>
+            <div class="player-card__meta">
+              <span>Команда: ${st.team ? TEAMS[st.team].name : "—"}</span>
+              <span class="league">Ліга: —</span>
+              <span>Режими: ${st.modes.size}</span>
+            </div>
           </div>
+          <div class="rank-badge">…</div>
         </div>
-        <div class="rank-badge">...</div>
-      </div>
-      <div class="progress-row">
-        <div class="label">DM раунди: <strong>${st.dmRounds}</strong></div>
-        <div class="progress-bar"><span style="width:${Math.min(100, st.dmRounds * 12)}%;background:${TEAMS[st.team]?.color || "#8f9bbd"}55"></span></div>
-      </div>
-      <div class="progress-row">
-        <div class="label">Control Point очки: <strong>${st.ktPoints}</strong></div>
-        <div class="progress-bar"><span style="width:${Math.min(100, st.ktPoints * 10)}%;background:${TEAMS[st.team]?.color || "#8f9bbd"}55"></span></div>
-      </div>
-      <div class="progress-row">
-        <div class="label">TDM очки: <strong>${st.tdmScore}</strong></div>
-        <div class="progress-bar"><span style="width:${Math.min(100, st.tdmScore * 8)}%;background:${TEAMS[st.team]?.color || "#8f9bbd"}55"></span></div>
-      </div>
-      <div class="badge" style="margin-top:8px;${topMvp.includes(st.nick) ? "border-color:var(--yellow);color:var(--yellow);" : ""}">
-        MVP: ${st.mvpScore}
-      </div>
-    `;
-    card.addEventListener("click", () => openModal(st.nick));
-    grid.append(card);
-  });
+        <div class="progress-row">
+          <div class="label">DM раунди: <strong>${st.dmRounds}</strong> · перемоги: <strong>${st.dmMatchWins}</strong></div>
+          <div class="progress-bar"><span class="team--${st.team}" style="width:${Math.min(100, st.dmRounds * 12)}%"></span></div>
+        </div>
+        <div class="progress-row">
+          <div class="label">Control Point: <strong>${st.ktPoints}</strong> балів</div>
+          <div class="progress-bar"><span class="team--${st.team}" style="width:${Math.min(100, st.ktPoints * 10)}%"></span></div>
+        </div>
+        <div class="progress-row">
+          <div class="label">TDM очки: <strong>${st.tdmScore}</strong> · перемоги: <strong>${st.tdmWins}/${st.tdmMatches}</strong></div>
+          <div class="progress-bar"><span class="team--${st.team}" style="width:${Math.min(100, st.tdmScore * 8)}%"></span></div>
+        </div>
+        <div class="badge ${podium}">MVP: ${st.mvpCount}</div>
+        <div class="card-actions">
+          <a class="btn ghost" href="${profileUrl}">Профіль</a>
+          <button type="button" class="btn" data-popover="${st.nick}">Статистика</button>
+        </div>
+      `;
+
+      card.querySelector("[data-popover]").addEventListener("click", (event) => {
+        event.stopPropagation();
+        openPopover(st.nick, card);
+      });
+
+      card.addEventListener("click", (event) => openPopover(st.nick, event.currentTarget));
+      card.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        openPopover(st.nick, event.currentTarget);
+      });
+      grid.append(card);
+    });
 }
 
 function updateCounters() {
-  const teamsCount = Object.keys(TEAMS).length;
-  const playersCount = uniquePlayerSet.length;
-  const matchesCount = DM.length + KT.length + TDM.length;
-  document.getElementById("teams-count").textContent = teamsCount;
-  document.getElementById("players-count").textContent = playersCount;
-  document.getElementById("matches-count").textContent = matchesCount;
+  document.getElementById("teams-count").textContent = Object.keys(TEAMS).length;
+  document.getElementById("players-count").textContent = uniquePlayers.length;
+  document.getElementById("matches-count").textContent = DM.length + KT.length + TDM.length;
 }
 
 function applyProfiles() {
-  profileCache.forEach((profile, nick) => {
-    const teamKey = teamForPlayer(nick);
-    const color = TEAMS[teamKey]?.color || "#fff";
+  profileCache.forEach((profile, displayName) => {
+    const teamKey = teamForPlayer(displayName);
+    const colorClass = teamKey ? `team--${teamKey}` : "";
 
-    document.querySelectorAll(`[data-nick="${nick}"] .player-card__avatar img`).forEach((img) => {
+    document.querySelectorAll(`[data-nick="${displayName}"] .player-card__avatar img`).forEach((img) => {
       img.src = profile.avatar;
     });
 
-    document.querySelectorAll(`[data-nick="${nick}"] .player-chip__avatar`).forEach((wrap) => {
-      wrap.innerHTML = `<img alt="${nick}" src="${profile.avatar}" />`;
+    document.querySelectorAll(`[data-nick="${displayName}"] .player-chip__avatar`).forEach((wrap) => {
+      wrap.innerHTML = `<img alt="${displayName}" src="${profile.avatar}" />`;
     });
 
-    document.querySelectorAll(`[data-nick="${nick}"] .rank-badge`).forEach((badge) => {
-      badge.textContent = `${profile.rank}${Number.isFinite(profile.points) ? " · " + profile.points : ""}`;
-      badge.style.borderColor = `${color}33`;
+    document.querySelectorAll(`[data-nick="${displayName}"] .rank-badge`).forEach((badge) => {
+      badge.textContent = `${profile.rank}-rank${Number.isFinite(profile.points) ? " · " + profile.points : ""}`;
+      badge.className = `rank-badge ${rankTone(profile.rank)} ${colorClass}`;
     });
 
-    document.querySelectorAll(`[data-nick="${nick}"] .league`).forEach((el) => {
+    document.querySelectorAll(`[data-nick="${displayName}"] .league`).forEach((el) => {
       el.textContent = `Ліга: ${profile.league || "—"}`;
     });
   });
 }
 
 async function hydrateProfiles() {
-  for (const nick of uniquePlayerSet) {
+  for (const nick of uniquePlayers) {
     await fetchProfile(nick);
   }
   applyProfiles();
 }
 
-function modalStat(label, value) {
+function popoverStat(label, value) {
   const div = document.createElement("div");
   div.className = "modal-stat";
   div.innerHTML = `<strong>${label}</strong><span>${value}</span>`;
   return div;
 }
 
-async function openModal(nick) {
-  const modal = document.getElementById("player-modal");
-  const stats = buildStats();
-  const st = stats[nick];
+function closePopover() {
+  const pop = document.getElementById("player-popover");
+  pop.hidden = true;
+}
+
+async function openPopover(nick, anchor) {
+  const pop = document.getElementById("player-popover");
+  const card = pop.querySelector(".player-popover__card");
+  const st = playerStats[nick];
   const profile = await fetchProfile(nick);
   const teamKey = st?.team;
-  const color = teamKey ? TEAMS[teamKey].color : "#8f9bbd";
+  const apiNick = getApiNick(nick);
 
-  document.getElementById("modal-nick").textContent = nick;
-  document.getElementById("modal-team").textContent = teamKey ? TEAMS[teamKey].name : "Гість";
-  document.getElementById("modal-league").textContent = profile.league ? `Ліга: ${profile.league}` : "Ліга: —";
-  document.getElementById("modal-avatar").src = profile.avatar;
-  document.getElementById("modal-rank").textContent = `${profile.rank} · ${profile.points} очок`;
-  document.getElementById("modal-rank").style.borderColor = `${color}55`;
+  document.getElementById("popover-nick").textContent = nick;
+  document.getElementById("popover-team").textContent = teamKey ? TEAMS[teamKey].name : "Гість";
+  document.getElementById("popover-league").textContent = profile.league ? `Ліга: ${profile.league}` : "Ліга: —";
+  document.getElementById("popover-avatar").src = profile.avatar;
 
-  const statsBox = document.getElementById("modal-stats");
+  const rankLabel = `${profile.rank}-rank`;
+  const rankEl = document.getElementById("popover-rank");
+  rankEl.textContent = `${rankLabel} · ${profile.points}`;
+  rankEl.className = `rank-chip ${rankTone(profile.rank)}`;
+
+  const statsBox = document.getElementById("popover-stats");
   statsBox.innerHTML = "";
   if (st) {
     statsBox.append(
-      modalStat("DM", `Раунди: ${st.dmRounds}, перемоги: ${st.dmMatchWins}`),
-      modalStat("Control Point", `Очки: ${st.ktPoints}, раунди: ${st.ktRoundWins}`),
-      modalStat("TDM", `Очки: ${st.tdmScore}, перемоги: ${st.tdmWins}/${st.tdmMatches}`),
-      modalStat("MVP", `Нагороди: ${st.mvpScore}`)
+      popoverStat("DM wins", st.dmMatchWins),
+      popoverStat("KT points", st.ktPoints),
+      popoverStat("TDM points", st.tdmScore),
+      popoverStat("MVP", st.mvpCount)
     );
   }
 
-  modal.querySelector(".player-modal__card").style.borderColor = `${color}55`;
-  modal.hidden = false;
+  const profileLink = document.getElementById("popover-profile");
+  profileLink.href = `profile.html?nick=${encodeURIComponent(apiNick)}`;
+
+  card.className = `player-popover__card ${teamKey ? `team--${teamKey}` : ""}`;
+  pop.hidden = false;
+
+  if (anchor) {
+    const rect = anchor.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const spacing = 8;
+    const preferredLeft = rect.left + rect.width / 2 - cardRect.width / 2;
+    const maxLeft = window.innerWidth - cardRect.width - 12;
+    const left = Math.max(12, Math.min(preferredLeft, maxLeft));
+    let top = rect.bottom + spacing;
+    if (top + cardRect.height > window.innerHeight) {
+      top = rect.top - cardRect.height - spacing;
+    }
+    if (window.innerWidth <= 640) {
+      card.style.left = `12px`;
+      card.style.right = `12px`;
+      card.style.top = `${Math.max(12, rect.bottom + spacing)}px`;
+    } else {
+      card.style.left = `${left}px`;
+      card.style.right = "auto";
+      card.style.top = `${Math.max(12, top)}px`;
+    }
+  }
 }
 
-function attachModalHandlers() {
-  const modal = document.getElementById("player-modal");
-  modal.addEventListener("click", (e) => {
-    if (e.target.dataset.close === "true") {
-      modal.hidden = true;
-    }
+function attachPopoverHandlers() {
+  document.addEventListener("click", (event) => {
+    const pop = document.getElementById("player-popover");
+    const card = pop.querySelector(".player-popover__card");
+    if (pop.hidden) return;
+    if (card.contains(event.target)) return;
+    closePopover();
+  });
+
+  window.addEventListener("resize", closePopover);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePopover();
   });
 }
 
-function buildSummary(stats) {
+function buildSummary() {
   const dmRounds = { green: 0, blue: 0, red: 0 };
   const ktPoints = { green: 0, blue: 0, red: 0 };
   const tdmScore = { green: 0, blue: 0, red: 0 };
@@ -600,15 +720,45 @@ function buildSummary(stats) {
   return { dmRounds, ktPoints, tdmScore };
 }
 
+function renderTopBlock(stats) {
+  const topContainer = document.getElementById("players-section");
+  const podium = Object.values(stats)
+    .sort((a, b) => b.mvpScore - a.mvpScore || b.mvpCount - a.mvpCount)
+    .slice(0, 3);
+
+  const existing = topContainer.querySelector(".podium-grid");
+  if (existing) existing.remove();
+
+  const grid = document.createElement("div");
+  grid.className = "podium-grid";
+  podium.forEach((st, idx) => {
+    const apiNick = getApiNick(st.nick);
+    const tile = document.createElement("article");
+    tile.className = `podium-card podium-${idx + 1} team--${st.team}`;
+    tile.innerHTML = `
+      <div class="podium-rank">${idx + 1}</div>
+      <div class="podium-body">
+        <div class="podium-name">${st.nick}</div>
+        <div class="podium-meta">MVP: ${st.mvpCount} · Очки TDM: ${st.tdmScore}</div>
+        <a class="btn ghost" href="profile.html?nick=${encodeURIComponent(apiNick)}">Профіль</a>
+      </div>
+    `;
+    grid.append(tile);
+  });
+
+  topContainer.insertBefore(grid, topContainer.querySelector(".player-grid"));
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  playerStats = buildStats();
   renderTeams();
-  const stats = buildStats();
-  const summary = buildSummary(stats);
+  const summary = buildSummary();
   renderDmTable(summary);
   renderKtTable(summary);
   renderTdmBlock(summary);
-  renderPlayers(stats);
+  renderTopBlock(playerStats);
+  renderPlayers(playerStats);
   updateCounters();
-  attachModalHandlers();
+  attachPopoverHandlers();
   await hydrateProfiles();
 });

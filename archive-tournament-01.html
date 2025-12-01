@@ -1,138 +1,156 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Турнір VARTA — Архів #01</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="css/tournament.css" />
+  <link rel="stylesheet" href="balancer.css">
+  <link rel="stylesheet" href="styles/balance.css">
+  <link rel="stylesheet" href="styles/balance.mobile.css">
+  <style>
+    :root {
+      --team-green: #43a047;
+      --team-blue: #3498db;
+      --team-red: #e53935;
+    }
+
+    body { background: var(--bg, #0e0f14); color: var(--text, #f3f4f6); }
+
+    .page-wrap { max-width: 1200px; margin: 0 auto 80px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+    .hero { display: grid; gap: 12px; }
+    .hero__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+    .hero__meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--text-muted); }
+    .hero__meta .pill { padding: 6px 10px; background: var(--bal-card-bg); border-radius: 8px; border: 1px solid var(--border, #2f333c); }
+    .hero__modes { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hero__modes .pill { text-transform: uppercase; font-weight: 700; letter-spacing: 0.2px; }
+
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .info-card { display: flex; flex-direction: column; gap: 4px; }
+    .info-card .label { color: var(--text-muted); font-size: 13px; }
+    .info-card strong { font-size: 18px; }
+
+    .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .team-card { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border, #2f333c); border-left: 5px solid transparent; }
+    .team-card.green { border-left-color: var(--team-green); }
+    .team-card.blue { border-left-color: var(--team-blue); }
+    .team-card.red { border-left-color: var(--team-red); }
+    .team-card h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+    .team-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.03); border: 1px solid var(--border, #2f333c); font-size: 13px; }
+    .player-list { display: flex; flex-direction: column; gap: 8px; }
+    .player-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; background: rgba(255,255,255,0.03); }
+    .player-row:hover { background: rgba(255,255,255,0.06); }
+    .player-row img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border, #2f333c); }
+    .player-row .meta { display: flex; flex-direction: column; gap: 2px; }
+    .player-row .meta .nick { font-weight: 700; }
+    .player-row .meta .muted { color: var(--text-muted); font-size: 12px; margin: 0; }
+    .rank-pill { padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid var(--border, #2f333c); font-weight: 700; font-size: 12px; }
+    .player-link { color: inherit; text-decoration: none; }
+
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border, #2f333c); }
+    .table th { position: sticky; top: 0; background: var(--bal-card-bg); color: var(--text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .table tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
+    .table tbody tr:hover { background: rgba(0,208,132,0.06); }
+    .table-responsive { overflow-x: auto; }
+
+    .badge-win { color: #4caf50; }
+    .badge-loss { color: #e53935; }
+    .badge-draw { color: #e0e0e0; }
+    .result-icon { display: inline-flex; align-items: center; gap: 6px; }
+
+    .modes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+    .mode-card h3 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+
+    .player-popover { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 50; padding: 12px; }
+    .player-popover.active { display: flex; }
+    .player-popover .card { width: min(420px, 100%); }
+    .popover-header { display: flex; gap: 12px; align-items: center; }
+    .popover-header img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; border: 2px solid var(--border, #2f333c); }
+    .popover-meta { display: flex; flex-direction: column; gap: 4px; }
+    .popover-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .btn { background: #13b36b; color: #fff; padding: 8px 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .btn.secondary { background: transparent; border: 1px solid var(--border, #2f333c); color: inherit; }
+  </style>
 </head>
-<body class="loading-state">
-  <div class="page-noise"></div>
-  <div class="loading-overlay" id="loading-overlay">
-    <div class="loading-spinner" aria-hidden="true"></div>
-    <p>Завантажуємо рейтинг...</p>
-  </div>
-
-  <header class="tournament-hero">
-    <div class="hero-left">
-      <div class="logo-chip" aria-label="VARTA logo">VARTA</div>
-      <div class="hero-body">
-        <p class="eyebrow">Архів турнірів</p>
-
-        <h1 id="hero-title">Турнір VARTA — Архів #01</h1>
-        <p class="muted" id="hero-format">Формат 3×4: DM · Control Point · TDM</p>
-        <div class="hero-tags">
-          <span class="tag" id="hero-date">15 грудня 2024</span>
-          <span class="tag" id="hero-location">Pixel-arena · Neon raid</span>
-
-        <h1>Турнір VARTA — Архів #01</h1>
-        <p class="muted">Формат 3×4: DM · Control Point · TDM · Pixel-arena · Neon raid.</p>
-        <div class="hero-tags">
-          <span class="tag">15 грудня 2024</span>
-          <span class="tag">Pixel-arena</span>
-          <span class="tag">Neon raid</span>
-
-        </div>
-        <div class="mode-badges" id="mode-badges"></div>
-      </div>
-    </div>
-    <div class="hero-right">
-      <div class="stat-pill">
-        <span class="label">Команди</span>
-        <span class="value" id="teams-count">—</span>
-      </div>
-      <div class="stat-pill">
-        <span class="label">Учасники</span>
-        <span class="value" id="players-count">—</span>
-      </div>
-      <div class="stat-pill">
-        <span class="label">Матчі</span>
-        <span class="value" id="matches-count">—</span>
-      </div>
-    </div>
-  </header>
-
-  <main class="tournament-main">
-    <section class="panel" id="teams-section">
-      <div class="panel-heading">
+<body class="bal">
+  <main class="page-wrap" id="archive-root">
+    <section class="bal__card hero">
+      <div class="hero__top">
         <div>
-          <p class="eyebrow">Команди</p>
-          <h2>Тактичні склади</h2>
+          <p class="muted">Архів турнірів</p>
+          <h1 id="tournament-title">Турнір VARTA — Архів #01</h1>
         </div>
-        <p class="muted">Натисни на гравця, щоб відкрити тактичне вікно з рангом та статистикою.</p>
+        <div class="hero__modes" id="mode-badges"></div>
+      </div>
+      <div class="hero__meta">
+        <span class="pill" id="tournament-date">15 грудня 2024</span>
+        <span class="pill" id="tournament-format">3×4 · DM · KT · TDM</span>
+        <span class="pill" id="tournament-map">Pixel-arena · Neon Raid</span>
+      </div>
+      <div class="info-grid" id="info-grid"></div>
+    </section>
+
+    <section class="bal__card">
+      <div class="section-title">
+        <h2>Команди та склади</h2>
+        <p class="muted">Натисни на нік, щоб переглянути профіль та статистику.</p>
       </div>
       <div class="team-grid" id="team-grid"></div>
     </section>
 
-    <section class="panel" id="modes-section">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Режими</p>
-          <h2>DM · Control Point · TDM</h2>
-        </div>
-        <p class="muted">Горизонтальний скрол на мобільних, кольорові іконки перемог та підсвітка MVP.</p>
+    <section class="bal__card">
+      <div class="section-title">
+        <h2>Підсумкова турнірна таблиця</h2>
+        <p class="muted">Місця, очки та W/L/D по всіх режимах.</p>
       </div>
-      <div class="mode-grid">
-        <article class="mode-card">
-          <div class="mode-title">
-            <span class="pill green">DM</span>
-            <div>
-              <h3>Deathmatch</h3>
-              <p class="muted">Перемоги по раундах, нічия позначена нейтрально.</p>
-            </div>
-          </div>
-          <div class="table-shell" id="dm-table"></div>
-        </article>
-        <article class="mode-card">
-          <div class="mode-title">
-            <span class="pill blue">KT</span>
-            <div>
-              <h3>Control Point</h3>
-              <p class="muted">Час захоплення точки та очки.</p>
-            </div>
-          </div>
-          <div class="table-shell" id="kt-table"></div>
-        </article>
-        <article class="mode-card">
-          <div class="mode-title">
-            <span class="pill red">TDM</span>
-            <div>
-              <h3>Team Deathmatch</h3>
-              <p class="muted">Графік очок та фаворити.</p>
-            </div>
-          </div>
-          <div class="table-shell" id="tdm-block"></div>
-        </article>
+      <div class="table-responsive">
+        <table class="table" id="standings-table"></table>
       </div>
     </section>
 
-    <section class="panel" id="players-section">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Індивідуальна статистика</p>
-          <h2>Профілі, ранги та MVP</h2>
-        </div>
-        <p class="muted">Відображаються поточні ранги з API рейтингу.</p>
+    <section class="bal__card">
+      <div class="section-title">
+        <h2>Режими</h2>
+        <p class="muted">Раунди, MVP та іконки результатів.</p>
       </div>
-      <div class="table-shell" id="mvp-table"></div>
-      <div class="player-grid" id="player-grid"></div>
+      <div class="modes-grid" id="modes-grid"></div>
+    </section>
+
+    <section class="bal__card">
+      <div class="section-title">
+        <h2>Індивідуальна статистика</h2>
+        <p class="muted">Ранги, аватарки, MVP, очки.</p>
+      </div>
+      <div class="table-responsive">
+        <table class="table" id="players-table"></table>
+      </div>
+    </section>
+
+    <section class="bal__card">
+      <div class="section-title">
+        <h2>Хронологія матчів</h2>
+        <p class="muted">Крок за кроком по всіх режимах.</p>
+      </div>
+      <div class="match-list" id="match-list"></div>
     </section>
   </main>
 
-  <div class="player-popover" id="player-popover" hidden>
-    <div class="player-popover__card">
-      <div class="player-popover__header">
-        <div class="avatar-frame"><img id="popover-avatar" alt="Avatar" /></div>
-        <div class="popover-headings">
-          <p class="eyebrow" id="popover-league"></p>
+  <div class="player-popover" id="player-popover" role="dialog" aria-modal="true">
+    <div class="bal__card card">
+      <div class="popover-header">
+        <img id="popover-avatar" alt="Аватар гравця" />
+        <div class="popover-meta">
+          <p class="muted" id="popover-league"></p>
           <h3 id="popover-nick"></h3>
           <p class="muted" id="popover-team"></p>
         </div>
-        <div class="rank-chip" id="popover-rank"></div>
+        <span class="rank-pill" id="popover-rank"></span>
       </div>
-      <div class="popover-stats" id="popover-stats"></div>
+      <div class="info-grid" id="popover-stats"></div>
       <div class="popover-actions">
-        <a class="btn ghost" id="popover-profile" href="#">Профіль</a>
+        <button class="btn secondary" id="popover-close" type="button">Закрити</button>
+        <a class="btn" id="popover-profile" href="#" target="_blank" rel="noopener">Профіль у рейтингу</a>
       </div>
     </div>
   </div>

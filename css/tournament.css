@@ -411,6 +411,7 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   color: #fff;
 }
 
+
 .rank-chip { border: 2px solid var(--border); }
 
 .rank-s { border-color: #9c27b0; background: rgba(156, 39, 176, 0.15); }
@@ -420,6 +421,7 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
 .rank-d { border-color: #777; background: rgba(119, 119, 119, 0.2); }
 .rank-e { border-color: #666; background: rgba(102, 102, 102, 0.2); }
 .rank-f { border-color: #444; background: rgba(68, 68, 68, 0.2); }
+
 
 .rank-badge.team--green,
 .rank-badge.team--blue,
@@ -601,7 +603,11 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
 .chart-bar span.team--blue { background: color-mix(in srgb, var(--blue) 65%, transparent); }
 .chart-bar span.team--red { background: color-mix(in srgb, var(--red) 65%, transparent); }
 
+
 .player-popover {
+
+.player-modal {
+
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -621,11 +627,19 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   pointer-events: auto;
 }
 
+
 .player-popover__card.team--green { border-color: var(--green); }
 .player-popover__card.team--blue { border-color: var(--blue); }
 .player-popover__card.team--red { border-color: var(--red); }
 
 .player-popover__header {
+
+.player-modal__card.team--green { border-color: color-mix(in srgb, var(--green) 45%, var(--border)); }
+.player-modal__card.team--blue { border-color: color-mix(in srgb, var(--blue) 45%, var(--border)); }
+.player-modal__card.team--red { border-color: color-mix(in srgb, var(--red) 45%, var(--border)); }
+
+.player-modal__header {
+
   display: flex;
   align-items: center;
   gap: 10px;

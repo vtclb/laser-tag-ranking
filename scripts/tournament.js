@@ -11,6 +11,9 @@ const NICK_MAP = {
   "Даня": "hAppser",
   "Happser": "hAppser",
 
+  "happser": "hAppser",
+
+
   "Ластон": "Laston",
 
   "Лерес": "Leres",
@@ -109,9 +112,17 @@ const uniquePlayers = Array.from(
   new Set(Object.values(TEAMS).flatMap((team) => team.players))
 );
 
+
 function getApiNick(displayName) {
   return NICK_MAP[displayName] || displayName;
 }
+
+
+
+function getApiNick(displayName) {
+  return NICK_MAP[displayName] || displayName;
+}
+
 
 function normalizeDisplayNick(name) {
   const apiNick = getApiNick(name);
@@ -129,10 +140,12 @@ function rankFromPoints(points) {
   return "F";
 }
 
+
 function rankTone(rank) {
   const key = (rank || "").toString().trim().toUpperCase();
   return `rank-${key || "f"}`;
 }
+
 
 async function fetchProfile(displayName) {
   if (profileCache.has(displayName)) return profileCache.get(displayName);
@@ -206,10 +219,20 @@ function createTeamCard(teamKey, team) {
       <span class="rank-badge">…</span>
     `;
 
+
     btn.addEventListener("click", (event) => openPopover(nick, event.currentTarget));
     btn.addEventListener("contextmenu", (event) => {
       event.preventDefault();
       openPopover(nick, event.currentTarget);
+
+    btn.addEventListener("click", () => openProfile(nick));
+    btn.addEventListener("auxclick", (event) => {
+      if (event.button === 1) openProfile(nick, true);
+    });
+    btn.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      openModal(nick);
+
     });
     players.append(btn);
   });
@@ -552,6 +575,7 @@ function renderPlayers(stats) {
         <div class="badge ${podium}">MVP: ${st.mvpCount}</div>
         <div class="card-actions">
           <a class="btn ghost" href="${profileUrl}">Профіль</a>
+
           <button type="button" class="btn" data-popover="${st.nick}">Статистика</button>
         </div>
       `;
@@ -565,6 +589,20 @@ function renderPlayers(stats) {
       card.addEventListener("contextmenu", (event) => {
         event.preventDefault();
         openPopover(st.nick, event.currentTarget);
+
+          <button type="button" class="btn" data-modal="${st.nick}">Деталі</button>
+        </div>
+      `;
+
+      card.querySelector("[data-modal]").addEventListener("click", (event) => {
+        event.stopPropagation();
+        openModal(st.nick);
+      });
+
+      card.addEventListener("click", () => openProfile(st.nick));
+      card.addEventListener("auxclick", (event) => {
+        if (event.button === 1) openProfile(st.nick, true);
+
       });
       grid.append(card);
     });
@@ -590,8 +628,13 @@ function applyProfiles() {
     });
 
     document.querySelectorAll(`[data-nick="${displayName}"] .rank-badge`).forEach((badge) => {
+
       badge.textContent = `${profile.rank}-rank${Number.isFinite(profile.points) ? " · " + profile.points : ""}`;
       badge.className = `rank-badge ${rankTone(profile.rank)} ${colorClass}`;
+
+      badge.textContent = `${profile.rank}${Number.isFinite(profile.points) ? " · " + profile.points : ""}`;
+      badge.classList.add(colorClass);
+
     });
 
     document.querySelectorAll(`[data-nick="${displayName}"] .league`).forEach((el) => {
@@ -625,6 +668,7 @@ async function openPopover(nick, anchor) {
   const st = playerStats[nick];
   const profile = await fetchProfile(nick);
   const teamKey = st?.team;
+
   const apiNick = getApiNick(nick);
 
   document.getElementById("popover-nick").textContent = nick;
@@ -637,10 +681,22 @@ async function openPopover(nick, anchor) {
   rankEl.textContent = `${rankLabel} · ${profile.points}`;
   rankEl.className = `rank-chip ${rankTone(profile.rank)}`;
 
+  const colorClass = teamKey ? `team--${teamKey}` : "";
+  const apiNick = getApiNick(nick);
+
+  document.getElementById("modal-nick").textContent = nick;
+  document.getElementById("modal-team").textContent = teamKey ? TEAMS[teamKey].name : "Гість";
+  document.getElementById("modal-league").textContent = profile.league ? `Ліга: ${profile.league}` : "Ліга: —";
+  document.getElementById("modal-avatar").src = profile.avatar;
+  document.getElementById("modal-rank").textContent = `${profile.rank} · ${profile.points} очок`;
+  document.getElementById("modal-rank").className = `rank-chip ${colorClass}`;
+
+
   const statsBox = document.getElementById("popover-stats");
   statsBox.innerHTML = "";
   if (st) {
     statsBox.append(
+
       popoverStat("DM wins", st.dmMatchWins),
       popoverStat("KT points", st.ktPoints),
       popoverStat("TDM points", st.tdmScore),
@@ -689,7 +745,40 @@ function attachPopoverHandlers() {
   window.addEventListener("resize", closePopover);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePopover();
+
+      modalStat("DM", `Раунди: ${st.dmRounds}, перемоги: ${st.dmMatchWins}`),
+      modalStat("Control Point", `Очки: ${st.ktPoints}, раунди: ${st.ktRoundWins}`),
+      modalStat("TDM", `Очки: ${st.tdmScore}, перемоги: ${st.tdmWins}/${st.tdmMatches}`),
+      modalStat("MVP", `Нагороди: ${st.mvpCount}`),
+      modalStat("Профіль", `<a href="profile.html?nick=${encodeURIComponent(apiNick)}" class="link">Відкрити сторінку</a>`)
+    );
+  }
+
+  modal.querySelector(".player-modal__card").className = `player-modal__card ${colorClass}`;
+  modal.hidden = false;
+}
+
+function attachModalHandlers() {
+  const modal = document.getElementById("player-modal");
+  modal.addEventListener("click", (event) => {
+    if (event.target.dataset.close === "true") {
+      modal.hidden = true;
+    }
+
   });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") modal.hidden = true;
+  });
+}
+
+function openProfile(nick, newTab = false) {
+  const apiNick = getApiNick(nick);
+  const url = `profile.html?nick=${encodeURIComponent(apiNick)}`;
+  if (newTab) {
+    window.open(url, "_blank");
+  } else {
+    window.location.href = url;
+  }
 }
 
 function buildSummary() {
@@ -752,12 +841,20 @@ function renderTopBlock(stats) {
 document.addEventListener("DOMContentLoaded", async () => {
   playerStats = buildStats();
   renderTeams();
+
+  const stats = buildStats();
+
   const summary = buildSummary();
   renderDmTable(summary);
   renderKtTable(summary);
   renderTdmBlock(summary);
+
   renderTopBlock(playerStats);
   renderPlayers(playerStats);
+
+  renderTopBlock(stats);
+  renderPlayers(stats);
+
   updateCounters();
   attachPopoverHandlers();
   await hydrateProfiles();

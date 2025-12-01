@@ -6,20 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="css/tournament.css" />
 </head>
-<body>
+<body class="loading-state">
   <div class="page-noise"></div>
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p>Завантажуємо рейтинг...</p>
+  </div>
+
   <header class="tournament-hero">
     <div class="hero-left">
       <div class="logo-chip" aria-label="VARTA logo">VARTA</div>
-      <div>
+      <div class="hero-body">
         <p class="eyebrow">Архів турнірів</p>
+
+        <h1 id="hero-title">Турнір VARTA — Архів #01</h1>
+        <p class="muted" id="hero-format">Формат 3×4: DM · Control Point · TDM</p>
+        <div class="hero-tags">
+          <span class="tag" id="hero-date">15 грудня 2024</span>
+          <span class="tag" id="hero-location">Pixel-arena · Neon raid</span>
+
         <h1>Турнір VARTA — Архів #01</h1>
         <p class="muted">Формат 3×4: DM · Control Point · TDM · Pixel-arena · Neon raid.</p>
         <div class="hero-tags">
           <span class="tag">15 грудня 2024</span>
           <span class="tag">Pixel-arena</span>
           <span class="tag">Neon raid</span>
+
         </div>
+        <div class="mode-badges" id="mode-badges"></div>
       </div>
     </div>
     <div class="hero-right">
@@ -43,9 +57,9 @@
       <div class="panel-heading">
         <div>
           <p class="eyebrow">Команди</p>
-          <h2>Склад та кольори</h2>
+          <h2>Тактичні склади</h2>
         </div>
-        <p class="muted">Натисни на гравця, щоб побачити рейтинг та статистику.</p>
+        <p class="muted">Натисни на гравця, щоб відкрити тактичне вікно з рангом та статистикою.</p>
       </div>
       <div class="team-grid" id="team-grid"></div>
     </section>
@@ -53,10 +67,10 @@
     <section class="panel" id="modes-section">
       <div class="panel-heading">
         <div>
-          <p class="eyebrow">Результати режимів</p>
+          <p class="eyebrow">Режими</p>
           <h2>DM · Control Point · TDM</h2>
         </div>
-        <p class="muted">Таблиці можна скролити на мобільних. MVP підсвічені.</p>
+        <p class="muted">Горизонтальний скрол на мобільних, кольорові іконки перемог та підсвітка MVP.</p>
       </div>
       <div class="mode-grid">
         <article class="mode-card">
@@ -64,7 +78,7 @@
             <span class="pill green">DM</span>
             <div>
               <h3>Deathmatch</h3>
-              <p class="muted">Раунди між трійками, рахунок без PDF.</p>
+              <p class="muted">Перемоги по раундах, нічия позначена нейтрально.</p>
             </div>
           </div>
           <div class="table-shell" id="dm-table"></div>
@@ -74,7 +88,7 @@
             <span class="pill blue">KT</span>
             <div>
               <h3>Control Point</h3>
-              <p class="muted">Час захоплення та очки.</p>
+              <p class="muted">Час захоплення точки та очки.</p>
             </div>
           </div>
           <div class="table-shell" id="kt-table"></div>
@@ -84,7 +98,7 @@
             <span class="pill red">TDM</span>
             <div>
               <h3>Team Deathmatch</h3>
-              <p class="muted">Простий графік очок.</p>
+              <p class="muted">Графік очок та фаворити.</p>
             </div>
           </div>
           <div class="table-shell" id="tdm-block"></div>
@@ -96,10 +110,11 @@
       <div class="panel-heading">
         <div>
           <p class="eyebrow">Індивідуальна статистика</p>
-          <h2>Профілі та MVP</h2>
+          <h2>Профілі, ранги та MVP</h2>
         </div>
-        <p class="muted">Автоматично підтягується з рейтингу через API.</p>
+        <p class="muted">Відображаються поточні ранги з API рейтингу.</p>
       </div>
+      <div class="table-shell" id="mvp-table"></div>
       <div class="player-grid" id="player-grid"></div>
     </section>
   </main>

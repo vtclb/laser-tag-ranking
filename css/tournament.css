@@ -15,11 +15,18 @@
   --shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
   --grid-gap: 16px;
 
-  --green: #33ff77;
+  --green: #14db62;
   --blue: #4faaff;
   --red: #ff4646;
   --yellow: #ffd166;
+  --gold: #f6c344;
+  --silver: #cdd5e3;
+  --bronze: #d98945;
 }
+
+.team--green { --team-color: var(--green); }
+.team--blue { --team-color: var(--blue); }
+.team--red { --team-color: var(--red); }
 
 * {
   box-sizing: border-box;
@@ -233,6 +240,13 @@ table {
   min-width: 320px;
 }
 
+.inline-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 th, td {
   padding: 10px;
   text-align: left;
@@ -255,11 +269,21 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   background: rgba(255,255,255,0.03);
 }
 
+.team-chip .team-dot { background: var(--team-color, #8f9bbd); }
+
+.team-chip.team--green,
+.team-chip.team--blue,
+.team-chip.team--red {
+  border-color: color-mix(in srgb, var(--team-color, #8f9bbd) 45%, #1f2b46);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--team-color, #8f9bbd) 15%, transparent);
+}
+
 .team-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   display: inline-block;
+  background: var(--team-color, #8f9bbd);
 }
 
 .round-badge {
@@ -273,6 +297,13 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   margin-right: 6px;
   border: 1px solid rgba(255,255,255,0.05);
   color: #fff;
+  background: color-mix(in srgb, var(--team-color, #8f9bbd) 18%, transparent);
+}
+
+.round-badge.team--green,
+.round-badge.team--blue,
+.round-badge.team--red {
+  border-color: color-mix(in srgb, var(--team-color, #8f9bbd) 40%, transparent);
 }
 
 .round-badge.equal { color: var(--muted); border-style: dashed; }
@@ -308,10 +339,17 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
 
 .team-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
 
+.team-card.team--green,
+.team-card.team--blue,
+.team-card.team--red {
+  border-color: color-mix(in srgb, var(--team-color, #8f9bbd) 45%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--team-color, #8f9bbd) 30%, transparent), var(--shadow);
+}
+
 .team-card__bar {
   position: absolute;
   inset: 0;
-  background: linear-gradient(140deg, rgba(255,255,255,0.04), transparent 60%);
+  background: linear-gradient(140deg, color-mix(in srgb, var(--team-color, #8f9bbd) 12%, rgba(255,255,255,0.04)), transparent 65%);
   pointer-events: none;
 }
 
@@ -372,6 +410,17 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   border: 1px solid rgba(255,255,255,0.1);
   font-weight: 700;
   font-size: 0.9rem;
+  color: #fff;
+}
+
+.rank-badge.team--green,
+.rank-badge.team--blue,
+.rank-badge.team--red,
+.rank-chip.team--green,
+.rank-chip.team--blue,
+.rank-chip.team--red {
+  border-color: color-mix(in srgb, var(--team-color, #8f9bbd) 50%, rgba(255,255,255,0.2));
+  color: #fff;
 }
 
 .player-grid {
@@ -379,6 +428,54 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--grid-gap);
 }
+
+.podium-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.podium-card {
+  position: relative;
+  background: linear-gradient(140deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05)), var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.podium-card.team--green,
+.podium-card.team--blue,
+.podium-card.team--red {
+  border-color: color-mix(in srgb, var(--team-color, #8f9bbd) 55%, rgba(255,255,255,0.1));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--team-color, #8f9bbd) 24%, transparent), var(--shadow);
+}
+
+.podium-card .podium-rank {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.podium-1 { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(246,195,68,0.2); }
+.podium-1 .podium-rank { background: rgba(246,195,68,0.18); border-color: rgba(246,195,68,0.5); }
+.podium-2 { border-color: var(--silver); box-shadow: 0 0 0 1px rgba(205,213,227,0.2); }
+.podium-2 .podium-rank { background: rgba(205,213,227,0.18); border-color: rgba(205,213,227,0.4); }
+.podium-3 { border-color: var(--bronze); box-shadow: 0 0 0 1px rgba(217,137,69,0.2); }
+.podium-3 .podium-rank { background: rgba(217,137,69,0.18); border-color: rgba(217,137,69,0.4); }
+
+.podium-body { display: grid; gap: 6px; }
+.podium-name { font-weight: 800; font-size: 1.05rem; }
+.podium-meta { color: var(--muted); font-size: 0.9rem; }
 
 .player-card {
   background: var(--bg-card);
@@ -392,6 +489,10 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
 }
 
 .player-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: rgba(255,255,255,0.14); }
+
+.player-card.podium-1 { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(246,195,68,0.25), var(--shadow); }
+.player-card.podium-2 { border-color: var(--silver); box-shadow: 0 0 0 1px rgba(205,213,227,0.25), var(--shadow); }
+.player-card.podium-3 { border-color: var(--bronze); box-shadow: 0 0 0 1px rgba(217,137,69,0.25), var(--shadow); }
 
 .player-card__header { display: flex; align-items: center; gap: 10px; }
 
@@ -410,11 +511,46 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   gap: 6px;
 }
 
+.badge.podium-1 { border-color: var(--gold); color: var(--gold); }
+.badge.podium-2 { border-color: var(--silver); color: var(--silver); }
+.badge.podium-3 { border-color: var(--bronze); color: var(--bronze); }
+
+.card-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(140deg, rgba(94,252,155,0.18), rgba(79,170,255,0.18));
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.btn:hover { transform: translateY(-1px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.btn:active { transform: translateY(0); }
+.btn.ghost { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.18); color: #e8f0ff; }
+
 .progress-row {
   margin-top: 10px;
 }
 
 .progress-row .label { color: var(--muted); font-size: 0.85rem; }
+
+.link {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.link:hover { text-decoration: underline; }
 
 .progress-bar {
   margin-top: 6px;
@@ -429,6 +565,10 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   height: 100%;
   border-radius: inherit;
 }
+
+.progress-bar span.team--green { background: color-mix(in srgb, var(--green) 60%, transparent); }
+.progress-bar span.team--blue { background: color-mix(in srgb, var(--blue) 60%, transparent); }
+.progress-bar span.team--red { background: color-mix(in srgb, var(--red) 60%, transparent); }
 
 .chart-row {
   display: flex;
@@ -448,6 +588,10 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
 }
 
 .chart-bar span { display: block; height: 100%; }
+
+.chart-bar span.team--green { background: color-mix(in srgb, var(--green) 65%, transparent); }
+.chart-bar span.team--blue { background: color-mix(in srgb, var(--blue) 65%, transparent); }
+.chart-bar span.team--red { background: color-mix(in srgb, var(--red) 65%, transparent); }
 
 .player-modal {
   position: fixed;
@@ -476,6 +620,10 @@ th { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
   width: min(520px, calc(100% - 24px));
   z-index: 1;
 }
+
+.player-modal__card.team--green { border-color: color-mix(in srgb, var(--green) 45%, var(--border)); }
+.player-modal__card.team--blue { border-color: color-mix(in srgb, var(--blue) 45%, var(--border)); }
+.player-modal__card.team--red { border-color: color-mix(in srgb, var(--red) 45%, var(--border)); }
 
 .player-modal__header {
   display: flex;

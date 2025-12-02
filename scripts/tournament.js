@@ -17,6 +17,7 @@ const PLAYER_MAP = {
   'Юра': 'Morti',
   'Морті': 'Morti',
   'Morti': 'Morti',
+  'Сегедин': 'Morti',
 
   'Ворон': 'Voron',
   'Voron': 'Voron',
@@ -25,6 +26,7 @@ const PLAYER_MAP = {
   'Оксанка': 'Оксанка',
 
   'Даня': 'hAppser',
+  'Happser': 'hAppser',
   'hAppser': 'hAppser',
 
   'Ластон': 'Laston',
@@ -40,10 +42,16 @@ const PLAYER_MAP = {
   'Cocosik': 'Cocosik',
 
   'Sem': 'Sem',
+  'Сем': 'Sem',
   'Justy': 'Justy',
+  'Джасті': 'Justy',
   'Олег': 'Олег',
   'Темофій': 'Temostar',
-  'Temostar': 'Temostar'
+  'Темостар': 'Temostar',
+  'Temostar': 'Temostar',
+
+  'Остап': 'Остап',
+  'Вова': 'Вова'
 };
 
 function mapNick(name) {
@@ -56,6 +64,20 @@ const TEAM_BY_CODE = {
   '2': 'blue',
   '3': 'red'
 };
+
+function ktPointsForTime(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return 0;
+  const [mPart, sPart] = timeStr.split(':');
+  const minutes = Number(mPart);
+  const seconds = Number(sPart);
+  const totalSeconds = Number.isFinite(minutes) && Number.isFinite(seconds) ? minutes * 60 + seconds : 999;
+
+  if (totalSeconds <= 2 * 60 + 29) return 5;
+  if (totalSeconds <= 3 * 60) return 4;
+  if (totalSeconds <= 3 * 60 + 29) return 3;
+  if (totalSeconds <= 4 * 60) return 2;
+  return 1;
+}
 
 // ---------- Турнір ----------
 const TOURNAMENT = {
@@ -91,7 +113,7 @@ const TOURNAMENT = {
         teamA: 'green',
         teamB: 'blue',
         results: ['2', '=', '2', '=', '2', '2', '2'],
-        mvp: ['Laston', 'Leres', 'Morti']
+        mvp: ['Laston', 'Leres', 'Сегедин']
       },
       {
         label: 'Раундовий DM',
@@ -105,7 +127,7 @@ const TOURNAMENT = {
         teamA: 'red',
         teamB: 'green',
         results: ['3', '=', '3', '3', '1', '3', '1', '3'],
-        mvp: ['Morti', 'Temostar', 'Олег']
+        mvp: ['Морті', 'Temostar', 'Олег']
       }
     ],
     kt: [
@@ -114,30 +136,30 @@ const TOURNAMENT = {
         teamA: 'blue',
         teamB: 'green',
         rounds: [
-          { winner: 'green', time: '4:07', points: 1 },
-          { winner: 'blue', time: '3:56', points: 2 }
+          { winner: 'green', time: '4:07' },
+          { winner: 'blue', time: '3:56' }
         ],
-        mvp: ['Morti', 'Laston', 'Leres']
+        mvp: ['Юра', 'Laston', 'Вова']
       },
       {
         label: 'Control Point',
         teamA: 'blue',
         teamB: 'red',
         rounds: [
-          { winner: 'blue', time: '3:52', points: 2 },
-          { winner: 'red', time: '3:13', points: 3 }
+          { winner: 'blue', time: '3:52' },
+          { winner: 'red', time: '3:13' }
         ],
-        mvp: ['Morti', 'Laston', 'Temostar']
+        mvp: ['Остап', 'Laston', 'Темофій']
       },
       {
         label: 'Control Point',
         teamA: 'red',
         teamB: 'green',
         rounds: [
-          { winner: 'red', time: '3:06', points: 3 },
-          { winner: 'red', time: '3:09', points: 3 }
+          { winner: 'red', time: '3:06' },
+          { winner: 'red', time: '3:09' }
         ],
-        mvp: ['Morti', 'Justy', 'Temostar']
+        mvp: ['Юра', 'Остап', 'Темофій']
       }
     ],
     tdm: [
@@ -396,6 +418,9 @@ function buildTournamentStats(playerIndex) {
   const playerStats = initPlayerStats(playerIndex);
 
   let totalMatches = 0;
+  let totalDmRounds = 0;
+  let totalKtRounds = 0;
+  let totalTdmCaptures = 0;
 
   const registerGameResult = (participants, outcome) => {
     const { winnerIds, drawIds, loserIds } = outcome;
@@ -444,6 +469,8 @@ function buildTournamentStats(playerIndex) {
   // ---------- DM (FFA 3×3 на раунди) ----------
   TOURNAMENT.modes.dm.forEach((game) => {
     const counters = { green: 0, blue: 0, red: 0 };
+
+    totalDmRounds += game.results.length;
 
     game.results.forEach((code) => {
       if (code === '=') return;
@@ -526,12 +553,14 @@ function buildTournamentStats(playerIndex) {
     const pts = { [game.teamA]: 0, [game.teamB]: 0 };
 
     game.rounds.forEach((round) => {
-      pts[round.winner] = (pts[round.winner] || 0) + round.points;
+      const roundPoints = ktPointsForTime(round.time);
+      pts[round.winner] = (pts[round.winner] || 0) + roundPoints;
       const t = teamStats[round.winner];
-      if (t) t.ktPoints += round.points;
+      if (t) t.ktPoints += roundPoints;
       TOURNAMENT.teams[round.winner].players.forEach((nick) => {
-        playerStats[nick].ktPoints += round.points;
+        playerStats[nick].ktPoints += roundPoints;
       });
+      totalKtRounds += 1;
     });
 
     const aPts = pts[game.teamA] || 0;
@@ -564,6 +593,8 @@ function buildTournamentStats(playerIndex) {
   TOURNAMENT.modes.tdm.forEach((game) => {
     const scoreA = game.scores[game.teamA] || 0;
     const scoreB = game.scores[game.teamB] || 0;
+
+    totalTdmCaptures += scoreA + scoreB;
 
     const teamAStats = teamStats[game.teamA];
     const teamBStats = teamStats[game.teamB];
@@ -610,6 +641,8 @@ function buildTournamentStats(playerIndex) {
   Object.values(playerStats).forEach((p) => {
     const impact =
       p.mvps * 5 +
+      p.secondPlaces * 2 +
+      p.thirdPlaces * 1 +
       p.dmRounds * 1 +
       p.ktPoints * 2 +
       p.tdmScore * 0.3;
@@ -626,13 +659,31 @@ function buildTournamentStats(playerIndex) {
 
   const podiumPlayers = playerArray.slice(0, 3);
 
+  const summary = {
+    totalPlayers: playerArray.length,
+    totalTeams: Object.keys(teamStats).length,
+    totalMatches,
+    totalDmRounds,
+    totalKtRounds,
+    totalTdmCaptures,
+    totalWins: Object.values(teamStats).reduce((acc, t) => acc + t.wins, 0),
+    totalDraws: Object.values(teamStats).reduce((acc, t) => acc + t.draws, 0),
+    totalLosses: Object.values(teamStats).reduce((acc, t) => acc + t.losses, 0),
+    modeBreakdown: {
+      dm: TOURNAMENT.modes.dm.length,
+      kt: TOURNAMENT.modes.kt.length,
+      tdm: TOURNAMENT.modes.tdm.length
+    }
+  };
+
   return {
     teamStats: teamArray,
     playerStats: playerArray,
     podiumPlayers,
     topMvp,
     totalPlayers: playerArray.length,
-    totalMatches
+    totalMatches,
+    summary
   };
 }
 
@@ -655,6 +706,10 @@ function renderHero(totals) {
     {
       label: 'Гравців',
       value: totals.totalPlayers
+    },
+    {
+      label: 'Команд',
+      value: totals.summary?.totalTeams ?? Object.keys(TOURNAMENT.teams).length
     },
     {
       label: 'Матчів (DM/KT/TDM)',
@@ -696,6 +751,43 @@ function renderHero(totals) {
        </div>`
     );
   }
+}
+
+// ---------- Інфографіка ----------
+function renderInfographic(summary) {
+  const container = document.getElementById('tournament-infographic');
+  const section = document.getElementById('tournament-infographic-section');
+  if (!container || !section) return;
+
+  if (!summary) {
+    section.classList.add('hidden');
+    return;
+  }
+
+  container.innerHTML = '';
+  section.classList.remove('hidden');
+
+  const cards = [
+    { label: 'DM раундів', value: summary.totalDmRounds },
+    { label: 'KT раундів', value: summary.totalKtRounds },
+    { label: 'Знищених баз (TDM)', value: summary.totalTdmCaptures },
+    { label: 'W / D / L', value: `${summary.totalWins} / ${summary.totalDraws} / ${summary.totalLosses}` },
+    { label: 'Унікальних гравців', value: summary.totalPlayers },
+    {
+      label: 'Режими',
+      value: `DM ×${summary.modeBreakdown.dm} · KT ×${summary.modeBreakdown.kt} · TDM ×${summary.modeBreakdown.tdm}`
+    }
+  ];
+
+  cards.forEach((card) => {
+    container.insertAdjacentHTML(
+      'beforeend',
+      `<div class="info-chip">
+         <p class="info-chip__label">${card.label}</p>
+         <p class="info-chip__value">${card.value}</p>
+       </div>`
+    );
+  });
 }
 
 // ---------- Команди (таблиця з W/L/D/Очки) ----------
@@ -905,8 +997,10 @@ function renderModes() {
   TOURNAMENT.modes.kt.forEach((game) => {
     const rounds = game.rounds
       .map(
-        (r, i) =>
-          `<div class='round-row'>Раунд ${i + 1}: <strong>${r.time}</strong> → ${TOURNAMENT.teams[r.winner].name} (+${r.points})</div>`
+        (r, i) => {
+          const points = ktPointsForTime(r.time);
+          return `<div class='round-row'>Раунд ${i + 1}: <strong>${r.time}</strong> → ${TOURNAMENT.teams[r.winner].name} (+${points})</div>`;
+        }
       )
       .join('');
 
@@ -943,6 +1037,7 @@ async function initPage() {
   renderTeams(totals.teamStats);
   renderPlayers(totals.playerStats);
   renderModes();
+  renderInfographic(totals.summary);
 }
 
 document.addEventListener('DOMContentLoaded', initPage);

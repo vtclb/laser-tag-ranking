@@ -99,7 +99,11 @@
     .table-responsive { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; min-width: 720px; }
     th, td { padding: 10px 12px; text-align: left; vertical-align: middle; }
+
+    th { color: #c8ccd6; font-weight: 700; background: #141721; position: sticky; top: 0; z-index: 2; }
+
     th { color: #c8ccd6; font-weight: 700; background: #141721; position: sticky; top: 0; }
+
     tbody tr:nth-child(odd) { background: #161924; }
     tbody tr:nth-child(even) { background: #12141c; }
     tbody tr:hover { background: #1f2433; }
@@ -161,6 +165,11 @@
     #tournament-selector .t-info { display: flex; flex-direction: column; gap: 2px; }
     #tournament-selector .t-name { font-weight: 700; color: #fff; }
     #tournament-selector .t-meta { color: #9ea2ae; font-size: 13px; }
+
+    .infographic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+    .info-chip { background: linear-gradient(135deg, rgba(19, 179, 107, 0.08), rgba(52, 152, 219, 0.08)); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 12px; box-shadow: 0 0 20px rgba(19,179,107,0.08), 0 0 24px rgba(52,152,219,0.06); }
+    .info-chip__label { margin: 0 0 4px; color: #9ea2ae; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
+    .info-chip__value { margin: 0; color: #fff; font-weight: 800; font-size: 18px; text-shadow: 0 0 8px rgba(0,255,153,0.3); }
 
     @media (max-width: 720px) {
       #tournament-view { padding: 12px; }
@@ -238,6 +247,14 @@
       <h2 class="section-title">Матчі</h2>
       <div id="matches-container"></div>
     </section>
+
+
+    <section class="bal__card" id="tournament-infographic-section" data-requires-id="true">
+      <h2 class="section-title">Інфографіка турніру</h2>
+      <div class="infographic-grid" id="tournament-infographic"></div>
+    </section>
+
+
     <div id="player-modal" class="player-modal hidden" aria-hidden="true">
       <div class="player-modal__card" role="dialog" aria-modal="true">
         <button class="player-modal__close" aria-label="Закрити">×</button>

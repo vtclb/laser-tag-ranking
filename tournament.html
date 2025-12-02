@@ -550,6 +550,99 @@
       font-size: 13px;
     }
 
+      /* Щоб таблиці не розвалювали мобілку */
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  #teams-table,
+  #players-table {
+    min-width: 720px;
+    border-collapse: collapse;
+  }
+
+  #teams-table th,
+  #teams-table td,
+  #players-table th,
+  #players-table td {
+    padding: 6px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* Підсвічування команд */
+  .team-blue-row td {
+    background: rgba(52, 152, 219, 0.08);
+  }
+  .team-red-row td {
+    background: rgba(231, 76, 60, 0.08);
+  }
+  .team-green-row td {
+    background: rgba(46, 204, 113, 0.08);
+  }
+
+  .team-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.9;
+  }
+  .team-chip--blue {
+    background: rgba(52, 152, 219, 0.2);
+    border: 1px solid #3498db;
+  }
+  .team-chip--red {
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+  }
+  .team-chip--green {
+    background: rgba(46, 204, 113, 0.2);
+    border: 1px solid #2ecc71;
+  }
+
+  /* Аватарки */
+  .player-avatar img,
+  .avatar.avatar--sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    object-fit: cover;
+  }
+
+  /* Карточки матчів більш «ретро-ігрові» */
+  .match-card {
+    border-radius: 16px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #181b22, #13151b);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .match-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  .match-card__mode {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.7;
+  }
+
+  .match-card__score {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+  }
+
     /* Інфографіка */
     .infographic-grid {
       display: grid;
@@ -834,6 +927,7 @@
   <script type="module" src="scripts/config.js"></script>
   <script type="module" src="scripts/logger.js"></script>
   <script type="module" src="scripts/api.js"></script>
+  <script type="module" src="scripts/avatars.client.js"></script>
   <script type="module" src="scripts/tournament.js"></script>
   <script type="module" src="scripts/rankUtils.js"></script>
 </body>

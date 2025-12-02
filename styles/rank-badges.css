@@ -1,0 +1,100 @@
+:root {
+  --rank-s-color: #9c27b0;
+  --rank-a-color: #e91e63;
+  --rank-b-color: #ffb300;
+  --rank-c-color: #4fc3f7;
+  --rank-d-color: #777;
+  --rank-e-color: #666;
+  --rank-f-color: #444;
+}
+
+.rank-chip,
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 2px solid var(--border, rgba(255, 255, 255, 0.15));
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.rank-badge {
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.rank-chip.rank-xs,
+.rank-badge.rank-xs {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+}
+
+.rank-chip.rank-s,
+.rank-badge.rank-s,
+.rank-chip.rank-S,
+.rank-badge.rank-S {
+  border-color: var(--rank-s-color);
+  background: color-mix(in srgb, var(--rank-s-color) 15%, transparent);
+}
+
+.rank-chip.rank-a,
+.rank-badge.rank-a,
+.rank-chip.rank-A,
+.rank-badge.rank-A {
+  border-color: var(--rank-a-color);
+  background: color-mix(in srgb, var(--rank-a-color) 15%, transparent);
+}
+
+.rank-chip.rank-b,
+.rank-badge.rank-b,
+.rank-chip.rank-B,
+.rank-badge.rank-B {
+  border-color: var(--rank-b-color);
+  background: color-mix(in srgb, var(--rank-b-color) 15%, transparent);
+}
+
+.rank-chip.rank-c,
+.rank-badge.rank-c,
+.rank-chip.rank-C,
+.rank-badge.rank-C {
+  border-color: var(--rank-c-color);
+  background: color-mix(in srgb, var(--rank-c-color) 15%, transparent);
+}
+
+.rank-chip.rank-d,
+.rank-badge.rank-d,
+.rank-chip.rank-D,
+.rank-badge.rank-D {
+  border-color: var(--rank-d-color);
+  background: color-mix(in srgb, var(--rank-d-color) 20%, transparent);
+}
+
+.rank-chip.rank-e,
+.rank-badge.rank-e,
+.rank-chip.rank-E,
+.rank-badge.rank-E {
+  border-color: var(--rank-e-color);
+  background: color-mix(in srgb, var(--rank-e-color) 20%, transparent);
+}
+
+.rank-chip.rank-f,
+.rank-badge.rank-f,
+.rank-chip.rank-F,
+.rank-badge.rank-F {
+  border-color: var(--rank-f-color);
+  background: color-mix(in srgb, var(--rank-f-color) 20%, transparent);
+}
+
+.rank-chip.team--green,
+.rank-badge.team--green,
+.rank-chip.team--blue,
+.rank-badge.team--blue,
+.rank-chip.team--red,
+.rank-badge.team--red {
+  border-color: color-mix(in srgb, var(--team-color, #8f9bbd) 50%, rgba(255, 255, 255, 0.15));
+  color: #fff;
+}

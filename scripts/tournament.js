@@ -3,16 +3,23 @@
 // Новий монолітний tournament.js з покращеною логікою та UX
 // -------------------------------------------------------------
 
-import { loadPlayers, normalizeLeague } from './api.js';
+import { loadPlayers, normalizeLeague, fetchPlayerGames } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
 
+const DEBUG_TOURNAMENT = false;
+
 const DEFAULT_AVATAR = 'assets/default_avatars/av0.png';
+const MVP_FIELDS = ['MVP', 'Mvp', 'mvp', 'MVP2', 'mvp2', 'MVP 2', 'mvp 2', 'MVP3', 'mvp3', 'MVP 3', 'mvp 3'];
+const TEAM_FIELDS = ['Team1', 'Team 1', 'team1', 'team 1', 'Team2', 'Team 2', 'team2', 'team 2'];
+const seasonStatsCache = new Map();
+let lastPlayerStats = [];
 
 // ---------- Нікнейми → API ----------
 const PLAYER_MAP = {
   'Юра': 'Morti',
   'Морті': 'Morti',
   'Morti': 'Morti',
+  'Сегедин': 'Morti',
 
   'Ворон': 'Voron',
   'Voron': 'Voron',
@@ -21,6 +28,7 @@ const PLAYER_MAP = {
   'Оксанка': 'Оксанка',
 
   'Даня': 'hAppser',
+  'Happser': 'hAppser',
   'hAppser': 'hAppser',
 
   'Ластон': 'Laston',
@@ -36,14 +44,21 @@ const PLAYER_MAP = {
   'Cocosik': 'Cocosik',
 
   'Sem': 'Sem',
+  'Сем': 'Sem',
   'Justy': 'Justy',
+  'Джасті': 'Justy',
   'Олег': 'Олег',
   'Темофій': 'Temostar',
-  'Temostar': 'Temostar'
+  'Темостар': 'Temostar',
+  'Temostar': 'Temostar',
+
+  'Остап': 'Остап',
+  'Вова': 'Вова'
 };
 
 function mapNick(name) {
-  return PLAYER_MAP[name] || name;
+  const key = String(name || '').trim();
+  return PLAYER_MAP[key] || key;
 }
 
 // DM-код → команда
@@ -52,6 +67,20 @@ const TEAM_BY_CODE = {
   '2': 'blue',
   '3': 'red'
 };
+
+function ktPointsForTime(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return 0;
+  const [mPart, sPart] = timeStr.split(':');
+  const minutes = Number(mPart);
+  const seconds = Number(sPart);
+  const totalSeconds = Number.isFinite(minutes) && Number.isFinite(seconds) ? minutes * 60 + seconds : 999;
+
+  if (totalSeconds <= 2 * 60 + 29) return 5;
+  if (totalSeconds <= 3 * 60) return 4;
+  if (totalSeconds <= 3 * 60 + 29) return 3;
+  if (totalSeconds <= 4 * 60) return 2;
+  return 1;
+}
 
 // ---------- Турнір ----------
 const TOURNAMENT = {
@@ -87,7 +116,7 @@ const TOURNAMENT = {
         teamA: 'green',
         teamB: 'blue',
         results: ['2', '=', '2', '=', '2', '2', '2'],
-        mvp: ['Laston', 'Leres', 'Morti']
+        mvp: ['Laston', 'Leres', 'Сегедин']
       },
       {
         label: 'Раундовий DM',
@@ -101,7 +130,7 @@ const TOURNAMENT = {
         teamA: 'red',
         teamB: 'green',
         results: ['3', '=', '3', '3', '1', '3', '1', '3'],
-        mvp: ['Morti', 'Temostar', 'Олег']
+        mvp: ['Морті', 'Temostar', 'Олег']
       }
     ],
     kt: [
@@ -110,30 +139,30 @@ const TOURNAMENT = {
         teamA: 'blue',
         teamB: 'green',
         rounds: [
-          { winner: 'green', time: '4:07', points: 1 },
-          { winner: 'blue', time: '3:56', points: 2 }
+          { winner: 'green', time: '4:07' },
+          { winner: 'blue', time: '3:56' }
         ],
-        mvp: ['Morti', 'Laston', 'Leres']
+        mvp: ['Юра', 'Laston', 'Вова']
       },
       {
         label: 'Control Point',
         teamA: 'blue',
         teamB: 'red',
         rounds: [
-          { winner: 'blue', time: '3:52', points: 2 },
-          { winner: 'red', time: '3:13', points: 3 }
+          { winner: 'blue', time: '3:52' },
+          { winner: 'red', time: '3:13' }
         ],
-        mvp: ['Morti', 'Laston', 'Temostar']
+        mvp: ['Остап', 'Laston', 'Темофій']
       },
       {
         label: 'Control Point',
         teamA: 'red',
         teamB: 'green',
         rounds: [
-          { winner: 'red', time: '3:06', points: 3 },
-          { winner: 'red', time: '3:09', points: 3 }
+          { winner: 'red', time: '3:06' },
+          { winner: 'red', time: '3:09' }
         ],
-        mvp: ['Morti', 'Justy', 'Temostar']
+        mvp: ['Юра', 'Остап', 'Темофій']
       }
     ],
     tdm: [
@@ -147,21 +176,39 @@ const TOURNAMENT = {
 // ---------- Player Index ----------
 function buildPlayerIndex(players) {
   const index = new Map();
-  players.forEach((p) => index.set(p.nick.toLowerCase(), p));
+
+  players.forEach((p) => {
+    const aliases = [p.nick, p.apiNick, p.name, p.Nickname, p.nickname];
+    aliases
+      .map((v) => String(v || '').trim())
+      .filter(Boolean)
+      .forEach((alias) => {
+        const key = alias.toLowerCase();
+        if (!index.has(key)) index.set(key, p);
+      });
+  });
+
   return index;
 }
 
 function getProfile(displayNick, playerIndex) {
   const apiNick = mapNick(displayNick);
-  const p = playerIndex.get(apiNick.toLowerCase());
-  const pts = Number(p?.pts ?? 0);
+  const key = String(apiNick || '').toLowerCase();
+  const base = key ? playerIndex.get(key) : null;
+  const pts = Number(base?.pts ?? base?.points ?? base?.mmr ?? 0);
+  const rank = base?.rank || rankLetterForPoints(pts);
+  const avatar = base?.avatar || base?.avatar_url || DEFAULT_AVATAR;
+
+  if (DEBUG_TOURNAMENT && (!base || !base.avatar || !base.rank)) {
+    console.warn('[tournament] missing base data for', apiNick, { hasBase: !!base });
+  }
 
   return {
     displayNick,
     apiNick,
     points: pts,
-    rank: p?.rank || rankLetterForPoints(pts),
-    avatar: p?.avatar || DEFAULT_AVATAR,
+    rank,
+    avatar: avatar || DEFAULT_AVATAR,
     league: normalizeLeague(TOURNAMENT.league)
   };
 }
@@ -172,6 +219,154 @@ function resultIcon(code) {
   if (code === '1') return '🟢';
   if (code === '2') return '🔵';
   return '🔴';
+}
+
+function rankClass(rank) {
+  const letter = String(rank || '').trim();
+  return `rank-chip rank-xs rank-${letter.toLowerCase()}`;
+}
+
+function buildPlayerIdentity(player) {
+  const nick = player.displayNick;
+  const apiNick = player.apiNick;
+  const teamClass = player.teamId ? `team--${player.teamId}` : '';
+  const rankBadge = `<span class="${rankClass(player.rank)} ${teamClass}" ${player.teamColor ? `style="--team-color:${player.teamColor}"` : ''}>${player.rank || '—'}</span>`;
+  const avatar = player.avatar || DEFAULT_AVATAR;
+
+  return `
+    <div class="player-identity">
+      <div class="player-avatar">
+        <img src="${avatar}" alt="${nick}" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='${DEFAULT_AVATAR}'" />
+      </div>
+      <div class="player-name-block">
+        <div class="player-name-row">${nick} ${rankBadge}</div>
+        <div class="player-meta">@${apiNick}</div>
+      </div>
+    </div>
+  `;
+}
+
+function containsNick(value, targetNick) {
+  if (!value) return false;
+  return String(value)
+    .split(/[;,]/)
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean)
+    .some((name) => name === targetNick.toLowerCase());
+}
+
+function detectTeamSide(game, targetNick) {
+  let isTeam1 = false;
+  let isTeam2 = false;
+
+  TEAM_FIELDS.forEach((field, idx) => {
+    const val = game[field];
+    if (!val) return;
+    if (idx < 4) {
+      isTeam1 = isTeam1 || containsNick(val, targetNick);
+    } else {
+      isTeam2 = isTeam2 || containsNick(val, targetNick);
+    }
+  });
+
+  if (isTeam1) return 'team1';
+  if (isTeam2) return 'team2';
+  return null;
+}
+
+function deriveSeasonKey(game) {
+  const seasonField = game.Season || game.season || game.seasonId || game.SeasonId || game.season_id;
+  if (seasonField) return String(seasonField);
+
+  const ts = new Date(game.Timestamp || game.Date || game.date || game.time).getTime();
+  if (Number.isFinite(ts)) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  return 'current';
+}
+
+function aggregateSeasonStats(games, targetNick) {
+  const map = new Map();
+
+  games.forEach((game) => {
+    const side = detectTeamSide(game, targetNick);
+    if (!side) return;
+
+    const key = deriveSeasonKey(game);
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        games: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        mvps: 0,
+        mmrSamples: [],
+        lastTs: 0
+      });
+    }
+
+    const rec = map.get(key);
+    rec.games += 1;
+
+    const winner = String(game.Winner || game.winner || '').toLowerCase();
+    const drawValues = ['draw', 'tie', 'ничья', 'нічию'];
+
+    if (!winner || drawValues.includes(winner)) {
+      rec.draws += 1;
+    } else if (['team1', 'team 1', '1'].includes(winner)) {
+      if (side === 'team1') rec.wins += 1; else rec.losses += 1;
+    } else if (['team2', 'team 2', '2'].includes(winner)) {
+      if (side === 'team2') rec.wins += 1; else rec.losses += 1;
+    }
+
+    const ts = new Date(game.Timestamp || game.Date || game.date || game.time).getTime();
+    if (Number.isFinite(ts) && ts > rec.lastTs) rec.lastTs = ts;
+
+    const isMvp = MVP_FIELDS.some((field) => containsNick(game[field], targetNick));
+    if (isMvp) rec.mvps += 1;
+
+    const mmrField = ['PointsDelta', 'points_delta', 'MMRΔ', 'mmr_delta', 'MMR', 'mmr', 'MMRDelta', 'rating_change']
+      .map((f) => Number(game[f]))
+      .find((val) => Number.isFinite(val));
+
+    if (Number.isFinite(mmrField)) rec.mmrSamples.push(mmrField);
+  });
+
+  return Array.from(map.values()).map((rec) => ({
+    ...rec,
+    avgMmrChange: rec.mmrSamples.length
+      ? Math.round((rec.mmrSamples.reduce((a, b) => a + b, 0) / rec.mmrSamples.length) * 10) / 10
+      : null
+  }));
+}
+
+function pickSeasonSnapshots(games, nick) {
+  const aggregated = aggregateSeasonStats(games, nick);
+  aggregated.sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
+  return {
+    current: aggregated[0] || null,
+    previous: aggregated[1] || null
+  };
+}
+
+async function loadSeasonSnapshots(apiNick, league) {
+  const cacheKey = `${league}:${apiNick}`;
+  if (seasonStatsCache.has(cacheKey)) return seasonStatsCache.get(cacheKey);
+
+  try {
+    const games = await fetchPlayerGames(apiNick, league);
+    const snapshots = pickSeasonSnapshots(games, apiNick);
+    seasonStatsCache.set(cacheKey, snapshots);
+    return snapshots;
+  } catch (err) {
+    console.error('[tournament] season stats error', err);
+    const empty = { current: null, previous: null };
+    seasonStatsCache.set(cacheKey, empty);
+    return empty;
+  }
 }
 
 // ---------- Допоміжні структури ----------
@@ -218,6 +413,7 @@ function initPlayerStats(playerIndex) {
         ...base,
         teamId,
         teamName: team.name,
+        teamColor: team.color || '',
         games: 0,
         wins: 0,
         losses: 0,
@@ -243,6 +439,9 @@ function buildTournamentStats(playerIndex) {
   const playerStats = initPlayerStats(playerIndex);
 
   let totalMatches = 0;
+  let totalDmRounds = 0;
+  let totalKtRounds = 0;
+  let totalTdmCaptures = 0;
 
   const registerGameResult = (participants, outcome) => {
     const { winnerIds, drawIds, loserIds } = outcome;
@@ -291,6 +490,8 @@ function buildTournamentStats(playerIndex) {
   // ---------- DM (FFA 3×3 на раунди) ----------
   TOURNAMENT.modes.dm.forEach((game) => {
     const counters = { green: 0, blue: 0, red: 0 };
+
+    totalDmRounds += game.results.length;
 
     game.results.forEach((code) => {
       if (code === '=') return;
@@ -373,12 +574,14 @@ function buildTournamentStats(playerIndex) {
     const pts = { [game.teamA]: 0, [game.teamB]: 0 };
 
     game.rounds.forEach((round) => {
-      pts[round.winner] = (pts[round.winner] || 0) + round.points;
+      const roundPoints = ktPointsForTime(round.time);
+      pts[round.winner] = (pts[round.winner] || 0) + roundPoints;
       const t = teamStats[round.winner];
-      if (t) t.ktPoints += round.points;
+      if (t) t.ktPoints += roundPoints;
       TOURNAMENT.teams[round.winner].players.forEach((nick) => {
-        playerStats[nick].ktPoints += round.points;
+        playerStats[nick].ktPoints += roundPoints;
       });
+      totalKtRounds += 1;
     });
 
     const aPts = pts[game.teamA] || 0;
@@ -411,6 +614,8 @@ function buildTournamentStats(playerIndex) {
   TOURNAMENT.modes.tdm.forEach((game) => {
     const scoreA = game.scores[game.teamA] || 0;
     const scoreB = game.scores[game.teamB] || 0;
+
+    totalTdmCaptures += scoreA + scoreB;
 
     const teamAStats = teamStats[game.teamA];
     const teamBStats = teamStats[game.teamB];
@@ -457,6 +662,8 @@ function buildTournamentStats(playerIndex) {
   Object.values(playerStats).forEach((p) => {
     const impact =
       p.mvps * 5 +
+      p.secondPlaces * 2 +
+      p.thirdPlaces * 1 +
       p.dmRounds * 1 +
       p.ktPoints * 2 +
       p.tdmScore * 0.3;
@@ -471,7 +678,44 @@ function buildTournamentStats(playerIndex) {
     null
   );
 
+  const dmBeast = playerArray.reduce((best, p) => (p.dmRounds > (best?.dmRounds || 0) ? p : best), null);
+  const ktKing = playerArray.reduce((best, p) => (p.ktPoints > (best?.ktPoints || 0) ? p : best), null);
+  const baseBreaker = playerArray.reduce((best, p) => (p.tdmScore > (best?.tdmScore || 0) ? p : best), null);
+
   const podiumPlayers = playerArray.slice(0, 3);
+
+  const summary = {
+    totalPlayers: playerArray.length,
+    totalTeams: Object.keys(teamStats).length,
+    totalMatches,
+    totalDmRounds,
+    totalKtRounds,
+    totalTdmCaptures,
+    totalWins: Object.values(teamStats).reduce((acc, t) => acc + t.wins, 0),
+    totalDraws: Object.values(teamStats).reduce((acc, t) => acc + t.draws, 0),
+    totalLosses: Object.values(teamStats).reduce((acc, t) => acc + t.losses, 0),
+    modeBreakdown: {
+      dm: TOURNAMENT.modes.dm.length,
+      kt: TOURNAMENT.modes.kt.length,
+      tdm: TOURNAMENT.modes.tdm.length
+    },
+    teamTotals: teamArray.map((t) => ({
+      id: t.id,
+      name: t.name,
+      dm: t.dmRoundsWon,
+      kt: t.ktPoints,
+      tdm: t.tdmScore,
+      total: t.dmRoundsWon + t.ktPoints + t.tdmScore,
+      record: `${t.wins}W-${t.draws}D-${t.losses}L`
+    })),
+    awards: {
+      championTeam: teamArray[0] || null,
+      topMvp,
+      dmBeast,
+      ktKing,
+      baseBreaker
+    }
+  };
 
   return {
     teamStats: teamArray,
@@ -479,7 +723,8 @@ function buildTournamentStats(playerIndex) {
     podiumPlayers,
     topMvp,
     totalPlayers: playerArray.length,
-    totalMatches
+    totalMatches,
+    summary
   };
 }
 
@@ -502,6 +747,10 @@ function renderHero(totals) {
     {
       label: 'Гравців',
       value: totals.totalPlayers
+    },
+    {
+      label: 'Команд',
+      value: totals.summary?.totalTeams ?? Object.keys(TOURNAMENT.teams).length
     },
     {
       label: 'Матчів (DM/KT/TDM)',
@@ -545,6 +794,100 @@ function renderHero(totals) {
   }
 }
 
+// ---------- Інфографіка ----------
+function renderInfographic(summary) {
+  const container = document.getElementById('tournament-infographic');
+  const section = document.getElementById('tournament-infographic-section');
+  if (!container || !section) return;
+
+  if (!summary) {
+    section.classList.add('hidden');
+    return;
+  }
+
+  container.innerHTML = '';
+  section.classList.remove('hidden');
+
+  const awards = summary.awards || {};
+
+  const awardCards = [];
+  if (awards.championTeam) {
+    awardCards.push({
+      icon: '🏆',
+      title: 'Champion Team',
+      value: awards.championTeam.name,
+      meta: `DM ${awards.championTeam.dmRoundsWon} · KT ${awards.championTeam.ktPoints} · TDM ${awards.championTeam.tdmScore} = ${
+        awards.championTeam.dmRoundsWon + awards.championTeam.ktPoints + awards.championTeam.tdmScore
+      }`
+    });
+  }
+  if (awards.topMvp) awardCards.push({ icon: '⭐', title: 'MVP турніру', value: awards.topMvp.displayNick, meta: `${awards.topMvp.mvps} MVP` });
+  if (awards.dmBeast) awardCards.push({ icon: '💥', title: 'DM Beast', value: awards.dmBeast.displayNick, meta: `${awards.dmBeast.dmRounds} раундів` });
+  if (awards.ktKing) awardCards.push({ icon: '🎯', title: 'KT King', value: awards.ktKing.displayNick, meta: `${awards.ktKing.ktPoints} очок` });
+  if (awards.baseBreaker)
+    awardCards.push({ icon: '🚩', title: 'Base Breaker', value: awards.baseBreaker.displayNick, meta: `${awards.baseBreaker.tdmScore} баз` });
+
+  if (awardCards.length) {
+    const awardGrid = awardCards
+      .map(
+        (card) => `
+          <div class="award-card">
+            <div class="award-card__icon">${card.icon}</div>
+            <div class="award-card__body">
+              <p class="award-card__title">${card.title}</p>
+              <p class="award-card__value">${card.value}</p>
+              <p class="award-card__meta">${card.meta}</p>
+            </div>
+          </div>
+        `
+      )
+      .join('');
+    container.insertAdjacentHTML('beforeend', `<div class="award-grid">${awardGrid}</div>`);
+  }
+
+  const cards = [
+    { label: 'DM раундів', value: summary.totalDmRounds },
+    { label: 'KT раундів', value: summary.totalKtRounds },
+    { label: 'Знищених баз (TDM)', value: summary.totalTdmCaptures },
+    { label: 'W / D / L', value: `${summary.totalWins} / ${summary.totalDraws} / ${summary.totalLosses}` },
+    { label: 'Унікальних гравців', value: summary.totalPlayers },
+    {
+      label: 'Режими',
+      value: `DM ×${summary.modeBreakdown.dm} · KT ×${summary.modeBreakdown.kt} · TDM ×${summary.modeBreakdown.tdm}`
+    }
+  ];
+
+  const infoGrid = cards
+    .map(
+      (card) => `
+        <div class="info-chip">
+          <p class="info-chip__label">${card.label}</p>
+          <p class="info-chip__value">${card.value}</p>
+        </div>
+      `
+    )
+    .join('');
+
+  container.insertAdjacentHTML('beforeend', `<div class="infographic-grid">${infoGrid}</div>`);
+
+  const scoreCards = (summary.teamTotals || [])
+    .map(
+      (t) => `
+        <div class="score-card team-${t.id}-row">
+          <div class="score-card__row"><span class="team-chip team-chip--${t.id}"><span class="team-chip__dot"></span><span>${t.name}</span></span></div>
+          <div class="score-card__stats">DM ${t.dm} · KT ${t.kt} · TDM ${t.tdm}</div>
+          <div class="score-card__total">${t.total} очок</div>
+          <div class="score-card__meta">${t.record}</div>
+        </div>
+      `
+    )
+    .join('');
+
+  if (scoreCards) {
+    container.insertAdjacentHTML('beforeend', `<div class="score-grid">${scoreCards}</div>`);
+  }
+}
+
 // ---------- Команди (таблиця з W/L/D/Очки) ----------
 function renderTeams(teamStats) {
   const tbody = document.querySelector('#teams-table tbody');
@@ -554,8 +897,7 @@ function renderTeams(teamStats) {
 
   teamStats.forEach((t) => {
     const nameCell = `
-      <span class='team-chip' style='background:${t.color}'></span>
-      <span>${t.name}</span>
+      <span class='team-chip team-chip--${t.id}'><span class='team-chip__dot'></span><span>${t.name}</span></span>
     `;
 
     tbody.insertAdjacentHTML(
@@ -580,36 +922,154 @@ function renderPlayers(playerStats) {
 
   tbody.innerHTML = '';
 
+  lastPlayerStats = [...playerStats];
+
   playerStats.forEach((p) => {
     const teamLabel = TOURNAMENT.teams[p.teamId]?.name || p.teamName || '';
+    const teamChip = `<span class="team-chip team-chip--${p.teamId}"><span class="team-chip__dot"></span><span>${teamLabel}</span></span>`;
+    const nickCell = buildPlayerIdentity(p);
+    const mmrDelta = p.mmrDelta === 0 ? '—' : p.mmrDelta > 0 ? `+${p.mmrDelta}` : String(p.mmrDelta);
+    const row = document.createElement('tr');
+    row.classList.add('player-row', `team-${p.teamId}-row`);
+    row.dataset.nick = p.displayNick;
+    row.dataset.apiNick = p.apiNick;
 
-    const nickCell = `
-      <div>
-        <span>${p.displayNick}</span>
-        <span class='badge status' style='margin-left:6px;'>${p.rank}</span>
-      </div>
-      <div class='muted' style='font-size:11px;'>@${p.apiNick}</div>
+    row.innerHTML = `
+      <td>${nickCell}</td>
+      <td>${teamChip}</td>
+      <td>${p.games}</td>
+      <td>${p.wins}</td>
+      <td>${p.losses}</td>
+      <td>${p.draws}</td>
+      <td>${p.mvps}</td>
+      <td>${p.secondPlaces}</td>
+      <td>${p.thirdPlaces}</td>
+      <td>${p.impact}</td>
+      <td>${mmrDelta}</td>
     `;
 
-    const mmrDelta = p.mmrDelta === 0 ? '—' : (p.mmrDelta > 0 ? `+${p.mmrDelta}` : String(p.mmrDelta));
-
-    tbody.insertAdjacentHTML(
-      'beforeend',
-      `<tr>
-         <td>${nickCell}</td>
-         <td>${teamLabel}</td>
-         <td>${p.games}</td>
-         <td>${p.wins}</td>
-         <td>${p.losses}</td>
-         <td>${p.draws}</td>
-         <td>${p.mvps}</td>
-         <td>${p.secondPlaces}</td>
-         <td>${p.thirdPlaces}</td>
-         <td>${p.impact}</td>
-         <td>${mmrDelta}</td>
-       </tr>`
-    );
+    row.addEventListener('click', () => openPlayerModal(p));
+    tbody.appendChild(row);
   });
+}
+
+function statItem(label, value) {
+  return `
+    <div class="stat-item">
+      <span class="label">${label}</span>
+      <span class="value">${value}</span>
+    </div>
+  `;
+}
+
+function renderSeasonSection(title, stats) {
+  if (!stats) {
+    return `<div class="empty-note">Дані відсутні</div>`;
+  }
+
+  const mmr = stats.avgMmrChange === null || Number.isNaN(stats.avgMmrChange)
+    ? '—'
+    : `${stats.avgMmrChange > 0 ? '+' : ''}${stats.avgMmrChange}`;
+
+  return `
+    <div>
+      <h4 style="margin:0 0 8px;">${title}</h4>
+      <div class="stat-list">
+        ${statItem('Ігор', stats.games)}
+        ${statItem('W', stats.wins)}
+        ${statItem('L', stats.losses)}
+        ${statItem('D', stats.draws)}
+        ${statItem('MVP', stats.mvps)}
+        ${statItem('MMR Δ (avg)', mmr)}
+      </div>
+    </div>
+  `;
+}
+
+function renderTournamentBlock(p) {
+  const mmrDelta = p.mmrDelta === 0 ? '—' : p.mmrDelta > 0 ? `+${p.mmrDelta}` : String(p.mmrDelta);
+
+  return `
+    <div class="info-card">
+      <h3>Статистика турніру</h3>
+      <div class="stat-list">
+        ${statItem('Ігор', p.games)}
+        ${statItem('W', p.wins)}
+        ${statItem('L', p.losses)}
+        ${statItem('D', p.draws)}
+        ${statItem('MVP', p.mvps)}
+        ${statItem('2 місце (DM)', p.secondPlaces)}
+        ${statItem('3 місце (DM)', p.thirdPlaces)}
+        ${statItem('DM раунди', p.dmRounds)}
+        ${statItem('KT очки', p.ktPoints)}
+        ${statItem('TDM рахунок', p.tdmScore)}
+        ${statItem('Impact', p.impact)}
+        ${statItem('MMR Δ', mmrDelta)}
+      </div>
+    </div>
+  `;
+}
+
+function ensurePlayerModal() {
+  const modal = document.getElementById('player-modal');
+  const content = document.getElementById('player-modal-content');
+  const closeBtn = modal?.querySelector('.player-modal__close');
+  return { modal, content, closeBtn };
+}
+
+async function openPlayerModal(player) {
+  const { modal, content, closeBtn } = ensurePlayerModal();
+  if (!modal || !content) return;
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  content.innerHTML = '<p class="muted">Завантаження…</p>';
+
+  const seasonSnapshots = await loadSeasonSnapshots(player.apiNick, player.league);
+
+  const header = `
+    <div class="player-modal__header">
+      <div class="player-modal__avatar"><img src="${player.avatar || DEFAULT_AVATAR}" alt="${player.displayNick}" loading="lazy" onerror="this.src='${DEFAULT_AVATAR}'"></div>
+      <div class="player-modal__title">
+        <div class="player-name-row" style="font-size:1.1rem;">${player.displayNick} <span class="${rankClass(player.rank)}">${player.rank}</span></div>
+        <div class="modal-sub">@${player.apiNick} · ${player.teamName}</div>
+      </div>
+      <span class="tag">MMR: ${player.points}</span>
+    </div>
+  `;
+
+  const tournamentBlock = renderTournamentBlock(player);
+  const seasonBlocks = `
+    <div class="info-card">
+      <h3>Сезонна статистика</h3>
+      <div class="player-modal__grid">
+        ${renderSeasonSection('Цей сезон', seasonSnapshots.current)}
+        ${renderSeasonSection('Попередній сезон', seasonSnapshots.previous)}
+      </div>
+    </div>
+  `;
+
+  content.innerHTML = `${header}<div class="player-modal__grid">${tournamentBlock}${seasonBlocks}</div>`;
+
+  const onBackdrop = (e) => {
+    if (e.target === modal) hide();
+  };
+
+  const onKey = (e) => {
+    if (e.key === 'Escape') hide();
+  };
+
+  const hide = () => {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onKey);
+    if (closeBtn) closeBtn.removeEventListener('click', hide);
+  };
+
+  modal.addEventListener('click', onBackdrop);
+  document.addEventListener('keydown', onKey);
+  if (closeBtn) closeBtn.addEventListener('click', hide);
 }
 
 // ---------- Матчі (DM / KT / TDM cards) ----------
@@ -635,8 +1095,10 @@ function renderModes() {
   TOURNAMENT.modes.kt.forEach((game) => {
     const rounds = game.rounds
       .map(
-        (r, i) =>
-          `<div class='round-row'>Раунд ${i + 1}: <strong>${r.time}</strong> → ${TOURNAMENT.teams[r.winner].name} (+${r.points})</div>`
+        (r, i) => {
+          const points = ktPointsForTime(r.time);
+          return `<div class='round-row'>Раунд ${i + 1}: <strong>${r.time}</strong> → ${TOURNAMENT.teams[r.winner].name} (+${points})</div>`;
+        }
       )
       .join('');
 
@@ -673,6 +1135,7 @@ async function initPage() {
   renderTeams(totals.teamStats);
   renderPlayers(totals.playerStats);
   renderModes();
+  renderInfographic(totals.summary);
 }
 
 document.addEventListener('DOMContentLoaded', initPage);

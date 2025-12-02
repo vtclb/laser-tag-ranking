@@ -530,12 +530,38 @@ function buildTournamentStats(playerIndex) {
     registerGameResult([game.teamA, game.teamB], { winnerIds, drawIds, loserIds });
   });
 
-  // ---- Фіналізація ----
-  const teamArray = Object.values(teamStats).sort((a, b) => {
+   // ---- Фінальна агрегація по командах ----
+  const teamArray = Object.values(teamStats);
+
+  // 🔴 РУЧНИЙ ОВЕРРАЙД ПІД КОНКРЕТНИЙ ТУРНІР (Сині/Червоні/Зелені)
+  // Значення взяті з твого перерахунку:
+  // DM:  Сині 10, Червоні 6, Зелені 2
+  // KT:  Сині 4,  Червоні 9, Зелені 1
+  // TDM: Сині 8,  Червоні 7, Зелені 4
+  const overrideModePoints = {
+    blue:  { dm: 10, kt: 4, tdm: 8 },
+    red:   { dm: 6,  kt: 9, tdm: 7 },
+    green: { dm: 2,  kt: 1, tdm: 4 },
+  };
+
+  for (const team of teamArray) {
+    const o = overrideModePoints[team.id];
+    if (!o) continue;
+
+    team.dmRoundsWon = o.dm;
+    team.ktPoints    = o.kt;
+    team.tdmScore    = o.tdm;
+    team.points      = o.dm + o.kt + o.tdm; // Разом очок = DM + KT + TDM
+  }
+
+  // Сортування турнірної таблиці за оновленими очками
+  teamArray.sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    return b.avgMMR - a.avgMMR;
+    if (b.dmRoundsWon !== a.dmRoundsWon) return b.dmRoundsWon - a.dmRoundsWon;
+    if (b.ktPoints !== a.ktPoints) return b.ktPoints - a.ktPoints;
+    return b.tdmScore - a.tdmScore;
   });
+
 
   teamArray.forEach((t, i) => {
     t.place = i + 1;

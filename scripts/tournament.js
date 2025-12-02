@@ -3,10 +3,14 @@
 // Новий монолітний tournament.js з покращеною логікою та UX
 // -------------------------------------------------------------
 
-import { loadPlayers, normalizeLeague } from './api.js';
+import { loadPlayers, normalizeLeague, fetchPlayerGames } from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
 
 const DEFAULT_AVATAR = 'assets/default_avatars/av0.png';
+const MVP_FIELDS = ['MVP', 'Mvp', 'mvp', 'MVP2', 'mvp2', 'MVP 2', 'mvp 2', 'MVP3', 'mvp3', 'MVP 3', 'mvp 3'];
+const TEAM_FIELDS = ['Team1', 'Team 1', 'team1', 'team 1', 'Team2', 'Team 2', 'team2', 'team 2'];
+const seasonStatsCache = new Map();
+let lastPlayerStats = [];
 
 // ---------- Нікнейми → API ----------
 const PLAYER_MAP = {
@@ -174,6 +178,154 @@ function resultIcon(code) {
   return '🔴';
 }
 
+function rankClass(rank) {
+  const letter = String(rank || '').trim();
+  return `rank-chip rank-xs rank-${letter.toLowerCase()}`;
+}
+
+function buildPlayerIdentity(player) {
+  const nick = player.displayNick;
+  const apiNick = player.apiNick;
+  const teamClass = player.teamId ? `team--${player.teamId}` : '';
+  const rankBadge = `<span class="${rankClass(player.rank)} ${teamClass}" ${player.teamColor ? `style="--team-color:${player.teamColor}"` : ''}>${player.rank || '—'}</span>`;
+  const avatar = player.avatar || DEFAULT_AVATAR;
+
+  return `
+    <div class="player-identity">
+      <div class="player-avatar">
+        <img src="${avatar}" alt="${nick}" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='${DEFAULT_AVATAR}'" />
+      </div>
+      <div class="player-name-block">
+        <div class="player-name-row">${nick} ${rankBadge}</div>
+        <div class="player-meta">@${apiNick}</div>
+      </div>
+    </div>
+  `;
+}
+
+function containsNick(value, targetNick) {
+  if (!value) return false;
+  return String(value)
+    .split(/[;,]/)
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean)
+    .some((name) => name === targetNick.toLowerCase());
+}
+
+function detectTeamSide(game, targetNick) {
+  let isTeam1 = false;
+  let isTeam2 = false;
+
+  TEAM_FIELDS.forEach((field, idx) => {
+    const val = game[field];
+    if (!val) return;
+    if (idx < 4) {
+      isTeam1 = isTeam1 || containsNick(val, targetNick);
+    } else {
+      isTeam2 = isTeam2 || containsNick(val, targetNick);
+    }
+  });
+
+  if (isTeam1) return 'team1';
+  if (isTeam2) return 'team2';
+  return null;
+}
+
+function deriveSeasonKey(game) {
+  const seasonField = game.Season || game.season || game.seasonId || game.SeasonId || game.season_id;
+  if (seasonField) return String(seasonField);
+
+  const ts = new Date(game.Timestamp || game.Date || game.date || game.time).getTime();
+  if (Number.isFinite(ts)) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  return 'current';
+}
+
+function aggregateSeasonStats(games, targetNick) {
+  const map = new Map();
+
+  games.forEach((game) => {
+    const side = detectTeamSide(game, targetNick);
+    if (!side) return;
+
+    const key = deriveSeasonKey(game);
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        games: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        mvps: 0,
+        mmrSamples: [],
+        lastTs: 0
+      });
+    }
+
+    const rec = map.get(key);
+    rec.games += 1;
+
+    const winner = String(game.Winner || game.winner || '').toLowerCase();
+    const drawValues = ['draw', 'tie', 'ничья', 'нічию'];
+
+    if (!winner || drawValues.includes(winner)) {
+      rec.draws += 1;
+    } else if (['team1', 'team 1', '1'].includes(winner)) {
+      if (side === 'team1') rec.wins += 1; else rec.losses += 1;
+    } else if (['team2', 'team 2', '2'].includes(winner)) {
+      if (side === 'team2') rec.wins += 1; else rec.losses += 1;
+    }
+
+    const ts = new Date(game.Timestamp || game.Date || game.date || game.time).getTime();
+    if (Number.isFinite(ts) && ts > rec.lastTs) rec.lastTs = ts;
+
+    const isMvp = MVP_FIELDS.some((field) => containsNick(game[field], targetNick));
+    if (isMvp) rec.mvps += 1;
+
+    const mmrField = ['PointsDelta', 'points_delta', 'MMRΔ', 'mmr_delta', 'MMR', 'mmr', 'MMRDelta', 'rating_change']
+      .map((f) => Number(game[f]))
+      .find((val) => Number.isFinite(val));
+
+    if (Number.isFinite(mmrField)) rec.mmrSamples.push(mmrField);
+  });
+
+  return Array.from(map.values()).map((rec) => ({
+    ...rec,
+    avgMmrChange: rec.mmrSamples.length
+      ? Math.round((rec.mmrSamples.reduce((a, b) => a + b, 0) / rec.mmrSamples.length) * 10) / 10
+      : null
+  }));
+}
+
+function pickSeasonSnapshots(games, nick) {
+  const aggregated = aggregateSeasonStats(games, nick);
+  aggregated.sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
+  return {
+    current: aggregated[0] || null,
+    previous: aggregated[1] || null
+  };
+}
+
+async function loadSeasonSnapshots(apiNick, league) {
+  const cacheKey = `${league}:${apiNick}`;
+  if (seasonStatsCache.has(cacheKey)) return seasonStatsCache.get(cacheKey);
+
+  try {
+    const games = await fetchPlayerGames(apiNick, league);
+    const snapshots = pickSeasonSnapshots(games, apiNick);
+    seasonStatsCache.set(cacheKey, snapshots);
+    return snapshots;
+  } catch (err) {
+    console.error('[tournament] season stats error', err);
+    const empty = { current: null, previous: null };
+    seasonStatsCache.set(cacheKey, empty);
+    return empty;
+  }
+}
+
 // ---------- Допоміжні структури ----------
 function initTeamStats(playerIndex) {
   const stats = {};
@@ -218,6 +370,7 @@ function initPlayerStats(playerIndex) {
         ...base,
         teamId,
         teamName: team.name,
+        teamColor: team.color || '',
         games: 0,
         wins: 0,
         losses: 0,
@@ -580,36 +733,153 @@ function renderPlayers(playerStats) {
 
   tbody.innerHTML = '';
 
+  lastPlayerStats = [...playerStats];
+
   playerStats.forEach((p) => {
     const teamLabel = TOURNAMENT.teams[p.teamId]?.name || p.teamName || '';
+    const nickCell = buildPlayerIdentity(p);
+    const mmrDelta = p.mmrDelta === 0 ? '—' : p.mmrDelta > 0 ? `+${p.mmrDelta}` : String(p.mmrDelta);
+    const row = document.createElement('tr');
+    row.classList.add('player-row', `team-${p.teamId}-row`);
+    row.dataset.nick = p.displayNick;
+    row.dataset.apiNick = p.apiNick;
 
-    const nickCell = `
-      <div>
-        <span>${p.displayNick}</span>
-        <span class='badge status' style='margin-left:6px;'>${p.rank}</span>
-      </div>
-      <div class='muted' style='font-size:11px;'>@${p.apiNick}</div>
+    row.innerHTML = `
+      <td>${nickCell}</td>
+      <td>${teamLabel}</td>
+      <td>${p.games}</td>
+      <td>${p.wins}</td>
+      <td>${p.losses}</td>
+      <td>${p.draws}</td>
+      <td>${p.mvps}</td>
+      <td>${p.secondPlaces}</td>
+      <td>${p.thirdPlaces}</td>
+      <td>${p.impact}</td>
+      <td>${mmrDelta}</td>
     `;
 
-    const mmrDelta = p.mmrDelta === 0 ? '—' : (p.mmrDelta > 0 ? `+${p.mmrDelta}` : String(p.mmrDelta));
-
-    tbody.insertAdjacentHTML(
-      'beforeend',
-      `<tr>
-         <td>${nickCell}</td>
-         <td>${teamLabel}</td>
-         <td>${p.games}</td>
-         <td>${p.wins}</td>
-         <td>${p.losses}</td>
-         <td>${p.draws}</td>
-         <td>${p.mvps}</td>
-         <td>${p.secondPlaces}</td>
-         <td>${p.thirdPlaces}</td>
-         <td>${p.impact}</td>
-         <td>${mmrDelta}</td>
-       </tr>`
-    );
+    row.addEventListener('click', () => openPlayerModal(p));
+    tbody.appendChild(row);
   });
+}
+
+function statItem(label, value) {
+  return `
+    <div class="stat-item">
+      <span class="label">${label}</span>
+      <span class="value">${value}</span>
+    </div>
+  `;
+}
+
+function renderSeasonSection(title, stats) {
+  if (!stats) {
+    return `<div class="empty-note">Дані відсутні</div>`;
+  }
+
+  const mmr = stats.avgMmrChange === null || Number.isNaN(stats.avgMmrChange)
+    ? '—'
+    : `${stats.avgMmrChange > 0 ? '+' : ''}${stats.avgMmrChange}`;
+
+  return `
+    <div>
+      <h4 style="margin:0 0 8px;">${title}</h4>
+      <div class="stat-list">
+        ${statItem('Ігор', stats.games)}
+        ${statItem('W', stats.wins)}
+        ${statItem('L', stats.losses)}
+        ${statItem('D', stats.draws)}
+        ${statItem('MVP', stats.mvps)}
+        ${statItem('MMR Δ (avg)', mmr)}
+      </div>
+    </div>
+  `;
+}
+
+function renderTournamentBlock(p) {
+  const mmrDelta = p.mmrDelta === 0 ? '—' : p.mmrDelta > 0 ? `+${p.mmrDelta}` : String(p.mmrDelta);
+
+  return `
+    <div class="info-card">
+      <h3>Статистика турніру</h3>
+      <div class="stat-list">
+        ${statItem('Ігор', p.games)}
+        ${statItem('W', p.wins)}
+        ${statItem('L', p.losses)}
+        ${statItem('D', p.draws)}
+        ${statItem('MVP', p.mvps)}
+        ${statItem('2 місце (DM)', p.secondPlaces)}
+        ${statItem('3 місце (DM)', p.thirdPlaces)}
+        ${statItem('DM раунди', p.dmRounds)}
+        ${statItem('KT очки', p.ktPoints)}
+        ${statItem('TDM рахунок', p.tdmScore)}
+        ${statItem('Impact', p.impact)}
+        ${statItem('MMR Δ', mmrDelta)}
+      </div>
+    </div>
+  `;
+}
+
+function ensurePlayerModal() {
+  const modal = document.getElementById('player-modal');
+  const content = document.getElementById('player-modal-content');
+  const closeBtn = modal?.querySelector('.player-modal__close');
+  return { modal, content, closeBtn };
+}
+
+async function openPlayerModal(player) {
+  const { modal, content, closeBtn } = ensurePlayerModal();
+  if (!modal || !content) return;
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  content.innerHTML = '<p class="muted">Завантаження…</p>';
+
+  const seasonSnapshots = await loadSeasonSnapshots(player.apiNick, player.league);
+
+  const header = `
+    <div class="player-modal__header">
+      <div class="player-modal__avatar"><img src="${player.avatar || DEFAULT_AVATAR}" alt="${player.displayNick}" loading="lazy" onerror="this.src='${DEFAULT_AVATAR}'"></div>
+      <div class="player-modal__title">
+        <div class="player-name-row" style="font-size:1.1rem;">${player.displayNick} <span class="${rankClass(player.rank)}">${player.rank}</span></div>
+        <div class="modal-sub">@${player.apiNick} · ${player.teamName}</div>
+      </div>
+      <span class="tag">MMR: ${player.points}</span>
+    </div>
+  `;
+
+  const tournamentBlock = renderTournamentBlock(player);
+  const seasonBlocks = `
+    <div class="info-card">
+      <h3>Сезонна статистика</h3>
+      <div class="player-modal__grid">
+        ${renderSeasonSection('Цей сезон', seasonSnapshots.current)}
+        ${renderSeasonSection('Попередній сезон', seasonSnapshots.previous)}
+      </div>
+    </div>
+  `;
+
+  content.innerHTML = `${header}<div class="player-modal__grid">${tournamentBlock}${seasonBlocks}</div>`;
+
+  const onBackdrop = (e) => {
+    if (e.target === modal) hide();
+  };
+
+  const onKey = (e) => {
+    if (e.key === 'Escape') hide();
+  };
+
+  const hide = () => {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.removeEventListener('click', onBackdrop);
+    document.removeEventListener('keydown', onKey);
+    if (closeBtn) closeBtn.removeEventListener('click', hide);
+  };
+
+  modal.addEventListener('click', onBackdrop);
+  document.addEventListener('keydown', onKey);
+  if (closeBtn) closeBtn.addEventListener('click', hide);
 }
 
 // ---------- Матчі (DM / KT / TDM cards) ----------

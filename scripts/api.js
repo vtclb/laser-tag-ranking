@@ -161,6 +161,37 @@ const buildJsonUrl = (baseUrl) => {
 if (GAS_PROXY_URL) {
   gasProxyJsonUrl = buildJsonUrl(GAS_PROXY_URL);
 }
+// =======================================
+//           LEAGUE RESOLVER
+// =======================================
+async function resolveEffectiveLeague(requested) {
+  const preferred = normalizeLeague(requested);
+
+  const tryLoadCsv = async (lg) => {
+    try {
+      const csvUrl = getLeagueFeedUrl(lg);
+      const text = await fetchCsv(csvUrl, 0);
+      if (Array.isArray(text) && text.length > 0) return lg;
+    } catch {}
+    return null;
+  };
+
+  // 1) пробуємо ту, яку просили
+  const direct = await tryLoadCsv(preferred);
+  if (direct) return direct;
+
+  // 2) пробуємо sundaygames (бо там твоя основна ліга)
+  const sunday = await tryLoadCsv("sundaygames");
+  if (sunday) return "sundaygames";
+
+  // 3) пробуємо kids
+  const kids = await tryLoadCsv("kids");
+  if (kids) return "kids";
+
+  // 4) крайній fallback
+  return preferred;
+}
+
 
 // ==================== PROXY (Cloudflare Worker) ====================
 // Можеш переозначити в index.html ПЕРЕД підключенням api.js:

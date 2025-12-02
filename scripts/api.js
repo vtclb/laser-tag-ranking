@@ -668,8 +668,19 @@ export function parsePlayersFromCsv(csvText) {
 }
 
 export async function loadPlayers(league) {
-  const csvText = await fetchLeagueCsv(league);
-  return parsePlayersFromCsv(csvText);
+  const effectiveLeague = await resolveEffectiveLeague(league);
+  const csvText = await fetchLeagueCsv(effectiveLeague);
+  const players = parsePlayersFromCsv(csvText);
+
+  if (!players.length) {
+    console.warn('[loadPlayers] CSV пустий! Ставимо fallback.');
+    return [
+      { nick: "System", pts: 0, rank: "D", games: 0, avatar: "" }
+    ];
+  }
+
+  return players;
+
 }
 export async function fetchPlayerData(league) { return loadPlayers(league); }
 

@@ -161,38 +161,6 @@ const buildJsonUrl = (baseUrl) => {
 if (GAS_PROXY_URL) {
   gasProxyJsonUrl = buildJsonUrl(GAS_PROXY_URL);
 }
-// =======================================
-//           LEAGUE RESOLVER
-// =======================================
-async function resolveEffectiveLeague(requested) {
-  const preferred = normalizeLeague(requested);
-
-  const tryLoadCsv = async (lg) => {
-    try {
-      const csvUrl = getLeagueFeedUrl(lg);
-      const text = await fetchCsv(csvUrl, 0);
-      if (Array.isArray(text) && text.length > 0) return lg;
-    } catch {}
-    return null;
-  };
-
-  // 1) пробуємо ту, яку просили
-  const direct = await tryLoadCsv(preferred);
-  if (direct) return direct;
-
-  // 2) пробуємо sundaygames (бо там твоя основна ліга)
-  const sunday = await tryLoadCsv("sundaygames");
-  if (sunday) return "sundaygames";
-
-  // 3) пробуємо kids
-  const kids = await tryLoadCsv("kids");
-  if (kids) return "kids";
-
-  // 4) крайній fallback
-  return preferred;
-}
-
-
 // ==================== PROXY (Cloudflare Worker) ====================
 // Можеш переозначити в index.html ПЕРЕД підключенням api.js:
 // <script>window.WEB_APP_URL='https://laser-proxy.vartaclub.workers.dev/';</script>
@@ -544,6 +512,40 @@ export function getGamesFeedUrl(league) {
   return url;
 }
 
+// =======================================
+//           LEAGUE RESOLVER
+// =======================================
+async function resolveEffectiveLeague(requested) {
+  const preferred = normalizeLeague(requested);
+
+  const tryLoadCsv = async (lg) => {
+    try {
+      const url = getLeagueFeedUrl(lg);
+      const text = await fetchCsv(url, 0);
+      const rows = parseCsvText(text);
+      if (Array.isArray(rows) && rows.length > 0) return lg;
+    } catch (e) {
+      // silent
+    }
+    return null;
+  };
+
+  // 1) пробуємо те, що попросили (з урахуванням normalizeLeague)
+  const direct = await tryLoadCsv(preferred);
+  if (direct) return direct;
+
+  // 2) fallback на sundaygames (там основна старша ліга)
+  const sunday = await tryLoadCsv('sundaygames');
+  if (sunday) return 'sundaygames';
+
+  // 3) fallback на kids
+  const kids = await tryLoadCsv('kids');
+  if (kids) return 'kids';
+
+  // 4) крайній варіант — повертаємо preferred, навіть якщо там 0 рядків
+  return preferred;
+}
+
 // ==================== CSV PARSER ====================
 function parseCsvText(text) {
   if (typeof text !== 'string') return [];
@@ -672,15 +674,11 @@ export async function loadPlayers(league) {
   const csvText = await fetchLeagueCsv(effectiveLeague);
   const players = parsePlayersFromCsv(csvText);
 
-  if (!players.length) {
-    console.warn('[loadPlayers] CSV пустий! Ставимо fallback.');
-    return [
-      { nick: "System", pts: 0, rank: "D", games: 0, avatar: "" }
-    ];
+  if (!Array.isArray(players) || !players.length) {
+    console.warn('[loadPlayers] empty players list for league:', effectiveLeague);
   }
 
   return players;
-
 }
 export async function fetchPlayerData(league) { return loadPlayers(league); }
 

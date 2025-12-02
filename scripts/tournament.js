@@ -2,7 +2,13 @@
 // VARTA · Tournament view (один турнір, статичні дані + підрахунок)
 // -------------------------------------------------------------
 
-import { loadPlayers, normalizeLeague } from './api.js';
+import {
+  loadPlayers,
+  normalizeLeague,
+  avatarNickKey,
+  fetchAvatarsMap,
+  avatarSrcFromRecord
+} from './api.js';
 import { rankLetterForPoints } from './rankUtils.js';
 
 // Вмикай, якщо треба дебажити
@@ -218,6 +224,39 @@ function buildPlayerIndex(players) {
   return index;
 }
 
+async function enrichPlayersWithAvatars(players) {
+  try {
+    const mapResult = await fetchAvatarsMap();
+    const mapping = (mapResult && mapResult.mapping) || {};
+    const out = [];
+
+    for (const p of players) {
+      const nick = p.nick || p.Nickname || p.nickname;
+      if (!nick) {
+        out.push(p);
+        continue;
+      }
+
+      const key = avatarNickKey(nick);
+      const mappedValue = mapping[key];
+      const mappedUrl = typeof mappedValue === 'string'
+        ? mappedValue
+        : avatarSrcFromRecord(mappedValue);
+
+      if (mappedUrl && typeof mappedUrl === 'string') {
+        out.push({ ...p, avatar: mappedUrl });
+      } else {
+        out.push(p);
+      }
+    }
+
+    return out;
+  } catch (err) {
+    console.warn('[tournament] enrichPlayersWithAvatars failed', err);
+    return players;
+  }
+}
+
 function getProfile(displayNick, playerIndex) {
   const apiNick = mapNick(displayNick);
   const key = String(apiNick || '').toLowerCase();
@@ -339,6 +378,7 @@ function initPlayerStats(playerIndex) {
 // ---------- Підрахунок усіх статистик ----------
 
 function buildTournamentStats(playerIndex) {
+  // NOTE: ручний оверрайд очок для турніру #1 (див. блок нижче). Для інших турнірів цей блок можна буде вимкнути/замінити.
   const teamStats = initTeamStats(playerIndex);
   const playerStats = initPlayerStats(playerIndex);
 
@@ -985,17 +1025,24 @@ function renderModes() {
 
     const summary = `
       <div class="result-line">
-        <span><strong>Зелена:</strong> ${counters.green}</span>
-        <span><strong>Синя:</strong> ${counters.blue}</span>
-        <span><strong>Червона:</strong> ${counters.red}</span>
+        <span class="team-chip team-chip--green"><span class="team-chip__dot"></span><span>Зелена</span></span>
+        <span><strong>${counters.green}</strong> раундів</span>
+      </div>
+      <div class="result-line">
+        <span class="team-chip team-chip--blue"><span class="team-chip__dot"></span><span>Синя</span></span>
+        <span><strong>${counters.blue}</strong> раундів</span>
+      </div>
+      <div class="result-line">
+        <span class="team-chip team-chip--red"><span class="team-chip__dot"></span><span>Червона</span></span>
+        <span><strong>${counters.red}</strong> раундів</span>
       </div>`;
 
     container.insertAdjacentHTML(
       'beforeend',
-      `<article class="bal__card match-card">
+      `<article class="bal__card match-card match-card--mode-dm">
         <h3 class="match-title">DM · Раунд ${idx + 1}</h3>
         <p class="match-meta">Всі три команди одночасно</p>
-        <p>${line}</p>
+        <div class="round-row">${line}</div>
         ${summary}
         <p class="match-meta">MVP: ${game.mvp.join(', ')}</p>
       </article>`
@@ -1030,13 +1077,20 @@ function renderModes() {
 
     container.insertAdjacentHTML(
       'beforeend',
-      `<article class="bal__card match-card">
-        <h3 class="match-title">KT · ${aName} vs ${bName}</h3>
-        ${roundsHtml}
-        <div class="result-line">
-          <strong>${aName}</strong> — ${aPts} очок ·
-          <strong>${bName}</strong> — ${bPts} очок
+      `<article class="bal__card match-card match-card--mode-kt">
+        <div class="match-card__header">
+          <div>
+            <h3 class="match-title">King of the Hill</h3>
+            <p class="match-meta">${aName} vs ${bName}</p>
+          </div>
+          <div class="match-card__mode">KT</div>
         </div>
+        <div class="result-line">
+          <span class="team-chip team-chip--${game.teamA}"><span class="team-chip__dot"></span><span>${aName}</span></span>
+          <strong>${aPts} : ${bPts}</strong>
+          <span class="team-chip team-chip--${game.teamB}"><span class="team-chip__dot"></span><span>${bName}</span></span>
+        </div>
+        ${roundsHtml}
         <p class="match-meta">${winnerLine}</p>
         <p class="match-meta">MVP: ${game.mvp.join(', ')}</p>
       </article>`
@@ -1054,7 +1108,7 @@ function renderModes() {
 
     container.insertAdjacentHTML(
       'beforeend',
-      `<article class="bal__card match-card">
+      `<article class="bal__card match-card match-card--mode-tdm">
         <h3 class="match-title">TDM · ${aName} vs ${bName}</h3>
         <div class="result-line">
           <span class="team-chip team-chip--${game.teamA}">
@@ -1075,8 +1129,9 @@ function renderModes() {
 
 async function initPage() {
   try {
-    const players = await loadPlayers(TOURNAMENT.league);
-    const index = buildPlayerIndex(players);
+    const rawPlayers = await loadPlayers(TOURNAMENT.league);
+    const playersWithAvatars = await enrichPlayersWithAvatars(rawPlayers);
+    const index = buildPlayerIndex(playersWithAvatars);
 
     const totals = buildTournamentStats(index);
 

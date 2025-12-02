@@ -749,3 +749,48 @@ tr[data-rank="grandmaster"] { background: #ff000012; }
   cursor: pointer;
 }
 
+.match-card {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+.match-card .match-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.match-card .match-meta {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.match-card .result-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.match-card .result-line span {
+  font-size: 0.85rem;
+}
+
+.match-card .round-row {
+  font-size: 0.8rem;
+  padding: 2px 0;
+}
+
+@media (max-width: 640px) {
+  .match-card {
+    padding: 10px 10px;
+  }
+  .match-card .result-line {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

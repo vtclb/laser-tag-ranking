@@ -242,26 +242,36 @@ function getProfile(displayNick, playerIndex) {
 }
 
 function buildPlayerIdentity(player) {
-  const nick = player.displayNick;
-  const apiNick = player.apiNick;
-  const teamClass = player.teamId ? `team--${player.teamId}` : '';
-  const rankBadge = `<span class="${rankClass(player.rank)} ${teamClass}" ${player.teamColor ? `style="--team-color:${player.teamColor}"` : ''}>${player.rank || '—'}</span>`;
-  const avatar = player.avatar || DEFAULT_AVATAR;
+  const nick = player.displayNick || player.nick || player.playerNick;
+  const apiNick = player.apiNick || nick;
+  const teamClass = player.teamId ? `team-chip team-chip--${player.teamId}` : 'team-chip';
+  const rank = player.rank || player.rankLetter || '';
+  const rankBadge = rank
+    ? `<span class="${rankClass(rank)}">${rank}</span>`
+    : '';
 
   return `
     <div class="player-identity">
       <div class="player-avatar">
-        <img src="${avatar}" alt="${nick}" loading="lazy"
-             referrerpolicy="no-referrer"
-             onerror="this.src='${DEFAULT_AVATAR}'" />
+        <img class="avatar avatar--sm"
+             data-nick="${escapeHtml(nick)}"
+             alt="${escapeHtml(nick)}"
+             loading="lazy" />
       </div>
       <div class="player-name-block">
-        <div class="player-name-row">${nick} ${rankBadge}</div>
-        <div class="player-meta">@${apiNick}</div>
+        <div class="player-name-row">
+          <span class="player-nick">${escapeHtml(nick)}</span>
+          ${rankBadge}
+        </div>
+        <div class="player-meta">
+          <span class="${teamClass}">${escapeHtml(player.teamName || '')}</span>
+          <span class="player-handle">@${escapeHtml(apiNick)}</span>
+        </div>
       </div>
     </div>
   `;
 }
+
 
 // ---------- Стартові структури ----------
 

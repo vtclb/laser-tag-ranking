@@ -17,6 +17,16 @@ const DEBUG_TOURNAMENT = false;
 // Стандартний аватар
 const DEFAULT_AVATAR = 'assets/default_avatars/av0.png';
 
+function escapeHtml(value) {
+  const str = String(value ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Мапа "як ми пишемо нік" → "API-нік"
 const PLAYER_MAP = {
   'Юра': 'Morti',
@@ -77,8 +87,8 @@ const TEAM_BY_CODE = {
 const TOURNAMENT = {
   league: 'olds',
   meta: {
-    title: 'Турнір VARTA — Архів #01',
-    date: '15 грудня 2024',
+    title: 'Турнір VARTA — Сезон Осінь',
+    date: 'Старша ліга · жовтень 2024',
     format: '3×4 · DM · KT · TDM',
     map: 'Pixel-arena · Neon Raid',
     modes: ['DM', 'KT', 'TDM']
@@ -736,7 +746,7 @@ function renderHero(totals) {
       .map((p, i) => {
         const place = i + 1;
         const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉';
-        return `<li>${medal} ${p.displayNick} <span class='muted'>(ранг ${p.rank})</span></li>`;
+        return `<li>${medal} ${p.displayNick} <span class='muted'>(ранг ${p.rank} · Impact ${p.impact} · MVP ${p.mvps})</span></li>`;
       })
       .join('');
 
@@ -860,17 +870,73 @@ function renderTeams(teamStats) {
         <span>${t.name}</span>
       </span>`;
 
+    const total = t.dmRoundsWon + t.ktPoints + t.tdmScore;
+    const wdl = `${t.wins} / ${t.draws} / ${t.losses}`;
+
     tbody.insertAdjacentHTML(
       'beforeend',
-      `<tr>
+      `<tr class="team-${t.id}-row">
         <td>${nameCell}</td>
-        <td>${t.wins}</td>
-        <td>${t.losses}</td>
-        <td>${t.draws}</td>
-        <td>${t.points}</td>
+        <td>${wdl}</td>
+        <td>${t.dmRoundsWon}</td>
+        <td>${t.ktPoints}</td>
+        <td>${t.tdmScore}</td>
+        <td><strong>${total}</strong></td>
         <td>${Math.round(t.avgMMR)}</td>
         <td>${t.place}</td>
       </tr>`
+    );
+  });
+}
+
+function buildPlayerStatsMap(playerStats) {
+  const map = new Map();
+  playerStats.forEach((p) => map.set(p.displayNick, p));
+  return map;
+}
+
+function renderTeamCards(teamStats, playerStatsMap, playerIndex) {
+  const grid = document.getElementById('teams-cards-grid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+
+  teamStats.forEach((team) => {
+    const teamPlayers = TOURNAMENT.teams[team.id]?.players || [];
+    const rows = teamPlayers
+      .map((nick) => {
+        const stats = playerStatsMap.get(nick) || getProfile(nick, playerIndex);
+        const winRate = stats.games > 0 ? `${Math.round((stats.wins / stats.games) * 100)}%` : '—';
+        return `
+          <tr>
+            <td>${buildPlayerIdentity({ ...stats, displayNick: nick, teamId: team.id, teamName: team.name })}</td>
+            <td>${stats.points ?? '—'}</td>
+            <td>${stats.rank ?? '—'}</td>
+            <td>${stats.games ?? 0}</td>
+            <td>${winRate}</td>
+            <td>${stats.mvps ?? 0}</td>
+            <td>${stats.impact ?? 0}</td>
+          </tr>`;
+      })
+      .join('');
+
+    const total = team.dmRoundsWon + team.ktPoints + team.tdmScore;
+
+    grid.insertAdjacentHTML(
+      'beforeend',
+      `<article class="team-card team-${team.id}-row">
+        <div class="team-card__header">
+          <span class="team-chip team-chip--${team.id}"><span class="team-chip__dot"></span><span>${team.name}</span></span>
+          <div class="team-card__score">${total} очок</div>
+        </div>
+        <div class="team-card__meta">DM ${team.dmRoundsWon} · KT ${team.ktPoints} · TDM ${team.tdmScore} · Avg MMR ${Math.round(team.avgMMR)}</div>
+        <div class="team-card__players">
+          <table>
+            <thead><tr><th>Гравець</th><th>Points</th><th>Ранг</th><th>Ігор</th><th>Win%</th><th>MVP</th><th>Impact</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </article>`
     );
   });
 }
@@ -1135,8 +1201,11 @@ async function initPage() {
 
     const totals = buildTournamentStats(index);
 
+    const playerStatsMap = buildPlayerStatsMap(totals.playerStats);
+
     renderHero(totals);
     renderTeams(totals.teamStats);
+    renderTeamCards(totals.teamStats, playerStatsMap, index);
     renderPlayers(totals.playerStats);
     renderModes();
     renderInfographic(totals.summary);

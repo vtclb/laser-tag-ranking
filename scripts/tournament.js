@@ -18,6 +18,51 @@ const DEBUG_TOURNAMENT = false;
 // Стандартний аватар
 const DEFAULT_AVATAR = 'assets/default_avatars/av0.png';
 
+
+const PLAYER_TOURNAMENT_DETAILS = {
+  Morti: {
+    id: 3,
+    totalScore: 260,
+    eff: 1.61,
+    frags: 87,
+    deacts: 54,
+    shots: 211,
+    hits: 177,
+    accuracy: 84
+  },
+  Leres: {
+    id: 4,
+    totalScore: 233,
+    eff: 1.47,
+    frags: 75,
+    deacts: 51,
+    shots: 1532,
+    hits: 162,
+    accuracy: 11
+  },
+  Temostar: {
+    id: 17,
+    totalScore: 212,
+    eff: 1.76,
+    frags: 72,
+    deacts: 41,
+    shots: 1663,
+    hits: 144,
+    accuracy: 9
+  },
+  Laston: {
+    id: 14,
+    totalScore: 203,
+    eff: 1.25,
+    frags: 69,
+    deacts: 55,
+    shots: 634,
+    hits: 136,
+    accuracy: 21
+  }
+};
+
+
 function escapeHtml(value) {
   const str = String(value ?? '');
   return str
@@ -276,6 +321,7 @@ function getProfile(displayNick, playerIndex) {
   const pts = Number(base?.pts ?? base?.points ?? base?.mmr ?? base?.rating ?? 0);
   const rank = base?.rank || rankLetterForPoints(pts);
   const avatar = pickAvatarFromPlayerObj(base) || DEFAULT_AVATAR;
+  const seasonGames = Number(base?.games ?? base?.Games ?? base?.gameCount ?? base?.count ?? 0) || null;
 
   if (DEBUG_TOURNAMENT && !base) {
     console.warn('[tournament] no base player found for', apiNick);
@@ -287,11 +333,17 @@ function getProfile(displayNick, playerIndex) {
     points: pts,
     rank,
     avatar,
+    seasonGames,
     league: normalizeLeague(TOURNAMENT.league)
   };
 }
 
+
+function buildPlayerIdentity(player, options = {}) {
+  const { showTeamChip = true } = options;
+
 function buildPlayerIdentity(player) {
+
   const nickShown = player.displayNick || player.nick || player.playerNick;
   const apiNick = player.apiNick || player.nick || player.playerNick;
   const teamClass = player.teamId ? `team-chip team-chip--${player.teamId}` : 'team-chip';
@@ -314,7 +366,7 @@ function buildPlayerIdentity(player) {
           ${rankBadge}
         </div>
         <div class="player-meta">
-          <span class="${teamClass}">${escapeHtml(player.teamName || '')}</span>
+          ${showTeamChip && player.teamName ? `<span class="${teamClass}">${escapeHtml(player.teamName)}</span>` : ''}
           <span class="player-handle">@${escapeHtml(apiNick)}</span>
         </div>
       </div>
@@ -728,16 +780,24 @@ function renderHero(totals) {
   if (totals.topMvp) {
     cards.push({
       label: 'MVP турніру',
-      value: `${totals.topMvp.displayNick} (${totals.topMvp.mvps})`
+      value: `${totals.topMvp.displayNick} (${totals.topMvp.mvps})`,
+      detail: PLAYER_TOURNAMENT_DETAILS[mapNick(totals.topMvp.apiNick)]
     });
   }
 
   cards.forEach((card) => {
+    const detail = card.detail
+      ? `<p class="stat-subline">Бали: ${card.detail.totalScore} · Еф: ${card.detail.eff}</p>
+         <p class="stat-subline">Фраги/деактив: ${card.detail.frags} / ${card.detail.deacts}</p>
+         <p class="stat-subline">Постріли/влучення: ${card.detail.shots} / ${card.detail.hits} · Точність: ${card.detail.accuracy}%</p>`
+      : '';
+
     statsEl.insertAdjacentHTML(
       'beforeend',
       `<div class="stat-card">
         <p class="stat-label">${card.label}</p>
         <p class="stat-value">${card.value}</p>
+        ${detail}
       </div>`
     );
   });
@@ -747,15 +807,35 @@ function renderHero(totals) {
       .map((p, i) => {
         const place = i + 1;
         const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉';
+
+        const detail = PLAYER_TOURNAMENT_DETAILS[mapNick(p.apiNick)] || null;
+        const detailLines = detail
+          ? `<div class="podium-lines">
+              <div class="podium-line">${p.displayNick} (ID ${detail.id})</div>
+              <div class="podium-line">Бали: ${detail.totalScore} · Еф: ${detail.eff}</div>
+              <div class="podium-line">Фраги/деактив: ${detail.frags} / ${detail.deacts}</div>
+              <div class="podium-line">Постріли/влучення: ${detail.shots} / ${detail.hits}</div>
+              <div class="podium-line">Точність: ${detail.accuracy}%</div>
+            </div>`
+          : '';
+
+        return `<li>
+          <div class="podium-row">
+            <div class="podium-main">${medal} ${p.displayNick} <span class='muted'>(ранг ${p.rank} · Impact ${p.impact} · MVP ${p.mvps})</span></div>
+            ${detailLines}
+          </div>
+        </li>`;
+
         return `<li>${medal} ${p.displayNick} <span class='muted'>(ранг ${p.rank} · Impact ${p.impact} · MVP ${p.mvps})</span></li>`;
+
       })
       .join('');
 
     statsEl.insertAdjacentHTML(
       'beforeend',
-      `<div class="stat-card">
+      `<div class="stat-card stat-card--podium">
         <p class="stat-label">Топ-3 гравців турніру</p>
-        <ul style="margin:4px 0 0;padding-left:18px;">${podium}</ul>
+        <ul class="podium-list">${podium}</ul>
       </div>`
     );
   }
@@ -910,7 +990,11 @@ function renderTeamCards(teamStats, playerStatsMap, playerIndex) {
         const winRate = stats.games > 0 ? `${Math.round((stats.wins / stats.games) * 100)}%` : '—';
         return `
           <tr>
+
+            <td>${buildPlayerIdentity({ ...stats, displayNick: nick, teamId: team.id, teamName: team.name }, { showTeamChip: false })}</td>
+
             <td>${buildPlayerIdentity({ ...stats, displayNick: nick, teamId: team.id, teamName: team.name })}</td>
+
             <td>${stats.points ?? '—'}</td>
             <td>${stats.rank ?? '—'}</td>
             <td>${stats.games ?? 0}</td>
@@ -975,6 +1059,22 @@ function renderTournamentBlock(p) {
     </div>`;
 }
 
+function renderSeasonBlock(p) {
+  if (!p.points && !p.rank && !p.seasonGames) return '';
+
+  const seasonGames = Number.isFinite(p.seasonGames) ? p.seasonGames : '—';
+
+  return `
+    <div class="info-card">
+      <h3>Сезонна статистика</h3>
+      <div class="stat-list">
+        ${statItem('Ранг', p.rank || '—')}
+        ${statItem('Сезонні очки', p.points ?? '—')}
+        ${statItem('Ігор у сезоні', seasonGames)}
+      </div>
+    </div>`;
+}
+
 function ensurePlayerModal() {
   const modal = document.getElementById('player-modal');
   const content = document.getElementById('player-modal-content');
@@ -1004,11 +1104,12 @@ async function openPlayerModal(player) {
         <div class="modal-sub">@${player.apiNick} · ${player.teamName}</div>
       </div>
       <span class="tag">MMR: ${player.points}</span>
-    </div>`;
+  </div>`;
 
   const tournamentBlock = renderTournamentBlock(player);
+  const seasonBlock = renderSeasonBlock(player);
 
-  content.innerHTML = `${header}<div class="player-modal__grid">${tournamentBlock}</div>`;
+  content.innerHTML = `${header}<div class="player-modal__grid">${seasonBlock}${tournamentBlock}</div>`;
 
   const onBackdrop = (e) => {
     if (e.target === modal) hide();
@@ -1081,42 +1182,56 @@ function renderModes() {
 
   container.innerHTML = '';
 
+  container.insertAdjacentHTML('beforeend', '<h2 class="section-title mode-divider">Deathmatch</h2>');
+
   // DM
   TOURNAMENT.modes.dm.forEach((game, idx) => {
     const counters = { green: 0, blue: 0, red: 0 };
+    const participants = new Set();
     game.results.forEach((code) => {
       if (code === '=') return;
       const teamId = TEAM_BY_CODE[code];
-      if (teamId) counters[teamId] += 1;
+      if (teamId) {
+        counters[teamId] += 1;
+        participants.add(teamId);
+      }
     });
 
-    const line = game.results.map(resultIcon).join(' ');
+    if (participants.size === 0) {
+      if (game.teamA) participants.add(game.teamA);
+      if (game.teamB) participants.add(game.teamB);
+    }
 
-    const summary = `
-      <div class="result-line">
-        <span class="team-chip team-chip--green"><span class="team-chip__dot"></span><span>Зелена</span></span>
-        <span><strong>${counters.green}</strong> раундів</span>
-      </div>
-      <div class="result-line">
-        <span class="team-chip team-chip--blue"><span class="team-chip__dot"></span><span>Синя</span></span>
-        <span><strong>${counters.blue}</strong> раундів</span>
-      </div>
-      <div class="result-line">
-        <span class="team-chip team-chip--red"><span class="team-chip__dot"></span><span>Червона</span></span>
-        <span><strong>${counters.red}</strong> раундів</span>
-      </div>`;
+    const line = game.results.map(resultIcon).join(' ');
+    const summary = Array.from(participants)
+      .map((teamId) => {
+        const teamName = TOURNAMENT.teams[teamId]?.name || '';
+        return `
+        <div class="result-line">
+          <span class="team-chip team-chip--${teamId}"><span class="team-chip__dot"></span><span>${teamName}</span></span>
+          <span><strong>${counters[teamId] || 0}</strong> раундів</span>
+        </div>`;
+      })
+      .join('');
+
+    const participantNames = Array.from(participants)
+      .map((id) => TOURNAMENT.teams[id]?.name)
+      .filter(Boolean)
+      .join(' vs ');
 
     container.insertAdjacentHTML(
       'beforeend',
       `<article class="bal__card match-card match-card--mode-dm">
         <h3 class="match-title">DM · Раунд ${idx + 1}</h3>
-        <p class="match-meta">Всі три команди одночасно</p>
+        <p class="match-meta">${participantNames || 'Всі три команди'}</p>
         <div class="round-row">${line}</div>
         ${summary}
         <p class="match-meta">MVP: ${game.mvp.join(', ')}</p>
       </article>`
     );
   });
+
+  container.insertAdjacentHTML('beforeend', '<h2 class="section-title mode-divider">King of the Hill</h2>');
 
   // KT
   TOURNAMENT.modes.kt.forEach((game) => {
@@ -1165,6 +1280,8 @@ function renderModes() {
       </article>`
     );
   });
+
+  container.insertAdjacentHTML('beforeend', '<h2 class="section-title mode-divider">Team Deathmatch</h2>');
 
   // TDM
   TOURNAMENT.modes.tdm.forEach((game) => {

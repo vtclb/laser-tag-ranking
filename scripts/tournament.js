@@ -18,6 +18,7 @@ const DEBUG_TOURNAMENT = false;
 // Стандартний аватар
 const DEFAULT_AVATAR = 'assets/default_avatars/av0.png';
 
+
 const PLAYER_TOURNAMENT_DETAILS = {
   Morti: {
     id: 3,
@@ -60,6 +61,7 @@ const PLAYER_TOURNAMENT_DETAILS = {
     accuracy: 21
   }
 };
+
 
 function escapeHtml(value) {
   const str = String(value ?? '');
@@ -336,8 +338,12 @@ function getProfile(displayNick, playerIndex) {
   };
 }
 
+
 function buildPlayerIdentity(player, options = {}) {
   const { showTeamChip = true } = options;
+
+function buildPlayerIdentity(player) {
+
   const nickShown = player.displayNick || player.nick || player.playerNick;
   const apiNick = player.apiNick || player.nick || player.playerNick;
   const teamClass = player.teamId ? `team-chip team-chip--${player.teamId}` : 'team-chip';
@@ -801,6 +807,7 @@ function renderHero(totals) {
       .map((p, i) => {
         const place = i + 1;
         const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉';
+
         const detail = PLAYER_TOURNAMENT_DETAILS[mapNick(p.apiNick)] || null;
         const detailLines = detail
           ? `<div class="podium-lines">
@@ -818,6 +825,9 @@ function renderHero(totals) {
             ${detailLines}
           </div>
         </li>`;
+
+        return `<li>${medal} ${p.displayNick} <span class='muted'>(ранг ${p.rank} · Impact ${p.impact} · MVP ${p.mvps})</span></li>`;
+
       })
       .join('');
 
@@ -980,7 +990,11 @@ function renderTeamCards(teamStats, playerStatsMap, playerIndex) {
         const winRate = stats.games > 0 ? `${Math.round((stats.wins / stats.games) * 100)}%` : '—';
         return `
           <tr>
+
             <td>${buildPlayerIdentity({ ...stats, displayNick: nick, teamId: team.id, teamName: team.name }, { showTeamChip: false })}</td>
+
+            <td>${buildPlayerIdentity({ ...stats, displayNick: nick, teamId: team.id, teamName: team.name })}</td>
+
             <td>${stats.points ?? '—'}</td>
             <td>${stats.rank ?? '—'}</td>
             <td>${stats.games ?? 0}</td>

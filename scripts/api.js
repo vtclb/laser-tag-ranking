@@ -1071,6 +1071,45 @@ export async function updateAbonement({ nick, league, type }) {
 }
 
 // ==================== TOURNAMENT ACTIONS ====================
+const TOURNAMENT_SHEET_ID = '2PACX-1v5zum1H-NSUeJvQ_xMMWaTs045Ps7SQgGpKcyFwz4NQjsNh8zAjFAh-jttQfVAXGr3eN48R5aoG5pEN';
+const TOURNAMENT_SHEETS = {
+  tournaments: 'tournaments',
+  teams: 'tournament_teams',
+  games: 'tournament_games',
+  players: 'tournament_players'
+};
+
+function buildTournamentSheetUrl(sheetName) {
+  return `https://opensheet.elk.sh/${TOURNAMENT_SHEET_ID}/${encodeURIComponent(sheetName)}`;
+}
+
+async function fetchTournamentSheet(sheetName) {
+  const url = buildTournamentSheetUrl(sheetName);
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    const err = new Error(`Failed to fetch ${sheetName}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+function pickField(obj, ...candidates) {
+  if (!obj || typeof obj !== 'object') return '';
+  const entries = Object.entries(obj);
+  const lowerMap = new Map(entries.map(([k, v]) => [k.toLowerCase(), v]));
+  for (const name of candidates) {
+    const key = String(name || '').toLowerCase();
+    if (obj[name] != null) return obj[name];
+    if (lowerMap.has(key)) return lowerMap.get(key);
+  }
+  return '';
+}
+
+function normalizeTournamentId(value) {
+  return String(value || '').trim();
+}
+
 async function callTournament(action, payload = {}) {
   const req = { mode: 'tournament', action, ...payload };
   if (req.league) req.league = normalizeLeague(req.league);
@@ -1089,8 +1128,23 @@ export async function fetchTournaments({ league, status } = {}) {
   const filters = {};
   if (league) filters.league = normalizeLeague(league);
   if (status) filters.status = String(status).toUpperCase();
-  const resp = await callTournament('listTournaments', filters);
-  return Array.isArray(resp.tournaments) ? resp.tournaments : [];
+
+  try {
+    const rows = await fetchTournamentSheet(TOURNAMENT_SHEETS.tournaments);
+    const normLeague = filters.league || '';
+    const normStatus = filters.status || '';
+    return rows.filter((row) => {
+      const rowLeague = normalizeLeague(pickField(row, 'league'));
+      const rowStatus = String(pickField(row, 'status')).toUpperCase();
+      if (normLeague && rowLeague !== normLeague) return false;
+      if (normStatus && rowStatus !== normStatus) return false;
+      return true;
+    });
+  } catch (err) {
+    log('[tournament]', 'sheet fetch fallback to proxy', err);
+    const resp = await callTournament('listTournaments', filters);
+    return Array.isArray(resp.tournaments) ? resp.tournaments : [];
+  }
 }
 
 export async function createTournament(data) {
@@ -1114,8 +1168,31 @@ export async function saveTournamentGame(data) {
 }
 
 export async function fetchTournamentData(tournamentId) {
-  const resp = await callTournament('getTournamentData', { tournamentId });
-  return resp;
+  const targetId = normalizeTournamentId(tournamentId);
+  if (!targetId) throw new Error('tournamentId required');
+
+  try {
+    const [tournaments, teams, games, players] = await Promise.all([
+      fetchTournamentSheet(TOURNAMENT_SHEETS.tournaments),
+      fetchTournamentSheet(TOURNAMENT_SHEETS.teams),
+      fetchTournamentSheet(TOURNAMENT_SHEETS.games),
+      fetchTournamentSheet(TOURNAMENT_SHEETS.players)
+    ]);
+
+    const filterByTournament = (row) => normalizeTournamentId(pickField(row, 'tournamentId')) === targetId;
+    const tournament = tournaments.find(filterByTournament) || null;
+    return {
+      status: 'OK',
+      tournament,
+      teams: teams.filter(filterByTournament),
+      games: games.filter(filterByTournament),
+      players: players.filter(filterByTournament)
+    };
+  } catch (err) {
+    log('[tournament]', 'sheet fetch failed, fallback to proxy', err);
+    const resp = await callTournament('getTournamentData', { tournamentId });
+    return resp;
+  }
 }
 
 // ===== Optional small helpers (UI aliases) =====

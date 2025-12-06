@@ -780,7 +780,11 @@
       gap: 12px;
     }
 
+
+    .team-card { 
+
     .team-card {
+
       background: #12141a;
       border: 1px solid #2c2f38;
       border-radius: 12px;
@@ -795,6 +799,10 @@
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+
+      flex-wrap: wrap;
+
+
     }
 
     .team-card__score {
@@ -823,6 +831,63 @@
       overflow-x: auto;
     }
 
+
+    /* Турнірні уточнення (ізоляція) */
+    body[data-app-mode="tournament"] #teams-table th,
+    body[data-app-mode="tournament"] #teams-table td,
+    body[data-app-mode="tournament"] #players-table th,
+    body[data-app-mode="tournament"] #players-table td {
+      white-space: nowrap;
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+
+    body[data-app-mode="tournament"] #teams-table {
+      min-width: 640px;
+    }
+
+    body[data-app-mode="tournament"] #players-table {
+      min-width: 760px;
+    }
+
+    body[data-app-mode="tournament"] #teams-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    body[data-app-mode="tournament"] .team-card table {
+      min-width: 520px;
+      font-size: 12px;
+    }
+
+    body[data-app-mode="tournament"] .team-card__meta {
+      line-height: 1.4;
+    }
+
+    body[data-app-mode="tournament"] .team-card__score {
+      font-size: 20px;
+    }
+
+    body[data-app-mode="tournament"] .team-card__players {
+      overflow-x: auto;
+    }
+
+    body[data-app-mode="tournament"] .match-card {
+      gap: 8px;
+    }
+
+    body[data-app-mode="tournament"] .match-card .result-line {
+      row-gap: 6px;
+    }
+
+    @media (max-width: 900px) {
+      body[data-app-mode="tournament"] #teams-cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
     @media (max-width: 720px) {
       #tournament-view {
         padding: 12px;
@@ -848,6 +913,10 @@
       .player-modal__close {
         top: 6px;
         right: 8px;
+      }
+
+      body[data-app-mode="tournament"] #tournament-view {
+        gap: 14px;
       }
     }
   </style>

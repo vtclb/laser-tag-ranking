@@ -9,6 +9,7 @@ import {
   fetchAvatarsMap,
   avatarSrcFromRecord
 } from './api.js';
+import { reloadAvatars } from './avatars.client.js';
 import { rankLetterForPoints } from './rankUtils.js';
 
 // Вмикай, якщо треба дебажити
@@ -291,8 +292,8 @@ function getProfile(displayNick, playerIndex) {
 }
 
 function buildPlayerIdentity(player) {
-  const nick = player.displayNick || player.nick || player.playerNick;
-  const apiNick = player.apiNick || nick;
+  const nickShown = player.displayNick || player.nick || player.playerNick;
+  const apiNick = player.apiNick || player.nick || player.playerNick;
   const teamClass = player.teamId ? `team-chip team-chip--${player.teamId}` : 'team-chip';
   const rank = player.rank || player.rankLetter || '';
   const rankBadge = rank
@@ -303,13 +304,13 @@ function buildPlayerIdentity(player) {
     <div class="player-identity">
       <div class="player-avatar">
         <img class="avatar avatar--sm"
-             data-nick="${escapeHtml(nick)}"
-             alt="${escapeHtml(nick)}"
+             data-nick="${escapeHtml(apiNick)}"
+             alt="${escapeHtml(nickShown)}"
              loading="lazy" />
       </div>
       <div class="player-name-block">
         <div class="player-name-row">
-          <span class="player-nick">${escapeHtml(nick)}</span>
+          <span class="player-nick">${escapeHtml(nickShown)}</span>
           ${rankBadge}
         </div>
         <div class="player-meta">
@@ -992,8 +993,8 @@ async function openPlayerModal(player) {
   const header = `
     <div class="player-modal__header">
       <div class="player-modal__avatar">
-        <img src="${player.avatar || DEFAULT_AVATAR}" alt="${player.displayNick}"
-             loading="lazy" onerror="this.src='${DEFAULT_AVATAR}'">
+        <img class="avatar" data-nick="${escapeHtml(player.apiNick)}" alt="${escapeHtml(player.displayNick)}"
+             loading="lazy">
       </div>
       <div class="player-modal__title">
         <div class="player-name-row" style="font-size:1.1rem;">
@@ -1028,6 +1029,8 @@ async function openPlayerModal(player) {
   modal.addEventListener('click', onBackdrop);
   document.addEventListener('keydown', onKey);
   if (closeBtn) closeBtn.addEventListener('click', hide);
+
+  reloadAvatars(modal).catch((err) => console.warn('[tournament] modal avatars failed', err));
 }
 
 function renderPlayers(playerStats) {
@@ -1209,6 +1212,7 @@ async function initPage() {
     renderPlayers(totals.playerStats);
     renderModes();
     renderInfographic(totals.summary);
+    await reloadAvatars(document);
 
     if (DEBUG_TOURNAMENT) {
       window.tournamentTotals = totals;

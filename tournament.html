@@ -774,6 +774,111 @@
       font-size: 12px;
     }
 
+    #teams-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .team-card { 
+      background: #12141a;
+      border: 1px solid #2c2f38;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .team-card__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .team-card__score {
+      text-align: right;
+      font-weight: 800;
+      color: #fff;
+      font-size: 18px;
+    }
+
+    .team-card__meta {
+      color: #9ea2ae;
+      font-size: 13px;
+    }
+
+    .team-card table {
+      min-width: unset;
+      font-size: 13px;
+    }
+
+    .team-card th,
+    .team-card td {
+      padding: 6px 8px;
+    }
+
+    .team-card__players {
+      overflow-x: auto;
+    }
+
+    /* Турнірні уточнення (ізоляція) */
+    body[data-app-mode="tournament"] #teams-table th,
+    body[data-app-mode="tournament"] #teams-table td,
+    body[data-app-mode="tournament"] #players-table th,
+    body[data-app-mode="tournament"] #players-table td {
+      white-space: nowrap;
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+
+    body[data-app-mode="tournament"] #teams-table {
+      min-width: 640px;
+    }
+
+    body[data-app-mode="tournament"] #players-table {
+      min-width: 760px;
+    }
+
+    body[data-app-mode="tournament"] #teams-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    body[data-app-mode="tournament"] .team-card table {
+      min-width: 520px;
+      font-size: 12px;
+    }
+
+    body[data-app-mode="tournament"] .team-card__meta {
+      line-height: 1.4;
+    }
+
+    body[data-app-mode="tournament"] .team-card__score {
+      font-size: 20px;
+    }
+
+    body[data-app-mode="tournament"] .team-card__players {
+      overflow-x: auto;
+    }
+
+    body[data-app-mode="tournament"] .match-card {
+      gap: 8px;
+    }
+
+    body[data-app-mode="tournament"] .match-card .result-line {
+      row-gap: 6px;
+    }
+
+    @media (max-width: 900px) {
+      body[data-app-mode="tournament"] #teams-cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     @media (max-width: 720px) {
       #tournament-view {
         padding: 12px;
@@ -799,6 +904,10 @@
       .player-modal__close {
         top: 6px;
         right: 8px;
+      }
+
+      body[data-app-mode="tournament"] #tournament-view {
+        gap: 14px;
       }
     }
   </style>
@@ -842,10 +951,11 @@
           <thead>
             <tr>
               <th>Команда</th>
-              <th>W</th>
-              <th>L</th>
-              <th>D</th>
-              <th>Очки</th>
+              <th>W / D / L</th>
+              <th>DM</th>
+              <th>KT</th>
+              <th>TDM</th>
+              <th>Підсумок</th>
               <th>Avg MMR</th>
               <th>Місце</th>
             </tr>
@@ -853,6 +963,11 @@
           <tbody></tbody>
         </table>
       </div>
+    </section>
+
+    <section class="bal__card" id="teams-cards" data-requires-id="true">
+      <h2 class="section-title">Склад та статистика команд</h2>
+      <div id="teams-cards-grid"></div>
     </section>
 
     <!-- Гравці -->

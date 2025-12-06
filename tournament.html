@@ -695,6 +695,64 @@
       margin-top: 10px;
     }
 
+    .player-infocard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .player-infocard {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(52, 152, 219, 0.08), rgba(19, 179, 107, 0.08));
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+    }
+
+    .player-infocard__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .player-infocard__nick {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .player-infocard__team {
+      color: #9ea2ae;
+      font-size: 13px;
+    }
+
+    .player-infocard__stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .infostat {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #c6d4ff;
+      font-size: 13px;
+    }
+
+    .infostat strong {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
     .info-chip {
       background: linear-gradient(
         135deg,

@@ -22,7 +22,7 @@ export function safeSet(storage, key, value) {
 }
 export function safeDel(storage, key) {
   if (!storage) return;
-  try { storage.removeItem(key); } catch (err) { log('[ranking]', err); }
+  try { storage.removeItem(key, key); } catch (err) { log('[ranking]', err); }
 }
 // сесійне сховище (не падати у Safari Private Mode)
 if (!window.__SESS) {
@@ -626,43 +626,27 @@ const LEAGUE_DIRECT_URLS = {
   olds: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv',
   sundaygames: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
 };
+
+// 🔧 ГОЛОВНИЙ ФІКС: ТІЛЬКИ ПРЯМИЙ CSV, БЕЗ GAS_PROXY_BASE ДЛЯ РЕЙТИНГУ
 export async function fetchLeagueCsv(league) {
   const targetLeague = normalizeLeague(league);
+  const base = LEAGUE_DIRECT_URLS[targetLeague] || getLeagueFeedUrl(targetLeague);
 
-  let targetUrl = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=${targetLeague}`;
+  let url = base;
   try {
-    const urlObj = new URL(targetUrl);
-    urlObj.searchParams.set('cb', Date.now());
-    targetUrl = urlObj.toString();
+    const u = new URL(base);
+    u.searchParams.set('cb', Date.now());
+    url = u.toString();
   } catch {
-    const separator = targetUrl.includes('?') ? '&' : '?';
-    targetUrl = `${targetUrl}${separator}cb=${Date.now()}`;
+    const sep = base.includes('?') ? '&' : '?';
+    url = `${base}${sep}cb=${Date.now()}`;
   }
 
-  let response;
-  try {
-    response = await fetch(targetUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch league CSV: HTTP ${response.status}`);
-    }
-    return response.text();
-  } catch (err) {
-    const fallbackBase = LEAGUE_DIRECT_URLS[targetLeague] || getLeagueFeedUrl(targetLeague);
-    let fallbackUrl = fallbackBase;
-    try {
-      const urlObj = new URL(fallbackBase);
-      urlObj.searchParams.set('cb', Date.now());
-      fallbackUrl = urlObj.toString();
-    } catch {
-      const separator = fallbackBase.includes('?') ? '&' : '?';
-      fallbackUrl = `${fallbackBase}${separator}cb=${Date.now()}`;
-    }
-    const res = await fetch(fallbackUrl);
-    if (!res.ok) {
-      throw err;
-    }
-    return res.text();
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch league CSV: HTTP ${res.status}`);
   }
+  return res.text();
 }
 
 export function parsePlayersFromCsv(csvText) {
@@ -867,7 +851,7 @@ export async function fetchAvatarForNick(nick, { force = false } = {}) {
     if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarForNick error', err);
     const record = { url: null, updatedAt: Date.now() };
     storeAvatarRecord(key, record, { legacyKey: originalNick });
-    return record;
+    return.record;
   }
 
   let data = null;

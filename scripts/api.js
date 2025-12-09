@@ -165,7 +165,6 @@ if (GAS_PROXY_URL) {
 }
 
 
- <script>window.WEB_APP_URL='https://laser-proxy.vartaclub.workers.dev/';</script>
 const PROD_PROXY_URL  = 'https://laser-proxy.vartaclub.workers.dev/';
 const LOCAL_PROXY_URL = 'http://localhost:8787/';
 

@@ -7,9 +7,11 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
 const CSV_TTL = 60 * 1000;
 
-window.addEventListener('storage', e => {
-  if (e.key === 'avatarRefresh') reloadAvatars();
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'avatarRefresh') reloadAvatars();
+  });
+}
 export async function loadData(rankingURL, gamesURL) {
   try {
     const [rText, gText] = await Promise.all([
@@ -32,6 +34,21 @@ export async function loadData(rankingURL, gamesURL) {
   }
 }
 
+const TEAM_FIELDS = ["Team1", "Team 1", "team1", "team 1"];
+const TEAM2_FIELDS = ["Team2", "Team 2", "team2", "team 2"];
+const SCORE1_FIELDS = ["Score1", "Score 1", "score1", "score 1"];
+const SCORE2_FIELDS = ["Score2", "Score 2", "score2", "score 2"];
+
+function pickFieldValue(row, fields) {
+  for (const key of fields) {
+    const value = row?.[key];
+    if (value !== undefined && value !== null && String(value).trim()) {
+      return String(value).trim();
+    }
+  }
+  return "";
+}
+
 export function computeStats(rank, games, { alias = {}, league } = {}) {
   const stats = {};
   let totalRounds = 0;
@@ -40,19 +57,28 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
   const filtered = validLeagues.includes(leagueKey)
     ? games.filter((g) => {
         const gameLeague = g.League ? normalizeLeague(g.League) : "";
-        return gameLeague === leagueKey;
+        return !gameLeague || gameLeague === leagueKey;
       })
     : games;
   filtered.forEach((g) => {
+
+    const rawT1 = pickFieldValue(g, TEAM_FIELDS);
+    const rawT2 = pickFieldValue(g, TEAM2_FIELDS);
+
     const rawT1 = (g.Team1 ?? "").trim();
     const rawT2 = (g.Team2 ?? "").trim();
+
     if (!rawT1 || !rawT2) {
       log("[ranking]", "Skipping game without teams", g);
       return;
     }
     const t1 = rawT1.split(",").map((n) => alias[n.trim()] || n.trim());
     const t2 = rawT2.split(",").map((n) => alias[n.trim()] || n.trim());
+
+    const winKey = String(g.Winner || "").replace(/\s+/g, "").toLowerCase();
+
     const winKey = g.Winner;
+
     const winT = winKey === "team1" ? t1 : winKey === "team2" ? t2 : [];
     t1.concat(t2).forEach((n) => {
       stats[n] = stats[n] || { games: 0, wins: 0, mvp: 0 };
@@ -66,8 +92,8 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
     mvpList.forEach((m) => {
       if (stats[m]) stats[m].mvp++;
     });
-    let s1 = parseInt(g.Score1, 10);
-    let s2 = parseInt(g.Score2, 10);
+    let s1 = parseInt(pickFieldValue(g, SCORE1_FIELDS), 10);
+    let s2 = parseInt(pickFieldValue(g, SCORE2_FIELDS), 10);
     if (isNaN(s1) || isNaN(s2)) {
       const mScore = (g.Series || g.series || "").match(/(\d+)\D+(\d+)/);
       if (mScore) {
@@ -519,5 +545,7 @@ async function init() {
   updateArrows();
 }
 
-document.addEventListener("DOMContentLoaded", init);
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", init);
+}
 

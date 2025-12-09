@@ -611,7 +611,23 @@ async function init() {
   updateArrows();
 }
 
+export async function initRanking() {
+  try {
+    await init();
+  } catch (err) {
+    log("[ranking] initRanking error", err);
+  }
+}
+
 if (typeof document !== "undefined") {
-  document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") {
+    // DOM ще будується – чекаємо подію
+    document.addEventListener("DOMContentLoaded", () => {
+      initRanking();
+    });
+  } else {
+    // DOM уже готовий – запускаємо одразу
+    initRanking();
+  }
 }
 

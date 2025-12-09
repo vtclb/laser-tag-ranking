@@ -1,366 +1,87 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uk">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Молодша ліга | Лазертаг</title>
-    <!-- Піксельний шрифт -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
-      rel="stylesheet"
-    />
-    <script
-      type="module"
-      src="scripts/polyfills.js?v=2025-09-19-avatars-3"
-    ></script>
-    <!-- PapaParse для CSV -->
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js?v=2025-09-19-avatars-3"></script>
-    <style>
-      /* Reset & Base */
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        font-family: "Press Start 2P", monospace;
-        background: #111 url("assets/background_marathon.png") no-repeat
-          center/cover;
-        color: #fff;
-        cursor:
-          url("assets/cursor.png") 4 4,
-          auto;
-      }
-      /* Navigation */
-      nav {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.5rem;
-        background: rgba(0, 0, 0, 0.7);
-        padding: 0.5rem;
-      }
-      nav a {
-        color: #f39c12;
-        text-decoration: none;
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        transition:
-          color 0.2s,
-          background 0.2s;
-        border-radius: 3px;
-      }
-      nav a:hover {
-        color: #000;
-        background: #ffd700;
-      }
-      nav a.active {
-        border-bottom: 2px solid #ffd700;
-      }
-      /* Container */
-      .container {
-        max-width: 1200px;
-        margin: 1rem auto;
-        padding: 0 1rem;
-      }
-      .season-info,
-      .summary {
-        text-align: center;
-        margin-bottom: 1rem;
-      }
-      .season-info {
-        color: #f39c12;
-      }
-      .rank-chart {
-        display: flex;
-        height: 1rem;
-        max-width: 400px;
-        margin: 0.5rem auto;
-        border: 1px solid #555;
-        border-radius: 4px;
-        overflow: hidden;
-        font-size: 0.6rem;
-        color: #000;
-      }
-      .rank-chart div {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .seg-S {
-        background: magenta;
-      }
-      .seg-A {
-        background: red;
-      }
-      .seg-B {
-        background: yellow;
-      }
-      .seg-C {
-        background: cyan;
-      }
-      .seg-D {
-        background: lime;
-      }
-      .seg-E {
-        background: green;
-      }
-      .seg-F {
-        background: gray;
-      }
-      .summary {
-        color: #ccc;
-        font-size: 0.9rem;
-      }
-      /* Search */
-      .search-box {
-        text-align: center;
-        margin-bottom: 1rem;
-      }
-      .search-box input {
-        padding: 0.5rem;
-        width: 100%;
-        max-width: 300px;
-        border: 2px solid #555;
-        background: rgba(0, 0, 0, 0.5);
-        color: #fff;
-        border-radius: 4px;
-        font-size: 0.75rem;
-      }
-      /* Top MVP */
-      .top-mvp {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1.5rem;
-      }
-      .mvp-card {
-        background: rgba(243, 156, 18, 0.2);
-        border: 2px solid #f39c12;
-        border-radius: 6px;
-        padding: 1rem;
-        min-width: 140px;
-        text-align: center;
-        animation: pulse 1.5s infinite;
-      }
-      @keyframes pulse {
-        0%,
-        100% {
-          box-shadow: 0 0 8px rgba(243, 156, 18, 0.6);
-        }
-        50% {
-          box-shadow: 0 0 16px rgba(243, 156, 18, 1);
-        }
-      }
-      /* Table */
-      .table-container {
-        overflow-x: auto;
-        margin-bottom: 1rem;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 600px;
-        font-size: 0.75rem;
-      }
-      thead th {
-        position: sticky;
-        top: 0;
-        background: #222;
-        color: #f39c12;
-        padding: 0.75rem;
-        border-bottom: 2px solid #555;
-        z-index: 1;
-      }
-      th,
-      td {
-        padding: 0.5rem;
-        border: 1px solid #444;
-        text-align: center;
-      }
-      tbody tr:nth-child(odd) {
-        background: rgba(255, 255, 255, 0.05);
-      }
-      tbody tr:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-      .avatar-img {
-        width: 40px;
-        height: 40px;
-        object-fit: cover;
-      }
-      /* Pagination */
-      .pagination {
-        display: flex;
-        justify-content: center;
-        gap: 0.5rem;
-        margin: 1rem 0;
-      }
-      .pagination button {
-        padding: 0.75rem 1.5rem;
-        background: #222;
-        color: #f39c12;
-        border: 2px solid #f39c12;
-        border-radius: 4px;
-        font-family: "Press Start 2P", monospace;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        box-shadow: 0 0 8px #f39c12;
-        cursor:
-          url("assets/cursor.png") 4 4,
-          auto;
-        transition: transform 0.2s;
-      }
-      .pagination button:hover {
-        transform: scale(1.05);
-      }
-      .page-info {
-        align-self: center;
-      }
-      /* Rank highlight */
-      .rank-S td {
-        border-left: 4px solid magenta;
-      }
-      .rank-A td {
-        border-left: 4px solid red;
-      }
-      .rank-B td {
-        border-left: 4px solid yellow;
-      }
-      .rank-C td {
-        border-left: 4px solid cyan;
-      }
-      .rank-D td {
-        border-left: 4px solid lime;
-      }
-      .rank-E td {
-        border-left: 4px solid green;
-      }
-      .rank-F td {
-        border-left: 4px solid gray;
-      }
-      /* Nickname color */
-      .nick-S {
-        color: magenta;
-      }
-      .nick-A {
-        color: red;
-      }
-      .nick-B {
-        color: yellow;
-      }
-      .nick-C {
-        color: cyan;
-      }
-      .nick-D {
-        color: lime;
-      }
-      .nick-E {
-        color: green;
-      }
-      .nick-F {
-        color: gray;
-      }
-      .hidden {
-        display: none;
-      }
-      .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-      }
-      .modal.hidden {
-        display: none;
-      }
-      .modal-content {
-        background: #222;
-        padding: 1rem;
-        border-radius: 4px;
-        max-height: 90%;
-        overflow: auto;
-      }
-      #stats-close {
-        float: right;
-        background: #444;
-        border: none;
-        color: #fff;
-        cursor: pointer;
-        padding: 0.25rem 0.5rem;
-      }
-      @media (max-width: 600px) {
-        table {
-          min-width: 480px;
-        }
-        .mvp-card {
-          min-width: 45%;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <nav>
-      <a href="index.html" class="active">Молодша Ліга</a>
-      <a href="sunday.html">Старша Ліга</a>
-      <a href="gameday.html">Ігровий день</a>
-      <a href="rules.html">Правила</a>
-      <a href="about.html">Про клуб</a>
-    </nav>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Молодша Ліга — Рейтинг VARTA</title>
+
+  <link rel="stylesheet" href="styles/reset.css?v=1">
+  <link rel="stylesheet" href="styles/main.css?v=1">
+  <link rel="stylesheet" href="styles/ranking.css?v=1">
+  <link rel="stylesheet" href="styles/avatars.css?v=1">
+
+  <script defer src="scripts/toast.js"></script>
+  <script type="module" defer src="scripts/logger.js"></script>
+  <script type="module" defer src="scripts/config.js"></script>
+  <script type="module" defer src="scripts/api.js"></script>
+  <script type="module" defer src="scripts/avatars.client.js"></script>
+  <script type="module" defer src="scripts/quickStats.js"></script>
+  <script type="module" defer src="scripts/ranking.js"></script>
+
+  <style>
+    .league-title {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .season-block {
+      max-width: 900px;
+      margin: 25px auto;
+      padding: 20px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 14px;
+      backdrop-filter: blur(6px);
+      line-height: 1.55;
+    }
+    .season-block h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body data-league="kids">
+
+  <header class="header">
     <div class="container">
-      <div id="season-info" class="season-info"></div>
-      <div class="summary" id="summary"></div>
-      <div id="rank-chart" class="rank-chart"></div>
-      <div class="search-box">
-        <input type="text" id="search" placeholder="Пошук нікнейму…" />
-      </div>
-      <div class="top-mvp" id="top-mvp"></div>
-      <div class="table-container">
-        <table id="ranking">
-          <thead>
-            <tr>
-              <th data-key="place">Місце <span class="sort-arrow"></span></th>
-              <th>Аватар</th>
-              <th data-key="nickname">Нікнейм <span class="sort-arrow"></span></th>
-              <th data-key="rank">Ранг <span class="sort-arrow"></span></th>
-              <th data-key="points">Бали <span class="sort-arrow"></span></th>
-              <th data-key="games">Ігор <span class="sort-arrow"></span></th>
-              <th data-key="winRate">%Win <span class="sort-arrow"></span></th>
-              <th data-key="mvp">MVP <span class="sort-arrow"></span></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="pagination">
-        <button id="prev-page">Назад</button>
-        <span id="page-info" class="page-info"></span>
-        <button id="next-page">Вперед</button>
-        <button id="show-all">Показати всі</button>
-      </div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link active">Молодша ліга</a>
+        <a href="sunday.html" class="nav-link">Старша ліга</a>
+        <a href="balance.html" class="nav-link">Балансер</a>
+      </nav>
     </div>
-    <div id="stats-modal" class="modal hidden">
-      <div class="modal-content">
-        <button id="stats-close">✕</button>
-        <div id="stats-body"></div>
-      </div>
+  </header>
+
+  <main class="container">
+
+    <h1 class="league-title">Молодша ліга — Рейтинг гравців</h1>
+
+    <!-- Блок сезону -->
+    <div class="season-block">
+      <h2>Сезон 2025 — Молодша Ліга</h2>
+      <p>
+        Молодша ліга — це окремий сезон для юних гравців віком до 14 років.  
+        Кожна неділя — це новий ігровий день зі своїм набором місій, режимів та оцінювання.
+      </p>
+      <p>
+        Рейтинг формується на основі індивідуальних результатів, активності та MVP виступів.  
+        На відміну від старшої ліги, тут більший акцент на прогресі, щоб кожен молодий гравець бачив свій розвиток.
+      </p>
+      <p>
+        Також у сезоні діють бонуси за участь, стабільність та командну гру.  
+        В кінці сезону TOP-10 гравців проходять у фінальний ігровий день.
+      </p>
     </div>
-    <script src="scripts/toast.js?v=2025-09-19-avatars-3"></script>
 
-<script type="module">
-  import "./scripts/logger.js";
-  import "./scripts/config.js";
-  import "./scripts/api.js";
-  import "./scripts/avatars.client.js";
-  import "./scripts/quickStats.js";
-  import "./scripts/ranking.js";
-</script>
+    <!-- Швидка статистика -->
+    <section id="quickStats" class="stats-section"></section>
 
-  </body>
+    <!-- Таблиця рейтингу -->
+    <section id="rankingTable" class="ranking-section"></section>
+
+  </main>
+
+</body>
 </html>

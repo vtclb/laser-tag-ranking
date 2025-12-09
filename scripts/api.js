@@ -236,7 +236,7 @@ export function toFormUrlEncoded(obj = {}) {
 export const CSV_URLS = {
   kids: {
     ranking: LEAGUE_CSV.kids,
-    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
+    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv'
   },
   olds: {
     ranking: LEAGUE_CSV.olds || LEAGUE_CSV.sundaygames,

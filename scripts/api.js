@@ -164,9 +164,8 @@ if (GAS_PROXY_URL) {
   gasProxyJsonUrl = buildJsonUrl(GAS_PROXY_URL);
 }
 
-// ==================== PROXY (Cloudflare Worker) ====================
-// Можеш переозначити в index.html ПЕРЕД підключенням api.js:
-// <script>window.WEB_APP_URL='https://laser-proxy.vartaclub.workers.dev/';</script>
+
+ <script>window.WEB_APP_URL='https://laser-proxy.vartaclub.workers.dev/';</script>
 const PROD_PROXY_URL  = 'https://laser-proxy.vartaclub.workers.dev/';
 const LOCAL_PROXY_URL = 'http://localhost:8787/';
 
@@ -238,14 +237,14 @@ export function toFormUrlEncoded(obj = {}) {
 export const CSV_URLS = {
   kids: {
     ranking: LEAGUE_CSV.kids,
-    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv' // games sheet
+    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   },
   olds: {
     ranking: LEAGUE_CSV.olds || LEAGUE_CSV.sundaygames,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   },
   sundaygames: {
-    // legacy alias — завжди вказуємо на старшу лігу
+  
     ranking: LEAGUE_CSV.olds || LEAGUE_CSV.sundaygames,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   }

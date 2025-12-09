@@ -14,284 +14,63 @@
       src="scripts/polyfills.js?v=2025-09-19-avatars-3"
     ></script>
     <!-- PapaParse для CSV -->
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
-      integrity="sha512-6wOv87bthwRkgh5A8iiCznmc2DCMDoyYU6UDEvF7mN8IwdzW6OLE07DHg3OIN8y3oumZXnKHrXpxrwQDQ0STxA=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js?v=2025-09-19-avatars-3"></script>
     <style>
-      :root {
-        --bg-color: #050816;
-        --card-bg: #0b1220;
-        --accent-color: #22c55e;
-        --accent-soft: rgba(34, 197, 94, 0.15);
-        --text-color: #e5e7eb;
-        --muted-text: #9ca3af;
-        --danger-color: #ef4444;
-        --warning-color: #facc15;
-        --pixel-font: "Press Start 2P", system-ui, -apple-system, BlinkMacSystemFont,
-          "Segoe UI", sans-serif;
-      }
-
+      /* Reset & Base */
       * {
         box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
-
       body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
-        background: radial-gradient(circle at top, #0f172a 0, #020617 50%, #000 100%);
-        color: var(--text-color);
-        padding: 1rem;
+        font-family: "Press Start 2P", monospace;
+        background: #111 url("assets/background_marathon.png") no-repeat
+          center/cover;
+        color: #fff;
+        cursor:
+          url("assets/cursor.png") 4 4,
+          auto;
       }
-
-      body.no-scroll {
-        overflow: hidden;
-      }
-
-      .page {
-        max-width: 1200px;
-        margin: 0 auto;
-      }
-
-      header {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-      }
-
-      .top-bar {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      @media (min-width: 768px) {
-        .top-bar {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-        }
-      }
-
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-
-      .logo {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        background: radial-gradient(circle at 30% 20%, #22c55e, #15803d 45%, #022c22);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow:
-          0 0 20px rgba(34, 197, 94, 0.35),
-          0 0 0 1px rgba(15, 23, 42, 0.9);
-        position: relative;
-        overflow: hidden;
-      }
-
-      .logo::before,
-      .logo::after {
-        content: "";
-        position: absolute;
-        inset: 1px;
-        border-radius: 6px;
-        border: 1px solid rgba(15, 23, 42, 0.5);
-      }
-
-      .logo-mark {
-        font-family: var(--pixel-font);
-        font-size: 0.9rem;
-        color: #ecfeff;
-        text-shadow:
-          0 0 6px rgba(8, 47, 73, 0.8),
-          0 0 16px rgba(15, 118, 110, 0.7);
-      }
-
-      .brand-text h1 {
-        margin: 0;
-        font-family: var(--pixel-font);
-        font-size: clamp(1rem, 2.5vw, 1.35rem);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #e5e7eb;
-        text-shadow:
-          0 0 6px rgba(15, 23, 42, 0.9),
-          0 0 30px rgba(59, 130, 246, 0.4);
-      }
-
-      .brand-text p {
-        margin: 0.1rem 0 0;
-        font-size: 0.75rem;
-        color: var(--muted-text);
-      }
-
+      /* Navigation */
       nav {
         display: flex;
-        gap: 0.25rem;
-        padding: 0.25rem;
-        background: rgba(15, 23, 42, 0.85);
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        box-shadow:
-          0 18px 40px rgba(15, 23, 42, 0.85),
-          0 0 0 1px rgba(15, 23, 42, 0.9);
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 0.5rem;
       }
-
       nav a {
-        flex: 1;
-        text-align: center;
+        color: #f39c12;
         text-decoration: none;
         font-size: 0.75rem;
-        font-weight: 500;
-        padding: 0.45rem 0.9rem;
-        border-radius: 999px;
-        border: 1px solid transparent;
-        color: #9ca3af;
-        background: transparent;
+        padding: 0.25rem 0.5rem;
         transition:
-          color 0.18s ease-out,
-          background 0.18s ease-out,
-          border-color 0.18s ease-out,
-          box-shadow 0.18s ease-out,
-          transform 0.08s ease-out;
-        white-space: nowrap;
+          color 0.2s,
+          background 0.2s;
+        border-radius: 3px;
       }
-
-      nav a span {
-        opacity: 0.7;
+      nav a:hover {
+        color: #000;
+        background: #ffd700;
       }
-
       nav a.active {
-        color: #ecfeff;
-        background: radial-gradient(circle at 30% 10%, #4ade80, #16a34a 45%, #064e3b);
-        border-color: rgba(34, 197, 94, 0.8);
-        box-shadow:
-          0 12px 30px rgba(34, 197, 94, 0.45),
-          0 0 0 1px rgba(22, 163, 74, 0.9);
-        transform: translateY(-1px);
+        border-bottom: 2px solid #ffd700;
       }
-
-      nav a.active span {
-        opacity: 1;
+      /* Container */
+      .container {
+        max-width: 1200px;
+        margin: 1rem auto;
+        padding: 0 1rem;
       }
-
-      nav a:hover:not(.active) {
-        color: #e5e7eb;
-        background: rgba(15, 23, 42, 0.9);
-        border-color: rgba(148, 163, 184, 0.5);
-        transform: translateY(-0.5px);
-      }
-
-      main {
-        display: grid;
-        grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.6fr);
-        gap: 1.25rem;
-      }
-
-      @media (max-width: 960px) {
-        main {
-          grid-template-columns: minmax(0, 1fr);
-        }
-      }
-
-      .card {
-        background: radial-gradient(circle at top left, #020617, #020617 45%, #000 100%);
-        border-radius: 18px;
-        padding: 1rem 1.1rem 1.15rem;
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        box-shadow:
-          0 18px 45px rgba(15, 23, 42, 0.95),
-          0 0 0 1px rgba(15, 23, 42, 0.9);
-        position: relative;
-        overflow: hidden;
-      }
-
-      .card::before {
-        content: "";
-        position: absolute;
-        inset: -120px;
-        background:
-          radial-gradient(circle at 10% -20%, rgba(56, 189, 248, 0.28), transparent 55%),
-          radial-gradient(circle at 110% 0, rgba(34, 197, 94, 0.2), transparent 55%);
-        opacity: 0.75;
-        mix-blend-mode: screen;
-        pointer-events: none;
-      }
-
-      .card-inner {
-        position: relative;
-        z-index: 1;
-      }
-
-      .card-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 0.75rem;
-      }
-
-      .card-header h2 {
-        margin: 0;
-        font-family: var(--pixel-font);
-        font-size: 0.85rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #e5e7eb;
-        text-shadow:
-          0 0 10px rgba(15, 23, 42, 0.9),
-          0 0 30px rgba(56, 189, 248, 0.45);
-      }
-
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.2rem;
-        padding: 0.35rem 0.6rem;
-        border-radius: 999px;
-        background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), transparent 60%);
-        border: 1px solid rgba(59, 130, 246, 0.6);
-        font-size: 0.7rem;
-        color: #bfdbfe;
-        text-shadow: 0 0 8px rgba(15, 23, 42, 0.8);
-      }
-
-      .pill-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 999px;
-        background: #22c55e;
-        box-shadow: 0 0 10px rgba(34, 197, 94, 0.9);
-      }
-
-      .pill-label {
-        opacity: 0.95;
-      }
-
-      .pill-sub {
-        opacity: 0.7;
-        font-size: 0.65rem;
-      }
-
       .season-info,
       .summary {
         text-align: center;
         margin-bottom: 1rem;
       }
-
       .season-info {
         color: #f39c12;
       }
-
       .rank-chart {
         display: flex;
         height: 1rem;
@@ -300,1004 +79,284 @@
         border: 1px solid #555;
         border-radius: 4px;
         overflow: hidden;
+        font-size: 0.6rem;
+        color: #000;
       }
-
-      .rank-segment {
-        height: 100%;
-        transition: flex 0.3s ease;
-      }
-
-      .rank-d {
-        background: #6366f1;
-      }
-      .rank-c {
-        background: #22c55e;
-      }
-      .rank-b {
-        background: #f97316;
-      }
-      .rank-a {
-        background: #eab308;
-      }
-      .rank-s {
-        background: #ec4899;
-      }
-
-      .rank-legend {
+      .rank-chart div {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.3rem 0.75rem;
-        justify-content: center;
-        font-size: 0.75rem;
-        color: var(--muted-text);
-      }
-
-      .rank-legend span {
-        display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
-      }
-
-      .rank-dot {
-        width: 10px;
-        height: 4px;
-        border-radius: 999px;
-        opacity: 0.9;
-      }
-
-      .rank-dot.d {
-        background: #6366f1;
-      }
-      .rank-dot.c {
-        background: #22c55e;
-      }
-      .rank-dot.b {
-        background: #f97316;
-      }
-      .rank-dot.a {
-        background: #eab308;
-      }
-      .rank-dot.s {
-        background: #ec4899;
-      }
-
-      .badges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.35rem;
         justify-content: center;
-        margin-bottom: 1.15rem;
       }
-
-      .badge {
-        font-size: 0.7rem;
-        padding: 0.3rem 0.6rem;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.45);
-        background: linear-gradient(
-          135deg,
-          rgba(15, 23, 42, 0.96),
-          rgba(15, 23, 42, 0.75)
-        );
-        color: var(--muted-text);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
+      .seg-S {
+        background: magenta;
       }
-
-      .badge-emoji {
-        font-size: 0.8rem;
+      .seg-A {
+        background: red;
       }
-
-      .meta-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.75rem;
+      .seg-B {
+        background: yellow;
+      }
+      .seg-C {
+        background: cyan;
+      }
+      .seg-D {
+        background: lime;
+      }
+      .seg-E {
+        background: green;
+      }
+      .seg-F {
+        background: gray;
+      }
+      .summary {
+        color: #ccc;
+        font-size: 0.9rem;
+      }
+      /* Search */
+      .search-box {
+        text-align: center;
         margin-bottom: 1rem;
       }
-
-      .meta-item {
-        background: radial-gradient(circle at top, #020617, #020617 55%, #000 100%);
-        border-radius: 12px;
-        padding: 0.5rem 0.7rem;
-        border: 1px solid rgba(148, 163, 184, 0.45);
-        text-align: center;
-        box-shadow:
-          0 10px 25px rgba(15, 23, 42, 0.85),
-          0 0 0 1px rgba(15, 23, 42, 0.9);
-      }
-
-      .meta-label {
-        font-size: 0.6rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: #9ca3af;
-        margin-bottom: 0.2rem;
-      }
-
-      .meta-value {
-        font-family: var(--pixel-font);
-        font-size: 0.8rem;
-        color: #e5e7eb;
-      }
-
-      .meta-subvalue {
-        font-size: 0.7rem;
-        color: #9ca3af;
-      }
-
-      .summary {
-        font-size: 0.8rem;
-        color: var(--muted-text);
-      }
-
-      .flex-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-      }
-
-      .view-toggle {
-        display: inline-flex;
-        padding: 0.15rem;
-        border-radius: 999px;
-        background: rgba(15, 23, 42, 0.9);
-        border: 1px solid rgba(148, 163, 184, 0.4);
-      }
-
-      .view-toggle button {
-        border: none;
-        background: transparent;
-        color: var(--muted-text);
-        font-size: 0.7rem;
-        padding: 0.25rem 0.6rem;
-        border-radius: 999px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        transition:
-          background 0.15s ease-out,
-          color 0.15s ease-out;
-      }
-
-      .view-toggle button.active {
-        background: radial-gradient(circle at top, #0ea5e9, #0369a1);
-        color: #e5e7eb;
-      }
-
-      .view-toggle button span.icon {
-        font-size: 0.8rem;
-      }
-
-      .filters {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-        margin-bottom: 0.75rem;
-      }
-
-      .filter-chip {
-        font-size: 0.7rem;
-        padding: 0.3rem 0.5rem;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.5);
-        background: rgba(15, 23, 42, 0.9);
-        color: var(--muted-text);
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-      }
-
-      .filter-chip span.icon {
+      .search-box input {
+        padding: 0.5rem;
+        width: 100%;
+        max-width: 300px;
+        border: 2px solid #555;
+        background: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        border-radius: 4px;
         font-size: 0.75rem;
       }
-
-      .filter-chip.active {
-        border-color: rgba(34, 197, 94, 0.9);
-        color: #bbf7d0;
-        background: rgba(22, 101, 52, 0.65);
-      }
-
-      .players-list {
-        border-radius: 12px;
-        border: 1px solid rgba(148, 163, 184, 0.45);
-        background: radial-gradient(circle at top, #020617, #020617 55%, #000 100%);
-        overflow: hidden;
-        box-shadow:
-          inset 0 0 0 1px rgba(15, 23, 42, 0.9),
-          0 14px 35px rgba(15, 23, 42, 0.95);
-      }
-
-      .players-header {
-        display: grid;
-        grid-template-columns:
-          minmax(0, 0.85fr)
-          minmax(0, 0.45fr)
-          minmax(0, 0.55fr)
-          minmax(0, 0.55fr)
-          minmax(0, 0.45fr);
-        gap: 0.5rem;
-        padding: 0.6rem 0.75rem;
-        border-bottom: 1px solid rgba(75, 85, 99, 0.8);
-        background: linear-gradient(
-          90deg,
-          rgba(15, 23, 42, 0.98),
-          rgba(15, 23, 42, 0.92)
-        );
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.16em;
-        color: #9ca3af;
-      }
-
-      .players-header span {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .players-body {
-        max-height: 570px;
-        overflow-y: auto;
-      }
-
-      .player-row {
-        display: grid;
-        grid-template-columns:
-          minmax(0, 0.85fr)
-          minmax(0, 0.45fr)
-          minmax(0, 0.55fr)
-          minmax(0, 0.55fr)
-          minmax(0, 0.45fr);
-        gap: 0.5rem;
-        padding: 0.45rem 0.75rem;
-        align-items: center;
-        font-size: 0.8rem;
-        border-bottom: 1px solid rgba(31, 41, 55, 0.85);
-        background: radial-gradient(
-          circle at left,
-          rgba(15, 23, 42, 0.98),
-          rgba(15, 23, 42, 0.95)
-        );
-        transition: background 0.12s ease-out;
-      }
-
-      .player-row:nth-child(2n) {
-        background: radial-gradient(
-          circle at right,
-          rgba(15, 23, 42, 0.97),
-          rgba(15, 23, 42, 0.94)
-        );
-      }
-
-      .player-row:hover {
-        background: linear-gradient(
-          90deg,
-          rgba(21, 128, 61, 0.18),
-          rgba(12, 74, 110, 0.07)
-        );
-      }
-
-      .player-main {
+      /* Top MVP */
+      .top-mvp {
         display: flex;
-        align-items: center;
-        gap: 0.55rem;
-        min-width: 0;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
       }
-
-      .avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 999px;
-        border: 1px solid rgba(56, 189, 248, 0.8);
-        box-shadow:
-          0 0 0 1px rgba(15, 23, 42, 0.95),
-          0 0 12px rgba(56, 189, 248, 0.6);
-        background: radial-gradient(circle at 30% 0, #1d4ed8, #020617 45%);
-        flex-shrink: 0;
+      .mvp-card {
+        background: rgba(243, 156, 18, 0.2);
+        border: 2px solid #f39c12;
+        border-radius: 6px;
+        padding: 1rem;
+        min-width: 140px;
+        text-align: center;
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 8px rgba(243, 156, 18, 0.6);
+        }
+        50% {
+          box-shadow: 0 0 16px rgba(243, 156, 18, 1);
+        }
+      }
+      /* Table */
+      .table-container {
+        overflow-x: auto;
+        margin-bottom: 1rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 600px;
+        font-size: 0.75rem;
+      }
+      thead th {
+        position: sticky;
+        top: 0;
+        background: #222;
+        color: #f39c12;
+        padding: 0.75rem;
+        border-bottom: 2px solid #555;
+        z-index: 1;
+      }
+      th,
+      td {
+        padding: 0.5rem;
+        border: 1px solid #444;
+        text-align: center;
+      }
+      tbody tr:nth-child(odd) {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      tbody tr:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .avatar-img {
+        width: 40px;
+        height: 40px;
         object-fit: cover;
       }
-
-      .player-info {
-        min-width: 0;
-      }
-
-      .player-nick {
-        font-weight: 500;
-        font-size: 0.8rem;
-        color: #e5e7eb;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .player-meta {
-        font-size: 0.7rem;
-        color: #9ca3af;
-      }
-
-      .rank-pill {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 22px;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        border: 1px solid rgba(148, 163, 184, 0.7);
-        box-shadow:
-          0 0 0 1px rgba(15, 23, 42, 0.95),
-          0 10px 20px rgba(15, 23, 42, 0.95);
-        text-shadow: 0 0 6px rgba(15, 23, 42, 0.8);
-      }
-
-      .rank-d-pill {
-        background: radial-gradient(circle at 30% 0, #3b82f6, #1d4ed8 40%, #020617);
-        border-color: rgba(59, 130, 246, 0.8);
-        color: #dbeafe;
-      }
-
-      .rank-c-pill {
-        background: radial-gradient(circle at 30% 0, #22c55e, #16a34a 40%, #022c22);
-        border-color: rgba(34, 197, 94, 0.8);
-        color: #bbf7d0;
-      }
-
-      .rank-b-pill {
-        background: radial-gradient(circle at 30% 0, #f97316, #ea580c 40%, #451a03);
-        border-color: rgba(249, 115, 22, 0.9);
-        color: #ffedd5;
-      }
-
-      .rank-a-pill {
-        background: radial-gradient(circle at 30% 0, #eab308, #ca8a04 40%, #422006);
-        border-color: rgba(234, 179, 8, 0.9);
-        color: #fef9c3;
-      }
-
-      .rank-s-pill {
-        background: radial-gradient(circle at 30% 0, #ec4899, #db2777 40%, #4a044e);
-        border-color: rgba(236, 72, 153, 0.95);
-        color: #fce7f3;
-      }
-
-      .points {
-        font-family: var(--pixel-font);
-        font-size: 0.75rem;
-        letter-spacing: 0.04em;
-        color: #facc15;
-      }
-
-      .games {
-        font-size: 0.75rem;
-        color: var(--muted-text);
-      }
-
-      .trend {
-        font-size: 0.75rem;
-        text-align: right;
-      }
-
-      .trend.up {
-        color: #4ade80;
-      }
-
-      .trend.down {
-        color: #f97316;
-      }
-
-      .trend.same {
-        color: #9ca3af;
-      }
-
+      /* Pagination */
       .pagination {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.6rem 0.75rem;
-        border-top: 1px solid rgba(55, 65, 81, 0.85);
-        background: linear-gradient(
-          180deg,
-          rgba(15, 23, 42, 0.98),
-          rgba(15, 23, 42, 0.95)
-        );
+        justify-content: center;
+        gap: 0.5rem;
+        margin: 1rem 0;
       }
-
-      .pagination-info {
-        font-size: 0.7rem;
-        color: var(--muted-text);
-      }
-
-      .pagination-controls {
-        display: inline-flex;
-        gap: 0.3rem;
-      }
-
-      .pagination-controls button {
-        border: 1px solid rgba(148, 163, 184, 0.7);
-        background: rgba(15, 23, 42, 0.95);
-        color: var(--muted-text);
-        border-radius: 999px;
-        font-size: 0.7rem;
-        padding: 0.2rem 0.5rem;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.2rem;
-      }
-
-      .pagination-controls button:disabled {
-        opacity: 0.45;
-        cursor: default;
-      }
-
-      .pagination-controls button:not(:disabled):hover {
-        background: rgba(15, 23, 42, 0.9);
-        color: #e5e7eb;
-      }
-
-      .sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .quick-stats {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.75rem;
-      }
-
-      .quick-card {
-        background: radial-gradient(circle at top, #020617, #020617 55%, #000 100%);
-        border-radius: 14px;
-        padding: 0.6rem 0.7rem 0.7rem;
-        border: 1px solid rgba(148, 163, 184, 0.45);
-        box-shadow:
-          0 12px 30px rgba(15, 23, 42, 0.9),
-          0 0 0 1px rgba(15, 23, 42, 0.95);
-      }
-
-      .quick-label {
-        font-size: 0.6rem;
+      .pagination button {
+        padding: 0.75rem 1.5rem;
+        background: #222;
+        color: #f39c12;
+        border: 2px solid #f39c12;
+        border-radius: 4px;
+        font-family: "Press Start 2P", monospace;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: #9ca3af;
-        margin-bottom: 0.25rem;
+        box-shadow: 0 0 8px #f39c12;
+        cursor:
+          url("assets/cursor.png") 4 4,
+          auto;
+        transition: transform 0.2s;
       }
-
-      .quick-value {
-        font-family: var(--pixel-font);
-        font-size: 0.9rem;
-        color: #e5e7eb;
-        margin-bottom: 0.15rem;
+      .pagination button:hover {
+        transform: scale(1.05);
       }
-
-      .quick-sub {
-        font-size: 0.7rem;
-        color: #9ca3af;
+      .page-info {
+        align-self: center;
       }
-
-      .cta-card {
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
+      /* Rank highlight */
+      .rank-S td {
+        border-left: 4px solid magenta;
       }
-
-      .cta-title {
-        font-family: var(--pixel-font);
-        font-size: 0.75rem;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: #e5e7eb;
+      .rank-A td {
+        border-left: 4px solid red;
       }
-
-      .cta-text {
-        font-size: 0.78rem;
-        color: var(--muted-text);
+      .rank-B td {
+        border-left: 4px solid yellow;
       }
-
-      .cta-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
+      .rank-C td {
+        border-left: 4px solid cyan;
       }
-
-      .cta-buttons a {
-        text-decoration: none;
-        font-size: 0.75rem;
-        padding: 0.35rem 0.6rem;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.6);
-        background: rgba(15, 23, 42, 0.9);
-        color: #e5e7eb;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
+      .rank-D td {
+        border-left: 4px solid lime;
       }
-
-      .cta-buttons a.primary {
-        background: radial-gradient(circle at 30% 0, #22c55e, #15803d 45%, #022c22);
-        border-color: rgba(34, 197, 94, 0.85);
-        box-shadow:
-          0 12px 30px rgba(34, 197, 94, 0.55),
-          0 0 0 1px rgba(15, 23, 42, 0.9);
+      .rank-E td {
+        border-left: 4px solid green;
       }
-
-      .cta-buttons a span.icon {
-        font-size: 0.9rem;
+      .rank-F td {
+        border-left: 4px solid gray;
       }
-
-      .cta-footer {
-        font-size: 0.7rem;
-        color: #6b7280;
+      /* Nickname color */
+      .nick-S {
+        color: magenta;
       }
-
-      .game-history {
-        max-height: 240px;
-        overflow-y: auto;
+      .nick-A {
+        color: red;
       }
-
-      .game-row {
-        display: grid;
-        grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-        gap: 0.4rem;
-        padding: 0.4rem 0.5rem;
-        border-bottom: 1px dashed rgba(55, 65, 81, 0.85);
-        font-size: 0.75rem;
+      .nick-B {
+        color: yellow;
       }
-
-      .game-main {
-        font-weight: 500;
-        color: #e5e7eb;
+      .nick-C {
+        color: cyan;
       }
-
-      .game-sub {
-        color: #9ca3af;
+      .nick-D {
+        color: lime;
       }
-
-      .game-sub span {
-        margin-right: 0.4rem;
+      .nick-E {
+        color: green;
       }
-
-      .badge-alt {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.45rem;
-        border-radius: 999px;
-        border: 1px solid rgba(52, 211, 153, 0.8);
-        background: rgba(5, 46, 22, 0.8);
-        color: #bbf7d0;
+      .nick-F {
+        color: gray;
       }
-
       .hidden {
-        display: none !important;
+        display: none;
       }
-
-      .loading {
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 1.5rem 0;
-        font-size: 0.8rem;
-        color: var(--muted-text);
-        gap: 0.5rem;
+        z-index: 1000;
       }
-
-      .spinner {
-        width: 16px;
-        height: 16px;
-        border-radius: 999px;
-        border: 2px solid rgba(148, 163, 184, 0.45);
-        border-top-color: rgba(56, 189, 248, 0.95);
-        animation: spin 0.9s linear infinite;
+      .modal.hidden {
+        display: none;
       }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+      .modal-content {
+        background: #222;
+        padding: 1rem;
+        border-radius: 4px;
+        max-height: 90%;
+        overflow: auto;
       }
-
-      .toast-container {
-        position: fixed;
-        bottom: 1.25rem;
-        right: 1.25rem;
-        max-width: 320px;
-        z-index: 9999;
-      }
-
-      .toast {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.5rem;
-        background: rgba(15, 23, 42, 0.97);
-        border-radius: 12px;
-        padding: 0.6rem 0.75rem;
-        border: 1px solid rgba(248, 250, 252, 0.08);
-        box-shadow:
-          0 18px 40px rgba(15, 23, 42, 0.98),
-          0 0 0 1px rgba(15, 23, 42, 0.95);
-        font-size: 0.75rem;
-        color: #e5e7eb;
-      }
-
-      .toast-icon {
-        font-size: 0.9rem;
-      }
-
-      .toast-content {
-        flex: 1;
-      }
-
-      .toast-title {
-        font-weight: 600;
-        margin-bottom: 0.15rem;
-      }
-
-      .toast-text {
-        color: #9ca3af;
-      }
-
-      .toast-close {
+      #stats-close {
+        float: right;
+        background: #444;
         border: none;
-        background: transparent;
-        color: #6b7280;
+        color: #fff;
         cursor: pointer;
-        padding: 0.1rem;
+        padding: 0.25rem 0.5rem;
       }
-
-      .chips-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.35rem;
-        margin-top: 0.5rem;
-      }
-
-      .chip {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.45rem;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.45);
-        background: rgba(15, 23, 42, 0.95);
-        color: #9ca3af;
-      }
-
       @media (max-width: 600px) {
-        body {
-          padding: 0.75rem;
+        table {
+          min-width: 480px;
         }
-
-        nav {
-          overflow-x: auto;
-        }
-
-        .players-header,
-        .player-row {
-          grid-template-columns:
-            minmax(0, 1.1fr)
-            minmax(0, 0.6fr)
-            minmax(0, 0.8fr)
-            minmax(0, 0.6fr)
-            minmax(0, 0.6fr);
-        }
-
-        .players-body {
-          max-height: 420px;
-        }
-
-        .meta-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .quick-stats {
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .toast-container {
-          left: 0.75rem;
-          right: 0.75rem;
-          max-width: none;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        * {
-          scroll-behavior: auto !important;
-          animation-duration: 0.001s !important;
-          animation-iteration-count: 1 !important;
+        .mvp-card {
+          min-width: 45%;
         }
       }
     </style>
   </head>
   <body>
-    <div class="page">
-      <header>
-        <div class="top-bar">
-          <div class="brand">
-            <div class="logo">
-              <div class="logo-mark">V</div>
-            </div>
-            <div class="brand-text">
-              <h1>Молодша ліга — рейтинг Варта Лазертаг</h1>
-              <p>Рейтинг активних гравців клубу «Варта» (молодша ліга).</p>
-            </div>
-          </div>
-
-          <nav>
-            <a href="index.html" class="active"><span>Молодша ліга</span></a>
-            <a href="sunday.html"><span>Старша ліга</span></a>
-            <a href="balance.html"><span>Балансер команд</span></a>
-            <a href="tournament.html"><span>Турніри</span></a>
-          </nav>
-        </div>
-      </header>
-
-      <main>
-        <section class="card">
-          <div class="card-inner">
-            <div class="card-header">
-              <h2>Рейтинг гравців</h2>
-              <div class="pill">
-                <span class="pill-dot"></span>
-                <span class="pill-label">Молодша ліга</span>
-                <span class="pill-sub">сезон літо 2025</span>
-              </div>
-            </div>
-
-            <div class="season-info">
-              <div>Сезон дитячих ігор — літо 2025.</div>
-              <div>Очки нараховуються за участь, перемоги та MVP у форматі kids-ліги.</div>
-            </div>
-
-            <div class="badges">
-              <div class="badge">
-                <span class="badge-emoji">🎮</span>
-                <span>Рейтинг оновлюється після кожної гри</span>
-              </div>
-              <div class="badge">
-                <span class="badge-emoji">🏅</span>
-                <span>Система рангів від D до S</span>
-              </div>
-              <div class="badge">
-                <span class="badge-emoji">📊</span>
-                <span>Можна відкрити детальну статистику по кожному гравцю</span>
-              </div>
-            </div>
-
-            <div class="meta-grid">
-              <div class="meta-item">
-                <div class="meta-label">Поточний сезон</div>
-                <div class="meta-value">Літо 2025</div>
-                <div class="meta-subvalue">Молодша ліга (kids)</div>
-              </div>
-              <div class="meta-item">
-                <div class="meta-label">Рівні рангів</div>
-                <div class="meta-value">D • C • B • A • S</div>
-                <div class="meta-subvalue">D — старт, S — топ гравці</div>
-              </div>
-              <div class="meta-item">
-                <div class="meta-label">Формат</div>
-                <div class="meta-value">Kids</div>
-                <div class="meta-subvalue">Ігри для молодшої ліги</div>
-              </div>
-            </div>
-
-            <div class="summary">
-              У таблиці нижче — всі гравці молодшої ліги із кількістю очок, рангом,
-              кількістю ігор та базовим трендом зміни рейтингу.
-            </div>
-
-            <div class="flex-row">
-              <div class="view-toggle">
-                <button id="view-ranking" class="active">
-                  <span class="icon">📋</span>
-                  <span>Рейтинг</span>
-                </button>
-                <button id="view-grid">
-                  <span class="icon">🧩</span>
-                  <span>Сітка</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="filters">
-              <button class="filter-chip" data-filter="all">
-                <span class="icon">🌐</span>
-                <span>Всі гравці</span>
-              </button>
-              <button class="filter-chip" data-filter="top10">
-                <span class="icon">🏆</span>
-                <span>Топ-10</span>
-              </button>
-              <button class="filter-chip" data-filter="active">
-                <span class="icon">🔥</span>
-                <span>Активні (є ігри)</span>
-              </button>
-            </div>
-
-            <div id="ranking-section">
-              <div id="ranking-loading" class="loading">
-                <div class="spinner"></div>
-                <span>Завантаження рейтингу молодшої ліги…</span>
-              </div>
-              <div id="ranking-error" class="hidden">
-                Сталася помилка при завантаженні рейтингу. Будь ласка, спробуйте пізніше.
-              </div>
-              <div id="ranking-content" class="hidden">
-                <div class="players-list">
-                  <div class="players-header">
-                    <span>Гравець</span>
-                    <span>Ранг</span>
-                    <span>Очки</span>
-                    <span>Ігор</span>
-                    <span>Тренд</span>
-                  </div>
-                  <div id="players-container" class="players-body"></div>
-                  <div class="pagination">
-                    <div class="pagination-info" id="pagination-info">
-                      Показано 0 з 0
-                    </div>
-                    <div class="pagination-controls">
-                      <button id="prev-page" disabled>
-                        <span>&laquo;</span>
-                        <span>Назад</span>
-                      </button>
-                      <button id="next-page" disabled>
-                        <span>Далі</span>
-                        <span>&raquo;</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div id="grid-section" class="hidden">
-              <div class="players-list">
-                <div class="players-header">
-                  <span>Гравець</span>
-                  <span>Ранг</span>
-                  <span>Очки</span>
-                  <span>Ігор</span>
-                  <span>Тренд</span>
-                </div>
-                <div id="grid-container" class="players-body"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <aside class="sidebar">
-          <section class="card">
-            <div class="card-inner">
-              <div class="card-header">
-                <h2>Швидкі показники</h2>
-                <div class="pill">
-                  <span class="pill-dot"></span>
-                  <span class="pill-label">Kids</span>
-                  <span class="pill-sub">молодша ліга</span>
-                </div>
-              </div>
-
-              <div id="quick-stats-loading" class="loading">
-                <div class="spinner"></div>
-                <span>Розрахунок статистики…</span>
-              </div>
-
-              <div id="quick-stats-content" class="hidden">
-                <div class="quick-stats" id="quick-stats-cards">
-                  <!-- Карточки зі швидкою статистикою малює JS -->
-                </div>
-
-                <div class="chips-row">
-                  <span class="chip">Середній рейтинг по лізі</span>
-                  <span class="chip">Найактивніші гравці</span>
-                  <span class="chip">Скільки людей вже мають A/S ранг</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section class="card">
-            <div class="card-inner cta-card">
-              <div class="card-header">
-                <h2>Як потрапити в рейтинг</h2>
-                <div class="pill">
-                  <span class="pill-dot"></span>
-                  <span class="pill-label">Молодша ліга</span>
-                  <span class="pill-sub">формат kids</span>
-                </div>
-              </div>
-
-              <div class="cta-text">
-                Щоб потрапити в таблицю, потрібно регулярно відвідувати ігри молодшої
-                ліги, брати участь у сценаріях і отримувати очки за перемоги, активні
-                дії та MVP.
-              </div>
-
-              <div class="cta-buttons">
-                <a
-                  href="https://t.me/varta_club"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="primary"
-                >
-                  <span class="icon">✅</span>
-                  <span>Записатися на гру</span>
-                </a>
-                <a
-                  href="https://instagram.com/varta.club"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span class="icon">📸</span>
-                  <span>Фото з ігор</span>
-                </a>
-              </div>
-
-              <div class="cta-footer">
-                Дорослі сценарії, турніри та інші формати — у старшій лізі та на інших
-                сторінках нашого рейтингу.
-              </div>
-            </div>
-          </section>
-
-          <section class="card">
-            <div class="card-inner">
-              <div class="card-header">
-                <h2>Останні ігри (kids)</h2>
-                <div class="pill">
-                  <span class="pill-dot"></span>
-                  <span class="pill-label">Історія матчів</span>
-                </div>
-              </div>
-
-              <div id="game-history-loading" class="loading">
-                <div class="spinner"></div>
-                <span>Завантаження історії ігор…</span>
-              </div>
-
-              <div id="game-history-content" class="hidden">
-                <div class="game-history" id="game-history-list">
-                  <!-- Ігри підтягуються з таблиці kids (аркуш games / історія) -->
-                </div>
-              </div>
-            </div>
-          </section>
-        </aside>
-      </main>
+    <nav>
+      <a href="index.html" class="active">Молодша Ліга</a>
+      <a href="sunday.html">Старша Ліга</a>
+      <a href="gameday.html">Ігровий день</a>
+      <a href="rules.html">Правила</a>
+      <a href="about.html">Про клуб</a>
+    </nav>
+    <div class="container">
+      <div id="season-info" class="season-info"></div>
+      <div class="summary" id="summary"></div>
+      <div id="rank-chart" class="rank-chart"></div>
+      <div class="search-box">
+        <input type="text" id="search" placeholder="Пошук нікнейму…" />
+      </div>
+      <div class="top-mvp" id="top-mvp"></div>
+      <div class="table-container">
+        <table id="ranking">
+          <thead>
+            <tr>
+              <th data-key="place">Місце <span class="sort-arrow"></span></th>
+              <th>Аватар</th>
+              <th data-key="nickname">Нікнейм <span class="sort-arrow"></span></th>
+              <th data-key="rank">Ранг <span class="sort-arrow"></span></th>
+              <th data-key="points">Бали <span class="sort-arrow"></span></th>
+              <th data-key="games">Ігор <span class="sort-arrow"></span></th>
+              <th data-key="winRate">%Win <span class="sort-arrow"></span></th>
+              <th data-key="mvp">MVP <span class="sort-arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <button id="prev-page">Назад</button>
+        <span id="page-info" class="page-info"></span>
+        <button id="next-page">Вперед</button>
+        <button id="show-all">Показати всі</button>
+      </div>
     </div>
-
-    <div class="toast-container" id="toast-container"></div>
-
-    <!-- Сервісні скрипти (той самий порядок, що на робочій сторінці старшої ліги) -->
-    <script
-      type="module"
-      src="./scripts/toast.js?v=2025-09-19-avatars-2"
-    ></script>
-    <script type="module" src="./scripts/config.js?v=2025-09-19-avatars-2"></script>
-    <script type="module" src="./scripts/logger.js?v=2025-09-19-avatars-2"></script>
-    <script type="module" src="./scripts/api.js?v=2025-09-19-avatars-2"></script>
-    <script
-      type="module"
-      src="./scripts/avatars.client.js?v=2025-09-19-avatars-2"
-    ></script>
-
-    <!-- Логіка рейтингу + швидка статистика (kids) -->
-    <script
-      type="module"
-      src="./scripts/ranking.js?v=2025-09-19-avatars-2"
-    ></script>
-    <script
-      type="module"
-      src="./scripts/quickStats.js?v=2025-09-19-avatars-2"
-    ></script>
+    <div id="stats-modal" class="modal hidden">
+      <div class="modal-content">
+        <button id="stats-close">✕</button>
+        <div id="stats-body"></div>
+      </div>
+    </div>
+    <script src="scripts/toast.js?v=2025-09-19-avatars-3"></script>
+    <script type="module" src="scripts/logger.js?v=2025-09-19-avatars-3"></script>
+    <script type="module" src="scripts/config.js?v=2025-09-19-avatars-3"></script>
+    <script type="module" src="scripts/api.js?v=2025-09-19-avatars-3"></script>
+    <script type="module" src="scripts/avatars.client.js"></script>
+    <script type="module" src="scripts/quickStats.js?v=2025-09-19-avatars-3"></script>
+    <script type="module" src="scripts/ranking.js?v=2025-09-19-avatars-3"></script>
   </body>
 </html>

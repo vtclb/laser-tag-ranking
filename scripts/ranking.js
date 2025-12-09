@@ -107,21 +107,46 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
     .filter((d) => !isNaN(d));
   const minDate = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
   const maxDate = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null;
-  const players = rank
-    .map((r) => {
-      const nick = alias[r.Nickname] || r.Nickname;
-      const p = {
-        nickname: nick,
-        points: +r.Points || 0,
-        games: stats[nick]?.games || 0,
-        wins: stats[nick]?.wins || 0,
-        mvp: stats[nick]?.mvp || 0,
-      };
-      p.losses = p.games - p.wins;
-      p.winRate = p.games ? ((p.wins / p.games) * 100).toFixed(2) : "0.00";
-      return p;
-    })
-    .sort((a, b) => b.points - a.points);
+const players = rank
+  .map((r) => {
+    // 1) Акуратно дістаємо нік з різних можливих полів
+    const rawNick =
+      r.Nickname ??
+      r.nickname ??
+      r.nick ??
+      r["Nick"] ??
+      r["Ім’я"] ??
+      r["Імʼя"] ??
+      r["Name"] ??
+      "";
+
+    const nickClean = String(rawNick || "").trim();
+    const nick = alias[nickClean] || nickClean;
+
+    // Якщо нік порожній – пропускаємо рядок, щоб не ламати фільтр/сортування
+    if (!nick) return null;
+
+    // 2) Бали з різних можливих полів
+    const ptsRaw = r.Points ?? r.points ?? r.pts ?? r["Очки"] ?? 0;
+    const pts = Number(ptsRaw) || 0;
+
+    // 3) Статистика з games (може бути відсутньою)
+    const s = stats[nick] || { games: 0, wins: 0, mvp: 0 };
+
+    const p = {
+      nickname: nick,
+      points: pts,
+      games: s.games,
+      wins: s.wins,
+      mvp: s.mvp,
+    };
+    p.losses = p.games - p.wins;
+    p.winRate = p.games ? ((p.wins / p.games) * 100).toFixed(2) : "0.00";
+    return p;
+  })
+  .filter(Boolean)              // прибираємо null, якщо нік був порожній
+  .sort((a, b) => b.points - a.points);
+
   return { players, totalGames, totalRounds, minDate, maxDate };
 }
 

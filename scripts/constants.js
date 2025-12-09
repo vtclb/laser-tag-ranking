@@ -1,4 +1,3 @@
-export const LEAGUE = location.pathname.endsWith('sunday.html') ? 'sundaygames' : 'kids';
 export const LEAGUE = (() => {
   const path = location.pathname.toLowerCase();
 

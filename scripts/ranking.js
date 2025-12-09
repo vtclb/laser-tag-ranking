@@ -57,8 +57,13 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
   const filtered = validLeagues.includes(leagueKey)
     ? games.filter((g) => {
         const rawLeague = g.League ? normalizeLeague(g.League) : "";
+
         const effectiveLeague = rawLeague || "kids";
         return effectiveLeague === leagueKey;
+
+        const realLeague = rawLeague || "kids";
+        return realLeague === leagueKey;
+
       })
     : games;
   filtered.forEach((g) => {

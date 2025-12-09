@@ -256,8 +256,6 @@ function rankFromPoints(p) {
   return 'S';
 }
 
-import { LEAGUE_CSV } from "./config.js";
-
 export async function loadPlayers(league) {
   const url = LEAGUE_CSV[league] || LEAGUE_CSV.kids;
 

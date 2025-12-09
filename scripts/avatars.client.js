@@ -1,129 +1,368 @@
+// avatars.client.js
 import { AVATAR_WORKER_BASE, AVATAR_PLACEHOLDER } from './avatarConfig.js';
 
+// ---------------- BASE ----------------
 const RAW_BASE = typeof AVATAR_WORKER_BASE === 'string' ? AVATAR_WORKER_BASE.trim() : '';
 const NORMALIZED_BASE = RAW_BASE ? RAW_BASE.replace(/\/+$/, '') : '';
-const FEED = NORMALIZED_BASE ? `${NORMALIZED_BASE}/avatars` : '';
+// https://worker/avatars  ← feed
+const FEED   = NORMALIZED_BASE ? `${NORMALIZED_BASE}/avatars` : '';
+// https://worker/avatars/{nick} ← по ніку
 const BY_NICK = FEED ? `${FEED}/` : '';
 
+// мапа "key → url"
 const mapping = new Map();
 let lastUpdated = 0;
 
+// проміс для фіду, щоб не спамити запитами
+let feedPromise = null;
+let feedPromiseIsFresh = false;
+
+// pending-запити для конкретних нікнеймів
+const pendingByKey = new Map();
+
+// ---------------- HELPERS ----------------
 function norm(value) {
-  return value ? String(value).trim().toLowerCase() : '';
+  if (value == null) return '';
+  return String(value).trim().toLowerCase();
 }
 
 function bustUrl(url, stamp = Date.now()) {
-  if (!url) return '';
-  const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}t=${stamp}`;
+  const base = typeof url === 'string' ? url.trim() : '';
+  if (!base) return '';
+  const value = Number.isFinite(stamp) ? stamp : Date.now();
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}t=${value}`;
 }
 
-function setImage(img, url) {
-  if (!img) return;
-  img.onerror = () => {
-    img.src = AVATAR_PLACEHOLDER;
-  };
-  img.src = url || AVATAR_PLACEHOLDER;
-}
-
-/* ✅ Безпечне завантаження FEED */
-async function safeLoadFeed() {
-  if (!FEED) return;
-
-  try {
-    const res = await fetch(bustUrl(FEED), { cache: "no-store" });
-
-    // ❗ Якщо сервер повернув HTML → просто пропускаємо
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      console.warn("[avatars] FEED returned non-JSON → ignore");
-      return;
-    }
-
-    const data = await res.json();
-    if (!data) return;
-
-    if (data.entries) {
-      for (const [nick, url] of data.entries) {
-        const key = norm(nick);
-        if (key && url) mapping.set(key, url);
-      }
-    } else if (data.mapping) {
-      for (const [nick, url] of Object.entries(data.mapping)) {
-        const key = norm(nick);
-        if (key && url) mapping.set(key, url);
-      }
-    }
-
-    lastUpdated = Date.now();
-
-  } catch (err) {
-    console.warn("[avatars] FEED error (ignored):", err);
+function extractUpdatedAt(input) {
+  if (typeof input === 'number' && Number.isFinite(input)) return input;
+  if (typeof input === 'string') {
+    const n = Number(input);
+    if (Number.isFinite(n)) return n;
+    const d = Date.parse(input);
+    if (!Number.isNaN(d)) return d;
   }
+  return 0;
 }
 
-/* ✅ Безпечне завантаження АВАТАРА для одного ніку */
-async function safeLoadNick(nick) {
-  if (!BY_NICK) return null;
+function resolveRoot(root) {
+  if (root && typeof root.querySelectorAll === 'function') return root;
+  if (typeof document !== 'undefined') return document;
+  return null;
+}
 
-  const url = bustUrl(`${BY_NICK}${encodeURIComponent(nick)}`);
+function ensureImageElement(node) {
+  if (!node) return null;
 
-  try {
-    const res = await fetch(url, { cache: "no-store" });
+  if (node.tagName && node.tagName.toLowerCase() === 'img') return node;
 
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      console.warn("[avatars] BY_NICK non-JSON → ignore");
-      return null;
-    }
+  if (typeof node.querySelector === 'function') {
+    const found =
+      node.querySelector('img.avatar') ||
+      node.querySelector('img[data-nick]') ||
+      node.querySelector('img');
 
-    const data = await res.json();
-    if (data?.url) return data.url;
+    if (found) return found;
 
-  } catch (err) {
-    console.warn("[avatars] Avatar fetch error:", err);
+    const doc = node.ownerDocument || (typeof document !== 'undefined' ? document : null);
+    if (!doc) return null;
+
+    const created = doc.createElement('img');
+    created.classList.add('avatar');
+    node.prepend(created);
+    return created;
   }
 
   return null;
 }
 
-/* =================== ГОЛОВНИЙ РЕНДЕР =================== */
+function seedPlaceholder(img, nick) {
+  if (!img) return;
+  if (!img.referrerPolicy) img.referrerPolicy = 'no-referrer';
+  img.decoding = img.decoding || 'async';
+  if (!img.loading) img.loading = 'lazy';
+  if (!img.alt) img.alt = nick || 'avatar';
+  if (!img.getAttribute('src')) {
+    img.src = AVATAR_PLACEHOLDER;
+  }
+}
 
-export async function renderAllAvatars(root = document) {
-  if (!root) return;
+function prepareTarget(node) {
+  const img = ensureImageElement(node);
+  if (!img) return null;
 
-  await safeLoadFeed();
+  const rawNick = (() => {
+    if (typeof img.dataset?.nick === 'string' && img.dataset.nick.trim()) return img.dataset.nick;
+    if (node !== img && typeof node.dataset?.nick === 'string' && node.dataset.nick.trim()) return node.dataset.nick;
+    const imgAttr  = typeof img.getAttribute === 'function'  ? img.getAttribute('data-nick') : '';
+    const nodeAttr = node !== img && typeof node.getAttribute === 'function'
+      ? node.getAttribute('data-nick')
+      : '';
+    return imgAttr || nodeAttr || '';
+  })();
 
-  const nodes = root.querySelectorAll("[data-nick]");
+  const nick = rawNick.trim();
 
-  for (const node of nodes) {
-    const nick = node.dataset.nick;
-    const key = norm(nick);
-    const img = node.tagName === "IMG" ? node : node.querySelector("img") || node;
+  if (nick) {
+    img.dataset.nick = nick;
+    if (node !== img) node.dataset.nick = nick;
+  } else {
+    delete img.dataset.nick;
+    if (node !== img) delete node.dataset.nick;
+  }
 
-    if (!key) {
-      setImage(img, null);
-      continue;
+  const key = norm(nick);
+  if (key) img.dataset.nickKey = key;
+  else delete img.dataset.nickKey;
+
+  seedPlaceholder(img, nick);
+  return { img, nick, key };
+}
+
+function collectTargets(scope) {
+  const seen = new Set();
+  const targets = [];
+
+  scope.querySelectorAll('img[data-nick]').forEach(img => {
+    const entry = prepareTarget(img);
+    if (entry && !seen.has(entry.img)) {
+      seen.add(entry.img);
+      targets.push(entry);
     }
+  });
 
-    if (mapping.has(key)) {
-      setImage(img, mapping.get(key));
-      continue;
+  scope.querySelectorAll('[data-nick]:not(img)').forEach(node => {
+    const entry = prepareTarget(node);
+    if (entry && !seen.has(entry.img)) {
+      seen.add(entry.img);
+      targets.push(entry);
     }
+  });
 
-    const resolved = await safeLoadNick(nick);
-    if (resolved) {
-      mapping.set(key, resolved);
-      setImage(img, resolved);
-    } else {
-      // 🔥 БЕЗ КРАШУ → always safe
-      setImage(img, null);
+  return targets;
+}
+
+function applyFeedPayload(payload) {
+  if (!payload || typeof payload !== 'object') return;
+
+  const next = new Map();
+  let shouldReplace = false;
+
+  if (Array.isArray(payload.entries)) {
+    shouldReplace = true;
+    for (const entry of payload.entries) {
+      if (!entry || entry.length < 2) continue;
+      const key = norm(entry[0]);
+      const url = typeof entry[1] === 'string' ? entry[1].trim() : '';
+      if (key && url) next.set(key, url);
+    }
+  } else {
+    const mappingSource =
+      (payload.mapping && typeof payload.mapping === 'object' && payload.mapping) ||
+      (payload.avatars && typeof payload.avatars === 'object' && payload.avatars) ||
+      null;
+
+    if (mappingSource) {
+      shouldReplace = true;
+      for (const [nick, url] of Object.entries(mappingSource)) {
+        const key = norm(nick);
+        const value = typeof url === 'string' ? url.trim() : '';
+        if (key && value) next.set(key, value);
+      }
+    }
+  }
+
+  if (!next.size && !Array.isArray(payload.entries)) {
+    const fallback = Object.entries(payload).filter(([k]) => k !== 'updatedAt');
+    if (fallback.length) shouldReplace = true;
+    for (const [nick, url] of fallback) {
+      const key = norm(nick);
+      const value = typeof url === 'string' ? url.trim() : '';
+      if (key && value) next.set(key, value);
+    }
+  }
+
+  if (shouldReplace) {
+    mapping.clear();
+    for (const [key, url] of next.entries()) {
+      mapping.set(key, url);
+    }
+  }
+
+  const updated = extractUpdatedAt(payload.updatedAt);
+  if (updated) lastUpdated = updated;
+  else if (shouldReplace) lastUpdated = Date.now();
+}
+
+async function loadFeed(fresh = false) {
+  if (!FEED) return mapping;
+
+  // якщо вже колись вантажили й нема запиту — повертаємо мапу
+  if (!fresh && lastUpdated && !feedPromise) return mapping;
+
+  // якщо вже є проміс
+  if (feedPromise) {
+    if (fresh && !feedPromiseIsFresh) {
+      // дочекаємось старий і перезапустимо свіжий
+      return feedPromise.finally(() => loadFeed(true));
+    }
+    return feedPromise;
+  }
+
+  const url = fresh ? bustUrl(FEED, Date.now()) : FEED;
+  feedPromiseIsFresh = fresh;
+
+  feedPromise = (async () => {
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response || !response.ok) {
+        console.warn('[avatars] feed status', response?.status);
+        return mapping;
+      }
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (err) {
+        console.warn('[avatars] feed parse failed', err);
+        data = null;
+      }
+      if (data) applyFeedPayload(data);
+    } catch (err) {
+      console.warn('[avatars] feed fetch failed', err);
+    } finally {
+      feedPromise = null;
+      feedPromiseIsFresh = false;
+    }
+    return mapping;
+  })();
+
+  return feedPromise;
+}
+
+function setImage(img, url, stamp) {
+  if (!img) return;
+  const s = Number.isFinite(stamp) ? stamp : Date.now();
+  const finalUrl = url ? bustUrl(url, s) : '';
+  const fallback = bustUrl(AVATAR_PLACEHOLDER, s) || AVATAR_PLACEHOLDER;
+
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = fallback;
+  };
+  img.src = finalUrl || fallback;
+}
+
+async function fetchAvatarForEntry(entry) {
+  if (!entry || !entry.key || !entry.nick || !BY_NICK) {
+    setImage(entry?.img, '', lastUpdated);
+    return;
+  }
+
+  // уже є у мапі
+  if (mapping.has(entry.key)) {
+    setImage(entry.img, mapping.get(entry.key), lastUpdated);
+    return;
+  }
+
+  // уже є запит для цього ніку
+  if (pendingByKey.has(entry.key)) {
+    await pendingByKey.get(entry.key);
+    const cached = mapping.get(entry.key) || '';
+    setImage(entry.img, cached, lastUpdated);
+    return;
+  }
+
+  const request = (async () => {
+    const url = bustUrl(`${BY_NICK}${encodeURIComponent(entry.nick)}`, Date.now());
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response || !response.ok) {
+        console.warn('[avatars] nick status', response?.status);
+        return;
+      }
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (err) {
+        console.warn('[avatars] nick parse failed', err);
+        data = null;
+      }
+      const resolvedUrl = typeof data?.url === 'string' ? data.url.trim() : '';
+      const updated = extractUpdatedAt(data?.updatedAt) || Date.now();
+      if (resolvedUrl) {
+        mapping.set(entry.key, resolvedUrl);
+        lastUpdated = updated;
+        setImage(entry.img, resolvedUrl, updated);
+        return;
+      }
+    } catch (err) {
+      console.warn('[avatars] nick fetch failed', err);
+    }
+    setImage(entry.img, '', Date.now());
+  })();
+
+  pendingByKey.set(entry.key, request);
+  try {
+    await request;
+  } finally {
+    if (pendingByKey.get(entry.key) === request) {
+      pendingByKey.delete(entry.key);
     }
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  renderAllAvatars().catch(err =>
-    console.warn("[avatars] render fail (safe)", err)
-  );
-});
+// ---------------- ПУБЛІЧНІ ФУНКЦІЇ ----------------
+
+async function _renderAllAvatars(root = (typeof document !== 'undefined' ? document : undefined)) {
+  const scope = resolveRoot(root);
+  if (!scope) return;
+
+  const targets = collectTargets(scope);
+  if (!targets.length) {
+    console.log('[avatars] imgs=0');
+    return;
+  }
+
+  // підтягуємо фід (якщо є)
+  await loadFeed(false);
+
+  const jobs = [];
+  for (const entry of targets) {
+    if (!entry.key) {
+      setImage(entry.img, '', lastUpdated);
+      continue;
+    }
+
+    const cached = mapping.get(entry.key) || '';
+    if (cached) {
+      setImage(entry.img, cached, lastUpdated);
+      continue;
+    }
+
+    jobs.push(fetchAvatarForEntry(entry));
+  }
+
+  if (jobs.length) {
+    await Promise.allSettled(jobs);
+  }
+
+  console.log(`[avatars] imgs=${targets.length}`);
+}
+
+async function _reloadAvatars(root = (typeof document !== 'undefined' ? document : undefined)) {
+  await loadFeed(true);
+  await _renderAllAvatars(root);
+}
+
+// ЕКСПОРТИ ДЛЯ ranking.js ТА ІНШИХ СТОРІНОК
+export const renderAllAvatars = _renderAllAvatars;
+export const reloadAvatars = _reloadAvatars;
+
+// автозапуск на DOMContentLoaded (як було раніше)
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', () => {
+    _renderAllAvatars(document).catch(err => {
+      console.warn('[avatars] initial render failed', err);
+    });
+  });
+}

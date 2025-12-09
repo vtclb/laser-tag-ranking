@@ -57,6 +57,15 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
   const filtered = validLeagues.includes(leagueKey)
     ? games.filter((g) => {
         const gameLeague = g.League ? normalizeLeague(g.League) : "";
+
+        const realLeague = gameLeague || "kids";
+        return realLeague === leagueKey;
+      })
+    : games;
+  filtered.forEach((g) => {
+    const rawT1 = pickFieldValue(g, TEAM_FIELDS);
+    const rawT2 = pickFieldValue(g, TEAM2_FIELDS);
+
         return !gameLeague || gameLeague === leagueKey;
       })
     : games;
@@ -68,6 +77,7 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
     const rawT1 = (g.Team1 ?? "").trim();
     const rawT2 = (g.Team2 ?? "").trim();
 
+
     if (!rawT1 || !rawT2) {
       log("[ranking]", "Skipping game without teams", g);
       return;
@@ -77,7 +87,11 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
 
     const winKey = String(g.Winner || "").replace(/\s+/g, "").toLowerCase();
 
+
+    const winKey = String(g.Winner || "").replace(/\s+/g, "").toLowerCase();
+
     const winKey = g.Winner;
+
 
     const winT = winKey === "team1" ? t1 : winKey === "team2" ? t2 : [];
     t1.concat(t2).forEach((n) => {

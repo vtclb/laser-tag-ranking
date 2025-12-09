@@ -22,7 +22,7 @@ export function safeSet(storage, key, value) {
 }
 export function safeDel(storage, key) {
   if (!storage) return;
-  try { storage.removeItem(key, key); } catch (err) { log('[ranking]', err); }
+  try { storage.removeItem(key); } catch (err) { log('[ranking]', err); }
 }
 // сесійне сховище (не падати у Safari Private Mode)
 if (!window.__SESS) {
@@ -124,12 +124,14 @@ function appendCacheBust(url, bustValue) {
   }
 }
 
+// ==================== AVATAR / PROXY CONFIG ====================
 const AVATAR_WORKER_BASE_URL = computeWorkerBase(AVATAR_WORKER_BASE);
 const AVATAR_COLLECTION_URL = buildWorkerUrl(AVATAR_WORKER_BASE_URL, 'avatars');
 const AVATARS_FEED_URL = AVATAR_COLLECTION_URL;
 const AVATAR_BY_NICK_URL = ensureTrailingSlashValue(AVATAR_COLLECTION_URL);
 const AVATAR_CACHE_BUST_VALUE = trimConfigValue(AVATAR_CACHE_BUST);
 
+// GAS proxy (старий прямий бекенд, як бекап)
 const GAS_PROXY_BASE_VALUE = trimConfigValue(GAS_PROXY_BASE);
 let gasProxyUrl = '';
 let gasProxyOrigin = '';
@@ -161,6 +163,7 @@ const buildJsonUrl = (baseUrl) => {
 if (GAS_PROXY_URL) {
   gasProxyJsonUrl = buildJsonUrl(GAS_PROXY_URL);
 }
+
 // ==================== PROXY (Cloudflare Worker) ====================
 // Можеш переозначити в index.html ПЕРЕД підключенням api.js:
 // <script>window.WEB_APP_URL='https://laser-proxy.vartaclub.workers.dev/';</script>
@@ -182,8 +185,6 @@ window.PROXY_URL    = PROXY_URL;
 window.PROXY_ORIGIN = PROXY_ORIGIN;
 
 const GAS_PROXY_JSON_URL = buildJsonUrl(PROXY_URL) || gasProxyJsonUrl;
-
-// Додатковий прямий бекап налаштовується через GAS_PROXY_BASE у config.js
 
 // ==================== NET HELPERS ====================
 async function parseTextSafely(res) {
@@ -231,18 +232,21 @@ export function toFormUrlEncoded(obj = {}) {
     .join('&');
 }
 
-// ==================== CSV FEEDS ====================
+// ==================== CSV FEEDS (URLs таблиць) ====================
+// kids  → табличка "kids"
+// olds  → табличка "sundaygames" (стара назва старшої ліги)
 export const CSV_URLS = {
   kids: {
     ranking: LEAGUE_CSV.kids,
-    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
+    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv' // games sheet
   },
   olds: {
-    ranking: LEAGUE_CSV.olds,
+    ranking: LEAGUE_CSV.olds || LEAGUE_CSV.sundaygames,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   },
   sundaygames: {
-    ranking: LEAGUE_CSV.sundaygames,
+    // legacy alias — завжди вказуємо на старшу лігу
+    ranking: LEAGUE_CSV.olds || LEAGUE_CSV.sundaygames,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   }
 };
@@ -255,34 +259,6 @@ function rankFromPoints(p) {
   if (n < 1200) return 'A';
   return 'S';
 }
-
-export async function loadPlayers(league) {
-  const url = LEAGUE_CSV[league] || LEAGUE_CSV.kids;
-
-  const res = await fetch(url);
-  const text = await res.text();
-
-  return parseCsv(text);
-}
-
-function parseCsv(text) {
-  const lines = text.split("\n").map(l => l.trim()).filter(l => l.length);
-  const header = lines[0].split(",");
-
-  return lines.slice(1).map(line => {
-    const cols = line.split(",");
-    const obj = {};
-    header.forEach((h, i) => obj[h.trim()] = cols[i]?.trim() || "");
-    return obj;
-  });
-}
-
-export function normalizeLeague(l) {
-  l = String(l || "").toLowerCase();
-  if (["kids", "kid", "junior"].includes(l)) return "kids";
-  return "olds";
-}
-
 
 // Один раз у памʼяті + у sessionStorage
 const _fetchCache = {};
@@ -536,19 +512,28 @@ const LEAGUE_ALIASES = {
   'старшаліга': 'olds',
   'старша ліга': 'olds'
 };
+
 export function normalizeLeague(v) {
   const key = String(v ?? '').trim().toLowerCase();
   return LEAGUE_ALIASES[key] || 'kids';
 }
+
 export function getLeagueFeedUrl(league) {
-  const key = normalizeLeague(league);
-  const url = LEAGUE_CSV[key];
+  const key = normalizeLeague(league); // kids / olds
+  let url = LEAGUE_CSV[key];
+  if (!url && key === 'olds') {
+    // fallback, якщо в config.js ще залишився тільки sundaygames
+    url = LEAGUE_CSV.sundaygames;
+  }
   if (!url) throw new Error('Unknown league: ' + league);
   return url;
 }
+
 export function getGamesFeedUrl(league) {
-  const key = normalizeLeague(league);
-  const url = CSV_URLS[key]?.games;
+  const key = normalizeLeague(league); // kids / olds
+  const url =
+    (CSV_URLS[key] && CSV_URLS[key].games) ||
+    (key === 'olds' ? CSV_URLS.sundaygames?.games : null);
   if (!url) throw new Error('Unknown league: ' + league);
   return url;
 }
@@ -575,9 +560,9 @@ async function resolveEffectiveLeague(requested) {
   const direct = await tryLoadCsv(preferred);
   if (direct) return direct;
 
-  // 2) fallback на sundaygames (там основна старша ліга)
-  const sunday = await tryLoadCsv('sundaygames');
-  if (sunday) return 'sundaygames';
+  // 2) fallback на olds (історичний sundaygames)
+  const olds = await tryLoadCsv('olds');
+  if (olds) return 'olds';
 
   // 3) fallback на kids
   const kids = await tryLoadCsv('kids');
@@ -649,16 +634,19 @@ export async function fetchCsv(url, ttlMs = 0) {
 }
 
 // ==================== PLAYERS ====================
+// прямі CSV (як запасний варіант, якщо щось піде не так з LEAGUE_CSV)
 const LEAGUE_DIRECT_URLS = {
   kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
-  olds: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv',
-  sundaygames: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
+  olds: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
 };
 
-// 🔧 ГОЛОВНИЙ ФІКС: ТІЛЬКИ ПРЯМИЙ CSV, БЕЗ GAS_PROXY_BASE ДЛЯ РЕЙТИНГУ
 export async function fetchLeagueCsv(league) {
   const targetLeague = normalizeLeague(league);
-  const base = LEAGUE_DIRECT_URLS[targetLeague] || getLeagueFeedUrl(targetLeague);
+  // спочатку пробуємо URL з config.js
+  let base = getLeagueFeedUrl(targetLeague);
+  if (!base) {
+    base = LEAGUE_DIRECT_URLS[targetLeague];
+  }
 
   let url = base;
   try {
@@ -755,7 +743,7 @@ export async function saveResult(data) {
     }
   };
 
-  // 1) через воркер
+  // 1) через воркер (Cloudflare Worker: laser-proxy...)
   let result = await attempt(PROXY_ORIGIN); // (!) кореневий URL воркера, БЕЗ /json
 
   // 2) опційний прямий fallback на GAS
@@ -879,7 +867,7 @@ export async function fetchAvatarForNick(nick, { force = false } = {}) {
     if (DEBUG_NETWORK) log('[ranking]', 'fetchAvatarForNick error', err);
     const record = { url: null, updatedAt: Date.now() };
     storeAvatarRecord(key, record, { legacyKey: originalNick });
-    return.record;
+    return record;
   }
 
   let data = null;

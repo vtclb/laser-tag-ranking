@@ -256,6 +256,36 @@ function rankFromPoints(p) {
   return 'S';
 }
 
+import { LEAGUE_CSV } from "./config.js";
+
+export async function loadPlayers(league) {
+  const url = LEAGUE_CSV[league] || LEAGUE_CSV.kids;
+
+  const res = await fetch(url);
+  const text = await res.text();
+
+  return parseCsv(text);
+}
+
+function parseCsv(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(l => l.length);
+  const header = lines[0].split(",");
+
+  return lines.slice(1).map(line => {
+    const cols = line.split(",");
+    const obj = {};
+    header.forEach((h, i) => obj[h.trim()] = cols[i]?.trim() || "");
+    return obj;
+  });
+}
+
+export function normalizeLeague(l) {
+  l = String(l || "").toLowerCase();
+  if (["kids", "kid", "junior"].includes(l)) return "kids";
+  return "olds";
+}
+
+
 // Один раз у памʼяті + у sessionStorage
 const _fetchCache = {};
 export const avatarCache = new Map();

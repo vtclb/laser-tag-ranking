@@ -61,15 +61,24 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
       })
     : games;
   filtered.forEach((g) => {
+
     const rawT1 = pickFieldValue(g, TEAM_FIELDS);
     const rawT2 = pickFieldValue(g, TEAM2_FIELDS);
+
+    const rawT1 = (g.Team1 ?? "").trim();
+    const rawT2 = (g.Team2 ?? "").trim();
+
     if (!rawT1 || !rawT2) {
       log("[ranking]", "Skipping game without teams", g);
       return;
     }
     const t1 = rawT1.split(",").map((n) => alias[n.trim()] || n.trim());
     const t2 = rawT2.split(",").map((n) => alias[n.trim()] || n.trim());
+
     const winKey = String(g.Winner || "").replace(/\s+/g, "").toLowerCase();
+
+    const winKey = g.Winner;
+
     const winT = winKey === "team1" ? t1 : winKey === "team2" ? t2 : [];
     t1.concat(t2).forEach((n) => {
       stats[n] = stats[n] || { games: 0, wins: 0, mvp: 0 };

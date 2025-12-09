@@ -61,10 +61,8 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
         const effectiveLeague = rawLeague || "kids";
         return effectiveLeague === leagueKey;
 
-        const realLeague = rawLeague || "kids";
-        return realLeague === leagueKey;
-
-      })
+    
+    })
     : games;
   filtered.forEach((g) => {
     const rawT1 = pickFieldValue(g, TEAM_FIELDS);

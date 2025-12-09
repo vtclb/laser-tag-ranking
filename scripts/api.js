@@ -490,10 +490,23 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
 
 // ==================== LEAGUES ====================
 const LEAGUE_ALIASES = {
-  kids: 'kids', kid: 'kids', junior: 'kids',
-  olds: 'sundaygames', adult: 'sundaygames', adults: 'sundaygames',
-  sundaygames: 'sundaygames', sunday: 'sundaygames', sundaygame: 'sundaygames',
-  'старшаліга': 'sundaygames', 'старша ліга': 'sundaygames'
+  // молодша ліга
+  kids: 'kids',
+  kid: 'kids',
+  junior: 'kids',
+
+  // старша ліга (основний ключ – "olds")
+  olds: 'olds',
+  adult: 'olds',
+  adults: 'olds',
+  old: 'olds',
+
+  // історичні назви / псевдоніми
+  sundaygames: 'olds',
+  sunday: 'olds',
+  sundaygame: 'olds',
+  'старшаліга': 'olds',
+  'старша ліга': 'olds'
 };
 export function normalizeLeague(v) {
   const key = String(v ?? '').trim().toLowerCase();

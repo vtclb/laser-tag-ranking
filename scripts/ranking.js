@@ -44,8 +44,14 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
       })
     : games;
   filtered.forEach((g) => {
-    const t1 = g.Team1.split(",").map((n) => alias[n.trim()] || n.trim());
-    const t2 = g.Team2.split(",").map((n) => alias[n.trim()] || n.trim());
+    const rawT1 = (g.Team1 ?? "").trim();
+    const rawT2 = (g.Team2 ?? "").trim();
+    if (!rawT1 || !rawT2) {
+      log("[ranking]", "Skipping game without teams", g);
+      return;
+    }
+    const t1 = rawT1.split(",").map((n) => alias[n.trim()] || n.trim());
+    const t2 = rawT2.split(",").map((n) => alias[n.trim()] || n.trim());
     const winKey = g.Winner;
     const winT = winKey === "team1" ? t1 : winKey === "team2" ? t2 : [];
     t1.concat(t2).forEach((n) => {

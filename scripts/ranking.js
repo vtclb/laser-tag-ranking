@@ -13,26 +13,69 @@ if (typeof window !== 'undefined') {
   });
 }
 export async function loadData(rankingURL, gamesURL) {
+  const techMsg = "⚙ ТЕХНІЧНА ПАУЗА: дані рейтингу тимчасово недоступні";
+
   try {
-    const [rText, gText] = await Promise.all([
+    const [rRes, gRes] = await Promise.allSettled([
       fetchOnce(rankingURL, CSV_TTL),
       fetchOnce(gamesURL, CSV_TTL),
     ]);
+
+    if (rRes.status !== "fulfilled") {
+      // Якщо не змогли стягнути РЕЙТИНГ – це критично
+      log("[ranking] RANK fetch failed", rRes.reason);
+      if (typeof showToast === "function") showToast(techMsg);
+      if (typeof document !== "undefined") {
+        const div = document.createElement("div");
+        div.textContent = techMsg;
+        div.style.margin = "2rem auto";
+        div.style.padding = "1rem";
+        div.style.maxWidth = "600px";
+        div.style.textAlign = "center";
+        div.style.background = "rgba(0,0,0,0.8)";
+        div.style.border = "2px solid #f39c12";
+        div.style.boxShadow = "0 0 12px #f39c12";
+        div.style.fontFamily = '"Press Start 2P", monospace';
+        div.style.textTransform = "uppercase";
+        document.body.appendChild(div);
+      }
+      return { rank: [], games: [] };
+    }
+
+    const rText = rRes.value;
     const rank = Papa.parse(rText, { header: true, skipEmptyLines: true }).data;
-    const games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;
+
+    let games = [];
+    if (gRes.status === "fulfilled") {
+      const gText = gRes.value;
+      games = Papa.parse(gText, { header: true, skipEmptyLines: true }).data;
+    } else {
+      // Ігри не підтягнулися – не критично, просто не буде статистики по іграм
+      log("[ranking] GAMES fetch failed, continue with empty games", gRes.reason);
+    }
+
     return { rank, games };
   } catch (err) {
-    log('[ranking]', err);
-    const msg = "Не вдалося завантажити дані рейтингу";
-    if (typeof showToast === 'function') showToast(msg); else alert(msg);
+    log("[ranking] UNEXPECTED loadData error", err);
+    if (typeof showToast === "function") showToast(techMsg);
     if (typeof document !== "undefined") {
       const div = document.createElement("div");
-      div.textContent = msg;
+      div.textContent = techMsg;
+      div.style.margin = "2rem auto";
+      div.style.padding = "1rem";
+      div.style.maxWidth = "600px";
+      div.style.textAlign = "center";
+      div.style.background = "rgba(0,0,0,0.8)";
+      div.style.border = "2px solid #f39c12";
+      div.style.boxShadow = "0 0 12px #f39c12";
+      div.style.fontFamily = '"Press Start 2P", monospace';
+      div.style.textTransform = "uppercase";
       document.body.appendChild(div);
     }
     return { rank: [], games: [] };
   }
 }
+
 
 const TEAM_FIELDS = ["Team1", "Team 1", "team1", "team 1"];
 const TEAM2_FIELDS = ["Team2", "Team 2", "team2", "team 2"];

@@ -10,6 +10,23 @@ let gamesLeftEl = null;
 let currentNick = '';
 const pdfCache = {};
 
+const LEGACY_AWARDS = {
+  laston: {
+    title: 'MVP літнього сезону',
+    awards: [
+      { badge: 'Summer MVP', text: 'Нагорода за домінування в літньому сезоні 2025.' },
+      { badge: 'Firestarter', text: 'Відзнака за найвищу серію нагород MVP у спеку.' },
+    ],
+  },
+  zavodchanyn: {
+    title: 'MVP осіннього сезону',
+    awards: [
+      { badge: 'Autumn MVP', text: 'Головна відзнака за осінній сезон: стабільність і точність.' },
+      { badge: 'Leaf Hunter', text: 'Ачівка за clutch-моменти та холоднокровність восени.' },
+    ],
+  },
+};
+
 function parseQuery(search) {
   const result = {};
   if (typeof search !== 'string' || !search) return result;
@@ -82,6 +99,38 @@ function showError(msg) {
     err.querySelector('p').textContent = msg;
     err.style.display = 'block';
   }
+}
+
+function renderLegacyAwards(nick) {
+  const box = document.getElementById('legacy-awards');
+  if (!box) return;
+  const entry = LEGACY_AWARDS[avatarNickKey(nick)];
+  if (!entry) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  box.style.display = 'block';
+  box.innerHTML = '';
+
+  const title = document.createElement('h3');
+  title.textContent = entry.title;
+  box.appendChild(title);
+
+  const list = document.createElement('ul');
+  for (const award of entry.awards) {
+    const li = document.createElement('li');
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = award.badge;
+    const desc = document.createElement('span');
+    desc.textContent = ` ${award.text}`;
+    li.appendChild(badge);
+    li.appendChild(desc);
+    list.appendChild(li);
+  }
+  box.appendChild(list);
 }
 
 function updateGamesLeft(used) {
@@ -195,6 +244,7 @@ async function loadProfile(nick, key = '') {
   document.getElementById('rating').textContent = `Рейтинг: ${profile.points} (${rank})`;
   const aboType = profile.abonement?.type || '';
   document.getElementById('abonement-type').textContent = `Абонемент: ${aboType}`;
+  renderLegacyAwards(nick);
 
   gameLimit = profile.gameLimit || { standart: 5, vip: 10 }[aboType] || 0;
   gamesLeftEl = document.getElementById('games-left');

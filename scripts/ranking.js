@@ -82,6 +82,26 @@ const TEAM2_FIELDS = ["Team2", "Team 2", "team2", "team 2"];
 const SCORE1_FIELDS = ["Score1", "Score 1", "score1", "score 1"];
 const SCORE2_FIELDS = ["Score2", "Score 2", "score2", "score 2"];
 
+function parseTimestamp(ts) {
+  if (!ts) return new Date(NaN);
+  const str = String(ts).trim();
+  const m = str.match(
+    /^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?/
+  );
+  if (m) {
+    const [, dd, mm, yyyy, hh = "0", min = "0", ss = "0"] = m;
+    return new Date(
+      Number(yyyy),
+      Number(mm) - 1,
+      Number(dd),
+      Number(hh),
+      Number(min),
+      Number(ss)
+    );
+  }
+  return new Date(ts);
+}
+
 function pickFieldValue(row, fields) {
   for (const key of fields) {
     const value = row?.[key];
@@ -146,7 +166,7 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
   });
   const totalGames = filtered.length;
   const dates = filtered
-    .map((g) => new Date(g.Timestamp))
+    .map((g) => parseTimestamp(g.Timestamp))
     .filter((d) => !isNaN(d));
   const minDate = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
   const maxDate = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null;
@@ -574,12 +594,19 @@ async function init() {
   allPlayers = pl.map((p, i) => ({ ...p, _index: i }));
   document.getElementById("summary").textContent =
     `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
+  const seasonStart = minDate
+    ? new Date(minDate.getFullYear(), minDate.getMonth(), 1)
+    : null;
   document.getElementById("season-info").textContent =
+    
+    "Зимовий сезон — старт " + formatFull(seasonStart);
+
 
     "Зимовий сезон — старт " + formatFull(minDate);
 
 
     "Зимовий сезон — старт 01.12.2025";
+
 
 
 

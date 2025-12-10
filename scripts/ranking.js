@@ -576,9 +576,13 @@ async function init() {
     `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
   document.getElementById("season-info").textContent =
 
+    "Зимовий сезон — старт 01.12.2025";
+
+
     "Зимовий сезон — старт " + formatFull(minDate);
 
     `Зимовий сезон — старт 01.12.2025`;
+
 
   renderTopMVP(allPlayers, document.getElementById("top-mvp"));
   renderChart(allPlayers, document.getElementById("rank-chart"));

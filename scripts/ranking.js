@@ -598,7 +598,21 @@ async function init() {
     ? new Date(minDate.getFullYear(), minDate.getMonth(), 1)
     : null;
   document.getElementById("season-info").textContent =
+    
     "Зимовий сезон — старт " + formatFull(seasonStart);
+
+
+    "Зимовий сезон — старт " + formatFull(minDate);
+
+
+    "Зимовий сезон — старт 01.12.2025";
+
+
+
+
+
+
+
   renderTopMVP(allPlayers, document.getElementById("top-mvp"));
   renderChart(allPlayers, document.getElementById("rank-chart"));
   rankingEl = document.querySelector("#ranking tbody");

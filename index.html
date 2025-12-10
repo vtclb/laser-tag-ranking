@@ -24,9 +24,16 @@
         background: #111 url("assets/background_marathon.png") no-repeat
           center/cover;
         color: #fff;
-        cursor:
-          url("assets/cursor.png") 4 4,
-          auto;
+      }
+
+      #snow-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: 2;
       }
    
       nav {
@@ -348,6 +355,6 @@
         <div id="stats-body"></div>
       </div>
     </div>
-
+    <canvas id="snow-canvas"></canvas>
   </body>
 </html>

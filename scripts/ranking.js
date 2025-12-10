@@ -82,6 +82,26 @@ const TEAM2_FIELDS = ["Team2", "Team 2", "team2", "team 2"];
 const SCORE1_FIELDS = ["Score1", "Score 1", "score1", "score 1"];
 const SCORE2_FIELDS = ["Score2", "Score 2", "score2", "score 2"];
 
+function parseTimestamp(ts) {
+  if (!ts) return new Date(NaN);
+  const str = String(ts).trim();
+  const m = str.match(
+    /^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?/
+  );
+  if (m) {
+    const [, dd, mm, yyyy, hh = "0", min = "0", ss = "0"] = m;
+    return new Date(
+      Number(yyyy),
+      Number(mm) - 1,
+      Number(dd),
+      Number(hh),
+      Number(min),
+      Number(ss)
+    );
+  }
+  return new Date(ts);
+}
+
 function pickFieldValue(row, fields) {
   for (const key of fields) {
     const value = row?.[key];
@@ -113,7 +133,7 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
 
 
     if (!rawT1 || !rawT2) {
-      log("[ranking]", "Skipping game without teams", g);
+      // тихий пропуск без логу
       return;
     }
     const t1 = rawT1.split(",").map((n) => alias[n.trim()] || n.trim());
@@ -146,7 +166,7 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
   });
   const totalGames = filtered.length;
   const dates = filtered
-    .map((g) => new Date(g.Timestamp))
+    .map((g) => parseTimestamp(g.Timestamp))
     .filter((d) => !isNaN(d));
   const minDate = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
   const maxDate = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null;
@@ -260,6 +280,8 @@ function updateArrows() {
 function sortPlayers() {
   const { key, dir } = sortState;
   allPlayers.sort((a, b) => {
+    if (a.games === 0 && b.games > 0) return 1;
+    if (a.games > 0 && b.games === 0) return -1;
     let res = 0;
     switch (key) {
       case "place":
@@ -304,6 +326,7 @@ function createRow(p, i) {
   const tr = document.createElement("tr");
   const cls = getRankClass(p.points);
   tr.className = cls;
+  if (p.games === 0) tr.classList.add("tr-inactive");
 
   const tdRank = document.createElement("td");
   tdRank.textContent = i + 1;
@@ -345,15 +368,15 @@ function createRow(p, i) {
   tr.appendChild(tdPoints);
 
   const tdGames = document.createElement("td");
-  tdGames.textContent = p.games;
+  tdGames.textContent = p.games > 0 ? p.games : "-";
   tr.appendChild(tdGames);
 
   const tdWin = document.createElement("td");
-  tdWin.textContent = p.winRate + "%";
+  tdWin.textContent = p.games > 0 ? p.winRate + "%" : "-";
   tr.appendChild(tdWin);
 
   const tdMvp = document.createElement("td");
-  tdMvp.textContent = p.mvp;
+  tdMvp.textContent = p.mvp > 0 ? p.mvp : "-";
   tr.appendChild(tdMvp);
 
   rowMap.set(p.nickname, tr);
@@ -380,12 +403,19 @@ export async function renderTable(list, tbodyEl) {
     const cls = getRankClass(p.points);
 
     if (prev.points !== p.points) cells[4].textContent = p.points;
-    if (prev.games !== p.games) cells[5].textContent = p.games;
-    if (prev.winRate !== p.winRate) cells[6].textContent = p.winRate + "%";
-    if (prev.mvp !== p.mvp) cells[7].textContent = p.mvp;
+    const gamesText = p.games > 0 ? p.games : "-";
+    if (prev.games !== p.games || cells[5].textContent !== String(gamesText))
+      cells[5].textContent = gamesText;
+    const winText = p.games > 0 ? p.winRate + "%" : "-";
+    if (prev.winRate !== p.winRate || cells[6].textContent !== winText)
+      cells[6].textContent = winText;
+    const mvpText = p.mvp > 0 ? p.mvp : "-";
+    if (prev.mvp !== p.mvp || cells[7].textContent !== String(mvpText))
+      cells[7].textContent = mvpText;
 
     const newCls = cls;
-    if (row.className !== newCls) row.className = newCls;
+    const nextClassName = p.games === 0 ? `${newCls} tr-inactive` : newCls;
+    if (row.className !== nextClassName) row.className = nextClassName;
     const nickCls = cls.replace("rank-", "nick-");
     if (cells[2].className !== nickCls) cells[2].className = nickCls;
     const rankText = cls.replace("rank-", "");
@@ -564,8 +594,11 @@ async function init() {
   allPlayers = pl.map((p, i) => ({ ...p, _index: i }));
   document.getElementById("summary").textContent =
     `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
+  const seasonStart = minDate
+    ? new Date(minDate.getFullYear(), minDate.getMonth(), 1)
+    : null;
   document.getElementById("season-info").textContent =
-    `Перший сезон — старт ${formatFull(minDate)}`;
+    "Зимовий сезон — старт " + formatFull(seasonStart);
   renderTopMVP(allPlayers, document.getElementById("top-mvp"));
   renderChart(allPlayers, document.getElementById("rank-chart"));
   rankingEl = document.querySelector("#ranking tbody");

@@ -1,4 +1,5 @@
 import { VERSION } from "./version.js";
+import "./snow.js";
 
 async function loadModule(name) {
   const mod = await import(`./${name}?v=${VERSION}`);

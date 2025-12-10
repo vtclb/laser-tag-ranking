@@ -27,9 +27,16 @@
         background: #111 url("assets/background_marathon.png") no-repeat
           center/cover;
         color: #fff;
-        cursor:
-          url("assets/cursor.png") 4 4,
-          auto;
+      }
+
+      #snow-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: 2;
       }
       /* Навігація */
       nav {
@@ -353,6 +360,7 @@
         <div id="stats-body"></div>
       </div>
     </div>
+    <canvas id="snow-canvas"></canvas>
     <script src="scripts/toast.js?v=2025-09-19-avatars-2"></script>
     <script type="module" src="scripts/config.js?v=2025-09-19-avatars-2"></script>
     <script type="module" src="scripts/logger.js?v=2025-09-19-avatars-2"></script>

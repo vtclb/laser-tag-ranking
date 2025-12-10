@@ -113,7 +113,7 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
 
 
     if (!rawT1 || !rawT2) {
-      log("[ranking]", "Skipping game without teams", g);
+      // тихий пропуск без логу
       return;
     }
     const t1 = rawT1.split(",").map((n) => alias[n.trim()] || n.trim());
@@ -565,7 +565,7 @@ async function init() {
   document.getElementById("summary").textContent =
     `Ігор: ${totalGames} (${totalRounds} раундів). Період: ${formatD(minDate)}–${formatD(maxDate)}`;
   document.getElementById("season-info").textContent =
-    `Перший сезон — старт ${formatFull(minDate)}`;
+    `Зимовий сезон — старт 01.12.2025`;
   renderTopMVP(allPlayers, document.getElementById("top-mvp"));
   renderChart(allPlayers, document.getElementById("rank-chart"));
   rankingEl = document.querySelector("#ranking tbody");

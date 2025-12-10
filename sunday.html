@@ -13,6 +13,7 @@
       type="module"
       src="scripts/polyfills.js?v=2025-09-19-avatars-2"
     ></script>
+    <script type="module" src="./scripts/snow.js"></script>
     <!-- PapaParse для CSV -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js?v=2025-09-19-avatars-2"></script>
     <style>
@@ -191,6 +192,12 @@
       tbody tr:hover {
         background: rgba(255, 255, 255, 0.1);
       }
+      .tr-inactive {
+        opacity: 0.4;
+      }
+      .tr-inactive:hover {
+        opacity: 0.7;
+      }
       .avatar-img {
         width: 40px;
         height: 40px;
@@ -212,9 +219,7 @@
         font-family: "Press Start 2P", monospace;
         font-size: 0.75rem;
         text-transform: uppercase;
-        cursor:
-          url("assets/cursor.png") 4 4,
-          auto;
+        cursor: pointer;
         transition: transform 0.2s;
       }
       .pagination button:hover {

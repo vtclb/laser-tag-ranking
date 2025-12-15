@@ -1252,34 +1252,43 @@ function resolveSeasonAsset(pathname) {
 async function boot() {
   try {
     const [packData, eventsData] = await Promise.all([
-      // варіант A (рекомендую): беремо JSON з воркера
-      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')),
+      fetchJSON(
+        'https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025'
+      ),
 
-      // events опційно; якщо нема — не ламаємось
-      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025'))
-        .catch((error) => {
-          console.warn('[autumn2025] events load failed, continuing without events', error);
-          return [];
-        })
+      fetchJSON(
+        'https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025'
+      ).catch((error) => {
+        console.warn('[autumn2025] events load failed, continuing without events', error);
+        return [];
+      })
     ]);
 
     PACK = packData;
     EVENTS = eventsData;
 
-    topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});
+    topPlayers = normalizeTopPlayers(
+      PACK?.top10 ?? [],
+      PACK?.meta ?? {},
+      PACK?.aliases ?? {}
+    );
+
     renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
     renderPodium(topPlayers);
     renderLeaderboard(topPlayers);
+
     bindTableControls();
     bindProfile();
   } catch (error) {
     console.error('[autumn2025] boot failed', error);
     if (metricsGrid) {
-      metricsGrid.innerHTML = '<p class="error">Не вдалося завантажити дані сезону.</p>';
+      metricsGrid.innerHTML =
+        '<p class="error">Не вдалося завантажити дані сезону.</p>';
     }
   }
 }
 
 boot();
+
 
 

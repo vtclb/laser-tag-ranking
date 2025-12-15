@@ -1204,6 +1204,196 @@ async function fetchJSON(url, options = {}) {
   return response.json();
 }
 
+
+function normalizeKey(key) {
+  return typeof key === 'string'
+    ? key
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9а-яіїєґё]+/giu, '')
+    : '';
+}
+
+function parseCsvRows(text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    return [];
+  }
+
+  const rows = [];
+  let current = [];
+  let value = '';
+  let inQuotes = false;
+
+  const flush = () => {
+    current.push(value);
+    value = '';
+  };
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        value += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && (char === '\n' || char === '\r')) {
+      if (current.length > 0 || value) {
+        flush();
+        rows.push(current);
+        current = [];
+      }
+      if (char === '\r' && next === '\n') {
+        i += 1;
+      }
+      continue;
+    }
+
+    if (!inQuotes && char === ',') {
+      flush();
+      continue;
+    }
+
+    value += char;
+  }
+
+  if (current.length > 0 || value) {
+    flush();
+    rows.push(current);
+  }
+
+  return rows.filter((row) => row.some((cell) => (cell ?? '').toString().trim()));
+}
+
+function buildPackFromCsv(text) {
+  const rows = parseCsvRows(text);
+  if (!rows.length) {
+    return null;
+  }
+
+  const headers = rows[0];
+  const normalizedHeaders = headers.map((key) => normalizeKey(key) || key.trim());
+  const records = rows.slice(1).map((row) => {
+    const record = {};
+    row.forEach((value, index) => {
+      const headerKey = headers[index] ?? `col_${index}`;
+      const normalizedKey = normalizedHeaders[index] ?? headerKey;
+      record[headerKey] = value;
+      record[normalizedKey] = value;
+    });
+    return record;
+  });
+
+  const getValue = (record, keys) => {
+    for (const key of keys) {
+      const normalized = normalizeKey(key);
+      for (const candidate of Object.keys(record)) {
+        if (normalizeKey(candidate) === normalized) {
+          return record[candidate];
+        }
+      }
+    }
+    return undefined;
+  };
+
+  const entries = records
+    .map((record, index) => {
+      const nickname = (getValue(record, ['nickname', 'player', 'нік', 'гравець']) ?? '')
+        .toString()
+        .trim();
+      if (!nickname) {
+        return null;
+      }
+
+      const adminValue = (getValue(record, ['admin', 'administrator', 'адмін', 'роль']) ?? '')
+        .toString()
+        .toLowerCase();
+      const isAdmin = ['admin', 'yes', 'true', 'адмін', 'адміністратор'].some((mark) =>
+        adminValue.includes(mark)
+      );
+
+      const rankRaw = toFiniteNumber(
+        getValue(record, ['rank', 'place', '№', 'позиція']) ?? index + 1
+      );
+      const games = toFiniteNumber(getValue(record, ['games', 'матчів', 'игры', 'games_played']));
+      const wins = toFiniteNumber(getValue(record, ['wins', 'перемоги', 'победы']));
+      const losses = toFiniteNumber(getValue(record, ['losses', 'поразки', 'поражения']));
+      const draws = toFiniteNumber(getValue(record, ['draws', 'нічії', 'ничьи']));
+      const seasonPoints = toFiniteNumber(
+        getValue(record, ['season_points', 'points', 'очків', 'очки', 'total_points'])
+      );
+      const rounds = toFiniteNumber(getValue(record, ['rounds', 'раунди', 'раунды']));
+      const roundWins = toFiniteNumber(getValue(record, ['round_wins', 'виграні раунди']));
+      const roundLosses = toFiniteNumber(getValue(record, ['round_losses', 'програні раунди']));
+      const winRate = toFiniteNumber(getValue(record, ['winrate', 'wr', 'відсоток перемог']));
+      const roundWR = toFiniteNumber(getValue(record, ['roundwr', 'round_wr']));
+      const mvpCount = toFiniteNumber(getValue(record, ['mvp']));
+
+      return {
+        rank: rankRaw ?? index + 1,
+        player: nickname,
+        season_points: seasonPoints,
+        games,
+        wins,
+        losses,
+        draws,
+        winRate,
+        rounds,
+        round_wins: roundWins,
+        round_losses: roundLosses,
+        roundWR,
+        MVP: mvpCount,
+        is_admin: isAdmin
+      };
+    })
+    .filter(Boolean);
+
+  const sortedEntries = entries
+    .slice()
+    .sort((a, b) => (toFiniteNumber(b.season_points) ?? 0) - (toFiniteNumber(a.season_points) ?? 0))
+    .map((entry, idx) => ({ ...entry, rank: idx + 1 }));
+
+  const top10 = sortedEntries.filter((entry) => !entry.is_admin).slice(0, 10);
+
+  const aggregates = {
+    players_with_games: entries.length || null,
+    players_in_rating: entries.length || null,
+    points_total: entries.reduce((sum, entry) => sum + (toFiniteNumber(entry.season_points) ?? 0), 0)
+  };
+
+  return {
+    meta: { season: 'Осінній сезон 2025', league: 'Sunday League' },
+    aggregates,
+    top10,
+    aliases: {}
+  };
+}
+
+async function fetchSeasonPack(url, options = {}) {
+  const response = await fetch(url, { cache: 'no-store', ...options });
+  if (!response.ok) {
+    throw new Error(`Не вдалося завантажити ${url}: ${response.status}`);
+  }
+
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const pack = buildPackFromCsv(text);
+    if (!pack) {
+      throw new Error(`Невідомий формат даних за адресою ${url}`);
+    }
+    return pack;
+  }
+}
+
+
 function resolveSeasonAsset(pathname) {
   if (typeof pathname !== 'string' || !pathname) {
     return pathname;
@@ -1247,10 +1437,26 @@ function resolveSeasonAsset(pathname) {
 
 async function boot() {
   try {
+
+    const packPromise = fetchSeasonPack(
+      resolveSeasonAsset(
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=234914774&single=true&output=csv'
+      )
+    );
+    const eventsPromise = fetchJSON(
+      resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025')
+    ).catch((error) => {
+      console.warn('[autumn2025] events load failed, continuing without events', error);
+      return [];
+    });
+
+    const [packData, eventsData] = await Promise.all([packPromise, eventsPromise]);
+
     const [packData, eventsData] = await Promise.all([
       fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')),
       fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025'))
     ]);
+
     PACK = packData;
     EVENTS = eventsData;
     topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});

@@ -1399,7 +1399,7 @@ return {
   is_admin: isAdmin
 };
 
-      };
+     
     })
     .filter(Boolean);
 

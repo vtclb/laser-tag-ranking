@@ -1350,13 +1350,7 @@ const roundWR = toFiniteNumber(record?.['Round WR']);
 const mvpCount = toFiniteNumber(record?.MVP);
 
 
-      const adminValue = (getValue(record, ['admin', 'administrator', 'адмін', 'роль']) ?? '')
-        .toString()
-        .toLowerCase();
-      const isAdmin = ['admin', 'yes', 'true', 'адмін', 'адміністратор'].some((mark) =>
-        adminValue.includes(mark)
-      );
-
+            
       const rankRaw = toFiniteNumber(
         getValue(record, ['rank', 'place', '№', 'позиція']) ?? index + 1
       );

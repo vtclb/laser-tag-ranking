@@ -1320,29 +1320,35 @@ function buildPackFromCsv(text) {
       const nickname = (getValue(record, ['nickname', 'player', 'нік', 'гравець']) ?? '')
         .toString()
         .trim();
+if (!nickname) {
+  return null;
+}
 
-      if (!nickname) {
-        return null;
-      }
+// ===== ADMIN CHECK (single source of truth) =====
+const adminValue = (getValue(record, ['admin', 'administrator', 'адмін', 'роль']) ?? '')
+  .toString()
+  .toLowerCase();
 
+const isAdmin = ['admin', 'yes', 'true', 'адмін', 'адміністратор']
+  .some(mark => adminValue.includes(mark));
 
-      const adminValue = record?.Admin;
-      const isAdmin = typeof adminValue === 'string'
-        ? ['true', 'yes', 'y', '1'].includes(adminValue.trim().toLowerCase())
-        : Boolean(adminValue);
+// ===== BASIC STATS =====
+const rankRaw = toFiniteNumber(record?.Rank ?? index + 1);
+const games = toFiniteNumber(record?.Games);
+const wins = toFiniteNumber(record?.Wins);
+const losses = toFiniteNumber(record?.Losses);
+const draws = toFiniteNumber(record?.Draws);
+const seasonPoints = toFiniteNumber(record?.Points);
 
-      const rankRaw = toFiniteNumber(record?.Rank ?? index + 1);
-      const games = toFiniteNumber(record?.Games);
-      const wins = toFiniteNumber(record?.Wins);
-      const losses = toFiniteNumber(record?.Losses);
-      const draws = toFiniteNumber(record?.Draws);
-      const seasonPoints = toFiniteNumber(record?.Points);
-      const rounds = toFiniteNumber(record?.Rounds);
-      const roundWins = toFiniteNumber(record?.['Round wins']);
-      const roundLosses = toFiniteNumber(record?.['Round losses']);
-      const winRate = toFiniteNumber(record?.WinRate);
-      const roundWR = toFiniteNumber(record?.['Round WR']);
-      const mvpCount = toFiniteNumber(record?.MVP);
+const rounds = toFiniteNumber(record?.Rounds);
+const roundWins = toFiniteNumber(record?.['Round wins']);
+const roundLosses = toFiniteNumber(record?.['Round losses']);
+
+const winRate = toFiniteNumber(record?.WinRate);
+const roundWR = toFiniteNumber(record?.['Round WR']);
+
+const mvpCount = toFiniteNumber(record?.MVP);
+
 
       const adminValue = (getValue(record, ['admin', 'administrator', 'адмін', 'роль']) ?? '')
         .toString()

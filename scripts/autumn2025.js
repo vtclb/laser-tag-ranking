@@ -1253,11 +1253,10 @@ async function boot() {
   try {
     const [packData, eventsData] = await Promise.all([
       fetchJSON(
-        'https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025'
+        resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')
       ),
-
       fetchJSON(
-        'https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025'
+        resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025')
       ).catch((error) => {
         console.warn('[autumn2025] events load failed, continuing without events', error);
         return [];

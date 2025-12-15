@@ -1204,6 +1204,7 @@ async function fetchJSON(url, options = {}) {
   return response.json();
 }
 
+
 function normalizeKey(key) {
   return typeof key === 'string'
     ? key
@@ -1392,6 +1393,7 @@ async function fetchSeasonPack(url, options = {}) {
   }
 }
 
+
 function resolveSeasonAsset(pathname) {
   if (typeof pathname !== 'string' || !pathname) {
     return pathname;
@@ -1435,6 +1437,7 @@ function resolveSeasonAsset(pathname) {
 
 async function boot() {
   try {
+
     const packPromise = fetchSeasonPack(
       resolveSeasonAsset(
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=234914774&single=true&output=csv'
@@ -1448,6 +1451,12 @@ async function boot() {
     });
 
     const [packData, eventsData] = await Promise.all([packPromise, eventsPromise]);
+
+    const [packData, eventsData] = await Promise.all([
+      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')),
+      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025'))
+    ]);
+
     PACK = packData;
     EVENTS = eventsData;
     topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});

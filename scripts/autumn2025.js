@@ -1381,22 +1381,78 @@ function resolveSeasonAsset(pathname) {
   }
 }
 
+// ===== FETCHERS (single source of truth) =====
+async function fetchJSON(url, options = {}) {
+  const response = await fetch(url, { cache: 'no-store', ...options });
+  if (!response.ok) {
+    throw new Error(`Не вдалося завантажити ${url}: ${response.status}`);
+  }
+  return response.json();
+}
+
+function resolveSeasonAsset(pathname) {
+  if (typeof pathname !== 'string' || !pathname) {
+    return pathname;
+  }
+
+  if (typeof window !== 'undefined') {
+    const directoryHref = (() => {
+      if (typeof document !== 'undefined' && document.baseURI) {
+        try {
+          return new URL('.', document.baseURI).href;
+        } catch (error) {
+          console.warn('[autumn2025] failed to resolve document.baseURI', error);
+        }
+      }
+
+      const { origin, pathname: currentPath } = window.location ?? {};
+      if (origin) {
+        try {
+          const base = currentPath ? `${origin}${currentPath}` : origin;
+          return new URL('.', base).href;
+        } catch (error) {
+          console.warn('[autumn2025] failed to resolve window.location', error);
+          return `${origin}/`;
+        }
+      }
+
+      return undefined;
+    })();
+
+    if (directoryHref) {
+      try {
+        return new URL(pathname, directoryHref).href;
+      } catch (error) {
+        console.warn('[autumn2025] failed to resolve asset URL', pathname, error);
+      }
+    }
+  }
+
+  return pathname;
+}
+
 // ===== BOOT (single source of truth) =====
 async function boot() {
   try {
-    
-    const PACK_URL = resolveSeasonAsset(
-      'https://laser-proxy.vartaclub.workers.dev/?league=ocinb2025'
-    );
+    const [packData, eventsData] = await Promise.all([
+      // варіант A (рекомендую): беремо JSON з воркера
+      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')),
 
-    PACK = await fetchSeasonPack(PACK_URL);
-    EVENTS = []; // поки без івентів, щоб не ламалось
+      // events опційно; якщо нема — не ламаємось
+      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025'))
+        .catch((error) => {
+          console.warn('[autumn2025] events load failed, continuing without events', error);
+          return [];
+        })
+    ]);
+
+    PACK = packData;
+    EVENTS = eventsData;
 
     topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});
     renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
     renderPodium(topPlayers);
     renderLeaderboard(topPlayers);
-
     bindTableControls();
     bindProfile();
   } catch (error) {
@@ -1408,4 +1464,5 @@ async function boot() {
 }
 
 boot();
+
 

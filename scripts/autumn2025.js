@@ -1369,13 +1369,7 @@ async function fetchSeasonPack(url, options = {}) {
     if (!pack) throw new Error(`Невідомий формат даних за адресою ${url}`);
     return pack;
   }
-}
 
-async function fetchJSON(url, options = {}) {
-  const res = await fetch(url, { cache: 'no-store', ...options });
-  if (!res.ok) throw new Error(`Не вдалося завантажити ${url}: ${res.status}`);
-  return await res.json();
-}
 
 function resolveSeasonAsset(pathname) {
   if (typeof pathname !== 'string' || !pathname) return pathname;

@@ -1252,15 +1252,10 @@ function resolveSeasonAsset(pathname) {
 async function boot() {
   try {
     const [packData, eventsData] = await Promise.all([
-      fetchJSON(
-        resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')
-      ),
-      fetchJSON(
-        resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025')
-      ).catch((error) => {
-        console.warn('[autumn2025] events load failed, continuing without events', error);
-        return [];
-      })
+      codex/create-autumn2025.js-like-summer2025.js-2rr7r9
+      fetchJSON(resolveSeasonAsset('ocinb2025_pack.json')),
+      fetchJSON(resolveSeasonAsset('sunday_autumn_2025_EVENTS.json')).catch(() => [])
+
     ]);
 
     PACK = packData;
@@ -1282,7 +1277,7 @@ async function boot() {
     console.error('[autumn2025] boot failed', error);
     if (metricsGrid) {
       metricsGrid.innerHTML =
-        '<p class="error">Не вдалося завантажити дані сезону.</p>';
+        '<p class="error">Не вдалося завантажити дані осіннього сезону.</p>';
     }
   }
 }

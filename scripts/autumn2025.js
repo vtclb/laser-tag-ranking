@@ -1450,7 +1450,6 @@ async function boot() {
       return [];
     });
 
-    const [packData, eventsData] = await Promise.all([packPromise, eventsPromise]);
 
     const [packData, eventsData] = await Promise.all([
       fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')),

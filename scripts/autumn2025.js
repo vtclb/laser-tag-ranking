@@ -1275,131 +1275,61 @@ function parseCsvRows(text) {
   return rows.filter((row) => row.some((cell) => (cell ?? '').toString().trim()));
 }
 
-function buildPackFromCsv(text) {
-  const rows = parseCsvRows(text);
-  if (!rows.length) {
-    return null;
-  }
-
-  const headers = rows[0];
-
-
-  const normalizedHeaders = headers.map((key) => normalizeKey(key) || key.trim());
-
-
-  const records = rows.slice(1).map((row) => {
-    const record = {};
-    row.forEach((value, index) => {
-      const headerKey = headers[index] ?? `col_${index}`;
-
-
-      record[headerKey] = value;
-
-      const normalizedKey = normalizedHeaders[index] ?? headerKey;
-      record[headerKey] = value;
-      record[normalizedKey] = value;
-
-
-    });
-    return record;
-  });
-
-
+// ===== BUILD PACK FROM CSV RECORDS =====
+function buildPackFromCsv(csvText) {
+  const records = parseCsvToRecords(csvText); // 
+  if (!Array.isArray(records) || !records.length) return null;
 
   const entries = records
     .map((record, index) => {
-      const nickname = (record?.Nickname ?? '').toString().trim();
+      if (!record) return null;
 
-  const getValue = (record, keys) => {
-    for (const key of keys) {
-      const normalized = normalizeKey(key);
-      for (const candidate of Object.keys(record)) {
-        if (normalizeKey(candidate) === normalized) {
-          return record[candidate];
-        }
-      }
-    }
-    return undefined;
-  };
+      const nickname = String(getValue(record, ['Nickname', 'nickname', 'nick', 'player', 'гравець']) ?? '').trim();
+      if (!nickname) return null;
 
-  const entries = records
-    .map((record, index) => {
-      const nickname = (getValue(record, ['nickname', 'player', 'нік', 'гравець']) ?? '')
+      // ===== ADMIN CHECK (single source of truth) =====
+      const adminValue = (getValue(record, ['Admin', 'admin', 'administrator', 'адмін', 'роль']) ?? '')
         .toString()
-        .trim();
-if (!nickname) {
-  return null;
-}
+        .toLowerCase();
 
-// ===== ADMIN CHECK (single source of truth) =====
-const adminValue = (getValue(record, ['admin', 'administrator', 'адмін', 'роль']) ?? '')
-  .toString()
-  .toLowerCase();
+      const isAdmin = ['admin', 'yes', 'true', '1', 'y', 'адмін', 'адміністратор']
+        .some(mark => adminValue.includes(mark));
 
-const isAdmin = ['admin', 'yes', 'true', 'адмін', 'адміністратор']
-  .some(mark => adminValue.includes(mark));
+      // ===== BASIC STATS (single source of truth) =====
+      const rankRaw = toFiniteNumber(getValue(record, ['Rank', 'rank', 'place', '№', 'позиція']) ?? index + 1);
 
-// ===== BASIC STATS (single source of truth) =====
-const rankRaw = toFiniteNumber(
-  getValue(record, ['rank', 'place', '№', 'позиція']) ?? index + 1
-);
+      const games  = toFiniteNumber(getValue(record, ['Games', 'games', 'матчів', 'игры', 'games_played']));
+      const wins   = toFiniteNumber(getValue(record, ['Wins', 'wins', 'перемоги', 'победы']));
+      const losses = toFiniteNumber(getValue(record, ['Losses', 'losses', 'поразки', 'поражения']));
+      const draws  = toFiniteNumber(getValue(record, ['Draws', 'draws', 'нічії', 'ничьи']));
 
-const games = toFiniteNumber(
-  getValue(record, ['games', 'матчів', 'игры', 'games_played'])
-);
-const wins = toFiniteNumber(
-  getValue(record, ['wins', 'перемоги', 'победы'])
-);
-const losses = toFiniteNumber(
-  getValue(record, ['losses', 'поразки', 'поражения'])
-);
-const draws = toFiniteNumber(
-  getValue(record, ['draws', 'нічії', 'ничьи'])
-);
+      const seasonPoints = toFiniteNumber(getValue(record, ['Points', 'season_points', 'points', 'очків', 'очки', 'total_points']));
 
-const seasonPoints = toFiniteNumber(
-  getValue(record, ['season_points', 'points', 'очків', 'очки', 'total_points'])
-);
+      const rounds      = toFiniteNumber(getValue(record, ['Rounds', 'rounds', 'раунди', 'раунды']));
+      const roundWins   = toFiniteNumber(getValue(record, ['Round wins', 'round_wins', 'виграні раунди']));
+      const roundLosses = toFiniteNumber(getValue(record, ['Round losses', 'round_losses', 'програні раунди']));
 
-const rounds = toFiniteNumber(
-  getValue(record, ['rounds', 'раунди', 'раунды'])
-);
-const roundWins = toFiniteNumber(
-  getValue(record, ['round_wins', 'виграні раунди'])
-);
-const roundLosses = toFiniteNumber(
-  getValue(record, ['round_losses', 'програні раунди'])
-);
+      const winRate = toFiniteNumber(getValue(record, ['WinRate', 'winrate', 'wr', 'відсоток перемог']));
+      const roundWR = toFiniteNumber(getValue(record, ['Round WR', 'roundwr', 'round_wr']));
 
-const winRate = toFiniteNumber(
-  getValue(record, ['winrate', 'wr', 'відсоток перемог'])
-);
-const roundWR = toFiniteNumber(
-  getValue(record, ['roundwr', 'round_wr'])
-);
+      const mvpCount = toFiniteNumber(getValue(record, ['MVP', 'mvp']));
 
-const mvpCount = toFiniteNumber(
-  getValue(record, ['mvp'])
-);
-
-return {
-  rank: rankRaw ?? index + 1,
-  player: nickname,
-  season_points: seasonPoints,
-  games,
-  wins,
-  losses,
-  draws,
-  winRate,
-  rounds,
-  round_wins: roundWins,
-  round_losses: roundLosses,
-  roundWR,
-  MVP: mvpCount,
-  is_admin: isAdmin
-};
-
-     
+      return {
+        rank: rankRaw ?? index + 1,
+        player: nickname,
+        season_points: seasonPoints,
+        games,
+        wins,
+        losses,
+        draws,
+        winRate,
+        rounds,
+        round_wins: roundWins,
+        round_losses: roundLosses,
+        roundWR,
+        MVP: mvpCount,
+        is_admin: isAdmin
+      };
     })
     .filter(Boolean);
 
@@ -1408,12 +1338,12 @@ return {
     .sort((a, b) => (toFiniteNumber(b.season_points) ?? 0) - (toFiniteNumber(a.season_points) ?? 0))
     .map((entry, idx) => ({ ...entry, rank: idx + 1 }));
 
-  const top10 = sortedEntries.filter((entry) => !entry.is_admin).slice(0, 10);
+  const top10 = sortedEntries.filter(e => !e.is_admin).slice(0, 10);
 
   const aggregates = {
-    players_with_games: entries.length || null,
-    players_in_rating: entries.length || null,
-    points_total: entries.reduce((sum, entry) => sum + (toFiniteNumber(entry.season_points) ?? 0), 0)
+    players_with_games: entries.length || 0,
+    players_in_rating: entries.length || 0,
+    points_total: entries.reduce((sum, e) => sum + (toFiniteNumber(e.season_points) ?? 0), 0)
   };
 
   return {
@@ -1424,114 +1354,54 @@ return {
   };
 }
 
+// ===== FETCHERS =====
 async function fetchSeasonPack(url, options = {}) {
-  const response = await fetch(url, { cache: 'no-store', ...options });
-  if (!response.ok) {
-    throw new Error(`Не вдалося завантажити ${url}: ${response.status}`);
-  }
+  const res = await fetch(url, { cache: 'no-store', ...options });
+  if (!res.ok) throw new Error(`Не вдалося завантажити ${url}: ${res.status}`);
+  const text = await res.text();
 
-  const text = await response.text();
-
-  const pack = buildPackFromCsv(text);
-  if (!pack) {
-    throw new Error(`Невідомий формат даних за адресою ${url}`);
-  }
-  return pack;
-}
-
-
-
+  
   try {
     return JSON.parse(text);
-  } catch (error) {
+  } catch (_) {
+   
     const pack = buildPackFromCsv(text);
-    if (!pack) {
-      throw new Error(`Невідомий формат даних за адресою ${url}`);
-    }
+    if (!pack) throw new Error(`Невідомий формат даних за адресою ${url}`);
     return pack;
   }
 }
 
-
-
-function resolveSeasonAsset(pathname) {
-  if (typeof pathname !== 'string' || !pathname) {
-    return pathname;
-  }
-
-  if (typeof window !== 'undefined') {
-    const directoryHref = (() => {
-      if (typeof document !== 'undefined' && document.baseURI) {
-        try {
-          return new URL('.', document.baseURI).href;
-        } catch (error) {
-          console.warn('[autumn2025] failed to resolve document.baseURI', error);
-        }
-      }
-
-      const { origin, pathname: currentPath } = window.location ?? {};
-      if (origin) {
-        try {
-          const base = currentPath ? `${origin}${currentPath}` : origin;
-          return new URL('.', base).href;
-        } catch (error) {
-          console.warn('[autumn2025] failed to resolve window.location', error);
-          return `${origin}/`;
-        }
-      }
-
-      return undefined;
-    })();
-
-    if (directoryHref) {
-      try {
-        return new URL(pathname, directoryHref).href;
-      } catch (error) {
-        console.warn('[autumn2025] failed to resolve asset URL', pathname, error);
-      }
-    }
-  }
-
-  return pathname;
+async function fetchJSON(url, options = {}) {
+  const res = await fetch(url, { cache: 'no-store', ...options });
+  if (!res.ok) throw new Error(`Не вдалося завантажити ${url}: ${res.status}`);
+  return await res.json();
 }
 
+function resolveSeasonAsset(pathname) {
+  if (typeof pathname !== 'string' || !pathname) return pathname;
+  try {
+    return new URL(pathname, document.baseURI).href;
+  } catch (_) {
+    return pathname;
+  }
+}
+
+// ===== BOOT (single source of truth) =====
 async function boot() {
   try {
-
-    const packData = await fetchSeasonPack(
-      resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/?league=ocinb2025')
+    
+    const PACK_URL = resolveSeasonAsset(
+      'https://laser-proxy.vartaclub.workers.dev/?league=ocinb2025'
     );
-    PACK = packData;
-    EVENTS = [];
 
-
-
-    const packPromise = fetchSeasonPack(
-      resolveSeasonAsset(
-        'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=234914774&single=true&output=csv'
-      )
-    );
-    const eventsPromise = fetchJSON(
-      resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025')
-    ).catch((error) => {
-      console.warn('[autumn2025] events load failed, continuing without events', error);
-      return [];
-    });
-
-
-    const [packData, eventsData] = await Promise.all([
-      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/json?tab=ocinb2025')),
-      fetchJSON(resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/events?tab=ocinb2025'))
-    ]);
-
-    PACK = packData;
-    EVENTS = eventsData;
-
+    PACK = await fetchSeasonPack(PACK_URL);
+    EVENTS = []; // поки без івентів, щоб не ламалось
 
     topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});
     renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
     renderPodium(topPlayers);
     renderLeaderboard(topPlayers);
+
     bindTableControls();
     bindProfile();
   } catch (error) {
@@ -1543,3 +1413,4 @@ async function boot() {
 }
 
 boot();
+

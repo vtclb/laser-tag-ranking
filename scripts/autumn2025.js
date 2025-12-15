@@ -1369,6 +1369,7 @@ async function fetchSeasonPack(url, options = {}) {
     if (!pack) throw new Error(`Невідомий формат даних за адресою ${url}`);
     return pack;
   }
+}
 
 
 function resolveSeasonAsset(pathname) {

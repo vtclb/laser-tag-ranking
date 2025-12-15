@@ -1196,6 +1196,7 @@ function bindProfile() {
   });
 }
 
+
 async function fetchJSON(url, options = {}) {
   const response = await fetch(url, { cache: 'no-store', ...options });
   if (!response.ok) {
@@ -1213,6 +1214,7 @@ function normalizeKey(key) {
         .replace(/[^a-z0-9а-яіїєґё]+/giu, '')
     : '';
 }
+
 
 function parseCsvRows(text) {
   if (typeof text !== 'string' || !text.trim()) {
@@ -1278,17 +1280,28 @@ function buildPackFromCsv(text) {
   }
 
   const headers = rows[0];
+
   const normalizedHeaders = headers.map((key) => normalizeKey(key) || key.trim());
+
   const records = rows.slice(1).map((row) => {
     const record = {};
     row.forEach((value, index) => {
       const headerKey = headers[index] ?? `col_${index}`;
+
+      record[headerKey] = value;
+
       const normalizedKey = normalizedHeaders[index] ?? headerKey;
       record[headerKey] = value;
       record[normalizedKey] = value;
+
     });
     return record;
   });
+
+
+  const entries = records
+    .map((record, index) => {
+      const nickname = (record?.Nickname ?? '').toString().trim();
 
   const getValue = (record, keys) => {
     for (const key of keys) {
@@ -1307,9 +1320,29 @@ function buildPackFromCsv(text) {
       const nickname = (getValue(record, ['nickname', 'player', 'нік', 'гравець']) ?? '')
         .toString()
         .trim();
+
       if (!nickname) {
         return null;
       }
+
+
+      const adminValue = record?.Admin;
+      const isAdmin = typeof adminValue === 'string'
+        ? ['true', 'yes', 'y', '1'].includes(adminValue.trim().toLowerCase())
+        : Boolean(adminValue);
+
+      const rankRaw = toFiniteNumber(record?.Rank ?? index + 1);
+      const games = toFiniteNumber(record?.Games);
+      const wins = toFiniteNumber(record?.Wins);
+      const losses = toFiniteNumber(record?.Losses);
+      const draws = toFiniteNumber(record?.Draws);
+      const seasonPoints = toFiniteNumber(record?.Points);
+      const rounds = toFiniteNumber(record?.Rounds);
+      const roundWins = toFiniteNumber(record?.['Round wins']);
+      const roundLosses = toFiniteNumber(record?.['Round losses']);
+      const winRate = toFiniteNumber(record?.WinRate);
+      const roundWR = toFiniteNumber(record?.['Round WR']);
+      const mvpCount = toFiniteNumber(record?.MVP);
 
       const adminValue = (getValue(record, ['admin', 'administrator', 'адмін', 'роль']) ?? '')
         .toString()
@@ -1334,6 +1367,7 @@ function buildPackFromCsv(text) {
       const winRate = toFiniteNumber(getValue(record, ['winrate', 'wr', 'відсоток перемог']));
       const roundWR = toFiniteNumber(getValue(record, ['roundwr', 'round_wr']));
       const mvpCount = toFiniteNumber(getValue(record, ['mvp']));
+
 
       return {
         rank: rankRaw ?? index + 1,
@@ -1382,6 +1416,15 @@ async function fetchSeasonPack(url, options = {}) {
   }
 
   const text = await response.text();
+
+  const pack = buildPackFromCsv(text);
+  if (!pack) {
+    throw new Error(`Невідомий формат даних за адресою ${url}`);
+  }
+  return pack;
+}
+
+
   try {
     return JSON.parse(text);
   } catch (error) {
@@ -1438,6 +1481,13 @@ function resolveSeasonAsset(pathname) {
 async function boot() {
   try {
 
+    const packData = await fetchSeasonPack(
+      resolveSeasonAsset('https://laser-proxy.vartaclub.workers.dev/?league=ocinb2025')
+    );
+    PACK = packData;
+    EVENTS = [];
+
+
     const packPromise = fetchSeasonPack(
       resolveSeasonAsset(
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=234914774&single=true&output=csv'
@@ -1458,6 +1508,7 @@ async function boot() {
 
     PACK = packData;
     EVENTS = eventsData;
+
     topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});
     renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
     renderPodium(topPlayers);

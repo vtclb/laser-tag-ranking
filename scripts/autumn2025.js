@@ -1197,6 +1197,7 @@ function bindProfile() {
 }
 
 
+
 async function fetchJSON(url, options = {}) {
   const response = await fetch(url, { cache: 'no-store', ...options });
   if (!response.ok) {
@@ -1214,6 +1215,7 @@ function normalizeKey(key) {
         .replace(/[^a-z0-9а-яіїєґё]+/giu, '')
     : '';
 }
+
 
 
 function parseCsvRows(text) {
@@ -1281,12 +1283,15 @@ function buildPackFromCsv(text) {
 
   const headers = rows[0];
 
+
   const normalizedHeaders = headers.map((key) => normalizeKey(key) || key.trim());
+
 
   const records = rows.slice(1).map((row) => {
     const record = {};
     row.forEach((value, index) => {
       const headerKey = headers[index] ?? `col_${index}`;
+
 
       record[headerKey] = value;
 
@@ -1294,9 +1299,11 @@ function buildPackFromCsv(text) {
       record[headerKey] = value;
       record[normalizedKey] = value;
 
+
     });
     return record;
   });
+
 
 
   const entries = records
@@ -1369,6 +1376,7 @@ const mvpCount = toFiniteNumber(record?.MVP);
       const mvpCount = toFiniteNumber(getValue(record, ['mvp']));
 
 
+
       return {
         rank: rankRaw ?? index + 1,
         player: nickname,
@@ -1425,6 +1433,7 @@ async function fetchSeasonPack(url, options = {}) {
 }
 
 
+
   try {
     return JSON.parse(text);
   } catch (error) {
@@ -1435,6 +1444,7 @@ async function fetchSeasonPack(url, options = {}) {
     return pack;
   }
 }
+
 
 
 function resolveSeasonAsset(pathname) {
@@ -1488,6 +1498,7 @@ async function boot() {
     EVENTS = [];
 
 
+
     const packPromise = fetchSeasonPack(
       resolveSeasonAsset(
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=234914774&single=true&output=csv'
@@ -1508,6 +1519,7 @@ async function boot() {
 
     PACK = packData;
     EVENTS = eventsData;
+
 
     topPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, PACK?.aliases ?? {});
     renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);

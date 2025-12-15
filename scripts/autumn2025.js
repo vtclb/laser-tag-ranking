@@ -1339,59 +1339,66 @@ const adminValue = (getValue(record, ['admin', 'administrator', 'адмін', '�
 const isAdmin = ['admin', 'yes', 'true', 'адмін', 'адміністратор']
   .some(mark => adminValue.includes(mark));
 
-// ===== BASIC STATS =====
-const rankRaw = toFiniteNumber(record?.Rank ?? index + 1);
-const games = toFiniteNumber(record?.Games);
-const wins = toFiniteNumber(record?.Wins);
-const losses = toFiniteNumber(record?.Losses);
-const draws = toFiniteNumber(record?.Draws);
-const seasonPoints = toFiniteNumber(record?.Points);
+// ===== BASIC STATS (single source of truth) =====
+const rankRaw = toFiniteNumber(
+  getValue(record, ['rank', 'place', '№', 'позиція']) ?? index + 1
+);
 
-const rounds = toFiniteNumber(record?.Rounds);
-const roundWins = toFiniteNumber(record?.['Round wins']);
-const roundLosses = toFiniteNumber(record?.['Round losses']);
+const games = toFiniteNumber(
+  getValue(record, ['games', 'матчів', 'игры', 'games_played'])
+);
+const wins = toFiniteNumber(
+  getValue(record, ['wins', 'перемоги', 'победы'])
+);
+const losses = toFiniteNumber(
+  getValue(record, ['losses', 'поразки', 'поражения'])
+);
+const draws = toFiniteNumber(
+  getValue(record, ['draws', 'нічії', 'ничьи'])
+);
 
-const winRate = toFiniteNumber(record?.WinRate);
-const roundWR = toFiniteNumber(record?.['Round WR']);
+const seasonPoints = toFiniteNumber(
+  getValue(record, ['season_points', 'points', 'очків', 'очки', 'total_points'])
+);
 
-const mvpCount = toFiniteNumber(record?.MVP);
+const rounds = toFiniteNumber(
+  getValue(record, ['rounds', 'раунди', 'раунды'])
+);
+const roundWins = toFiniteNumber(
+  getValue(record, ['round_wins', 'виграні раунди'])
+);
+const roundLosses = toFiniteNumber(
+  getValue(record, ['round_losses', 'програні раунди'])
+);
 
+const winRate = toFiniteNumber(
+  getValue(record, ['winrate', 'wr', 'відсоток перемог'])
+);
+const roundWR = toFiniteNumber(
+  getValue(record, ['roundwr', 'round_wr'])
+);
 
-            
-      const rankRaw = toFiniteNumber(
-        getValue(record, ['rank', 'place', '№', 'позиція']) ?? index + 1
-      );
-      const games = toFiniteNumber(getValue(record, ['games', 'матчів', 'игры', 'games_played']));
-      const wins = toFiniteNumber(getValue(record, ['wins', 'перемоги', 'победы']));
-      const losses = toFiniteNumber(getValue(record, ['losses', 'поразки', 'поражения']));
-      const draws = toFiniteNumber(getValue(record, ['draws', 'нічії', 'ничьи']));
-      const seasonPoints = toFiniteNumber(
-        getValue(record, ['season_points', 'points', 'очків', 'очки', 'total_points'])
-      );
-      const rounds = toFiniteNumber(getValue(record, ['rounds', 'раунди', 'раунды']));
-      const roundWins = toFiniteNumber(getValue(record, ['round_wins', 'виграні раунди']));
-      const roundLosses = toFiniteNumber(getValue(record, ['round_losses', 'програні раунди']));
-      const winRate = toFiniteNumber(getValue(record, ['winrate', 'wr', 'відсоток перемог']));
-      const roundWR = toFiniteNumber(getValue(record, ['roundwr', 'round_wr']));
-      const mvpCount = toFiniteNumber(getValue(record, ['mvp']));
+const mvpCount = toFiniteNumber(
+  getValue(record, ['mvp'])
+);
 
+return {
+  rank: rankRaw ?? index + 1,
+  player: nickname,
+  season_points: seasonPoints,
+  games,
+  wins,
+  losses,
+  draws,
+  winRate,
+  rounds,
+  round_wins: roundWins,
+  round_losses: roundLosses,
+  roundWR,
+  MVP: mvpCount,
+  is_admin: isAdmin
+};
 
-
-      return {
-        rank: rankRaw ?? index + 1,
-        player: nickname,
-        season_points: seasonPoints,
-        games,
-        wins,
-        losses,
-        draws,
-        winRate,
-        rounds,
-        round_wins: roundWins,
-        round_losses: roundLosses,
-        roundWR,
-        MVP: mvpCount,
-        is_admin: isAdmin
       };
     })
     .filter(Boolean);

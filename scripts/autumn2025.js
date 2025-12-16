@@ -951,7 +951,7 @@ async function boot() {
     activeLeague = 'sundaygames';
 
 
-    updateLeagueButtons(activeLeague);
+  
     renderAll(activeLeague);
 
     bindLeagueSwitch();

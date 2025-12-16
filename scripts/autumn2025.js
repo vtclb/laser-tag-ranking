@@ -139,6 +139,194 @@ function computeStdDev(values, mean) {
   return Math.sqrt(variance);
 }
 
+function normalizeLeagueName(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed.toLowerCase() : '';
+}
+
+function resolvePlayerLeague(entry, fallback) {
+  const leagueFields = ['league', 'League', 'leagueName', 'league_name'];
+  for (const field of leagueFields) {
+    const value = typeof entry?.[field] === 'string' ? entry[field].trim() : '';
+    if (value) {
+      return value;
+    }
+  }
+  return typeof fallback === 'string' && fallback.trim() ? fallback.trim() : '';
+}
+
+function getLeagueLabel(value) {
+  const normalized = normalizeLeagueName(value);
+  if (!normalized) {
+    return value || FALLBACK;
+  }
+  if (
+    normalized.includes('junior') ||
+    normalized.includes('kid') ||
+    normalized.includes('youth') ||
+    normalized.includes('дит') ||
+    normalized.includes('молод')
+  ) {
+    return 'Дитяча ліга';
+  }
+  if (
+    normalized.includes('adult') ||
+    normalized.includes('sunday') ||
+    normalized.includes('дорос') ||
+    normalized.includes('старш')
+  ) {
+    return 'Доросла ліга';
+  }
+  return value || FALLBACK;
+}
+
+function isAdminPlayer(entry, aliasMap = {}) {
+  if (!entry) {
+    return false;
+  }
+  const adminFlag = entry?.is_admin === true || entry?.isAdmin === true;
+  if (adminFlag) {
+    return true;
+  }
+  const normalizedName = normalizeNickname(entry?.player ?? entry?.nickname ?? '', aliasMap);
+  return normalizedName ? ADMIN_BLOCKLIST.has(normalizedName) : false;
+}
+
+function mergePlayerRecords(allPlayers = [], topList = [], aliasMap = {}) {
+  const detailedIndex = new Map();
+  topList.forEach((entry) => {
+    const normalized = normalizeNickname(entry?.player, aliasMap);
+    if (normalized) {
+      detailedIndex.set(normalized, entry);
+    }
+  });
+
+  const merged = allPlayers.map((entry) => {
+    const normalized = normalizeNickname(entry?.player, aliasMap);
+    const detailed = normalized ? detailedIndex.get(normalized) : null;
+    return detailed ? { ...detailed, ...entry } : entry;
+  });
+
+  detailedIndex.forEach((entry, normalized) => {
+    const alreadyExists = merged.some((player) => normalizeNickname(player?.player, aliasMap) === normalized);
+    if (!alreadyExists) {
+      merged.push(entry);
+    }
+  });
+
+  return merged;
+}
+
+function buildLeagueOptions(players = [], fallbackLeague) {
+  const unique = new Map();
+  players.forEach((player) => {
+    const leagueName = resolvePlayerLeague(player, fallbackLeague);
+    if (!leagueName) {
+      return;
+    }
+    const normalized = normalizeLeagueName(leagueName);
+    if (normalized && !unique.has(normalized)) {
+      unique.set(normalized, leagueName);
+    }
+  });
+
+  if (unique.size === 0 && fallbackLeague) {
+    const normalizedFallback = normalizeLeagueName(fallbackLeague);
+    if (normalizedFallback) {
+      unique.set(normalizedFallback, fallbackLeague);
+    }
+  }
+
+  const priority = [
+    'junior',
+    'kid',
+    'youth',
+    'дит',
+    'молод',
+    'adult',
+    'sunday',
+    'дорос',
+    'старш'
+  ];
+
+  const scoreLeague = (league) => {
+    const normalized = normalizeLeagueName(league);
+    const index = priority.findIndex((token) => normalized.includes(token));
+    return index === -1 ? priority.length : index;
+  };
+
+  return Array.from(unique.values()).sort((a, b) => scoreLeague(a) - scoreLeague(b));
+}
+
+function sortPlayersForLeaderboard(a, b) {
+  const rankA = toFiniteNumber(a?.rank);
+  const rankB = toFiniteNumber(b?.rank);
+  if (rankA !== null && rankB !== null && rankA !== rankB) {
+    return rankA - rankB;
+  }
+
+  const pointsA = toFiniteNumber(a?.season_points ?? a?.totalPoints);
+  const pointsB = toFiniteNumber(b?.season_points ?? b?.totalPoints);
+  if (pointsA !== null && pointsB !== null && pointsA !== pointsB) {
+    return pointsB - pointsA;
+  }
+
+  const winRateA = toFiniteNumber(a?.winRate);
+  const winRateB = toFiniteNumber(b?.winRate);
+  if (winRateA !== null && winRateB !== null && winRateA !== winRateB) {
+    return winRateB - winRateA;
+  }
+
+  const gamesA = toFiniteNumber(a?.games);
+  const gamesB = toFiniteNumber(b?.games);
+  if (gamesA !== null && gamesB !== null && gamesA !== gamesB) {
+    return gamesB - gamesA;
+  }
+
+  const nameA = normalizeNickname(a?.nickname ?? a?.player ?? '', PACK?.aliases ?? {});
+  const nameB = normalizeNickname(b?.nickname ?? b?.player ?? '', PACK?.aliases ?? {});
+  return nameA.localeCompare(nameB);
+}
+
+function buildProfileLookup(players = [], aliasMap = {}) {
+  const map = new Map();
+  players.forEach((player) => {
+    const variants = getNicknameVariants(player?.nickname ?? player?.player ?? '', aliasMap);
+    variants.forEach((variant) => {
+      const normalized = normalizeNickname(variant, aliasMap);
+      if (normalized) {
+        map.set(normalized, player);
+      }
+    });
+  });
+  return map;
+}
+
+function findProfilePlayer(nickname) {
+  const aliasMap = PACK?.aliases ?? {};
+  const normalized = normalizeNickname(nickname, aliasMap);
+  if (!normalized) {
+    return null;
+  }
+  if (profileLookup.has(normalized)) {
+    return profileLookup.get(normalized);
+  }
+
+  return allPlayersNormalized.find((player) => {
+    if (!player) {
+      return false;
+    }
+    if (normalizeNickname(player?.nickname ?? '', aliasMap) === normalized) {
+      return true;
+    }
+    const aliases = Array.isArray(player?.aliases) ? player.aliases : [];
+    return aliases.some((alias) => normalizeNickname(alias, aliasMap) === normalized);
+  }) ?? null;
+}
+
 const numberFormatter = new Intl.NumberFormat('uk-UA');
 const percentFormatter0 = new Intl.NumberFormat('uk-UA', {
   style: 'percent',
@@ -190,25 +378,32 @@ const leaderboardBody = document.getElementById('leaderboard-body');
 const tickerEl = document.getElementById('season-ticker');
 const searchInput = document.getElementById('player-search');
 const tabButtons = Array.from(document.querySelectorAll('.tab-button'));
+const leagueButtons = Array.from(document.querySelectorAll('[data-league-target]'));
 const modal = document.getElementById('player-modal');
 const modalTitle = document.getElementById('modal-title');
 const modalBody = document.getElementById('modal-body');
 const closeButton = modal?.querySelector('[data-close]');
+
+const TOP_LIMIT = 10;
+const ADMIN_BLOCKLIST = new Set(['pantazi_ko']);
 
 let currentSort = 'rank';
 let currentDirection = 'asc';
 let PACK = null;
 let EVENTS = null;
 let topPlayers = [];
+let allPlayersNormalized = [];
+let profileLookup = new Map();
+let leagueOptions = [];
+let currentLeague = '';
 let seasonTickerMessages = [];
 let metricsSnapshot = null;
 let tickerTimer = null;
 let controlsBound = false;
 let profileBound = false;
+let leagueBound = false;
 
 function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
-  const leagueName = typeof meta.league === 'string' && meta.league.trim() ? meta.league : FALLBACK;
-
   return top10.map((entry, index) => {
     const nicknameRaw =
       typeof entry?.player === 'string' && entry.player.trim() ? entry.player.trim() : '';
@@ -269,6 +464,9 @@ function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
       : [];
 
     const lossesTo = opponentsMostLosses.length > 0 ? opponentsMostLosses[0] : null;
+
+    const playerLeague = resolvePlayerLeague(entry, meta.league);
+    const leagueName = playerLeague || FALLBACK;
 
     return {
       rank,
@@ -725,7 +923,10 @@ function renderLeaderboard(players = topPlayers) {
     `;
 
     const button = row.querySelector('button');
-    button?.addEventListener('click', () => renderModal(player));
+    button?.addEventListener('click', () => {
+      const profile = findProfilePlayer(playerNickname) ?? player;
+      renderModal(profile);
+    });
     leaderboardBody.append(row);
   });
 }
@@ -1144,6 +1345,28 @@ function updateTabs(targetButton) {
   });
 }
 
+function updateLeagueButtons(activeValue = currentLeague) {
+  if (!leagueButtons || leagueButtons.length === 0) {
+    return;
+  }
+
+  const normalizedActive = normalizeLeagueName(activeValue);
+  leagueButtons.forEach((button, index) => {
+    const leagueValue = leagueOptions[index] ?? '';
+    if (!leagueValue) {
+      button.disabled = true;
+      button.setAttribute('aria-pressed', 'false');
+      return;
+    }
+
+    button.disabled = false;
+    button.dataset.leagueValue = leagueValue;
+    button.textContent = getLeagueLabel(leagueValue);
+    const isActive = normalizeLeagueName(leagueValue) === normalizedActive;
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+}
+
 function bindTableControls() {
   if (controlsBound) {
     return;
@@ -1172,6 +1395,86 @@ function bindTableControls() {
   });
 
   updateTabs(tabButtons[0] ?? null);
+}
+
+function getEffectiveLeague(targetLeague) {
+  if (!Array.isArray(leagueOptions) || leagueOptions.length === 0) {
+    return targetLeague ?? '';
+  }
+
+  const normalizedTarget = normalizeLeagueName(targetLeague);
+  if (normalizedTarget) {
+    const matched = leagueOptions.find(
+      (leagueName) => normalizeLeagueName(leagueName) === normalizedTarget
+    );
+    if (matched) {
+      return matched;
+    }
+  }
+
+  return leagueOptions[0] ?? targetLeague ?? '';
+}
+
+function filterPlayersByLeague(players = [], leagueValue, fallbackLeague) {
+  const normalizedTarget =
+    normalizeLeagueName(leagueValue) || normalizeLeagueName(fallbackLeague);
+  if (!normalizedTarget) {
+    return players;
+  }
+
+  return players.filter((player) => {
+    const leagueName =
+      (typeof player?.team === 'string' && player.team.trim() ? player.team : '') ||
+      resolvePlayerLeague(player, fallbackLeague);
+    const normalizedLeague = normalizeLeagueName(leagueName);
+    return normalizedLeague === normalizedTarget;
+  });
+}
+
+function refreshLeagueData(targetLeague = currentLeague) {
+  const aliasMap = PACK?.aliases ?? {};
+  const fallbackLeague = PACK?.meta?.league;
+  const effectiveLeague = getEffectiveLeague(targetLeague || fallbackLeague);
+  currentLeague = effectiveLeague;
+
+  const leagueLabel = getLeagueLabel(effectiveLeague || fallbackLeague || FALLBACK);
+  const filteredByLeague = filterPlayersByLeague(allPlayersNormalized, effectiveLeague, fallbackLeague);
+  const nonAdmins = filteredByLeague.filter((player) => !isAdminPlayer(player, aliasMap));
+  const sorted = [...nonAdmins].sort(sortPlayersForLeaderboard);
+  const ranked = sorted.map((player, index) => ({ ...player, rank: index + 1 }));
+  const limited = ranked.slice(0, TOP_LIMIT);
+
+  topPlayers = normalizeTopPlayers(limited, { league: leagueLabel }, aliasMap).map(
+    (player, index) => ({ ...player, rank: index + 1 })
+  );
+
+  renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
+  renderPodium(topPlayers);
+  renderLeaderboard(topPlayers);
+  updateLeagueButtons(currentLeague);
+}
+
+function bindLeagueSwitch() {
+  if (leagueBound) {
+    return;
+  }
+  leagueBound = true;
+
+  leagueButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const targetLeague = button.dataset.leagueValue || button.dataset.leagueTarget || '';
+      const effectiveLeague = getEffectiveLeague(targetLeague);
+      if (!effectiveLeague) {
+        return;
+      }
+
+      if (normalizeLeagueName(effectiveLeague) === normalizeLeagueName(currentLeague)) {
+        return;
+      }
+
+      refreshLeagueData(effectiveLeague);
+    });
+  });
 }
 
 function bindProfile() {
@@ -1259,16 +1562,22 @@ async function boot() {
     PACK = packData;
     EVENTS = eventsData;
 
-    topPlayers = normalizeTopPlayers(
-      PACK?.top10 ?? [],
-      PACK?.meta ?? {},
-      PACK?.aliases ?? {}
+    const aliasMap = PACK?.aliases ?? {};
+    const mergedPlayers = mergePlayerRecords(
+      Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [],
+      Array.isArray(PACK?.top10) ? PACK.top10 : [],
+      aliasMap
     );
 
-    renderMetricsFromAggregates(PACK?.aggregates ?? {}, topPlayers);
-    renderPodium(topPlayers);
-    renderLeaderboard(topPlayers);
+    allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap);
+    profileLookup = buildProfileLookup(allPlayersNormalized, aliasMap);
+    leagueOptions = buildLeagueOptions(mergedPlayers, PACK?.meta?.league);
+    currentLeague = getEffectiveLeague(PACK?.meta?.league ?? leagueOptions[0] ?? '');
 
+    updateLeagueButtons(currentLeague);
+    refreshLeagueData(currentLeague);
+
+    bindLeagueSwitch();
     bindTableControls();
     bindProfile();
   } catch (error) {

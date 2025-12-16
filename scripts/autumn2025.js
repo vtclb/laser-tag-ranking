@@ -952,7 +952,7 @@ async function boot() {
 
 
   
-    renderAll(activeLeague);
+  
 
     bindLeagueSwitch();
     bindTableControls();

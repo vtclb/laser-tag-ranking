@@ -1861,7 +1861,7 @@ function renderAll(targetLeague = activeLeague) {
 
   const eligible = filteredTopCandidates;
 
- codex/implement-autumn-2025-league-functionalities-xyub4v
+
   console.log('[TOP10]', activeLeague, topPlayers.map((item) => item.nickname));
 
 

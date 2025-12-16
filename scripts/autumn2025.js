@@ -183,6 +183,12 @@ function normalizeLeagueName(value) {
 }
 
 function resolvePlayerLeague(entry, fallback) {
+  const aliasMap = aliasMapGlobal;
+  const normalizedKey = normalizeNickname(entry?.player ?? entry?.nickname ?? '', aliasMap);
+  if (normalizedKey && playerLeagueMap.has(normalizedKey)) {
+    return playerLeagueMap.get(normalizedKey);
+  }
+
   const leagueFields = ['league', 'League', 'leagueName', 'league_name'];
   for (const field of leagueFields) {
     const value = typeof entry?.[field] === 'string' ? entry[field].trim() : '';
@@ -259,11 +265,12 @@ function normalizeEventEntry(event) {
   };
 }
 
-function buildPlayerLeagueMapFromEvents(events = []) {
+function buildPlayerLeagueMap(events = []) {
   const counters = new Map();
 
   events.forEach((event) => {
-    if (!event || !event.league) {
+    const league = normalizeLeagueName(event?.league || event?.League);
+    if (!league || (league !== 'kids' && league !== 'sundaygames')) {
       return;
     }
     const players = [...parseTeamPlayers(event.team1), ...parseTeamPlayers(event.team2)];
@@ -272,22 +279,26 @@ function buildPlayerLeagueMapFromEvents(events = []) {
       if (!key) {
         return;
       }
-      const leagueCounts = counters.get(key) ?? new Map();
-      leagueCounts.set(event.league, (leagueCounts.get(event.league) ?? 0) + 1);
-      counters.set(key, leagueCounts);
+      const current = counters.get(key) ?? { kids: 0, sundaygames: 0 };
+      current[league] = (current[league] ?? 0) + 1;
+      counters.set(key, current);
     });
   });
 
   const result = new Map();
-  counters.forEach((leagueCounts, player) => {
+  counters.forEach((counts, player) => {
+    const kidsCount = toFiniteNumber(counts.kids) ?? 0;
+    const sundayCount = toFiniteNumber(counts.sundaygames) ?? 0;
+
     let bestLeague = '';
-    let bestCount = -1;
-    leagueCounts.forEach((count, league) => {
-      if (count > bestCount) {
-        bestCount = count;
-        bestLeague = league;
-      }
-    });
+    if (kidsCount > 0 && sundayCount === 0) {
+      bestLeague = 'kids';
+    } else if (sundayCount > 0 && kidsCount === 0) {
+      bestLeague = 'sundaygames';
+    } else if (kidsCount > 0 || sundayCount > 0) {
+      bestLeague = sundayCount > kidsCount ? 'sundaygames' : 'kids';
+    }
+
     if (bestLeague) {
       result.set(player, bestLeague);
     }
@@ -1102,7 +1113,7 @@ function renderLeaderboard(players = topPlayers) {
   });
 
   const filtered = rowsSource.filter((player) => {
-    if (player?.isAdmin) {
+    if (player?.isAdmin && !hasNormalizedSearch) {
       return false;
     }
     if (!searchTerm) {
@@ -1964,7 +1975,7 @@ async function boot() {
       ? EVENTS.events.map(normalizeEventEntry).filter(Boolean)
       : [];
 
-    playerLeagueMap = buildPlayerLeagueMapFromEvents(normalizedEvents);
+    playerLeagueMap = buildPlayerLeagueMap(normalizedEvents);
 
     const aliasMap = aliasMapGlobal;
 
@@ -1975,7 +1986,7 @@ async function boot() {
     allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap).map(
       (player) => {
         const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-        const leagueKey = playerLeagueMap.get(normalizedKey) ?? player.leagueKey;
+        const leagueKey = playerLeagueMap.get(normalizedKey) ?? '';
         return { ...player, leagueKey };
       }
     );

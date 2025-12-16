@@ -501,6 +501,9 @@ function computeLeagueStats(events = [], leagueKey) {
       team.forEach(({ key, raw }) => {
         playerSet.add(key);
         const record = ensurePlayerRecord(stats, key, raw);
+        if (!record.leagueKey) {
+          record.leagueKey = normalizedLeague;
+        }
         record.games += 1;
         if (result === 'win') {
           record.wins += 1;
@@ -734,6 +737,7 @@ let currentSort = 'rank';
 let currentDirection = 'asc';
 let PACK = null;
 let EVENTS = null;
+let TOP10_BY_LEAGUE = null;
 let aliasMapGlobal = {};
 let normalizedEvents = [];
 let playerLeagueMap = new Map();
@@ -2018,14 +2022,16 @@ function resolveSeasonAsset(pathname) {
 // ===== BOOT (single source of truth) =====
 async function boot() {
   try {
-    const [packData, eventsData, summerPack] = await Promise.all([
+    const [packData, eventsData, top10ByLeagueData, summerPack] = await Promise.all([
       fetchJSON(resolveSeasonAsset('ocinb2025_pack.json')),
       fetchJSON(resolveSeasonAsset('sunday_autumn_2025_EVENTS.json')),
+      fetchJSON(resolveSeasonAsset('ocinb2025_top10_by_league.json')).catch(() => null),
       fetchJSON(resolveSeasonAsset('SL_Summer2025_pack.json')).catch(() => null)
     ]);
 
     PACK = packData;
     EVENTS = eventsData;
+    TOP10_BY_LEAGUE = top10ByLeagueData;
 
     aliasMapGlobal = { ...(summerPack?.aliases ?? {}), ...(PACK?.aliases ?? {}) };
 
@@ -2041,8 +2047,42 @@ async function boot() {
 
     const aliasMap = aliasMapGlobal;
 
+    // Patch note: підхоплюємо окремі топ-10 для kids/sundaygames з нового JSON, щоб не змішувати ліги.
+    const topByLeagueList = [];
+    if (Array.isArray(TOP10_BY_LEAGUE?.top10_kids)) {
+      topByLeagueList.push(
+        ...TOP10_BY_LEAGUE.top10_kids.map((entry) => ({
+          ...entry,
+          league: 'kids',
+          leagueKey: 'kids'
+        }))
+      );
+    }
+    if (Array.isArray(TOP10_BY_LEAGUE?.top10_sundaygames)) {
+      topByLeagueList.push(
+        ...TOP10_BY_LEAGUE.top10_sundaygames.map((entry) => ({
+          ...entry,
+          league: 'sundaygames',
+          leagueKey: 'sundaygames'
+        }))
+      );
+    }
+
+    topByLeagueList.forEach((entry) => {
+      const normalizedKey = canon(entry?.player ?? entry?.nickname ?? '');
+      const explicitLeague = normalizeLeagueName(entry?.leagueKey ?? entry?.league);
+      if (normalizedKey && explicitLeague) {
+        playerLeagueMap.set(normalizedKey, explicitLeague);
+      }
+    });
+
     const baseAllPlayers = Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [];
-    const baseTopPlayers = Array.isArray(PACK?.top10) ? PACK.top10 : [];
+    const baseTopPlayers =
+      topByLeagueList.length > 0
+        ? topByLeagueList
+        : Array.isArray(PACK?.top10)
+          ? PACK.top10
+          : [];
     const mergedPlayers = mergePlayerRecords(baseAllPlayers, baseTopPlayers, aliasMap);
 
     allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap).map(
@@ -2077,13 +2117,37 @@ async function boot() {
       new Set(normalizedEvents.map((event) => normalizeLeagueName(event?.league)).filter(Boolean))
     );
 
+    const leaguesFromTop = Array.from(
+      new Set(
+        topByLeagueList
+          .map((entry) => normalizeLeagueName(entry?.leagueKey ?? entry?.league))
+          .filter(Boolean)
+      )
+    );
+
+    const availableLeagues = new Set([...leaguesFromEvents, ...leaguesFromTop]);
+    if (Array.isArray(TOP10_BY_LEAGUE?.leagues)) {
+      TOP10_BY_LEAGUE.leagues
+        .map((league) => normalizeLeagueName(league))
+        .filter(Boolean)
+        .forEach((league) => availableLeagues.add(league));
+    }
+    if (TOP10_BY_LEAGUE?.top10_kids) {
+      availableLeagues.add('kids');
+    }
+    if (TOP10_BY_LEAGUE?.top10_sundaygames) {
+      availableLeagues.add('sundaygames');
+    }
+
+    if (availableLeagues.size === 0) {
+      ['sundaygames', 'kids'].forEach((league) => availableLeagues.add(league));
+    }
+
     leaguesFromEvents.forEach((league) => {
       leagueStatsCache.set(league, computeLeagueStats(normalizedEvents, league));
     });
 
-    leagueOptions = ['sundaygames', 'kids'].filter(
-      (league) => leaguesFromEvents.length === 0 || leaguesFromEvents.includes(league)
-    );
+    leagueOptions = ['sundaygames', 'kids'].filter((league) => availableLeagues.has(league));
 
     activeLeague = getEffectiveLeague('sundaygames');
 

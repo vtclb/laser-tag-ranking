@@ -954,9 +954,7 @@ async function boot() {
   
   
 
-    bindLeagueSwitch();
-    bindTableControls();
-    bindProfile();
+  
   } catch (error) {
     console.error('[autumn2025] boot failed', error);
     if (metricsGrid) {

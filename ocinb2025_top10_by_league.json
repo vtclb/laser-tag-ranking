@@ -5,6 +5,7 @@
     "kids",
     "sundaygames"
   ],
+
   "top10_kids": [
     {
       "player": "Крутелик",
@@ -167,6 +168,7 @@
       "league": "kids"
     }
   ],
+
   "top10_sundaygames": [
     {
       "rank": 1,

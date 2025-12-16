@@ -948,7 +948,8 @@ async function boot() {
       (league) => leaguesFromEvents.length === 0 || leaguesFromEvents.includes(league)
     );
 
-    activeLeague = getEffectiveLeague('sundaygames');
+    activeLeague = 'sundaygames';
+
 
     updateLeagueButtons(activeLeague);
     renderAll(activeLeague);

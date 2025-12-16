@@ -312,6 +312,7 @@ function findProfilePlayer(nickname) {
     return null;
   }
 
+
   if (profileLookupAll.has(normalized)) {
     return profileLookupAll.get(normalized);
   }
@@ -321,6 +322,7 @@ function findProfilePlayer(nickname) {
   }
 
   return null;
+
 }
 
 const numberFormatter = new Intl.NumberFormat('uk-UA');
@@ -389,9 +391,11 @@ let PACK = null;
 let EVENTS = null;
 let topPlayers = [];
 let allPlayersNormalized = [];
+
 let topPlayersNormalized = [];
 let profileLookupAll = new Map();
 let profileLookupTop = new Map();
+
 let leagueOptions = [];
 let currentLeague = '';
 let seasonTickerMessages = [];
@@ -1443,6 +1447,7 @@ function refreshLeagueData(targetLeague = currentLeague) {
   currentLeague = effectiveLeague;
 
   const leagueLabel = getLeagueLabel(effectiveLeague || fallbackLeague || FALLBACK);
+
   const normalizedTarget =
     normalizeLeagueName(effectiveLeague) || normalizeLeagueName(fallbackLeague);
   const baseTop = Array.isArray(PACK?.top10) ? PACK.top10 : [];
@@ -1463,6 +1468,7 @@ function refreshLeagueData(targetLeague = currentLeague) {
     .map((entry, idx) => ({ ...entry, rank: idx + 1 }));
 
   topPlayers = normalizeTopPlayers(rankedRows, { league: leagueLabel }, aliasMap).map(
+
     (player, index) => ({ ...player, rank: index + 1 })
   );
 
@@ -1581,6 +1587,7 @@ async function boot() {
     EVENTS = eventsData;
 
     const aliasMap = PACK?.aliases ?? {};
+
     const baseAllPlayers = Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [];
     const baseTopPlayers = Array.isArray(PACK?.top10) ? PACK.top10 : [];
     const mergedPlayers = mergePlayerRecords(baseAllPlayers, baseTopPlayers, aliasMap);
@@ -1591,6 +1598,7 @@ async function boot() {
     profileLookupTop = buildProfileLookup(topPlayersNormalized, aliasMap);
     leagueOptions = buildLeagueOptions(mergedPlayers, PACK?.meta?.league);
     currentLeague = getEffectiveLeague(PACK?.meta?.league ?? leagueOptions[0] ?? '');
+
 
     updateLeagueButtons(currentLeague);
     refreshLeagueData(currentLeague);

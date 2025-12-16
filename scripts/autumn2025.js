@@ -164,7 +164,7 @@ function normalizeLeagueName(value) {
     return 'kids';
   }
   if (ADULT_LEAGUE_ALIASES.some((token) => lookup.includes(token))) {
-    return 'adult';
+    return 'olds';
   }
   return lookup;
 }
@@ -185,7 +185,7 @@ function getLeagueLabel(value) {
   if (normalized === 'kids') {
     return 'Дитяча ліга';
   }
-  if (normalized === 'adult') {
+  if (normalized === 'olds') {
     return 'Доросла ліга';
   }
   return value || FALLBACK;
@@ -251,7 +251,7 @@ function buildLeagueOptions(players = [], fallbackLeague) {
     unique.add(normalizedFallback);
   }
 
-  const priority = ['kids', 'adult'];
+  const priority = ['kids', 'olds'];
   return Array.from(unique.values()).sort((a, b) => priority.indexOf(a) - priority.indexOf(b));
 }
 
@@ -379,7 +379,7 @@ const modalBody = document.getElementById('modal-body');
 const closeButton = modal?.querySelector('[data-close]');
 
 const TOP_LIMIT = 10;
-const ADMIN_BLOCKLIST = new Set(['pantazi_ko']);
+const ADMIN_BLOCKLIST = new Set(['pantazi_ko', 'sem', 'bogd']);
 
 let currentSort = 'rank';
 let currentDirection = 'asc';
@@ -1455,7 +1455,10 @@ function refreshLeagueData(targetLeague = currentLeague) {
     return normalizedTarget ? leagueKey === normalizedTarget : true;
   });
 
-  const sortedByPoints = filteredPlayers
+  const playersForLeague =
+    filteredPlayers.length > 0 ? filteredPlayers : basePlayers;
+
+  const sortedByPoints = playersForLeague
     .slice()
     .sort((a, b) => (toFiniteNumber(b?.season_points) ?? 0) - (toFiniteNumber(a?.season_points) ?? 0));
 
@@ -1606,7 +1609,7 @@ async function boot() {
     profileLookupTop = buildProfileLookup(topPlayersNormalized, aliasMap);
     leagueOptions = buildLeagueOptions(mergedPlayers, PACK?.meta?.league);
     currentLeague =
-      getEffectiveLeague(PACK?.meta?.league ?? leagueOptions[0] ?? '') || 'adult';
+      getEffectiveLeague(PACK?.meta?.league ?? leagueOptions[0] ?? '') || 'olds';
 
     updateLeagueButtons(currentLeague);
     refreshLeagueData(currentLeague);

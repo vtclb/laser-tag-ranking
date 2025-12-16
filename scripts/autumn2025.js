@@ -1252,10 +1252,8 @@ function resolveSeasonAsset(pathname) {
 async function boot() {
   try {
     const [packData, eventsData] = await Promise.all([
-
       fetchJSON(resolveSeasonAsset('ocinb2025_pack.json')),
-      fetchJSON(resolveSeasonAsset('sunday_autumn_2025_EVENTS.json')).catch(() => [])
-
+      fetchJSON(resolveSeasonAsset('sunday_autumn_2025_EVENTS.json'))
     ]);
 
     PACK = packData;

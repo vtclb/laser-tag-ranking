@@ -1,930 +1,2288 @@
 {
   "meta": {
     "format": "v3",
-    "generated_at": "2025-12-15T17:01:44Z",
+    "generated_at": "2025-12-16T00:18:08.966Z",
     "season": "Осінній сезон 2025",
     "league": "Sunday League"
   },
   "aggregates": {
-    "players_with_games": 94,
-    "players_in_rating": 94,
-    "points_total": 27779.0
+    "total_games": 486,
+    "total_rounds": 1892,
+    "avg_rounds_per_game": 3.8930041152263373,
+    "avg_players_per_game": 7.8765432098765435,
+    "players_with_games": 120,
+    "players_in_rating": 257,
+    "points_total": 47176,
+    "points_positive_only": 47176,
+    "points_negative_only": 0,
+    "common_score": "0-3",
+    "longest_game_rounds": 5
   },
   "top10": [
     {
       "rank": 1,
       "player": "Pantazi_ko",
-      "season_points": 1400.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
-      "MVP": 0,
-      "rankTier": null
+      "season_points": 1400,
+      "games": 85,
+      "wins": 60,
+      "losses": 25,
+      "draws": 0,
+      "winRate": 0.7058823529411765,
+      "rounds": 341,
+      "round_wins": 206,
+      "round_losses": 135,
+      "roundWR": 0.6041055718475073,
+      "MVP": 43,
+      "rankTier": "S",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
+    },
+    {
+      "rank": 1,
+      "player": "Makasino",
+      "season_points": 1109,
+      "games": 46,
+      "wins": 27,
+      "losses": 19,
+      "draws": 0,
+      "winRate": 0.5869565217391305,
+      "rounds": 182,
+      "round_wins": 97,
+      "round_losses": 85,
+      "roundWR": 0.532967032967033,
+      "MVP": 14,
+      "rankTier": "A",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
     },
     {
       "rank": 2,
-      "player": "Sem",
-      "season_points": 1281.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
-      "MVP": 0,
-      "rankTier": null
+      "player": "Kуmar",
+      "season_points": 816,
+      "games": 91,
+      "wins": 37,
+      "losses": 54,
+      "draws": 0,
+      "winRate": 0.4065934065934066,
+      "rounds": 357,
+      "round_wins": 160,
+      "round_losses": 197,
+      "roundWR": 0.4481792717086835,
+      "MVP": 4,
+      "rankTier": "B",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
+    },
+    {
+      "rank": 2,
+      "player": "Missagen",
+      "season_points": 1136,
+      "games": 46,
+      "wins": 28,
+      "losses": 18,
+      "draws": 0,
+      "winRate": 0.6086956521739131,
+      "rounds": 182,
+      "round_wins": 109,
+      "round_losses": 73,
+      "roundWR": 0.5989010989010989,
+      "MVP": 16,
+      "rankTier": "A",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
     },
     {
       "rank": 3,
-      "player": "Bogd",
-      "season_points": 1278.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
+      "player": "Casha g",
+      "season_points": 1,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "winRate": 0,
+      "rounds": 0,
+      "round_wins": 0,
+      "round_losses": 0,
+      "roundWR": 0,
       "MVP": 0,
-      "rankTier": null
+      "rankTier": "F",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
+    },
+    {
+      "rank": 3,
+      "player": "Артемон",
+      "season_points": 795,
+      "games": 7,
+      "wins": 5,
+      "losses": 2,
+      "draws": 0,
+      "winRate": 0.7142857142857143,
+      "rounds": 30,
+      "round_wins": 18,
+      "round_losses": 12,
+      "roundWR": 0.6,
+      "MVP": 4,
+      "rankTier": "C",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
     },
     {
       "rank": 4,
-      "player": "Zavodchanyn",
-      "season_points": 1261.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
+      "player": "Temostar",
+      "season_points": 596,
+      "games": 11,
+      "wins": 5,
+      "losses": 6,
+      "draws": 0,
+      "winRate": 0.45454545454545453,
+      "rounds": 39,
+      "round_wins": 19,
+      "round_losses": 20,
+      "roundWR": 0.48717948717948717,
+      "MVP": 5,
+      "rankTier": "D",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
+    },
+    {
+      "rank": 4,
+      "player": "Рікардо",
+      "season_points": 200,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "winRate": 0,
+      "rounds": 0,
+      "round_wins": 0,
+      "round_losses": 0,
+      "roundWR": 0,
       "MVP": 0,
-      "rankTier": null
+      "rankTier": "E",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
     },
     {
       "rank": 5,
-      "player": "Laston",
-      "season_points": 1211.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
-      "MVP": 0,
-      "rankTier": null
+      "player": "Zavodchanyn",
+      "season_points": 1261,
+      "games": 186,
+      "wins": 92,
+      "losses": 94,
+      "draws": 0,
+      "winRate": 0.4946236559139785,
+      "rounds": 750,
+      "round_wins": 368,
+      "round_losses": 382,
+      "roundWR": 0.49066666666666664,
+      "MVP": 43,
+      "rankTier": "S",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
     },
     {
-      "rank": 6,
-      "player": "Slavon",
-      "season_points": 1125.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
+      "rank": 5,
+      "player": "АТБ",
+      "season_points": 1,
+      "games": 0,
+      "wins": 0,
+      "losses": 0,
+      "draws": 0,
+      "winRate": 0,
+      "rounds": 0,
+      "round_wins": 0,
+      "round_losses": 0,
+      "roundWR": 0,
       "MVP": 0,
-      "rankTier": null
-    },
-    {
-      "rank": 7,
-      "player": "Morti",
-      "season_points": 1122.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
-      "MVP": 0,
-      "rankTier": null
-    },
-    {
-      "rank": 8,
-      "player": "Justy",
-      "season_points": 1073.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
-      "MVP": 0,
-      "rankTier": null
-    },
-    {
-      "rank": 9,
-      "player": "Gidora",
-      "season_points": 1064.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
-      "MVP": 0,
-      "rankTier": null
-    },
-    {
-      "rank": 10,
-      "player": "Leres",
-      "season_points": 1058.0,
-      "games": null,
-      "wins": null,
-      "losses": null,
-      "draws": null,
-      "winRate": null,
-      "rounds": null,
-      "round_wins": null,
-      "round_losses": null,
-      "roundWR": null,
-      "MVP": 0,
-      "rankTier": null
+      "rankTier": "F",
+      "win_streak": null,
+      "loss_streak": null,
+      "teammates_most": [],
+      "teammates_most_wins": [],
+      "opponents_most": []
     }
   ],
-  "aliases": {},
   "allPlayers": [
     {
       "player": "Pantazi_ko",
-      "season_points": 1400.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1400,
+      "rankTier": "S",
+      "games": 85,
+      "winRate": 0.7058823529411765,
+      "MVP": 43
+    },
+    {
+      "player": "Makasino",
+      "season_points": 1109,
+      "rankTier": "A",
+      "games": 46,
+      "winRate": 0.5869565217391305,
+      "MVP": 14
+    },
+    {
+      "player": "Kуmar",
+      "season_points": 816,
+      "rankTier": "B",
+      "games": 91,
+      "winRate": 0.4065934065934066,
+      "MVP": 4
+    },
+    {
+      "player": "Missagen",
+      "season_points": 1136,
+      "rankTier": "A",
+      "games": 46,
+      "winRate": 0.6086956521739131,
+      "MVP": 16
+    },
+    {
+      "player": "Casha g",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
-      "player": "Sem",
-      "season_points": 1281.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
+      "player": "Артемон",
+      "season_points": 795,
+      "rankTier": "C",
+      "games": 7,
+      "winRate": 0.7142857142857143,
+      "MVP": 4
     },
     {
-      "player": "Bogd",
-      "season_points": 1278.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "player": "Temostar",
+      "season_points": 596,
+      "rankTier": "D",
+      "games": 11,
+      "winRate": 0.45454545454545453,
+      "MVP": 5
+    },
+    {
+      "player": "Рікардо",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Zavodchanyn",
-      "season_points": 1261.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
+      "season_points": 1261,
+      "rankTier": "S",
+      "games": 186,
+      "winRate": 0.4946236559139785,
+      "MVP": 43
     },
     {
-      "player": "Laston",
-      "season_points": 1211.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Slavon",
-      "season_points": 1125.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Morti",
-      "season_points": 1122.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Justy",
-      "season_points": 1073.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Gidora",
-      "season_points": 1064.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Leres",
-      "season_points": 1058.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Оксанка",
-      "season_points": 975.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Voron",
-      "season_points": 925.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Кицюня",
-      "season_points": 893.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Kуmar",
-      "season_points": 816.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "RuBisCo",
-      "season_points": 762.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Олег",
-      "season_points": 726.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Сocosik",
-      "season_points": 722.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Ваніль",
-      "season_points": 700.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Kolia",
-      "season_points": 683.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Temostar",
-      "season_points": 596.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Люся",
-      "season_points": 564.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Eks",
-      "season_points": 522.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "wiedii",
-      "season_points": 505.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Otg 141",
-      "season_points": 453.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Галка",
-      "season_points": 420.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Reabilitator",
-      "season_points": 400.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Джокер",
-      "season_points": 377.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "hAppser",
-      "season_points": 360.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Юліііііі",
-      "season_points": 300.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Oleksiy",
-      "season_points": 237.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Nata",
-      "season_points": 230.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Ifstasik",
-      "season_points": 229.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Rain",
-      "season_points": 206.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Den",
-      "season_points": 200.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "tuff boi",
-      "season_points": 200.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "syvu4",
-      "season_points": 200.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Sahanovskyi",
-      "season_points": 200.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "armurchik",
-      "season_points": 191.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Zorik",
-      "season_points": 171.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Bogdan",
-      "season_points": 168.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Зефір",
-      "season_points": 146.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "_bueno",
-      "season_points": 144.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Кря",
-      "season_points": 124.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "zxc_illiaxxx",
-      "season_points": 121.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Shadovf90",
-      "season_points": 106.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Ворона",
-      "season_points": 104.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Бетмен",
-      "season_points": 101.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "julie",
-      "season_points": 100.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Ракета",
-      "season_points": 100.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Vitold",
-      "season_points": 100.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "ІГОР",
-      "season_points": 100.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Бандера",
-      "season_points": 91.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Терік",
-      "season_points": 81.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Kozlovets",
-      "season_points": 64.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "VladisLove",
-      "season_points": 64.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Falkon",
-      "season_points": 63.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Koto",
-      "season_points": 61.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Ice",
-      "season_points": 61.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Творчій",
-      "season_points": 61.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Kasstiel57",
-      "season_points": 42.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Вікінг",
-      "season_points": 41.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Халк",
-      "season_points": 41.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Вілі",
-      "season_points": 28.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
-      "MVP": 0
-    },
-    {
-      "player": "Casha g",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "player": "АТБ",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Alex",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
+      "player": "Крутелик",
+      "season_points": 400,
+      "rankTier": "D",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Slavon",
+      "season_points": 1125,
+      "rankTier": "A",
+      "games": 187,
+      "winRate": 0.5026737967914439,
+      "MVP": 19
+    },
+    {
+      "player": "Пасатт",
+      "season_points": 100,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Morti",
+      "season_points": 1122,
+      "rankTier": "A",
+      "games": 149,
+      "winRate": 0.5369127516778524,
+      "MVP": 23
+    },
+    {
+      "player": "Вольтиметер",
+      "season_points": 792,
+      "rankTier": "C",
+      "games": 9,
+      "winRate": 0.7777777777777778,
+      "MVP": 2
+    },
+    {
       "player": "Little red",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Вафельки",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "DarkFox",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
+      "player": "Тайок",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Den",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "UuuSss7",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Кицюня",
+      "season_points": 893,
+      "rankTier": "B",
+      "games": 84,
+      "winRate": 0.5119047619047619,
+      "MVP": 2
+    },
+    {
+      "player": "Varzyx",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Gidora",
+      "season_points": 1064,
+      "rankTier": "A",
+      "games": 62,
+      "winRate": 0.6451612903225806,
+      "MVP": 22
+    },
+    {
+      "player": "Стрінгастий",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Justy",
+      "season_points": 1073,
+      "rankTier": "A",
+      "games": 157,
+      "winRate": 0.47770700636942676,
+      "MVP": 13
+    },
+    {
+      "player": "Uzer",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Олег",
+      "season_points": 726,
+      "rankTier": "C",
+      "games": 67,
+      "winRate": 0.417910447761194,
+      "MVP": 9
+    },
+    {
+      "player": "Перфораторщик",
+      "season_points": 1035,
+      "rankTier": "A",
+      "games": 90,
+      "winRate": 0.5111111111111111,
+      "MVP": 30
+    },
+    {
+      "player": "Laston",
+      "season_points": 1211,
+      "rankTier": "S",
+      "games": 88,
+      "winRate": 0.5909090909090909,
+      "MVP": 19
+    },
+    {
+      "player": "Мессі",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "RuBisCo",
+      "season_points": 762,
+      "rankTier": "C",
+      "games": 21,
+      "winRate": 0.42857142857142855,
+      "MVP": 2
+    },
+    {
+      "player": "Чіка",
+      "season_points": 107,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "Reabilitator",
+      "season_points": 400,
+      "rankTier": "D",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Абовен",
+      "season_points": 199,
+      "rankTier": "F",
+      "games": 16,
+      "winRate": 0.1875,
+      "MVP": 1
+    },
+    {
+      "player": "Voron",
+      "season_points": 925,
+      "rankTier": "B",
+      "games": 147,
+      "winRate": 0.47619047619047616,
+      "MVP": 7
+    },
+    {
+      "player": "Ульман",
+      "season_points": 837,
+      "rankTier": "B",
+      "games": 70,
+      "winRate": 0.6428571428571429,
+      "MVP": 12
+    },
+    {
       "player": "Оlя",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "LiviXX",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Mr. Boombastic",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Білий Ворон",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Leres",
+      "season_points": 1058,
+      "rankTier": "A",
+      "games": 101,
+      "winRate": 0.4752475247524752,
+      "MVP": 16
+    },
+    {
+      "player": "Дальнабойшік",
+      "season_points": 100,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Ваніль",
+      "season_points": 700,
+      "rankTier": "C",
+      "games": 19,
+      "winRate": 0.5263157894736842,
+      "MVP": 1
+    },
+    {
+      "player": "Годинник",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "RaccooN",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Ло Пол",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Сocosik",
+      "season_points": 722,
+      "rankTier": "C",
+      "games": 144,
+      "winRate": 0.4027777777777778,
+      "MVP": 1
+    },
+    {
+      "player": "Niki",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Оксанка",
+      "season_points": 975,
+      "rankTier": "B",
+      "games": 211,
+      "winRate": 0.4834123222748815,
+      "MVP": 4
+    },
+    {
+      "player": "Григорій",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Джон вік",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Кнопочка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Мамай",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Кетігрін",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Лис",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Пельмень",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Юліііііі",
+      "season_points": 300,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Буйна",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Pobi",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Дарина USA",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Вілі",
+      "season_points": 28,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Kiler",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Волі",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Лоутаб",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "tuff boi",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Рональдо",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Otg 141",
+      "season_points": 453,
+      "rankTier": "D",
+      "games": 28,
+      "winRate": 0.35714285714285715,
+      "MVP": 2
+    },
+    {
+      "player": "Блонда",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "og max",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Роблокс",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "nastiadrr",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "freezy",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Вітас",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Чітер",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "tuff",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Вбивця",
+      "season_points": 11,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.5714285714285714,
       "MVP": 0
     },
     {
       "player": "Qwerty",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Чорнява",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "foggers",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "qwerty",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Шейх",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Лабубу",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Gato",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Куромі",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Вовчик",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Лабубу 2",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Kris",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Фафік",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Danchoz",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Addiia",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Nata",
+      "season_points": 230,
+      "rankTier": "E",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "Білий",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Люся",
+      "season_points": 564,
+      "rankTier": "D",
+      "games": 9,
+      "winRate": 0.8888888888888888,
+      "MVP": 0
+    },
+    {
+      "player": "Didi",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Eks",
+      "season_points": 522,
+      "rankTier": "D",
+      "games": 19,
+      "winRate": 0.42105263157894735,
+      "MVP": 1
+    },
+    {
+      "player": "Злата 228",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "phenol",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Чірікет",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "San4ik",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Denys5000",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "wiedii",
+      "season_points": 505,
+      "rankTier": "D",
+      "games": 3,
+      "winRate": 0.3333333333333333,
+      "MVP": 0
+    },
+    {
+      "player": "Dani",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "syvu4",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Xз",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "глек",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "NBA",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "турист",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Тапочок",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Sahanovskyi",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Каструля 228",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "julie",
+      "season_points": 100,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Черепаха 002",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Kozlovets",
+      "season_points": 64,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Карапузік 222",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Ракета",
+      "season_points": 100,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Снайпер 222",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Vitold",
+      "season_points": 100,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Сковорідка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "ІГОР",
+      "season_points": 100,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Кружка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Аннета",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
+      "player": "Danix37",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Kolia",
+      "season_points": 683,
+      "rankTier": "C",
+      "games": 60,
+      "winRate": 0.45,
+      "MVP": 1
+    },
+    {
+      "player": "Nedix",
+      "season_points": 438,
+      "rankTier": "D",
+      "games": 24,
+      "winRate": 0.6666666666666666,
+      "MVP": 6
+    },
+    {
+      "player": "Джокер",
+      "season_points": 377,
+      "rankTier": "E",
+      "games": 42,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Den734",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Бетмен",
+      "season_points": 101,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "вла13",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Sem",
+      "season_points": 1281,
+      "rankTier": "S",
+      "games": 177,
+      "winRate": 0.4858757062146893,
+      "MVP": 43
+    },
+    {
+      "player": "Бир Бир патапім",
+      "season_points": 220,
+      "rankTier": "E",
+      "games": 7,
+      "winRate": 0.42857142857142855,
+      "MVP": 3
+    },
+    {
       "player": "єляу",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Лш16",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "джавід",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Бобр",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
       "MVP": 0
     },
     {
       "player": "Лунас",
-      "season_points": 1.0,
-      "rankTier": null,
-      "games": null,
-      "winRate": null,
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "магг",
+      "season_points": 339,
+      "rankTier": "E",
+      "games": 24,
+      "winRate": 0.5416666666666666,
+      "MVP": 0
+    },
+    {
+      "player": "Бандера",
+      "season_points": 91,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.5714285714285714,
+      "MVP": 0
+    },
+    {
+      "player": "Нікатоп",
+      "season_points": 81,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.4444444444444444,
+      "MVP": 0
+    },
+    {
+      "player": "Bogd",
+      "season_points": 1278,
+      "rankTier": "S",
+      "games": 157,
+      "winRate": 0.5796178343949044,
+      "MVP": 20
+    },
+    {
+      "player": "Nelix",
+      "season_points": 287,
+      "rankTier": "E",
+      "games": 9,
+      "winRate": 0.6666666666666666,
+      "MVP": 4
+    },
+    {
+      "player": "Rain",
+      "season_points": 206,
+      "rankTier": "E",
+      "games": 9,
+      "winRate": 0.8888888888888888,
+      "MVP": 0
+    },
+    {
+      "player": "Phyz",
+      "season_points": 319,
+      "rankTier": "E",
+      "games": 9,
+      "winRate": 0.6666666666666666,
+      "MVP": 1
+    },
+    {
+      "player": "Shadovf90",
+      "season_points": 106,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.3333333333333333,
+      "MVP": 0
+    },
+    {
+      "player": "Зефір",
+      "season_points": 146,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "nastyaaa",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Вікінг",
+      "season_points": 41,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.2,
+      "MVP": 0
+    },
+    {
+      "player": "Вонтет",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Кря",
+      "season_points": 124,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.6,
+      "MVP": 0
+    },
+    {
+      "player": "Бібка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Галка",
+      "season_points": 420,
+      "rankTier": "D",
+      "games": 7,
+      "winRate": 0.42857142857142855,
+      "MVP": 0
+    },
+    {
+      "player": "Халк",
+      "season_points": 41,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.2222222222222222,
+      "MVP": 0
+    },
+    {
+      "player": "Сосиска",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Kasstiel57",
+      "season_points": 42,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.16666666666666666,
+      "MVP": 0
+    },
+    {
+      "player": "амонгус",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Терік",
+      "season_points": 81,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.6666666666666666,
+      "MVP": 0
+    },
+    {
+      "player": "Артемон2",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "VladisLove",
+      "season_points": 64,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Сталкер",
+      "season_points": 100,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Koto",
+      "season_points": 61,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "ропагопс",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Ice",
+      "season_points": 61,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.3333333333333333,
+      "MVP": 0
+    },
+    {
+      "player": "Амонгусс",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Falkon",
+      "season_points": 63,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.3333333333333333,
+      "MVP": 1
+    },
+    {
+      "player": "Бобрікс",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Творчій",
+      "season_points": 61,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.42857142857142855,
+      "MVP": 0
+    },
+    {
+      "player": "Рататуй",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Ворона",
+      "season_points": 104,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.8333333333333334,
+      "MVP": 0
+    },
+    {
+      "player": "Зомбі",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Oleksiy",
+      "season_points": 237,
+      "rankTier": "E",
+      "games": 13,
+      "winRate": 0.5384615384615384,
+      "MVP": 4
+    },
+    {
+      "player": "Шіфтер",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Zorik",
+      "season_points": 171,
+      "rankTier": "F",
+      "games": 13,
+      "winRate": 0.46153846153846156,
+      "MVP": 2
+    },
+    {
+      "player": "квантум",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "_bueno",
+      "season_points": 144,
+      "rankTier": "F",
+      "games": 13,
+      "winRate": 0.5384615384615384,
+      "MVP": 0
+    },
+    {
+      "player": "Містер док",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Bogdan",
+      "season_points": 168,
+      "rankTier": "F",
+      "games": 13,
+      "winRate": 0.6153846153846154,
+      "MVP": 0
+    },
+    {
+      "player": "Бобер10923",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "zxc_illiaxxx",
+      "season_points": 121,
+      "rankTier": "F",
+      "games": 13,
+      "winRate": 0.38461538461538464,
+      "MVP": 0
+    },
+    {
+      "player": "Фіолетово",
+      "season_points": 574,
+      "rankTier": "D",
+      "games": 92,
+      "winRate": 0.34782608695652173,
+      "MVP": 0
+    },
+    {
+      "player": "armurchik",
+      "season_points": 191,
+      "rankTier": "F",
+      "games": 13,
+      "winRate": 0.6153846153846154,
+      "MVP": 2
+    },
+    {
+      "player": "Davud",
+      "season_points": 470,
+      "rankTier": "D",
+      "games": 93,
+      "winRate": 0.25806451612903225,
+      "MVP": 1
+    },
+    {
+      "player": "Ifstasik",
+      "season_points": 229,
+      "rankTier": "E",
+      "games": 13,
+      "winRate": 0.6153846153846154,
+      "MVP": 5
+    },
+    {
+      "player": "hopahopa444",
+      "season_points": 200,
+      "rankTier": "E",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "hAppser",
+      "season_points": 360,
+      "rankTier": "E",
+      "games": 16,
+      "winRate": 0.625,
+      "MVP": 1
+    },
+    {
+      "player": "Maki",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Франклін",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Заяць",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Віві",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Таджик2233",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Хайзенберг",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Жолудь",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "їожка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Ранальда",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Вуду",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Мандаринка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Чунгук",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Бобер",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Акула",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Білийзаяць",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Фенікс",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Чорна шкарпетка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Біла шкарпетка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Розрчка",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Софі орео",
+      "season_points": 1,
+      "rankTier": "F",
+      "games": 0,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Корова",
+      "season_points": 425,
+      "rankTier": "D",
+      "games": 48,
+      "winRate": 0.5,
+      "MVP": 5
+    },
+    {
+      "player": "Баранчік",
+      "season_points": 1109,
+      "rankTier": "A",
+      "games": 109,
+      "winRate": 0.5596330275229358,
+      "MVP": 30
+    },
+    {
+      "player": "Футік",
+      "season_points": 433,
+      "rankTier": "D",
+      "games": 34,
+      "winRate": 0.5294117647058824,
+      "MVP": 3
+    },
+    {
+      "player": "Сакура",
+      "season_points": 560,
+      "rankTier": "D",
+      "games": 34,
+      "winRate": 0.6470588235294118,
+      "MVP": 13
+    },
+    {
+      "player": "gg bro",
+      "season_points": 339,
+      "rankTier": "E",
+      "games": 21,
+      "winRate": 0.6190476190476191,
+      "MVP": 4
+    },
+    {
+      "player": "Zipxar",
+      "season_points": 111,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.3,
+      "MVP": 0
+    },
+    {
+      "player": "Мальборо",
+      "season_points": 191,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.6,
+      "MVP": 2
+    },
+    {
+      "player": "Троль",
+      "season_points": 489,
+      "rankTier": "D",
+      "games": 34,
+      "winRate": 0.6470588235294118,
+      "MVP": 5
+    },
+    {
+      "player": "Байра",
+      "season_points": 151,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Байра 2",
+      "season_points": 131,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.4,
+      "MVP": 0
+    },
+    {
+      "player": "Красавчік",
+      "season_points": 86,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.2222222222222222,
+      "MVP": 0
+    },
+    {
+      "player": "Протобафф",
+      "season_points": 136,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.7142857142857143,
+      "MVP": 0
+    },
+    {
+      "player": "Зо Зорян",
+      "season_points": 96,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.42857142857142855,
+      "MVP": 0
+    },
+    {
+      "player": "Байк",
+      "season_points": 31,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0,
+      "MVP": 0
+    },
+    {
+      "player": "Меланія",
+      "season_points": 111,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.6666666666666666,
+      "MVP": 0
+    },
+    {
+      "player": "Кабачок",
+      "season_points": 116,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.5714285714285714,
+      "MVP": 0
+    },
+    {
+      "player": "Балерина",
+      "season_points": 91,
+      "rankTier": "F",
+      "games": 6,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Stef",
+      "season_points": 41,
+      "rankTier": "F",
+      "games": 8,
+      "winRate": 0.25,
+      "MVP": 0
+    },
+    {
+      "player": "Кліп",
+      "season_points": 81,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.4444444444444444,
+      "MVP": 0
+    },
+    {
+      "player": "Макс28",
+      "season_points": 84,
+      "rankTier": "F",
+      "games": 8,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Тіп",
+      "season_points": 121,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.6,
+      "MVP": 0
+    },
+    {
+      "player": "midnight",
+      "season_points": 144,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.7,
+      "MVP": 0
+    },
+    {
+      "player": "стендов 2",
+      "season_points": 237,
+      "rankTier": "E",
+      "games": 10,
+      "winRate": 0.9,
+      "MVP": 3
+    },
+    {
+      "player": "Х",
+      "season_points": 99,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.4,
+      "MVP": 1
+    },
+    {
+      "player": "Мішок",
+      "season_points": 113,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.4,
+      "MVP": 0
+    },
+    {
+      "player": "Владівасток",
+      "season_points": 121,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.5,
+      "MVP": 2
+    },
+    {
+      "player": "Базар",
+      "season_points": 132,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.4,
+      "MVP": 4
+    },
+    {
+      "player": "Малина",
+      "season_points": 97,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.4,
+      "MVP": 0
+    },
+    {
+      "player": "Голуб",
+      "season_points": 101,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Карбюратор",
+      "season_points": 94,
+      "rankTier": "F",
+      "games": 10,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Gandzubasik",
+      "season_points": 396,
+      "rankTier": "E",
+      "games": 31,
+      "winRate": 0.6129032258064516,
+      "MVP": 1
+    },
+    {
+      "player": "Пробіотик",
+      "season_points": 201,
+      "rankTier": "E",
+      "games": 20,
+      "winRate": 0.3,
+      "MVP": 2
+    },
+    {
+      "player": "Прікормка",
+      "season_points": 197,
+      "rankTier": "F",
+      "games": 20,
+      "winRate": 0.4,
+      "MVP": 1
+    },
+    {
+      "player": "Арара",
+      "season_points": 104,
+      "rankTier": "F",
+      "games": 13,
+      "winRate": 0.38461538461538464,
+      "MVP": 0
+    },
+    {
+      "player": "Тьотя Мотя",
+      "season_points": 61,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.42857142857142855,
+      "MVP": 0
+    },
+    {
+      "player": "Вовк",
+      "season_points": 61,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.42857142857142855,
+      "MVP": 0
+    },
+    {
+      "player": "Алекс",
+      "season_points": 101,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "Таракан",
+      "season_points": 121,
+      "rankTier": "F",
+      "games": 13,
+      "winRate": 0.46153846153846156,
+      "MVP": 0
+    },
+    {
+      "player": "Сімпл",
+      "season_points": 74,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.42857142857142855,
+      "MVP": 0
+    },
+    {
+      "player": "Мікеланджело",
+      "season_points": 81,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 0.5714285714285714,
+      "MVP": 0
+    },
+    {
+      "player": "Мар'ян",
+      "season_points": 156,
+      "rankTier": "F",
+      "games": 7,
+      "winRate": 1,
+      "MVP": 0
+    },
+    {
+      "player": "Ніхто",
+      "season_points": 81,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.4444444444444444,
+      "MVP": 0
+    },
+    {
+      "player": "Лобзік",
+      "season_points": 101,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "Romaplay",
+      "season_points": 61,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.3333333333333333,
+      "MVP": 0
+    },
+    {
+      "player": "proshk15",
+      "season_points": 84,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.4444444444444444,
+      "MVP": 0
+    },
+    {
+      "player": "Stas_Son",
+      "season_points": 101,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "Mykyta",
+      "season_points": 81,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.4444444444444444,
+      "MVP": 0
+    },
+    {
+      "player": "два один",
+      "season_points": 101,
+      "rankTier": "F",
+      "games": 9,
+      "winRate": 0.5555555555555556,
+      "MVP": 0
+    },
+    {
+      "player": "klishchick",
+      "season_points": 73,
+      "rankTier": "F",
+      "games": 4,
+      "winRate": 0.75,
+      "MVP": 1
+    },
+    {
+      "player": "Anuyta",
+      "season_points": 41,
+      "rankTier": "F",
+      "games": 4,
+      "winRate": 0.5,
+      "MVP": 0
+    },
+    {
+      "player": "Komar",
+      "season_points": 0,
+      "rankTier": "F",
+      "games": 1,
+      "winRate": 0,
       "MVP": 0
     }
-  ]
+  ],
+  "aliases": {
+    "Kumar": [
+      "Kуmar"
+    ]
+  }
 }

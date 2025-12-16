@@ -291,10 +291,12 @@ function normalizeEventEntry(event) {
 }
 
 function buildPlayerLeagueMap(events = []) {
+
   const leagueStats = new Map();
 
   events.forEach((event) => {
     const league = normalizeLeagueName(event?.League || event?.league);
+
     if (!league || (league !== 'kids' && league !== 'sundaygames')) {
       return;
     }
@@ -305,6 +307,7 @@ function buildPlayerLeagueMap(events = []) {
       if (!key) {
         return;
       }
+
       const record = leagueStats.get(key) || { kids: 0, sundaygames: 0 };
       if (league === 'kids') {
         record.kids += 1;
@@ -315,6 +318,7 @@ function buildPlayerLeagueMap(events = []) {
       leagueStats.set(key, record);
     });
   });
+
 
   const playerLeagueMap = new Map();
   leagueStats.forEach((counts, key) => {
@@ -327,6 +331,7 @@ function buildPlayerLeagueMap(events = []) {
       playerLeagueMap.set(key, 'sundaygames');
     } else if (kidsCount > 0 || sundayCount > 0) {
       playerLeagueMap.set(key, sundayCount > kidsCount ? 'sundaygames' : 'kids');
+
     }
   });
 
@@ -1818,9 +1823,11 @@ function renderAll(targetLeague = activeLeague) {
     combined.push(merged);
   });
 
+
   const leagueFiltered = combined.filter((entry) => {
     const leagueKey = normalizeKey(entry?.nickname ?? entry?.player ?? '');
     return playerLeagueMap.get(leagueKey) === effectiveLeague;
+
   });
 
   const filteredTopCandidates = leagueFiltered
@@ -1842,7 +1849,9 @@ function renderAll(targetLeague = activeLeague) {
     rankIndex.set(player.normalizedNickname, rank);
   });
 
+
   activeLeaguePlayers = leagueFiltered.map((player) => ({
+
     ...player,
     rank: rankIndex.get(player.normalizedNickname) ?? null
   }));
@@ -1852,7 +1861,10 @@ function renderAll(targetLeague = activeLeague) {
 
   const eligible = filteredTopCandidates;
 
+ codex/implement-autumn-2025-league-functionalities-xyub4v
   console.log('[TOP10]', activeLeague, topPlayers.map((item) => item.nickname));
+
+
 
   const pointsTotal = eligible.reduce(
     (sum, player) => sum + (toFiniteNumber(player?.season_points ?? player?.totalPoints) ?? 0),
@@ -1894,12 +1906,17 @@ function bindLeagueSwitch() {
   const kidsButton = document.querySelector('[data-league-target="kids"]');
 
   adultsButton?.addEventListener('click', () => {
+
     activeLeague = 'sundaygames';
+
     renderAll(activeLeague);
   });
 
   kidsButton?.addEventListener('click', () => {
+
     activeLeague = 'kids';
+
+
     renderAll(activeLeague);
   });
 }

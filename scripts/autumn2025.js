@@ -1252,7 +1252,7 @@ function resolveSeasonAsset(pathname) {
 async function boot() {
   try {
     const [packData, eventsData] = await Promise.all([
-      codex/create-autumn2025.js-like-summer2025.js-2rr7r9
+
       fetchJSON(resolveSeasonAsset('ocinb2025_pack.json')),
       fetchJSON(resolveSeasonAsset('sunday_autumn_2025_EVENTS.json')).catch(() => [])
 

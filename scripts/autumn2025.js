@@ -311,20 +311,18 @@ function findProfilePlayer(nickname) {
   if (!normalized) {
     return null;
   }
-  if (profileLookup.has(normalized)) {
-    return profileLookup.get(normalized);
+
+
+  if (profileLookupAll.has(normalized)) {
+    return profileLookupAll.get(normalized);
   }
 
-  return allPlayersNormalized.find((player) => {
-    if (!player) {
-      return false;
-    }
-    if (normalizeNickname(player?.nickname ?? '', aliasMap) === normalized) {
-      return true;
-    }
-    const aliases = Array.isArray(player?.aliases) ? player.aliases : [];
-    return aliases.some((alias) => normalizeNickname(alias, aliasMap) === normalized);
-  }) ?? null;
+  if (profileLookupTop.has(normalized)) {
+    return profileLookupTop.get(normalized);
+  }
+
+  return null;
+
 }
 
 const numberFormatter = new Intl.NumberFormat('uk-UA');
@@ -393,7 +391,11 @@ let PACK = null;
 let EVENTS = null;
 let topPlayers = [];
 let allPlayersNormalized = [];
-let profileLookup = new Map();
+
+let topPlayersNormalized = [];
+let profileLookupAll = new Map();
+let profileLookupTop = new Map();
+
 let leagueOptions = [];
 let currentLeague = '';
 let seasonTickerMessages = [];
@@ -405,12 +407,15 @@ let leagueBound = false;
 
 function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
   return top10.map((entry, index) => {
-    const nicknameRaw =
-      typeof entry?.player === 'string' && entry.player.trim() ? entry.player.trim() : '';
-    const nickname = nicknameRaw || FALLBACK;
-    const canonicalNickname = nicknameRaw ? resolveCanonicalNickname(nicknameRaw, aliasMap) : '';
-    const nicknameAliases = nicknameRaw ? getNicknameVariants(nicknameRaw, aliasMap) : [];
-    const normalizedNickname = nicknameRaw ? normalizeNickname(nicknameRaw, aliasMap) : '';
+    const nameField =
+      (typeof entry?.player === 'string' && entry.player.trim() && entry.player.trim()) ||
+      (typeof entry?.nickname === 'string' && entry.nickname.trim() && entry.nickname.trim()) ||
+      (typeof entry?.name === 'string' && entry.name.trim() && entry.name.trim()) ||
+      '';
+    const nickname = nameField || FALLBACK;
+    const canonicalNickname = nameField ? resolveCanonicalNickname(nameField, aliasMap) : '';
+    const nicknameAliases = nameField ? getNicknameVariants(nameField, aliasMap) : [];
+    const normalizedNickname = nameField ? normalizeNickname(nameField, aliasMap) : '';
     const rank = toFiniteNumber(entry?.rank) ?? index + 1;
     const games = toFiniteNumber(entry?.games);
     const wins = toFiniteNumber(entry?.wins);
@@ -893,12 +898,16 @@ function renderLeaderboard(players = topPlayers) {
     }
     const winRateTooltip = winRateTooltipParts.join(' · ');
 
-    const playerNickname = typeof player?.nickname === 'string' ? player.nickname : '';
+    const displayName =
+      (typeof player?.nickname === 'string' && player.nickname.trim()) ||
+      (typeof player?.canonicalNickname === 'string' && player.canonicalNickname.trim()) ||
+      FALLBACK;
+    const playerNickname = displayName !== FALLBACK ? displayName : '';
 
     row.innerHTML = `
       <td><span class="rank-chip">${formatNumberValue(player?.rank)}</span></td>
       <td>
-        <div>${player?.nickname ?? FALLBACK}</div>
+        <div>${displayName}</div>
         <small>${player?.realName ?? FALLBACK}</small>
         <button type="button" class="pixel-button" data-player="${playerNickname}">Профіль</button>
       </td>
@@ -1438,13 +1447,28 @@ function refreshLeagueData(targetLeague = currentLeague) {
   currentLeague = effectiveLeague;
 
   const leagueLabel = getLeagueLabel(effectiveLeague || fallbackLeague || FALLBACK);
-  const filteredByLeague = filterPlayersByLeague(allPlayersNormalized, effectiveLeague, fallbackLeague);
-  const nonAdmins = filteredByLeague.filter((player) => !isAdminPlayer(player, aliasMap));
-  const sorted = [...nonAdmins].sort(sortPlayersForLeaderboard);
-  const ranked = sorted.map((player, index) => ({ ...player, rank: index + 1 }));
-  const limited = ranked.slice(0, TOP_LIMIT);
 
-  topPlayers = normalizeTopPlayers(limited, { league: leagueLabel }, aliasMap).map(
+  const normalizedTarget =
+    normalizeLeagueName(effectiveLeague) || normalizeLeagueName(fallbackLeague);
+  const baseTop = Array.isArray(PACK?.top10) ? PACK.top10 : [];
+  const filteredByLeague = baseTop.filter((entry) => {
+    const leagueName = resolvePlayerLeague(entry, fallbackLeague);
+    const normalizedLeague = normalizeLeagueName(leagueName);
+    return normalizedTarget ? normalizedLeague === normalizedTarget : true;
+  });
+
+  const rankedRows = filteredByLeague
+    .filter((entry) => !isAdminPlayer(entry, aliasMap))
+    .slice()
+    .sort(
+      (a, b) =>
+        (toFiniteNumber(b?.season_points) ?? 0) - (toFiniteNumber(a?.season_points) ?? 0)
+    )
+    .slice(0, TOP_LIMIT)
+    .map((entry, idx) => ({ ...entry, rank: idx + 1 }));
+
+  topPlayers = normalizeTopPlayers(rankedRows, { league: leagueLabel }, aliasMap).map(
+
     (player, index) => ({ ...player, rank: index + 1 })
   );
 
@@ -1563,16 +1587,18 @@ async function boot() {
     EVENTS = eventsData;
 
     const aliasMap = PACK?.aliases ?? {};
-    const mergedPlayers = mergePlayerRecords(
-      Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [],
-      Array.isArray(PACK?.top10) ? PACK.top10 : [],
-      aliasMap
-    );
 
-    allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap);
-    profileLookup = buildProfileLookup(allPlayersNormalized, aliasMap);
+    const baseAllPlayers = Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [];
+    const baseTopPlayers = Array.isArray(PACK?.top10) ? PACK.top10 : [];
+    const mergedPlayers = mergePlayerRecords(baseAllPlayers, baseTopPlayers, aliasMap);
+
+    allPlayersNormalized = normalizeTopPlayers(baseAllPlayers, PACK?.meta ?? {}, aliasMap);
+    topPlayersNormalized = normalizeTopPlayers(baseTopPlayers, PACK?.meta ?? {}, aliasMap);
+    profileLookupAll = buildProfileLookup(allPlayersNormalized, aliasMap);
+    profileLookupTop = buildProfileLookup(topPlayersNormalized, aliasMap);
     leagueOptions = buildLeagueOptions(mergedPlayers, PACK?.meta?.league);
     currentLeague = getEffectiveLeague(PACK?.meta?.league ?? leagueOptions[0] ?? '');
+
 
     updateLeagueButtons(currentLeague);
     refreshLeagueData(currentLeague);

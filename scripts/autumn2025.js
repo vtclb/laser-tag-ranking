@@ -1827,9 +1827,15 @@ function renderAll(targetLeague = activeLeague) {
     const packEntry = packPlayerIndex.get(key);
     const statsEntry = leagueStats.get(key);
     const baseName = statsEntry?.nickname || packEntry?.nickname || displayName(key);
-    const seasonPoints = toFiniteNumber(packEntry?.season_points ?? packEntry?.totalPoints);
-    const playerLeague = playerLeagueMap.get(key) ?? fallbackLeague;
+    const explicitLeague = normalizeLeagueName(packEntry?.leagueKey ?? packEntry?.league);
+    const statsLeague = normalizeLeagueName(statsEntry?.leagueKey ?? statsEntry?.league);
+    const mappedLeague = playerLeagueMap.get(key);
+    const playerLeague = explicitLeague || statsLeague || mappedLeague || '';
+    if (!playerLeague || playerLeague !== effectiveLeague) {
+      return;
+    }
     const leagueLabel = getLeagueLabel(playerLeague || FALLBACK);
+    const seasonPoints = toFiniteNumber(packEntry?.season_points ?? packEntry?.totalPoints);
 
     const merged = {
       ...packEntry,
@@ -1884,12 +1890,6 @@ function renderAll(targetLeague = activeLeague) {
   profileLookupCurrent = buildProfileLookup(activeLeaguePlayers, aliasMap);
 
   const eligible = filteredTopCandidates;
-
-
-  console.log('[TOP10]', activeLeague, topPlayers.map((item) => item.nickname));
-
-
-
   const pointsTotal = eligible.reduce(
     (sum, player) => sum + (toFiniteNumber(player?.season_points ?? player?.totalPoints) ?? 0),
     0

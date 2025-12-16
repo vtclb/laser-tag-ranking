@@ -244,8 +244,15 @@ function parseTeamPlayers(team) {
 function extractPlayersFromEvent(event) {
   const players = [];
 
-  players.push(...parseTeamPlayers(event?.team1));
-  players.push(...parseTeamPlayers(event?.team2));
+  const team1Sources = [event?.team1, event?.Team1];
+  const team2Sources = [event?.team2, event?.Team2];
+
+  team1Sources.forEach((team) => {
+    players.push(...parseTeamPlayers(team));
+  });
+  team2Sources.forEach((team) => {
+    players.push(...parseTeamPlayers(team));
+  });
 
   const mvpCandidates = [event?.MVP, event?.mvp, event?.mvp2, event?.mvp3]
     .flat()
@@ -293,12 +300,22 @@ function normalizeEventEntry(event) {
 function buildPlayerLeagueMap(events = []) {
   const leagueStats = new Map();
 
-  events.forEach((event) => {
+  events.forEach((event, index) => {
     const league = normalizeLeagueName(event?.League || event?.league);
 
     if (!league || (league !== 'kids' && league !== 'sundaygames')) {
       return;
     }
+
+    const eventTimestamp = (() => {
+      if (typeof event?.date === 'string') {
+        const time = Date.parse(event.date);
+        if (Number.isFinite(time)) {
+          return time;
+        }
+      }
+      return index;
+    })();
 
     const participants = extractPlayersFromEvent(event);
     participants.forEach((player) => {
@@ -307,14 +324,18 @@ function buildPlayerLeagueMap(events = []) {
         return;
       }
 
-      const record = leagueStats.get(key) || { kids: 0, sundaygames: 0, lastLeague: '' };
+      const record =
+        leagueStats.get(key) || { kids: 0, sundaygames: 0, lastLeague: '', lastSeen: null };
       if (league === 'kids') {
         record.kids += 1;
       }
       if (league === 'sundaygames') {
         record.sundaygames += 1;
       }
-      record.lastLeague = league;
+      if (record.lastSeen === null || eventTimestamp >= record.lastSeen) {
+        record.lastLeague = league;
+        record.lastSeen = eventTimestamp;
+      }
       leagueStats.set(key, record);
     });
   });
@@ -735,6 +756,7 @@ let tickerTimer = null;
 let controlsBound = false;
 let profileBound = false;
 let leagueBound = false;
+let fallbackLeague = 'sundaygames';
 
 function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
   return top10.map((entry, index) => {
@@ -1779,7 +1801,7 @@ function renderAll(targetLeague = activeLeague) {
 
   const candidateKeys = new Set();
 
-  const packCandidates = allPlayersNormalized.filter((player) => player.league === effectiveLeague);
+  const packCandidates = allPlayersNormalized.filter((player) => player.leagueKey === effectiveLeague);
 
   packCandidates.forEach((player) => {
     const key = normalizeKey(player?.nickname ?? player?.player ?? '');
@@ -1801,7 +1823,7 @@ function renderAll(targetLeague = activeLeague) {
     const statsEntry = leagueStats.get(key);
     const baseName = statsEntry?.nickname || packEntry?.nickname || displayName(key);
     const seasonPoints = toFiniteNumber(packEntry?.season_points ?? packEntry?.totalPoints);
-    const playerLeague = playerLeagueMap.get(key) ?? '';
+    const playerLeague = playerLeagueMap.get(key) ?? fallbackLeague;
     const leagueLabel = getLeagueLabel(playerLeague || FALLBACK);
 
     const merged = {
@@ -1822,7 +1844,7 @@ function renderAll(targetLeague = activeLeague) {
   });
 
 
-  const leagueFiltered = combined.filter((entry) => entry.league === effectiveLeague);
+  const leagueFiltered = combined.filter((entry) => entry.leagueKey === effectiveLeague);
 
   const filteredTopCandidates = leagueFiltered
     .filter((entry) => !entry.isAdmin)
@@ -1850,7 +1872,7 @@ function renderAll(targetLeague = activeLeague) {
     rank: rankIndex.get(player.normalizedNickname) ?? null
   }));
 
-  topPlayers = filteredTopCandidates.slice(0, TOP_LIMIT);
+    topPlayers = filteredTopCandidates.slice(0, TOP_LIMIT);
   profileLookupCurrent = buildProfileLookup(activeLeaguePlayers, aliasMap);
 
   const eligible = filteredTopCandidates;
@@ -2003,6 +2025,10 @@ async function boot() {
 
     aliasMapGlobal = { ...(summerPack?.aliases ?? {}), ...(PACK?.aliases ?? {}) };
 
+    fallbackLeague =
+      normalizeLeagueName(PACK?.meta?.league || EVENTS?.meta?.league || 'sundaygames') ||
+      'sundaygames';
+
     normalizedEvents = Array.isArray(EVENTS?.events)
       ? EVENTS.events.map(normalizeEventEntry).filter(Boolean)
       : [];
@@ -2018,14 +2044,14 @@ async function boot() {
     allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap).map(
       (player) => {
         const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-        const leagueKey = playerLeagueMap.get(normalizedKey) ?? '';
+        const leagueKey = playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
         return { ...player, leagueKey, league: leagueKey };
       }
     );
     topPlayersNormalized = normalizeTopPlayers(baseTopPlayers, PACK?.meta ?? {}, aliasMap).map(
       (player) => {
         const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-        const leagueKey = playerLeagueMap.get(normalizedKey) ?? '';
+        const leagueKey = playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
         return { ...player, leagueKey, league: leagueKey };
       }
     );

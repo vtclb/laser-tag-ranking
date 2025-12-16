@@ -291,10 +291,12 @@ function normalizeEventEntry(event) {
 }
 
 function buildPlayerLeagueMap(events = []) {
+
   const leagueStats = new Map();
 
   events.forEach((event) => {
     const league = normalizeLeagueName(event?.League || event?.league);
+
     if (!league || (league !== 'kids' && league !== 'sundaygames')) {
       return;
     }
@@ -305,6 +307,7 @@ function buildPlayerLeagueMap(events = []) {
       if (!key) {
         return;
       }
+
       const record = leagueStats.get(key) || { kids: 0, sundaygames: 0 };
       if (league === 'kids') {
         record.kids += 1;
@@ -327,6 +330,7 @@ function buildPlayerLeagueMap(events = []) {
       playerLeagueMap.set(key, 'sundaygames');
     } else if (kidsCount > 0 || sundayCount > 0) {
       playerLeagueMap.set(key, sundayCount > kidsCount ? 'sundaygames' : 'kids');
+
     }
   });
 

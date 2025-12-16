@@ -501,6 +501,9 @@ function computeLeagueStats(events = [], leagueKey) {
       team.forEach(({ key, raw }) => {
         playerSet.add(key);
         const record = ensurePlayerRecord(stats, key, raw);
+        if (!record.leagueKey) {
+          record.leagueKey = normalizedLeague;
+        }
         record.games += 1;
         if (result === 'win') {
           record.wins += 1;
@@ -2065,6 +2068,16 @@ async function boot() {
       );
     }
 
+
+    topByLeagueList.forEach((entry) => {
+      const normalizedKey = canon(entry?.player ?? entry?.nickname ?? '');
+      const explicitLeague = normalizeLeagueName(entry?.leagueKey ?? entry?.league);
+      if (normalizedKey && explicitLeague) {
+        playerLeagueMap.set(normalizedKey, explicitLeague);
+      }
+    });
+
+
     const baseAllPlayers = Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [];
     const baseTopPlayers =
       topByLeagueList.length > 0
@@ -2115,6 +2128,20 @@ async function boot() {
     );
 
     const availableLeagues = new Set([...leaguesFromEvents, ...leaguesFromTop]);
+
+    if (Array.isArray(TOP10_BY_LEAGUE?.leagues)) {
+      TOP10_BY_LEAGUE.leagues
+        .map((league) => normalizeLeagueName(league))
+        .filter(Boolean)
+        .forEach((league) => availableLeagues.add(league));
+    }
+    if (TOP10_BY_LEAGUE?.top10_kids) {
+      availableLeagues.add('kids');
+    }
+    if (TOP10_BY_LEAGUE?.top10_sundaygames) {
+      availableLeagues.add('sundaygames');
+    }
+
 
     if (availableLeagues.size === 0) {
       ['sundaygames', 'kids'].forEach((league) => availableLeagues.add(league));

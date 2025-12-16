@@ -1208,7 +1208,8 @@ function renderLeaderboard(players = topPlayers) {
 
   if (filtered.length === 0) {
     const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = `<td colspan="10">Немає гравців за цим запитом</td>`;
+    const message = searchTerm ? 'Немає гравців за цим запитом' : 'Немає гравців у цій лізі';
+    emptyRow.innerHTML = `<td colspan="10">${message}</td>`;
     leaderboardBody.append(emptyRow);
     return;
   }
@@ -1867,12 +1868,15 @@ function renderAll(targetLeague = activeLeague) {
 
 
   activeLeaguePlayers = leagueFiltered.map((player) => ({
-
     ...player,
     rank: rankIndex.get(player.normalizedNickname) ?? null
   }));
 
-    topPlayers = filteredTopCandidates.slice(0, TOP_LIMIT);
+  topPlayers = activeLeaguePlayers
+    .filter((player) => player.leagueKey === effectiveLeague)
+    .filter((player) => !player.isAdmin)
+    .sort(sortPlayersForLeaderboard)
+    .slice(0, TOP_LIMIT);
   profileLookupCurrent = buildProfileLookup(activeLeaguePlayers, aliasMap);
 
   const eligible = filteredTopCandidates;
@@ -2044,14 +2048,16 @@ async function boot() {
     allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap).map(
       (player) => {
         const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-        const leagueKey = playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
+        const explicitLeague = normalizeLeagueName(player?.leagueKey ?? player?.league);
+        const leagueKey = explicitLeague ?? playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
         return { ...player, leagueKey, league: leagueKey };
       }
     );
     topPlayersNormalized = normalizeTopPlayers(baseTopPlayers, PACK?.meta ?? {}, aliasMap).map(
       (player) => {
         const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-        const leagueKey = playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
+        const explicitLeague = normalizeLeagueName(player?.leagueKey ?? player?.league);
+        const leagueKey = explicitLeague ?? playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
         return { ...player, leagueKey, league: leagueKey };
       }
     );

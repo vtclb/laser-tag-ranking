@@ -1169,7 +1169,7 @@ function renderLeaderboard(players = topPlayers) {
   });
 
   const filtered = rowsSource.filter((player) => {
-    if (player?.isAdmin) {
+    if (player?.isAdmin && !searchTerm) {
       return false;
     }
     if (!searchTerm) {
@@ -2087,21 +2087,19 @@ async function boot() {
           : [];
     const mergedPlayers = mergePlayerRecords(baseAllPlayers, baseTopPlayers, aliasMap);
 
+    const assignLeagueKey = (player) => {
+      const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
+      const explicitLeague = normalizeLeagueName(player?.leagueKey ?? player?.league);
+      const mappedLeague = playerLeagueMap.get(normalizedKey);
+      const leagueKey = explicitLeague || mappedLeague || '';
+      return { ...player, leagueKey: leagueKey || undefined, league: leagueKey || undefined };
+    };
+
     allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap).map(
-      (player) => {
-        const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-        const explicitLeague = normalizeLeagueName(player?.leagueKey ?? player?.league);
-        const leagueKey = explicitLeague ?? playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
-        return { ...player, leagueKey, league: leagueKey };
-      }
+      assignLeagueKey
     );
     topPlayersNormalized = normalizeTopPlayers(baseTopPlayers, PACK?.meta ?? {}, aliasMap).map(
-      (player) => {
-        const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-        const explicitLeague = normalizeLeagueName(player?.leagueKey ?? player?.league);
-        const leagueKey = explicitLeague ?? playerLeagueMap.get(normalizedKey) ?? fallbackLeague;
-        return { ...player, leagueKey, league: leagueKey };
-      }
+      assignLeagueKey
     );
 
     packPlayerIndex = new Map();

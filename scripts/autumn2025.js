@@ -994,7 +994,7 @@ function resolveTop10EntryToPackRow(entry) {
   return matched ? { ...matched } : null;
 }
 
-function buildResolvedTop10Rows(rawList) {
+function buildResolvedTop10Rows(rawList, normalizedLeague) {
   const source = Array.isArray(rawList) ? rawList : [];
   const rows = source
     .map((entry) => resolveTop10EntryToPackRow(entry))
@@ -1046,7 +1046,9 @@ function buildLeagueTop10(rawTop10 = [], leagueKey = '') {
   const normalizedLeague = normalizeLeagueName(leagueKey || 'sundaygames');
   ensurePackLookups();
 
+
   const resolvedRows = buildResolvedTop10Rows(rawTop10).map((row) => ({
+
     ...row,
     leagueKey: normalizedLeague || row?.leagueKey,
     league: normalizedLeague || row?.league,

@@ -1042,6 +1042,35 @@ function buildResolvedTop10Rows(rawList) {
 
 }
 
+function buildLeagueTop10(rawTop10 = [], leagueKey = '') {
+  const normalizedLeague = normalizeLeagueName(leagueKey || 'sundaygames');
+  ensurePackLookups();
+
+  const resolvedRows = buildResolvedTop10Rows(rawTop10).map((row) => ({
+    ...row,
+    leagueKey: normalizedLeague || row?.leagueKey,
+    league: normalizedLeague || row?.league,
+    team: getLeagueLabel(normalizedLeague || row?.league || FALLBACK)
+  }));
+
+  if (resolvedRows.length > 0) {
+    return resolvedRows;
+  }
+
+  const normalized = normalizeTopPlayers(rawTop10, PACK?.meta ?? {}, aliasMapGlobal);
+
+  return normalized.map((entry, index) => {
+    const league = normalizeLeagueName(entry?.leagueKey ?? entry?.league ?? normalizedLeague);
+    return {
+      ...entry,
+      leagueKey: league || normalizedLeague,
+      league: league || normalizedLeague,
+      team: getLeagueLabel(league || normalizedLeague || FALLBACK),
+      rank: toFiniteNumber(entry?.rank) ?? index + 1
+    };
+  });
+}
+
 function buildMetrics(aggregates = {}, players = [], leagueMetrics = {}) {
   const totalGames = toFiniteNumber(leagueMetrics?.totalGames ?? aggregates?.total_games);
   const totalRounds = toFiniteNumber(leagueMetrics?.totalRounds ?? aggregates?.total_rounds);

@@ -668,6 +668,121 @@ function filterPlayersByLeague(players = [], leagueValue = '') {
   });
 }
 
+function getLeagueStatsForNickname(normalizedNickname, leagueValue = '') {
+  if (!normalizedNickname) {
+    return null;
+  }
+
+  const leagueKey = normalizeLeagueName(leagueValue || activeLeague);
+  const leagueData = leagueStatsCache.get(leagueKey);
+  if (!leagueData || !(leagueData.playerStats instanceof Map)) {
+    return null;
+  }
+
+  return leagueData.playerStats.get(normalizedNickname) ?? null;
+}
+
+function applyLeagueStats(player, leagueValue = '') {
+  if (!player) {
+    return null;
+  }
+
+  const aliasMap = aliasMapGlobal;
+  const leagueKey = normalizeLeagueName(leagueValue || activeLeague);
+  const nicknameField =
+    (typeof player?.nickname === 'string' && player.nickname.trim()) ||
+    (typeof player?.canonicalNickname === 'string' && player.canonicalNickname.trim()) ||
+    (typeof player?.player === 'string' && player.player.trim()) ||
+    '';
+  const normalizedNickname = normalizeNickname(nicknameField, aliasMap);
+  const stats = getLeagueStatsForNickname(normalizedNickname, leagueKey);
+
+  const target = { ...player };
+  const resetStats = () => {
+    target.games = 0;
+    target.wins = 0;
+    target.losses = 0;
+    target.draws = 0;
+    target.rounds = 0;
+    target.round_wins = 0;
+    target.round_losses = 0;
+    target.MVP = 0;
+    target.bestStreak = 0;
+    target.lossStreak = 0;
+    target.win_streak = 0;
+    target.loss_streak = 0;
+    target.winRate = null;
+    target.roundWR = null;
+    target.teammatesMost = [];
+    target.teammatesMostWins = [];
+    target.opponentsMost = [];
+    target.opponentsMostLosses = [];
+    target.recentScores = [];
+  };
+
+  resetStats();
+
+  if (stats) {
+    target.games = stats.games;
+    target.wins = stats.wins;
+    target.losses = stats.losses;
+    target.draws = stats.draws;
+    target.rounds = stats.rounds;
+    target.round_wins = stats.round_wins;
+    target.round_losses = stats.round_losses;
+    target.MVP = stats.MVP;
+    target.bestStreak = stats.bestStreak;
+    target.lossStreak = stats.lossStreak;
+    target.win_streak = stats.bestStreak;
+    target.loss_streak = stats.lossStreak;
+    target.winRate = stats.winRate;
+    target.roundWR = stats.roundWR;
+    target.teammatesMost = stats.teammatesMost;
+    target.teammatesMostWins = stats.teammatesMostWins;
+    target.opponentsMost = stats.opponentsMost;
+    target.opponentsMostLosses = stats.opponentsMostLosses;
+    target.recentScores = stats.recentScores;
+  }
+
+  target.leagueKey = leagueKey || target.leagueKey;
+  target.league = leagueKey || target.league;
+  target.team = getLeagueLabel(target.league || leagueKey || FALLBACK);
+  target.canonicalNickname =
+    target.canonicalNickname || resolveCanonicalNickname(nicknameField, aliasMap) || nicknameField;
+  target.normalizedNickname = normalizedNickname || target.normalizedNickname;
+
+  return target;
+}
+
+function buildProfileForLeague(targetPlayer, leagueValue = '') {
+  const leagueKey = normalizeLeagueName(leagueValue || activeLeague);
+  const aliasMap = aliasMapGlobal;
+  const basePlayer =
+    typeof targetPlayer === 'string' ? findProfilePlayer(targetPlayer) : targetPlayer;
+
+  if (!basePlayer && typeof targetPlayer !== 'string') {
+    return null;
+  }
+
+  const nicknameField =
+    (typeof (basePlayer?.nickname ?? basePlayer?.player) === 'string' &&
+      (basePlayer?.nickname ?? basePlayer?.player)?.trim()) ||
+    (typeof targetPlayer === 'string' ? targetPlayer : '') ||
+    '';
+
+  const fallbackPlayer = {
+    nickname: displayName(nicknameField),
+    canonicalNickname: resolveCanonicalNickname(nicknameField, aliasMap) || nicknameField,
+    normalizedNickname: normalizeNickname(nicknameField, aliasMap),
+    team: getLeagueLabel(leagueKey || FALLBACK),
+    leagueKey,
+    league: leagueKey
+  };
+
+  const profile = applyLeagueStats(basePlayer || fallbackPlayer, leagueKey);
+  return profile;
+}
+
 function buildProfileLookup(players = [], aliasMap = {}) {
   const map = new Map();
   players.forEach((player) => {
@@ -798,6 +913,7 @@ let activeLeague = 'sundaygames';
 let activeLeaguePlayers = [];
 let seasonTickerMessages = [];
 let metricsSnapshot = null;
+let openProfileKey = '';
 let tickerTimer = null;
 let controlsBound = false;
 let profileBound = false;
@@ -1451,6 +1567,8 @@ function renderLeaderboard(players = topPlayers) {
       (typeof player?.canonicalNickname === 'string' && player.canonicalNickname.trim()) ||
       FALLBACK;
     const playerNickname = displayName !== FALLBACK ? displayName : '';
+    const clickNickname =
+      resolveCanonicalNickname(player?.player ?? playerNickname, aliasMapGlobal) || playerNickname;
 
     row.innerHTML = `
       <td><span class="rank-chip">${formatNumberValue(player?.rank)}</span></td>
@@ -1481,8 +1599,7 @@ function renderLeaderboard(players = topPlayers) {
 
     const button = row.querySelector('button');
     button?.addEventListener('click', () => {
-      const profile = findProfilePlayer(playerNickname) ?? player;
-      renderModal(profile);
+      renderModal(clickNickname || playerNickname || player);
     });
     leaderboardBody.append(row);
   });
@@ -1701,10 +1818,20 @@ function renderPairList(items, type) {
   return `<ul class="pair-list">${markup}</ul>`;
 }
 
-function renderModal(player) {
+function renderModal(playerInput) {
   if (!modal) {
     return;
   }
+
+  const profile = buildProfileForLeague(playerInput, activeLeague);
+  if (!profile) {
+    return;
+  }
+
+  openProfileKey =
+    normalizeNickname(profile?.nickname ?? profile?.player ?? '', aliasMapGlobal) || '';
+
+  const player = profile;
 
   modalTitle.textContent = `${player?.nickname ?? FALLBACK} · ${player?.team ?? FALLBACK}`;
   const gamesLabel = formatNumberValue(player?.games);
@@ -1868,10 +1995,24 @@ function closeModal() {
   if (!modal) {
     return;
   }
+  openProfileKey = '';
   if (typeof modal.close === 'function') {
     modal.close();
   } else {
     modal.removeAttribute('open');
+  }
+}
+
+function rerenderOpenProfile() {
+  if (!openProfileKey) {
+    return;
+  }
+
+  const profile = buildProfileForLeague(openProfileKey, activeLeague);
+  if (profile) {
+    renderModal(profile);
+  } else {
+    closeModal();
   }
 }
 
@@ -2015,6 +2156,7 @@ function renderAll(targetLeague = activeLeague) {
   });
   renderPodium(topPlayers);
   renderLeaderboard(getTop10ForActiveLeague());
+  rerenderOpenProfile();
   updateLeagueButtons(activeLeague);
 }
 

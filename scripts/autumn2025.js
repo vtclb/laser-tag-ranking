@@ -996,81 +996,56 @@ function resolveTop10EntryToPackRow(entry) {
 
 function buildResolvedTop10Rows(rawList, normalizedLeague) {
   const source = Array.isArray(rawList) ? rawList : [];
-  const rows = source
-    .map((entry) => resolveTop10EntryToPackRow(entry))
-    .filter((entry) => Boolean(entry));
+  const normalizedLeagueKey = normalizeLeagueName(normalizedLeague || '');
+  const aliasMap = aliasMapGlobal;
 
-
-  rows.sort((a, b) => {
-    const pointsA = toFiniteNumber(a?.season_points ?? a?.totalPoints) ?? 0;
-    const pointsB = toFiniteNumber(b?.season_points ?? b?.totalPoints) ?? 0;
-    return pointsB - pointsA;
-  });
-
-
-  return rows.map((row, index) => {
-    const nickname =
-      (typeof row?.nickname === 'string' && row.nickname.trim()) ||
-      (typeof row?.player === 'string' && row.player.trim()) ||
-      FALLBACK;
-    const aliases = Array.isArray(row?.aliases)
-      ? row.aliases
-      : getNicknameVariants(nickname, aliasMapGlobal);
-    const canonicalNickname =
-      (typeof row?.canonicalNickname === 'string' && row.canonicalNickname.trim()) ||
-      resolveCanonicalNickname(nickname, aliasMapGlobal);
-    const normalizedNickname =
-      (typeof row?.normalizedNickname === 'string' && row.normalizedNickname.trim()) ||
-      normalizeNickname(nickname, aliasMapGlobal);
-    const resolvedLeague = normalizedLeague || normalizeLeagueName(row?.leagueKey ?? row?.league);
-    const teamLabel = getLeagueLabel(resolvedLeague || row?.team || FALLBACK);
+  return source.map((entry, index) => {
+    const nicknameField =
+      (typeof entry?.player === 'string' && entry.player.trim()) ||
+      (typeof entry?.nickname === 'string' && entry.nickname.trim()) ||
+      (typeof entry?.name === 'string' && entry.name.trim()) ||
+      '';
+    const nickname = nicknameField || FALLBACK;
+    const canonicalNickname = nicknameField
+      ? resolveCanonicalNickname(nicknameField, aliasMap)
+      : nickname;
+    const normalizedNickname = nicknameField
+      ? normalizeNickname(nicknameField, aliasMap)
+      : nicknameField;
+    const aliases = nicknameField ? getNicknameVariants(nicknameField, aliasMap) : [];
+    const resolvedLeague =
+      normalizeLeagueName(entry?.leagueKey ?? entry?.league ?? normalizedLeagueKey) ||
+      normalizedLeagueKey;
+    const teamLabel = getLeagueLabel(resolvedLeague || FALLBACK);
+    const pointsValue = toFiniteNumber(entry?.season_points ?? entry?.totalPoints);
+    const rankValue = toFiniteNumber(entry?.rank);
 
     return {
-      ...row,
+      ...entry,
       nickname,
       canonicalNickname: canonicalNickname || nickname,
       normalizedNickname,
       aliases,
-      leagueKey: resolvedLeague || row?.leagueKey,
-      league: resolvedLeague || row?.league,
+      leagueKey: resolvedLeague,
+      league: resolvedLeague,
       team: teamLabel,
-      rank: index + 1,
-      season_points: toFiniteNumber(row?.season_points ?? row?.totalPoints),
-      totalPoints: toFiniteNumber(row?.season_points ?? row?.totalPoints)
+      rank: rankValue,
+      season_points: pointsValue,
+      totalPoints: pointsValue,
+      originalIndex: index
     };
   });
-
 }
 
 function buildLeagueTop10(rawTop10 = [], leagueKey = '') {
   const normalizedLeague = normalizeLeagueName(leagueKey || 'sundaygames');
-  ensurePackLookups();
 
-
-  const resolvedRows = buildResolvedTop10Rows(rawTop10).map((row) => ({
-
+  return buildResolvedTop10Rows(rawTop10, normalizedLeague).map((row) => ({
     ...row,
     leagueKey: normalizedLeague || row?.leagueKey,
     league: normalizedLeague || row?.league,
     team: getLeagueLabel(normalizedLeague || row?.league || FALLBACK)
   }));
-
-  if (resolvedRows.length > 0) {
-    return resolvedRows;
-  }
-
-  const normalized = normalizeTopPlayers(rawTop10, PACK?.meta ?? {}, aliasMapGlobal);
-
-  return normalized.map((entry, index) => {
-    const league = normalizeLeagueName(entry?.leagueKey ?? entry?.league ?? normalizedLeague);
-    return {
-      ...entry,
-      leagueKey: league || normalizedLeague,
-      league: league || normalizedLeague,
-      team: getLeagueLabel(league || normalizedLeague || FALLBACK),
-      rank: toFiniteNumber(entry?.rank) ?? index + 1
-    };
-  });
 }
 
 function buildMetrics(aggregates = {}, players = [], leagueMetrics = {}) {
@@ -1350,27 +1325,9 @@ function renderLeaderboard(players = topPlayers) {
       return;
     }
   }
-  const sorted = [...rowsSource].sort((a, b) => {
-    const valueA = getSortValue(a, currentSort);
-    const valueB = getSortValue(b, currentSort);
-    const fallbackAsc = Number.POSITIVE_INFINITY;
-    const fallbackDesc = Number.NEGATIVE_INFINITY;
-    const safeA =
-      valueA !== null ? valueA : currentDirection === 'asc' ? fallbackAsc : fallbackDesc;
-    const safeB =
-      valueB !== null ? valueB : currentDirection === 'asc' ? fallbackAsc : fallbackDesc;
-    if (safeA === safeB) {
-      return 0;
-    }
-    return currentDirection === 'asc' ? safeA - safeB : safeB - safeA;
-  });
-
   const filtered = rowsSource.filter((player) => {
     if (player?.isAdmin && !searchTerm) {
       return false;
-    }
-    if (!searchTerm) {
-      return sorted.includes(player);
     }
 
     const aliasList = Array.isArray(player?.aliases) ? player.aliases : [];
@@ -1405,9 +1362,25 @@ function renderLeaderboard(players = topPlayers) {
     );
   });
 
+  const sorted = filtered
+    .map((player, index) => ({ player, index }))
+    .sort((a, b) => {
+      const pointsA = toFiniteNumber(a.player?.season_points ?? a.player?.totalPoints);
+      const pointsB = toFiniteNumber(b.player?.season_points ?? b.player?.totalPoints);
+      const safeA = pointsA !== null ? pointsA : Number.NEGATIVE_INFINITY;
+      const safeB = pointsB !== null ? pointsB : Number.NEGATIVE_INFINITY;
+
+      if (safeA === safeB) {
+        return a.index - b.index;
+      }
+
+      return safeB - safeA;
+    })
+    .map((item) => item.player);
+
   leaderboardBody.innerHTML = '';
 
-  if (filtered.length === 0) {
+  if (sorted.length === 0) {
     const emptyRow = document.createElement('tr');
     const message = searchTerm ? 'Немає гравців за цим запитом' : 'Немає гравців у цій лізі';
     emptyRow.innerHTML = `<td colspan="10">${message}</td>`;
@@ -1415,7 +1388,7 @@ function renderLeaderboard(players = topPlayers) {
     return;
   }
 
-  filtered.forEach((player) => {
+  sorted.forEach((player) => {
     const row = document.createElement('tr');
     const rankTier =
       typeof player?.rankTier === 'string' && player.rankTier.trim()

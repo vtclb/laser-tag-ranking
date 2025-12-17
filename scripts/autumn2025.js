@@ -123,6 +123,14 @@ function getRankTierByPlace(place) {
   return 'D';
 }
 
+function getRankClass(rankTier) {
+  const tier = typeof rankTier === 'string' ? rankTier.trim().toUpperCase() : '';
+  if (!tier) {
+    return 'rank-none';
+  }
+  return `rank-${tier}`;
+}
+
 function toFiniteNumber(value) {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : null;
@@ -227,46 +235,96 @@ function isAdminPlayer(entry, aliasMap = {}) {
 }
 
 function parseTeamPlayers(team) {
-  if (Array.isArray(team)) {
-    return team
-      .map((name) => (typeof name === 'string' ? name.trim() : ''))
-      .filter(Boolean);
-  }
-  if (typeof team === 'string') {
-    return team
-      .split(/[;,]/)
+  const collectTokens = (value) => {
+    if (typeof value !== 'string') {
+      return [];
+    }
+    const normalizedSeparators = value.replace(/[|;]/g, ',').replace(/\r?\n/g, ',');
+    const primary = normalizedSeparators
+      .split(/[,]/)
+      .flatMap((chunk) => chunk.split(/\s{2,}/))
       .map((name) => name.trim())
       .filter(Boolean);
+
+    if (primary.length > 1) {
+      return primary;
+    }
+
+    return normalizedSeparators
+      .split(/\s+/)
+      .map((name) => name.trim())
+      .filter(Boolean);
+  };
+
+  if (Array.isArray(team)) {
+    return team
+      .flatMap((value) => collectTokens(typeof value === 'string' ? value : ''))
+      .filter(Boolean);
   }
+
+  if (typeof team === 'string') {
+    return collectTokens(team);
+  }
+
   return [];
 }
 
-function extractPlayersFromEvent(event) {
-  const players = [];
+function extractParticipants(event, aliasMap = aliasMapGlobal) {
+  const normalizeEntry = (value) => {
+    if (value && typeof value === 'object') {
+      const candidate =
+        (typeof value.canonical === 'string' && value.canonical.trim()) ||
+        (typeof value.raw === 'string' && value.raw.trim()) ||
+        '';
+      if (!candidate) {
+        return null;
+      }
+      const normalizedExisting = normalizeNickname(candidate, aliasMap);
+      if (!normalizedExisting) {
+        return null;
+      }
+      return {
+        raw: candidate,
+        canonical: resolveCanonicalNickname(candidate, aliasMap) || candidate,
+        normalized: normalizedExisting
+      };
+    }
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const canonical = resolveCanonicalNickname(trimmed, aliasMap) || trimmed;
+    const normalized = normalizeNickname(trimmed, aliasMap);
+    if (!normalized) {
+      return null;
+    }
+    return { raw: trimmed, canonical, normalized };
+  };
 
   const team1Sources = [event?.team1, event?.Team1];
   const team2Sources = [event?.team2, event?.Team2];
 
-  team1Sources.forEach((team) => {
-    players.push(...parseTeamPlayers(team));
-  });
-  team2Sources.forEach((team) => {
-    players.push(...parseTeamPlayers(team));
-  });
+  const normalizeTeam = (sources) =>
+    sources
+      .flatMap((source) => {
+        if (Array.isArray(source) && source.some((item) => typeof item === 'object')) {
+          return source;
+        }
+        return parseTeamPlayers(source);
+      })
+      .map((name) => normalizeEntry(name))
+      .filter(Boolean);
 
-  const mvpCandidates = [event?.MVP, event?.mvp, event?.mvp2, event?.mvp3]
-    .flat()
-    .filter((value) => typeof value === 'string');
+  const team1 = normalizeTeam(team1Sources);
+  const team2 = normalizeTeam(team2Sources);
 
-  mvpCandidates.forEach((value) => {
-    value
-      .split(/[;,]/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .forEach((item) => players.push(item));
-  });
-
-  return players.filter(Boolean);
+  return {
+    team1,
+    team2
+  };
 }
 
 function normalizeEventEntry(event) {
@@ -276,16 +334,8 @@ function normalizeEventEntry(event) {
 
   const leagueRaw =
     event.League || event.league || event.leagueName || event.league_name || event.meta?.league;
-  const league = normalizeLeagueName(leagueRaw || 'sundaygames');
-
-  const team1 = [event.team1, event.Team1]
-    .flat()
-    .flatMap((team) => parseTeamPlayers(team))
-    .filter(Boolean);
-  const team2 = [event.team2, event.Team2]
-    .flat()
-    .flatMap((team) => parseTeamPlayers(team))
-    .filter(Boolean);
+  const league = normalizeLeagueName(leagueRaw);
+  const { team1, team2 } = extractParticipants(event);
   const score = Array.isArray(event.score) ? event.score : [];
   const mvpCandidates = [event.MVP, event.mvp, event.mvp2, event.mvp3]
     .flat()
@@ -334,9 +384,9 @@ function buildPlayerLeagueMap(events = []) {
       return index;
     })();
 
-    const participants = extractPlayersFromEvent(event);
-    participants.forEach((player) => {
-      const key = normalizeKey(player);
+    const { team1, team2 } = extractParticipants(event);
+    [...team1, ...team2].forEach((player) => {
+      const key = normalizeKey(player?.canonical ?? player?.raw ?? '');
       if (!key) {
         return;
       }
@@ -454,27 +504,44 @@ function computeLeagueStats(events = [], leagueKey) {
   let totalRounds = 0;
   let totalParticipants = 0;
 
-  const relevantEvents = events.filter((event) => {
-    if (!event) {
-      return false;
-    }
-    const eventLeague = normalizeLeagueName(event.league || event.League);
-    if (normalizedLeague) {
-      return eventLeague === normalizedLeague;
-    }
-    return Boolean(eventLeague);
-  });
+  const relevantEvents = events
+    .map((event, index) => ({ event, index }))
+    .filter(({ event }) => {
+      if (!event) {
+        return false;
+      }
+      const eventLeague = normalizeLeagueName(event.league || event.League);
+      if (normalizedLeague) {
+        return eventLeague === normalizedLeague;
+      }
+      return Boolean(eventLeague);
+    })
+    .sort((a, b) => {
+      const timeA = Date.parse(a.event?.date ?? '') || 0;
+      const timeB = Date.parse(b.event?.date ?? '') || 0;
+      if (timeA !== timeB) {
+        return timeA - timeB;
+      }
+      return a.index - b.index;
+    });
 
-  relevantEvents.forEach((event) => {
-    const team1 = parseTeamPlayers(event.team1);
-    const team2 = parseTeamPlayers(event.team2);
-    const teams = [team1, team2];
-    if (team1.length === 0 && team2.length === 0) {
+  relevantEvents.forEach(({ event }) => {
+    const { team1, team2 } = extractParticipants(event);
+    const teams = [team1, team2].map((team) =>
+      team
+        .map((player) => ({
+          raw: player.canonical,
+          key: player.normalized
+        }))
+        .filter((item) => Boolean(item.key))
+    );
+
+    if (teams[0].length === 0 && teams[1].length === 0) {
       return;
     }
 
     totalGames += 1;
-    totalParticipants += team1.length + team2.length;
+    totalParticipants += teams[0].length + teams[1].length;
 
     const score = Array.isArray(event.score) ? event.score : [];
     const roundsInMatch = score.reduce((sum, value) => sum + (toFiniteNumber(value) ?? 0), 0);
@@ -484,16 +551,7 @@ function computeLeagueStats(events = [], leagueKey) {
 
     const winner = toFiniteNumber(event.winnerTeam);
 
-    const canonicalTeams = teams.map((team) =>
-      team
-        .map((player) => ({
-          raw: player,
-          key: canon(player)
-        }))
-        .filter((item) => Boolean(item.key))
-    );
-
-    canonicalTeams.forEach((team, index) => {
+    teams.forEach((team, index) => {
       const opponentIndex = index === 0 ? 1 : 0;
       const result = (() => {
         if (winner === index + 1) {
@@ -563,7 +621,7 @@ function computeLeagueStats(events = [], leagueKey) {
           }
         });
 
-        const opponents = canonicalTeams[opponentIndex];
+        const opponents = teams[opponentIndex];
         opponents.forEach((enemy) => {
           const count = record.opponentsMap.get(enemy.raw) ?? 0;
           record.opponentsMap.set(enemy.raw, count + 1);
@@ -800,6 +858,38 @@ function buildProfileForLeague(targetPlayer, leagueValue = '') {
   return profile;
 }
 
+function getPlayerStreaks(player, leagueValue = '') {
+  const leagueKey = normalizeLeagueName(leagueValue || activeLeague);
+  const aliasMap = aliasMapGlobal;
+  const nicknameField =
+    (typeof player?.nickname === 'string' && player.nickname.trim()) ||
+    (typeof player?.canonicalNickname === 'string' && player.canonicalNickname.trim()) ||
+    (typeof player?.player === 'string' && player.player.trim()) ||
+    '';
+
+  const normalizedNickname = normalizeNickname(nicknameField, aliasMap);
+  if (!normalizedNickname) {
+    return { winStreak: null, lossStreak: null };
+  }
+
+  const cacheKey = `${leagueKey || 'any'}:${normalizedNickname}`;
+  if (streakCache.has(cacheKey)) {
+    return streakCache.get(cacheKey);
+  }
+
+  const stats = getLeagueStatsForNickname(normalizedNickname, leagueKey) ?? {};
+  const winStreak =
+    toFiniteNumber(player?.win_streak ?? player?.bestStreak) ??
+    toFiniteNumber(stats.bestStreak ?? stats.win_streak);
+  const lossStreak =
+    toFiniteNumber(player?.loss_streak ?? player?.lossStreak) ??
+    toFiniteNumber(stats.lossStreak ?? stats.currentLossStreak);
+
+  const streaks = { winStreak, lossStreak };
+  streakCache.set(cacheKey, streaks);
+  return streaks;
+}
+
 function buildProfileLookup(players = [], aliasMap = {}) {
   const map = new Map();
   players.forEach((player) => {
@@ -924,6 +1014,7 @@ let profileLookupCurrent = new Map();
 let packPlayerIndex = new Map();
 let packPlayerRawIndex = new Map();
 let leagueStatsCache = new Map();
+let streakCache = new Map();
 
 let leagueOptions = [];
 let activeLeague = 'sundaygames';
@@ -1413,17 +1504,19 @@ function renderPodium(players = topPlayers) {
       typeof player?.rankTier === 'string' && player.rankTier.trim()
         ? player.rankTier
         : getRankTierByPlace(player?.rank);
+    const rankClass = getRankClass(rankTier);
+    const { winStreak } = getPlayerStreaks(player, activeLeague);
     card.innerHTML = `
       <h3>${player?.nickname ?? FALLBACK}</h3>
       <ul>
         <li>${player?.team ?? FALLBACK}</li>
         <li>${formatNumberValue(player?.totalPoints)} очок</li>
         <li>Win rate ${formatPercentValue(player?.winRate)}</li>
-        <li>Стрік ${formatNumberValue(player?.bestStreak)}</li>
+        <li>🔥 Стрік ${formatNumberValue(winStreak)}</li>
       </ul>
     `;
     if (rankTier && rankTier !== FALLBACK) {
-      card.classList.add(`tier-${rankTier}`);
+      card.classList.add(rankClass);
     }
     podiumGrid.append(card);
   });
@@ -1561,14 +1654,11 @@ function renderLeaderboard(players = topPlayers) {
       typeof player?.rankTier === 'string' && player.rankTier.trim()
         ? player.rankTier
         : null;
-    if (rankTier) {
-      row.classList.add(`tier-${rankTier}`);
-    } else {
-      row.classList.add('tier-none');
-    }
+    const rankClass = getRankClass(rankTier);
+    row.classList.add(rankClass || 'rank-none');
     const badgeMarkup = rankTier
-      ? `<span class="role-badge tier-${rankTier}" aria-label="Ранг ${rankTier}">${rankTier}</span>`
-      : `<span class="role-badge tier-none" aria-label="Ранг відсутній">${FALLBACK}</span>`;
+      ? `<span class="rank-badge ${rankClass}" aria-label="Ранг ${rankTier}">${rankTier}</span>`
+      : `<span class="rank-badge rank-none" aria-label="Ранг відсутній">${FALLBACK}</span>`;
 
     const seasonPointsLabel = formatNumberValue(player?.season_points ?? player?.totalPoints);
     const gamesLabel = formatNumberValue(player?.games);
@@ -1579,8 +1669,9 @@ function renderLeaderboard(players = topPlayers) {
     const roundsLabel = formatNumberValue(player?.rounds);
     const roundWinsLabel = formatNumberValue(player?.round_wins);
     const roundLossesLabel = formatNumberValue(player?.round_losses);
-    const winStreakLabel = formatNumberValue(player?.win_streak);
-    const lossStreakLabel = formatNumberValue(player?.loss_streak);
+    const streaks = getPlayerStreaks(player, activeLeague);
+    const winStreakLabel = formatNumberValue(streaks.winStreak);
+    const lossStreakLabel = formatNumberValue(streaks.lossStreak);
     const mvpLabel = formatNumberValue(player?.MVP);
 
     const gamesTooltipParts = [];
@@ -2169,6 +2260,7 @@ function getTop10ForActiveLeague() {
 function renderAll(targetLeague = activeLeague) {
   const effectiveLeague = getEffectiveLeague(targetLeague || 'sundaygames');
   activeLeague = effectiveLeague;
+  streakCache.clear();
 
   const aliasMap = aliasMapGlobal;
   const leagueData = leagueStatsCache.get(effectiveLeague) ?? { playerStats: new Map(), metrics: {} };
@@ -2423,7 +2515,9 @@ async function boot() {
       ['sundaygames', 'kids'].forEach((league) => availableLeagues.add(league));
     }
 
-    leaguesFromEvents.forEach((league) => {
+    const leaguesForStats = new Set([...availableLeagues]);
+    leagueStatsCache = new Map();
+    leaguesForStats.forEach((league) => {
       leagueStatsCache.set(league, computeLeagueStats(normalizedEvents, league));
     });
 

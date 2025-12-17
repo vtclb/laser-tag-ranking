@@ -737,7 +737,8 @@ let currentSort = 'rank';
 let currentDirection = 'asc';
 let PACK = null;
 let EVENTS = null;
-let TOP10_BY_LEAGUE = null;
+let seasonTop10ByLeague = null;
+let normalizedTop10ByLeague = { kids: [], sundaygames: [] };
 let aliasMapGlobal = {};
 let normalizedEvents = [];
 let playerLeagueMap = new Map();
@@ -1771,12 +1772,12 @@ function bindTableControls() {
         currentDirection = sortKey === 'rank' ? 'asc' : 'desc';
       }
       updateTabs(button);
-      renderLeaderboard();
+      renderLeaderboard(getTop10ForActiveLeague());
     });
   });
 
   searchInput?.addEventListener('input', () => {
-    renderLeaderboard();
+    renderLeaderboard(getTop10ForActiveLeague());
   });
 
   updateTabs(tabButtons[0] ?? null);
@@ -1795,101 +1796,30 @@ function getEffectiveLeague(targetLeague) {
   return leagueOptions[0] ?? normalizedTarget ?? targetLeague ?? '';
 }
 
+function getTop10ForActiveLeague() {
+  if (activeLeague === 'kids') {
+    return seasonTop10ByLeague?.top10_kids ?? [];
+  }
+  return seasonTop10ByLeague?.top10_sundaygames ?? [];
+}
+
 function renderAll(targetLeague = activeLeague) {
   const effectiveLeague = getEffectiveLeague(targetLeague || 'sundaygames');
   activeLeague = effectiveLeague;
 
   const aliasMap = aliasMapGlobal;
-
   const leagueData = leagueStatsCache.get(effectiveLeague) ?? { playerStats: new Map(), metrics: {} };
-  const leagueStats = leagueData.playerStats;
 
-  const candidateKeys = new Set();
+  const leagueTopPlayers =
+    effectiveLeague === 'kids'
+      ? normalizedTop10ByLeague.kids
+      : normalizedTop10ByLeague.sundaygames;
 
-  const packCandidates = allPlayersNormalized.filter((player) => player.leagueKey === effectiveLeague);
-
-  packCandidates.forEach((player) => {
-    const key = normalizeKey(player?.nickname ?? player?.player ?? '');
-    if (key) {
-      candidateKeys.add(key);
-    }
-  });
-
-  leagueStats.forEach((_, key) => {
-    if (playerLeagueMap.get(key) === effectiveLeague) {
-      candidateKeys.add(key);
-    }
-  });
-
-  const combined = [];
-
-  candidateKeys.forEach((key) => {
-    const packEntry = packPlayerIndex.get(key);
-    const statsEntry = leagueStats.get(key);
-    const baseName = statsEntry?.nickname || packEntry?.nickname || displayName(key);
-    const explicitLeague = normalizeLeagueName(packEntry?.leagueKey ?? packEntry?.league);
-    const statsLeague = normalizeLeagueName(statsEntry?.leagueKey ?? statsEntry?.league);
-    const mappedLeague = playerLeagueMap.get(key);
-    const playerLeague = explicitLeague || statsLeague || mappedLeague || '';
-    if (!playerLeague || playerLeague !== effectiveLeague) {
-      return;
-    }
-    const leagueLabel = getLeagueLabel(playerLeague || FALLBACK);
-    const seasonPoints = toFiniteNumber(packEntry?.season_points ?? packEntry?.totalPoints);
-
-    const merged = {
-      ...packEntry,
-      ...statsEntry,
-      nickname: baseName,
-      canonicalNickname: packEntry?.canonicalNickname ?? statsEntry?.canonicalNickname ?? baseName,
-      normalizedNickname: key,
-      leagueKey: playerLeague,
-      league: playerLeague,
-      team: leagueLabel,
-      season_points: seasonPoints ?? statsEntry?.season_points ?? null,
-      totalPoints: seasonPoints ?? statsEntry?.totalPoints ?? null
-    };
-
-    merged.isAdmin = isAdminPlayer({ player: merged.nickname }, aliasMap);
-    combined.push(merged);
-  });
-
-
-  const leagueFiltered = combined.filter((entry) => entry.leagueKey === effectiveLeague);
-
-  const filteredTopCandidates = leagueFiltered
-    .filter((entry) => !entry.isAdmin)
-    .filter((entry) => toFiniteNumber(entry.season_points ?? entry.totalPoints) !== null)
-    .sort((a, b) => {
-      const pointsA = toFiniteNumber(a?.season_points ?? a?.totalPoints) ?? 0;
-      const pointsB = toFiniteNumber(b?.season_points ?? b?.totalPoints) ?? 0;
-      if (pointsA !== pointsB) {
-        return pointsB - pointsA;
-      }
-      return (a.nickname ?? '').localeCompare(b.nickname ?? '');
-    });
-
-  const rankIndex = new Map();
-  filteredTopCandidates.forEach((player, idx) => {
-    const rank = idx + 1;
-    player.rank = rank;
-    rankIndex.set(player.normalizedNickname, rank);
-  });
-
-
-  activeLeaguePlayers = leagueFiltered.map((player) => ({
-    ...player,
-    rank: rankIndex.get(player.normalizedNickname) ?? null
-  }));
-
-  topPlayers = activeLeaguePlayers
-    .filter((player) => player.leagueKey === effectiveLeague)
-    .filter((player) => !player.isAdmin)
-    .sort(sortPlayersForLeaderboard)
-    .slice(0, TOP_LIMIT);
+  topPlayers = leagueTopPlayers;
+  activeLeaguePlayers = leagueTopPlayers;
   profileLookupCurrent = buildProfileLookup(activeLeaguePlayers, aliasMap);
 
-  const eligible = filteredTopCandidates;
+  const eligible = leagueTopPlayers;
   const pointsTotal = eligible.reduce(
     (sum, player) => sum + (toFiniteNumber(player?.season_points ?? player?.totalPoints) ?? 0),
     0
@@ -1916,7 +1846,7 @@ function renderAll(targetLeague = activeLeague) {
     pointsNegativeOnly: leagueAggregates.points_negative_only
   });
   renderPodium(topPlayers);
-  renderLeaderboard();
+  renderLeaderboard(getTop10ForActiveLeague());
   updateLeagueButtons(activeLeague);
 }
 
@@ -2023,15 +1953,15 @@ function resolveSeasonAsset(pathname) {
 async function boot() {
   try {
     const [packData, eventsData, top10ByLeagueData, summerPack] = await Promise.all([
-      fetchJSON(resolveSeasonAsset('ocinb2025_pack.json')),
+      fetchJSON(resolveSeasonAsset('ocinb2025_pack.json')).catch(() => null),
       fetchJSON(resolveSeasonAsset('sunday_autumn_2025_EVENTS.json')),
-      fetchJSON(resolveSeasonAsset('ocinb2025_top10_by_league.json')).catch(() => null),
+      fetchJSON(resolveSeasonAsset('ocinb2025_top10_by_league.json')),
       fetchJSON(resolveSeasonAsset('SL_Summer2025_pack.json')).catch(() => null)
     ]);
 
     PACK = packData;
     EVENTS = eventsData;
-    TOP10_BY_LEAGUE = top10ByLeagueData;
+    seasonTop10ByLeague = top10ByLeagueData;
 
     aliasMapGlobal = { ...(summerPack?.aliases ?? {}), ...(PACK?.aliases ?? {}) };
 
@@ -2047,60 +1977,28 @@ async function boot() {
 
     const aliasMap = aliasMapGlobal;
 
-    // Patch note: підхоплюємо окремі топ-10 для kids/sundaygames з нового JSON, щоб не змішувати ліги.
-    const topByLeagueList = [];
-    if (Array.isArray(TOP10_BY_LEAGUE?.top10_kids)) {
-      topByLeagueList.push(
-        ...TOP10_BY_LEAGUE.top10_kids.map((entry) => ({
-          ...entry,
-          league: 'kids',
-          leagueKey: 'kids'
-        }))
-      );
-    }
-    if (Array.isArray(TOP10_BY_LEAGUE?.top10_sundaygames)) {
-      topByLeagueList.push(
-        ...TOP10_BY_LEAGUE.top10_sundaygames.map((entry) => ({
-          ...entry,
-          league: 'sundaygames',
-          leagueKey: 'sundaygames'
-        }))
-      );
-    }
-
-
-    topByLeagueList.forEach((entry) => {
-      const normalizedKey = canon(entry?.player ?? entry?.nickname ?? '');
-      const explicitLeague = normalizeLeagueName(entry?.leagueKey ?? entry?.league);
-      if (normalizedKey && explicitLeague) {
-        playerLeagueMap.set(normalizedKey, explicitLeague);
-      }
-    });
-
-
-    const baseAllPlayers = Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [];
-    const baseTopPlayers =
-      topByLeagueList.length > 0
-        ? topByLeagueList
-        : Array.isArray(PACK?.top10)
-          ? PACK.top10
-          : [];
-    const mergedPlayers = mergePlayerRecords(baseAllPlayers, baseTopPlayers, aliasMap);
-
-    const assignLeagueKey = (player) => {
-      const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
-      const explicitLeague = normalizeLeagueName(player?.leagueKey ?? player?.league);
-      const mappedLeague = playerLeagueMap.get(normalizedKey);
-      const leagueKey = explicitLeague || mappedLeague || '';
-      return { ...player, leagueKey: leagueKey || undefined, league: leagueKey || undefined };
+    normalizedTop10ByLeague = {
+      kids: normalizeTopPlayers(
+        Array.isArray(seasonTop10ByLeague?.top10_kids)
+          ? seasonTop10ByLeague.top10_kids
+          : [],
+        seasonTop10ByLeague?.meta ?? {},
+        aliasMap
+      ).map((entry) => ({ ...entry, league: 'kids', leagueKey: 'kids' })),
+      sundaygames: normalizeTopPlayers(
+        Array.isArray(seasonTop10ByLeague?.top10_sundaygames)
+          ? seasonTop10ByLeague.top10_sundaygames
+          : [],
+        seasonTop10ByLeague?.meta ?? {},
+        aliasMap
+      ).map((entry) => ({ ...entry, league: 'sundaygames', leagueKey: 'sundaygames' }))
     };
 
-    allPlayersNormalized = normalizeTopPlayers(mergedPlayers, PACK?.meta ?? {}, aliasMap).map(
-      assignLeagueKey
-    );
-    topPlayersNormalized = normalizeTopPlayers(baseTopPlayers, PACK?.meta ?? {}, aliasMap).map(
-      assignLeagueKey
-    );
+    topPlayersNormalized = [
+      ...normalizedTop10ByLeague.kids,
+      ...normalizedTop10ByLeague.sundaygames
+    ];
+    allPlayersNormalized = topPlayersNormalized;
 
     packPlayerIndex = new Map();
     allPlayersNormalized.forEach((player) => {
@@ -2110,33 +2008,38 @@ async function boot() {
       }
     });
 
-    profileLookupAll = buildProfileLookup(allPlayersNormalized, aliasMap);
-    profileLookupTop = buildProfileLookup(topPlayersNormalized, aliasMap);
+    [...normalizedTop10ByLeague.kids, ...normalizedTop10ByLeague.sundaygames].forEach(
+      (entry) => {
+        const normalizedKey = canon(entry?.player ?? entry?.nickname ?? '');
+        const explicitLeague = normalizeLeagueName(entry?.leagueKey ?? entry?.league);
+        if (normalizedKey && explicitLeague) {
+          playerLeagueMap.set(normalizedKey, explicitLeague);
+        }
+      }
+    );
+
+    profileLookupAll = buildProfileLookup(
+      [...normalizedTop10ByLeague.kids, ...normalizedTop10ByLeague.sundaygames],
+      aliasMap
+    );
+    profileLookupTop = profileLookupAll;
 
     const leaguesFromEvents = Array.from(
       new Set(normalizedEvents.map((event) => normalizeLeagueName(event?.league)).filter(Boolean))
     );
 
-    const leaguesFromTop = Array.from(
-      new Set(
-        topByLeagueList
-          .map((entry) => normalizeLeagueName(entry?.leagueKey ?? entry?.league))
-          .filter(Boolean)
-      )
-    );
+    const availableLeagues = new Set(leaguesFromEvents);
 
-    const availableLeagues = new Set([...leaguesFromEvents, ...leaguesFromTop]);
-
-    if (Array.isArray(TOP10_BY_LEAGUE?.leagues)) {
-      TOP10_BY_LEAGUE.leagues
+    if (Array.isArray(seasonTop10ByLeague?.leagues)) {
+      seasonTop10ByLeague.leagues
         .map((league) => normalizeLeagueName(league))
         .filter(Boolean)
         .forEach((league) => availableLeagues.add(league));
     }
-    if (TOP10_BY_LEAGUE?.top10_kids) {
+    if (seasonTop10ByLeague?.top10_kids) {
       availableLeagues.add('kids');
     }
-    if (TOP10_BY_LEAGUE?.top10_sundaygames) {
+    if (seasonTop10ByLeague?.top10_sundaygames) {
       availableLeagues.add('sundaygames');
     }
 

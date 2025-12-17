@@ -234,7 +234,8 @@ function parseTeamPlayers(team) {
   }
   if (typeof team === 'string') {
     return team
-      .split(/[;,]/)
+      .split(/[;,|]/)
+      .flatMap((chunk) => chunk.split(/\s+/))
       .map((name) => name.trim())
       .filter(Boolean);
   }
@@ -1405,21 +1406,36 @@ function renderPodium(players = topPlayers) {
     return;
   }
   podiumGrid.innerHTML = '';
+  const aliasMap = aliasMapGlobal;
   players.slice(0, 3).forEach((player, index) => {
     const card = document.createElement('article');
     card.className = 'podium-card';
     card.dataset.rank = `#${index + 1}`;
+    const normalizedNickname = normalizeNickname(
+      player?.nickname ?? player?.player ?? '',
+      aliasMap
+    );
+    const leagueKey = normalizeLeagueName(player?.league ?? player?.leagueKey ?? activeLeague);
+    const leagueStats = normalizedNickname
+      ? getLeagueStatsForNickname(normalizedNickname, leagueKey)
+      : null;
     const rankTier =
       typeof player?.rankTier === 'string' && player.rankTier.trim()
         ? player.rankTier
         : getRankTierByPlace(player?.rank);
+    const streakValue =
+      leagueStats?.bestStreak ??
+      leagueStats?.win_streak ??
+      player?.bestStreak ??
+      player?.win_streak ??
+      null;
     card.innerHTML = `
       <h3>${player?.nickname ?? FALLBACK}</h3>
       <ul>
         <li>${player?.team ?? FALLBACK}</li>
         <li>${formatNumberValue(player?.totalPoints)} очок</li>
         <li>Win rate ${formatPercentValue(player?.winRate)}</li>
-        <li>Стрік ${formatNumberValue(player?.bestStreak)}</li>
+        <li>Стрік ${formatNumberValue(streakValue)}</li>
       </ul>
     `;
     if (rankTier && rankTier !== FALLBACK) {
@@ -2171,6 +2187,13 @@ function renderAll(targetLeague = activeLeague) {
   activeLeague = effectiveLeague;
 
   const aliasMap = aliasMapGlobal;
+  if (!leagueStatsCache.has(effectiveLeague)) {
+    leagueStatsCache.set(
+      effectiveLeague,
+      computeLeagueStats(normalizedEvents, effectiveLeague)
+    );
+  }
+
   const leagueData = leagueStatsCache.get(effectiveLeague) ?? { playerStats: new Map(), metrics: {} };
 
   const leagueTopPlayers = getTop10ForActiveLeague();

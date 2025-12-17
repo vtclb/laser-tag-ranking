@@ -178,20 +178,26 @@ const KIDS_LEAGUE_ALIASES = ['kids', 'kid', 'children', 'junior', 'youth', 'ди
 
 function normalizeLeagueName(value) {
   if (typeof value !== 'string') {
-    return '';
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return '';
-  }
-  const lookup = trimmed.toLowerCase();
-  if (KIDS_LEAGUE_ALIASES.some((token) => lookup.includes(token))) {
-    return 'kids';
-  }
-  if (ADULT_LEAGUE_ALIASES.some((token) => lookup.includes(token))) {
     return 'sundaygames';
   }
-  return lookup;
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'sundaygames';
+  }
+
+  const lookup = trimmed.toLowerCase();
+  const compact = lookup.replace(/[\s_-]+/g, '');
+
+  if (KIDS_LEAGUE_ALIASES.some((token) => compact.includes(token))) {
+    return 'kids';
+  }
+
+  if (ADULT_LEAGUE_ALIASES.some((token) => compact.includes(token))) {
+    return 'sundaygames';
+  }
+
+  return 'sundaygames';
 }
 
 function resolvePlayerLeague(entry, fallback) {
@@ -1267,45 +1273,95 @@ function buildLeagueTop10(rawTop10 = [], leagueKey = '') {
   const normalizedLeague = normalizeLeagueName(leagueKey || 'sundaygames');
   ensurePackLookups();
 
-  return buildResolvedTop10Rows(rawTop10, normalizedLeague).map((row) => {
-    const rankTier =
-      typeof row?.rankTier === 'string' && row.rankTier.trim() ? row.rankTier.trim() : null;
-    const packRow = resolveTop10EntryToPackRow(row);
-    const packDisplay = (() => {
-      if (!packRow) {
-        return {};
-      }
-      const aliasMap = PACK?.aliases ?? {};
-      const preferredName =
-        (typeof packRow?.nickname === 'string' && packRow.nickname.trim()) ||
-        (typeof packRow?.player === 'string' && packRow.player.trim()) ||
-        '';
+  const resolvedRows = buildResolvedTop10Rows(rawTop10, normalizedLeague)
+    .map((row) => {
+      const packRow = resolveTop10EntryToPackRow(row);
+      const packDisplay = (() => {
+        if (!packRow) {
+          return {};
+        }
+        const aliasMap = PACK?.aliases ?? {};
+        const preferredName =
+          (typeof packRow?.nickname === 'string' && packRow.nickname.trim()) ||
+          (typeof packRow?.player === 'string' && packRow.player.trim()) ||
+          '';
+        return {
+          avatar: packRow.avatar,
+          profile: packRow.profile,
+          profileUrl: packRow.profileUrl,
+          nickname: preferredName || row.nickname,
+          canonicalNickname:
+            row.canonicalNickname || resolveCanonicalNickname(preferredName || row.nickname, aliasMap),
+          aliases:
+            Array.isArray(row.aliases) && row.aliases.length > 0
+              ? row.aliases
+              : getNicknameVariants(preferredName || row.nickname, aliasMap),
+          rankTier: typeof packRow?.rankTier === 'string' && packRow.rankTier.trim()
+            ? packRow.rankTier.trim()
+            : null
+        };
+      })();
+
+      const resolvedLeague =
+        normalizeLeagueName(row?.leagueKey ?? row?.league ?? normalizedLeague) || normalizedLeague;
+
+      const rankTierFromRow =
+        typeof row?.rankTier === 'string' && row.rankTier.trim() ? row.rankTier.trim() : null;
+
       return {
-        avatar: packRow.avatar,
-        profile: packRow.profile,
-        profileUrl: packRow.profileUrl,
-        nickname: preferredName || row.nickname,
-        canonicalNickname:
-          row.canonicalNickname || resolveCanonicalNickname(preferredName || row.nickname, aliasMap),
-        aliases:
-          Array.isArray(row.aliases) && row.aliases.length > 0
-            ? row.aliases
-            : getNicknameVariants(preferredName || row.nickname, aliasMap)
+        ...row,
+        ...packDisplay,
+        rankTier: packDisplay.rankTier || rankTierFromRow,
+        leagueKey: resolvedLeague,
+        league: resolvedLeague,
+        team: getLeagueLabel(resolvedLeague || FALLBACK)
       };
-    })();
+    })
+    .filter((row) => {
+      const rowLeague = normalizeLeagueName(row?.leagueKey ?? row?.league ?? normalizedLeague);
+      if (rowLeague !== normalizedLeague) {
+        return false;
+      }
 
-    const resolvedLeague =
-      normalizeLeagueName(row?.leagueKey ?? row?.league ?? normalizedLeague) || normalizedLeague;
+      const games = toFiniteNumber(row?.games);
+      const points = toFiniteNumber(row?.season_points ?? row?.totalPoints);
+      if (row?.isAdmin) {
+        return false;
+      }
+      if (games !== null) {
+        return games > 0;
+      }
+      return points !== null && points > 0;
+    })
+    .sort((a, b) => {
+      const pointsA = toFiniteNumber(a?.season_points ?? a?.totalPoints) ?? 0;
+      const pointsB = toFiniteNumber(b?.season_points ?? b?.totalPoints) ?? 0;
+      if (pointsA !== pointsB) {
+        return pointsB - pointsA;
+      }
 
-    return {
+      const gamesA = toFiniteNumber(a?.games) ?? 0;
+      const gamesB = toFiniteNumber(b?.games) ?? 0;
+      if (gamesA !== gamesB) {
+        return gamesB - gamesA;
+      }
+
+      const winsA = toFiniteNumber(a?.wins) ?? 0;
+      const winsB = toFiniteNumber(b?.wins) ?? 0;
+      if (winsA !== winsB) {
+        return winsB - winsA;
+      }
+
+      return (a?.nickname ?? '').localeCompare(b?.nickname ?? '');
+    })
+    .map((row, index) => ({
       ...row,
-      ...packDisplay,
-      rankTier,
-      leagueKey: resolvedLeague,
-      league: resolvedLeague,
-      team: getLeagueLabel(resolvedLeague || FALLBACK)
-    };
-  });
+      rank: index + 1,
+      rankTier:
+        row.rankTier && row.rankTier !== FALLBACK ? row.rankTier : getRankTierByPlace(index + 1)
+    }));
+
+  return resolvedRows;
 }
 
 function buildMetrics(aggregates = {}, players = [], leagueMetrics = {}) {
@@ -1640,16 +1696,57 @@ function renderLeaderboard(players = topPlayers) {
   const sorted = filtered
     .map((player, index) => ({ player, index }))
     .sort((a, b) => {
-      const pointsA = toFiniteNumber(a.player?.season_points ?? a.player?.totalPoints);
-      const pointsB = toFiniteNumber(b.player?.season_points ?? b.player?.totalPoints);
-      const safeA = pointsA !== null ? pointsA : Number.NEGATIVE_INFINITY;
-      const safeB = pointsB !== null ? pointsB : Number.NEGATIVE_INFINITY;
+      const sortKey = currentSort || 'rank';
+      const direction = currentDirection === 'asc' ? 1 : -1;
 
-      if (safeA === safeB) {
+      if (sortKey === 'rank') {
+        const pointsA = toFiniteNumber(a.player?.season_points ?? a.player?.totalPoints) ?? 0;
+        const pointsB = toFiniteNumber(b.player?.season_points ?? b.player?.totalPoints) ?? 0;
+        if (pointsA !== pointsB) {
+          return direction * (pointsB - pointsA);
+        }
+
+        const gamesA = toFiniteNumber(a.player?.games) ?? 0;
+        const gamesB = toFiniteNumber(b.player?.games) ?? 0;
+        if (gamesA !== gamesB) {
+          return direction * (gamesB - gamesA);
+        }
+
+        const winsA = toFiniteNumber(a.player?.wins) ?? 0;
+        const winsB = toFiniteNumber(b.player?.wins) ?? 0;
+        if (winsA !== winsB) {
+          return direction * (winsB - winsA);
+        }
+
         return a.index - b.index;
       }
 
-      return safeB - safeA;
+      const valueA = getSortValue(a.player, sortKey);
+      const valueB = getSortValue(b.player, sortKey);
+
+      if (valueA === null && valueB === null) {
+        return a.index - b.index;
+      }
+      if (valueA === null) {
+        return 1;
+      }
+      if (valueB === null) {
+        return -1;
+      }
+
+      if (valueA === valueB) {
+        return a.index - b.index;
+      }
+
+      const isNumericA = typeof valueA === 'number' && Number.isFinite(valueA);
+      const isNumericB = typeof valueB === 'number' && Number.isFinite(valueB);
+      if (isNumericA && isNumericB) {
+        return direction * (valueA - valueB);
+      }
+
+      const labelA = String(valueA);
+      const labelB = String(valueB);
+      return direction * labelA.localeCompare(labelB);
     })
     .map((item) => item.player);
 
@@ -1663,12 +1760,13 @@ function renderLeaderboard(players = topPlayers) {
     return;
   }
 
-  sorted.forEach((player) => {
+  sorted.forEach((player, index) => {
+    const displayRank = index + 1;
     const row = document.createElement('tr');
     const rankTier =
       typeof player?.rankTier === 'string' && player.rankTier.trim()
         ? player.rankTier
-        : null;
+        : getRankTierByPlace(displayRank);
     const rankClass = getRankClass(rankTier);
     row.classList.add(rankClass || 'rank-none');
     const badgeMarkup = rankTier
@@ -1728,7 +1826,7 @@ function renderLeaderboard(players = topPlayers) {
       resolveCanonicalNickname(player?.player ?? playerNickname, aliasMapGlobal) || playerNickname;
 
     row.innerHTML = `
-      <td><span class="rank-chip">${formatNumberValue(player?.rank)}</span></td>
+      <td><span class="rank-chip">${formatNumberValue(displayRank)}</span></td>
       <td>
         <div>${displayName}</div>
         <small>${player?.realName ?? FALLBACK}</small>

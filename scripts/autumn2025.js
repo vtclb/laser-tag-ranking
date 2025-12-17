@@ -745,6 +745,12 @@ let playerLeagueMap = new Map();
 let topPlayers = [];
 let allPlayersNormalized = [];
 
+let top10RowsKids = [];
+let top10RowsSunday = [];
+let packLookupCanonical = new Map();
+let packLookupRaw = new Map();
+let packLookupReady = false;
+
 let topPlayersNormalized = [];
 let profileLookupAll = new Map();
 let profileLookupTop = new Map();
@@ -894,6 +900,81 @@ function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
       timeline: null
     };
   });
+}
+
+function ensurePackLookups() {
+  if (packLookupReady) {
+    return;
+  }
+
+  packLookupCanonical = new Map();
+  packLookupRaw = new Map();
+
+  const aliasMap = PACK?.aliases ?? {};
+  const packPlayers = normalizeTopPlayers(
+    Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [],
+    PACK?.meta ?? {},
+    aliasMap
+  );
+
+  packPlayers.forEach((player) => {
+    const canonicalKey = normalizeNickname(player?.nickname ?? player?.player ?? '', aliasMap);
+    const rawKey =
+      (typeof player?.nickname === 'string' && player.nickname.trim()) ||
+      (typeof player?.player === 'string' && player.player.trim()) ||
+      '';
+
+    if (canonicalKey) {
+      packLookupCanonical.set(canonicalKey, player);
+    }
+
+    if (rawKey) {
+      packLookupRaw.set(rawKey, player);
+    }
+  });
+
+  packLookupReady = true;
+}
+
+function resolveTop10EntryToPackRow(entry) {
+  if (!entry) {
+    return null;
+  }
+
+  ensurePackLookups();
+
+  const aliasMap = PACK?.aliases ?? {};
+  const nick =
+    (typeof entry?.player === 'string' && entry.player.trim()) ||
+    (typeof entry?.nickname === 'string' && entry.nickname.trim()) ||
+    '';
+  const canonical = normalizeNickname(nick, aliasMap);
+
+  const matched =
+    (canonical && packLookupCanonical.get(canonical)) ||
+    (nick && packLookupRaw.get(nick)) ||
+    null;
+
+  return matched ? { ...matched } : null;
+}
+
+function buildResolvedTop10Rows(rawList) {
+  const source = Array.isArray(rawList) ? rawList : [];
+  const rows = source
+    .map((entry) => resolveTop10EntryToPackRow(entry))
+    .filter((entry) => Boolean(entry));
+
+  rows.sort((a, b) => {
+    const pointsA = toFiniteNumber(a?.season_points ?? a?.totalPoints) ?? 0;
+    const pointsB = toFiniteNumber(b?.season_points ?? b?.totalPoints) ?? 0;
+    return pointsB - pointsA;
+  });
+
+  rows.forEach((row, index) => {
+    row.rank = index + 1;
+  });
+
+  return rows;
 }
 
 function buildMetrics(aggregates = {}, players = [], leagueMetrics = {}) {
@@ -1798,9 +1879,9 @@ function getEffectiveLeague(targetLeague) {
 
 function getTop10ForActiveLeague() {
   if (activeLeague === 'kids') {
-    return seasonTop10ByLeague?.top10_kids ?? [];
+    return top10RowsKids;
   }
-  return seasonTop10ByLeague?.top10_sundaygames ?? [];
+  return top10RowsSunday;
 }
 
 function renderAll(targetLeague = activeLeague) {
@@ -1993,6 +2074,9 @@ async function boot() {
         aliasMap
       ).map((entry) => ({ ...entry, league: 'sundaygames', leagueKey: 'sundaygames' }))
     };
+
+    top10RowsKids = buildResolvedTop10Rows(seasonTop10ByLeague?.top10_kids);
+    top10RowsSunday = buildResolvedTop10Rows(seasonTop10ByLeague?.top10_sundaygames);
 
     topPlayersNormalized = [
       ...normalizedTop10ByLeague.kids,

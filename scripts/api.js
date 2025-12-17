@@ -640,8 +640,17 @@ const LEAGUE_DIRECT_URLS = {
 
 export async function fetchLeagueCsv(league) {
   const targetLeague = normalizeLeague(league);
-  // спочатку пробуємо URL з config.js
-  let base = getLeagueFeedUrl(targetLeague);
+  const proxyLeague = targetLeague === 'olds' ? 'sundaygames' : targetLeague;
+
+  let base = null;
+  if (GAS_PROXY_BASE) {
+    base = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=${proxyLeague}`;
+  }
+
+  if (!base) {
+    base = getLeagueFeedUrl(targetLeague);
+  }
+
   if (!base) {
     base = LEAGUE_DIRECT_URLS[targetLeague];
   }

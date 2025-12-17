@@ -1046,7 +1046,9 @@ function buildLeagueTop10(rawTop10 = [], leagueKey = '') {
   const normalizedLeague = normalizeLeagueName(leagueKey || 'sundaygames');
   ensurePackLookups();
 
-  const resolvedRows = buildResolvedTop10Rows(rawTop10, normalizedLeague).map((row) => ({
+
+  const resolvedRows = buildResolvedTop10Rows(rawTop10).map((row) => ({
+
     ...row,
     leagueKey: normalizedLeague || row?.leagueKey,
     league: normalizedLeague || row?.league,

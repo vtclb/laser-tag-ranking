@@ -779,6 +779,12 @@ let topPlayers = [];
 let allPlayersNormalized = [];
 let packAllPlayersNormalized = [];
 
+let top10RowsKids = [];
+let top10RowsSunday = [];
+let packLookupCanonical = new Map();
+let packLookupRaw = new Map();
+let packLookupReady = false;
+
 let topPlayersNormalized = [];
 let profileLookupAll = new Map();
 let profileLookupTop = new Map();
@@ -931,74 +937,76 @@ function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
   });
 }
 
+
+function ensurePackLookups() {
+  if (packLookupReady) {
+    return;
+  }
+
+  packLookupCanonical = new Map();
+  packLookupRaw = new Map();
+
+  const aliasMap = PACK?.aliases ?? {};
+  const packPlayers = normalizeTopPlayers(
+    Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [],
+    PACK?.meta ?? {},
+    aliasMap
+  );
+
+  packPlayers.forEach((player) => {
+    const canonicalKey = normalizeNickname(player?.nickname ?? player?.player ?? '', aliasMap);
+    const rawKey =
+      (typeof player?.nickname === 'string' && player.nickname.trim()) ||
+      (typeof player?.player === 'string' && player.player.trim()) ||
+      '';
+
+    if (canonicalKey) {
+      packLookupCanonical.set(canonicalKey, player);
+    }
+
+    if (rawKey) {
+      packLookupRaw.set(rawKey, player);
+    }
+  });
+
+  packLookupReady = true;
+}
+
+
 function resolveTop10EntryToPackRow(entry) {
   if (!entry) {
     return null;
   }
 
-  const aliasMap = aliasMapGlobal;
-  const rawNick =
+
+  const aliasMap = PACK?.aliases ?? {};
+  const nick =
     (typeof entry?.player === 'string' && entry.player.trim()) ||
     (typeof entry?.nickname === 'string' && entry.nickname.trim()) ||
-    (typeof entry?.name === 'string' && entry.name.trim()) ||
     '';
+  const canonical = normalizeNickname(nick, aliasMap);
 
-  if (!rawNick) {
-    return null;
-  }
-
-  const canonicalNick = resolveCanonicalNickname(rawNick, aliasMap);
-  const normalizedNick = normalizeNickname(rawNick, aliasMap);
-  const baseFromPack =
-    (normalizedNick && packPlayerIndex.get(normalizedNick)) ||
-    packPlayerRawIndex.get(rawNick) ||
+  const matched =
+    (canonical && packLookupCanonical.get(canonical)) ||
+    (nick && packLookupRaw.get(nick)) ||
     null;
-  const leagueFromEntry = normalizeLeagueName(entry?.league ?? entry?.leagueKey);
-  const resolvedLeague =
-    leagueFromEntry || getPlayerLeagueKey(baseFromPack ?? { nickname: rawNick }) || '';
-  const aliases = getNicknameVariants(rawNick, aliasMap);
 
-  const seasonPoints =
-    toFiniteNumber(entry?.season_points ?? entry?.totalPoints) ??
-    toFiniteNumber(baseFromPack?.season_points ?? baseFromPack?.totalPoints);
-
-  return {
-    ...(baseFromPack ? { ...baseFromPack } : {}),
-    ...entry,
-    player: rawNick,
-    nickname:
-      (typeof (baseFromPack?.nickname ?? baseFromPack?.player) === 'string' &&
-        (baseFromPack?.nickname ?? baseFromPack?.player)?.trim()) ||
-      rawNick ||
-      FALLBACK,
-    canonicalNickname:
-      (typeof (baseFromPack?.canonicalNickname ?? baseFromPack?.nickname) === 'string' &&
-        (baseFromPack?.canonicalNickname ?? baseFromPack?.nickname)?.trim()) ||
-      canonicalNick ||
-      rawNick,
-    normalizedNickname:
-      (typeof baseFromPack?.normalizedNickname === 'string' &&
-        baseFromPack.normalizedNickname.trim()) ||
-      normalizedNick,
-    aliases: Array.isArray(baseFromPack?.aliases) ? baseFromPack.aliases : aliases,
-    leagueKey: resolvedLeague || baseFromPack?.leagueKey,
-    league: resolvedLeague || baseFromPack?.league,
-    team: resolvedLeague ? getLeagueLabel(resolvedLeague) : baseFromPack?.team,
-    season_points: seasonPoints,
-    totalPoints: seasonPoints,
-    rank: toFiniteNumber(entry?.rank) ?? toFiniteNumber(baseFromPack?.rank)
-  };
+  return matched ? { ...matched } : null;
 }
 
-function buildLeagueTop10(sourceEntries = [], leagueKey) {
-  const normalizedLeague = normalizeLeagueName(leagueKey);
-  const rows = sourceEntries.map(resolveTop10EntryToPackRow).filter(Boolean);
+function buildResolvedTop10Rows(rawList) {
+  const source = Array.isArray(rawList) ? rawList : [];
+  const rows = source
+    .map((entry) => resolveTop10EntryToPackRow(entry))
+    .filter((entry) => Boolean(entry));
+
 
   rows.sort((a, b) => {
     const pointsA = toFiniteNumber(a?.season_points ?? a?.totalPoints) ?? 0;
     const pointsB = toFiniteNumber(b?.season_points ?? b?.totalPoints) ?? 0;
     return pointsB - pointsA;
   });
+
 
   return rows.map((row, index) => {
     const nickname =
@@ -1031,6 +1039,7 @@ function buildLeagueTop10(sourceEntries = [], leagueKey) {
       totalPoints: toFiniteNumber(row?.season_points ?? row?.totalPoints)
     };
   });
+
 }
 
 function buildMetrics(aggregates = {}, players = [], leagueMetrics = {}) {
@@ -1954,9 +1963,11 @@ function getEffectiveLeague(targetLeague) {
 
 function getTop10ForActiveLeague() {
   if (activeLeague === 'kids') {
+
     return normalizedTop10ByLeague?.kids ?? [];
   }
   return normalizedTop10ByLeague?.sundaygames ?? [];
+
 }
 
 function renderAll(targetLeague = activeLeague) {
@@ -2143,8 +2154,11 @@ async function boot() {
     );
     const packTopPlayers = normalizeTopPlayers(PACK?.top10 ?? [], PACK?.meta ?? {}, aliasMap);
 
+
+
     packAllPlayersNormalized = mergePlayerRecords(packAllPlayersBase, packTopPlayers, aliasMap);
     allPlayersNormalized = packAllPlayersNormalized;
+
 
     packPlayerIndex = new Map();
     packPlayerRawIndex = new Map();

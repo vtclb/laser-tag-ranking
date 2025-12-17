@@ -278,12 +278,29 @@ function normalizeEventEntry(event) {
     event.League || event.league || event.leagueName || event.league_name || event.meta?.league;
   const league = normalizeLeagueName(leagueRaw || 'sundaygames');
 
-  const team1 = parseTeamPlayers(event.team1);
-  const team2 = parseTeamPlayers(event.team2);
+  const team1 = [event.team1, event.Team1]
+    .flat()
+    .flatMap((team) => parseTeamPlayers(team))
+    .filter(Boolean);
+  const team2 = [event.team2, event.Team2]
+    .flat()
+    .flatMap((team) => parseTeamPlayers(team))
+    .filter(Boolean);
   const score = Array.isArray(event.score) ? event.score : [];
-  const mvpCandidates = [event.mvp, event.mvp2, event.mvp3].filter((value) =>
-    typeof value === 'string'
-  );
+  const mvpCandidates = [event.MVP, event.mvp, event.mvp2, event.mvp3]
+    .flat()
+    .flatMap((value) => {
+      if (typeof value === 'string') {
+        return value
+          .split(/[;,]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+      if (Array.isArray(value)) {
+        return value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean);
+      }
+      return [];
+    });
 
   return {
     id: toFiniteNumber(event.id) ?? null,
@@ -1155,13 +1172,47 @@ function buildResolvedTop10Rows(rawList, normalizedLeague) {
 
 function buildLeagueTop10(rawTop10 = [], leagueKey = '') {
   const normalizedLeague = normalizeLeagueName(leagueKey || 'sundaygames');
+  ensurePackLookups();
 
-  return buildResolvedTop10Rows(rawTop10, normalizedLeague).map((row) => ({
-    ...row,
-    leagueKey: normalizedLeague || row?.leagueKey,
-    league: normalizedLeague || row?.league,
-    team: getLeagueLabel(normalizedLeague || row?.league || FALLBACK)
-  }));
+  return buildResolvedTop10Rows(rawTop10, normalizedLeague).map((row) => {
+    const rankTier =
+      typeof row?.rankTier === 'string' && row.rankTier.trim() ? row.rankTier.trim() : null;
+    const packRow = resolveTop10EntryToPackRow(row);
+    const packDisplay = (() => {
+      if (!packRow) {
+        return {};
+      }
+      const aliasMap = PACK?.aliases ?? {};
+      const preferredName =
+        (typeof packRow?.nickname === 'string' && packRow.nickname.trim()) ||
+        (typeof packRow?.player === 'string' && packRow.player.trim()) ||
+        '';
+      return {
+        avatar: packRow.avatar,
+        profile: packRow.profile,
+        profileUrl: packRow.profileUrl,
+        nickname: preferredName || row.nickname,
+        canonicalNickname:
+          row.canonicalNickname || resolveCanonicalNickname(preferredName || row.nickname, aliasMap),
+        aliases:
+          Array.isArray(row.aliases) && row.aliases.length > 0
+            ? row.aliases
+            : getNicknameVariants(preferredName || row.nickname, aliasMap)
+      };
+    })();
+
+    const resolvedLeague =
+      normalizeLeagueName(row?.leagueKey ?? row?.league ?? normalizedLeague) || normalizedLeague;
+
+    return {
+      ...row,
+      ...packDisplay,
+      rankTier,
+      leagueKey: resolvedLeague,
+      league: resolvedLeague,
+      team: getLeagueLabel(resolvedLeague || FALLBACK)
+    };
+  });
 }
 
 function buildMetrics(aggregates = {}, players = [], leagueMetrics = {}) {

@@ -171,10 +171,24 @@ const ADULT_LEAGUE_ALIASES = [
   'sunday',
   'league',
   'дорос',
-  'старш'
+  'доросл',
+  'старш',
+  'неділ'
 ];
 
-const KIDS_LEAGUE_ALIASES = ['kids', 'kid', 'children', 'junior', 'youth', 'дит', 'молод'];
+const KIDS_LEAGUE_ALIASES = [
+  'kids',
+  'kid',
+  'children',
+  'junior',
+  'youth',
+  'young',
+  'дит',
+  'діт',
+  'дитяч',
+  'молод',
+  'молодш'
+];
 
 function normalizeLeagueName(value) {
   if (typeof value !== 'string') {
@@ -518,6 +532,10 @@ function computeLeagueStats(events = [], leagueKey) {
       }
       return a.index - b.index;
     });
+
+  if (normalizedLeague === 'kids') {
+    console.debug('[autumn2025] kids events:', relevantEvents.length);
+  }
 
   relevantEvents.forEach(({ event }) => {
     const { team1, team2 } = extractParticipants(event);
@@ -1852,7 +1870,11 @@ function renderLeaderboard(players = topPlayers) {
 
     const button = row.querySelector('button');
     button?.addEventListener('click', () => {
-      renderModal(clickNickname || playerNickname || player);
+      const profileCandidate = clickNickname || playerNickname || player;
+      const canonical = resolveCanonicalNickname(profileCandidate, aliasMapGlobal) || profileCandidate;
+      const normalized = normalizeNickname(canonical, aliasMapGlobal);
+      openProfileKey = normalized || canonical || '';
+      rerenderOpenProfile();
     });
     leaderboardBody.append(row);
   });
@@ -2549,6 +2571,16 @@ async function boot() {
     normalizedEvents = Array.isArray(EVENTS?.events)
       ? EVENTS.events.map(normalizeEventEntry).filter(Boolean)
       : [];
+
+    normalizedEvents.forEach((event) => {
+      if (!event || typeof event !== 'object') {
+        return;
+      }
+      const normalizedLeague = normalizeLeagueName(
+        event.league || event.League || event.leagueName || event.league_name || event.meta?.league || ''
+      );
+      event.league = normalizedLeague;
+    });
 
     playerLeagueMap = buildPlayerLeagueMap(normalizedEvents);
 

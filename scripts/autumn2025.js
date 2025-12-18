@@ -399,14 +399,7 @@ function buildPlayerLeagueMap(events = []) {
         return;
       }
 
-      const record =
-        leagueStats.get(key) || { kids: 0, sundaygames: 0, lastLeague: '', lastSeen: null };
-      if (league === 'kids') {
-        record.kids += 1;
-      }
-      if (league === 'sundaygames') {
-        record.sundaygames += 1;
-      }
+      const record = leagueStats.get(key) || { lastLeague: '', lastSeen: null };
       if (record.lastSeen === null || eventTimestamp >= record.lastSeen) {
         record.lastLeague = league;
         record.lastSeen = eventTimestamp;
@@ -416,16 +409,9 @@ function buildPlayerLeagueMap(events = []) {
   });
 
   const playerLeagueMap = new Map();
-  leagueStats.forEach((counts, key) => {
-    const kidsCount = toFiniteNumber(counts.kids) ?? 0;
-    const sundayCount = toFiniteNumber(counts.sundaygames) ?? 0;
-    const lastLeague = normalizeLeagueName(counts.lastLeague);
-
-    if (kidsCount > sundayCount) {
-      playerLeagueMap.set(key, 'kids');
-    } else if (sundayCount > kidsCount) {
-      playerLeagueMap.set(key, 'sundaygames');
-    } else if (kidsCount > 0 && lastLeague) {
+  leagueStats.forEach((record, key) => {
+    const lastLeague = normalizeLeagueName(record.lastLeague);
+    if (lastLeague) {
       playerLeagueMap.set(key, lastLeague);
     }
   });
@@ -730,9 +716,7 @@ function getPlayerLeagueKey(player) {
 }
 
 function filterPlayersByLeague(players = [], leagueValue = '') {
-  const normalizedLeague = normalizeLeagueName(leagueValue);
-  const fallback = normalizeLeagueName(fallbackLeague);
-  const targetLeague = normalizedLeague || fallback;
+  const targetLeague = normalizeLeagueName(leagueValue);
 
   if (!Array.isArray(players)) {
     return [];
@@ -745,7 +729,7 @@ function filterPlayersByLeague(players = [], leagueValue = '') {
   return players.filter((player) => {
     const leagueKey = getPlayerLeagueKey(player);
     if (!leagueKey) {
-      return targetLeague === fallback;
+      return false;
     }
     return leagueKey === targetLeague;
   });
@@ -885,13 +869,16 @@ function getPlayerStreaks(player, leagueValue = '') {
     return streakCache.get(cacheKey);
   }
 
-  const stats = getLeagueStatsForNickname(normalizedNickname, leagueKey) ?? {};
-  const winStreak =
-    toFiniteNumber(player?.win_streak ?? player?.bestStreak) ??
-    toFiniteNumber(stats.bestStreak ?? stats.win_streak);
-  const lossStreak =
-    toFiniteNumber(player?.loss_streak ?? player?.lossStreak) ??
-    toFiniteNumber(stats.lossStreak ?? stats.currentLossStreak);
+  const stats = getLeagueStatsForNickname(normalizedNickname, leagueKey);
+
+  if (!stats) {
+    const streaks = { winStreak: 0, lossStreak: 0 };
+    streakCache.set(cacheKey, streaks);
+    return streaks;
+  }
+
+  const winStreak = toFiniteNumber(stats.bestStreak ?? stats.win_streak) ?? 0;
+  const lossStreak = toFiniteNumber(stats.lossStreak ?? stats.currentLossStreak) ?? 0;
 
   const streaks = { winStreak, lossStreak };
   streakCache.set(cacheKey, streaks);

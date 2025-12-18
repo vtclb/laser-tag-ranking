@@ -1036,6 +1036,17 @@ let profileBound = false;
 let leagueBound = false;
 let fallbackLeague = 'sundaygames';
 
+function ensureLeagueStats(leagueKey) {
+  const normalized = normalizeLeagueName(leagueKey || '');
+  if (!normalized) {
+    return;
+  }
+
+  if (!leagueStatsCache.has(normalized)) {
+    leagueStatsCache.set(normalized, computeLeagueStats(normalizedEvents, normalized));
+  }
+}
+
 function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
   return top10.map((entry, index) => {
     const nameField =
@@ -2376,40 +2387,46 @@ function renderAll(targetLeague = activeLeague) {
   streakCache.clear();
 
   const aliasMap = aliasMapGlobal;
-  if (!leagueStatsCache.has(effectiveLeague)) {
-    leagueStatsCache.set(
-      effectiveLeague,
-      computeLeagueStats(normalizedEvents, effectiveLeague)
-    );
-  }
+
+  ['kids', 'sundaygames'].forEach((league) => ensureLeagueStats(league));
+  ensureLeagueStats(effectiveLeague);
 
   const leagueData = leagueStatsCache.get(effectiveLeague) ?? { playerStats: new Map(), metrics: {} };
 
   const leagueTopPlayers = getTop10ForActiveLeague();
+  const leagueTopPlayersWithStats = filterPlayersByLeague(
+    leagueTopPlayers,
+    effectiveLeague
+  )
+    .map((player) => applyLeagueStats(player, effectiveLeague))
+    .filter(Boolean);
 
-  topPlayers = leagueTopPlayers;
-  activeLeaguePlayers = filterPlayersByLeague(packAllPlayersNormalized, effectiveLeague);
+  topPlayers = leagueTopPlayersWithStats;
+  activeLeaguePlayers = leagueTopPlayersWithStats;
   profileLookupCurrent = buildProfileLookup(activeLeaguePlayers, aliasMap);
 
-  const eligible = leagueTopPlayers;
+  const eligible = leagueTopPlayersWithStats;
   const pointsTotal = eligible.reduce(
     (sum, player) => sum + (toFiniteNumber(player?.season_points ?? player?.totalPoints) ?? 0),
     0
   );
 
-  const leagueAggregates = {
-    total_games: leagueData.metrics.totalGames,
-    total_rounds: leagueData.metrics.totalRounds,
-    avg_rounds_per_game: leagueData.metrics.avgRoundsPerGame,
-    avg_players_per_game: leagueData.metrics.avgPlayersPerGame,
-    players_with_games: leagueData.metrics.playersWithGames,
-    players_in_rating: eligible.length,
-    points_total: pointsTotal > 0 ? pointsTotal : null,
-    points_positive_only: null,
-    points_negative_only: null,
-    longest_game_rounds: PACK?.aggregates?.longest_game_rounds,
-    common_score: PACK?.aggregates?.common_score
-  };
+  const leagueAggregates =
+    effectiveLeague === 'kids'
+      ? {}
+      : {
+          total_games: leagueData.metrics.totalGames,
+          total_rounds: leagueData.metrics.totalRounds,
+          avg_rounds_per_game: leagueData.metrics.avgRoundsPerGame,
+          avg_players_per_game: leagueData.metrics.avgPlayersPerGame,
+          players_with_games: leagueData.metrics.playersWithGames,
+          players_in_rating: eligible.length,
+          points_total: pointsTotal > 0 ? pointsTotal : null,
+          points_positive_only: null,
+          points_negative_only: null,
+          longest_game_rounds: PACK?.aggregates?.longest_game_rounds,
+          common_score: PACK?.aggregates?.common_score
+        };
 
   renderMetricsFromAggregates(leagueAggregates, topPlayers, {
     ...leagueData.metrics,
@@ -2635,7 +2652,7 @@ async function boot() {
       ['sundaygames', 'kids'].forEach((league) => availableLeagues.add(league));
     }
 
-    const leaguesForStats = new Set([...availableLeagues]);
+    const leaguesForStats = new Set([...availableLeagues, 'kids', 'sundaygames']);
     leagueStatsCache = new Map();
     leaguesForStats.forEach((league) => {
       leagueStatsCache.set(league, computeLeagueStats(normalizedEvents, league));

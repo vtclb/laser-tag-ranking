@@ -354,9 +354,21 @@ function normalizeEventEntry(event) {
     return null;
   }
 
-  const leagueRaw =
-    event.League || event.league || event.leagueName || event.league_name || event.meta?.league;
-  const league = normalizeLeagueName(leagueRaw);
+  const rawLeague =
+    event.league ||
+    event.League ||
+    event.meta?.league ||
+    event.meta?.division ||
+    event.division ||
+    event.meta?.group ||
+    event.group ||
+    event.meta?.season ||
+    event.season ||
+    event.meta?.title ||
+    event.title ||
+    EVENTS?.meta?.league ||
+    '';
+  const league = rawLeague ? normalizeLeagueName(rawLeague) : '';
   const { team1, team2 } = extractParticipants(event);
   const score = Array.isArray(event.score) ? event.score : [];
   const mvpCandidates = [event.MVP, event.mvp, event.mvp2, event.mvp3]
@@ -375,9 +387,11 @@ function normalizeEventEntry(event) {
     });
 
   return {
+    ...event,
     id: toFiniteNumber(event.id) ?? null,
     date: typeof event.date === 'string' ? event.date : '',
     league,
+    leagueKey: league,
     team1,
     team2,
     score,
@@ -2568,18 +2582,28 @@ async function boot() {
       normalizeLeagueName(PACK?.meta?.league || EVENTS?.meta?.league || 'sundaygames') ||
       'sundaygames';
 
-    normalizedEvents = Array.isArray(EVENTS?.events)
-      ? EVENTS.events.map(normalizeEventEntry).filter(Boolean)
-      : [];
+    const events = Array.isArray(EVENTS?.events) ? EVENTS.events : [];
+    console.log(
+      '[DEBUG events]',
+      events.length,
+      events.filter((e) => String(e.League || e.league).toLowerCase().includes('kid')).length
+    );
+
+    normalizedEvents = events.map(normalizeEventEntry).filter(Boolean);
+
+    console.log(
+      '[DEBUG normalized]',
+      normalizedEvents.length,
+      normalizedEvents.filter((e) => e.league === 'kids').length
+    );
 
     normalizedEvents.forEach((event) => {
       if (!event || typeof event !== 'object') {
         return;
       }
-      const normalizedLeague = normalizeLeagueName(
-        event.league || event.League || event.leagueName || event.league_name || event.meta?.league || ''
-      );
+      const normalizedLeague = event.league ? normalizeLeagueName(event.league) : '';
       event.league = normalizedLeague;
+      event.leagueKey = normalizedLeague;
     });
 
     playerLeagueMap = buildPlayerLeagueMap(normalizedEvents);

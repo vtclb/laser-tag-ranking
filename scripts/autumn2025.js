@@ -1019,7 +1019,6 @@ let PACK = null;
 let EVENTS = null;
 let seasonTop10ByLeague = null;
 let normalizedTop10ByLeague = { kids: [], sundaygames: [] };
-let rawTop10Kids = [];
 let rawTop10Sunday = [];
 let aliasMapGlobal = {};
 let normalizedEvents = [];
@@ -1042,6 +1041,8 @@ let packPlayerIndex = new Map();
 let packPlayerRawIndex = new Map();
 let leagueStatsCache = new Map();
 let streakCache = new Map();
+let kidsEventsCount = 0;
+let kidsPackPlayersNormalized = [];
 
 let leagueOptions = [];
 let activeLeague = 'sundaygames';
@@ -1064,6 +1065,22 @@ function ensureLeagueStats(leagueKey) {
   if (!leagueStatsCache.has(normalized)) {
     leagueStatsCache.set(normalized, computeLeagueStats(normalizedEvents, normalized));
   }
+}
+
+function normalizePackPlayersForLeague(players = [], leagueKey = '', aliasMap = {}) {
+  const normalizedLeague = normalizeLeagueName(leagueKey || 'kids');
+  const normalized = normalizeTopPlayers(
+    players,
+    { ...(PACK?.meta ?? {}), league: normalizedLeague },
+    aliasMap
+  );
+
+  return normalized.map((player) => ({
+    ...player,
+    leagueKey: normalizedLeague,
+    league: normalizedLeague,
+    team: getLeagueLabel(normalizedLeague || FALLBACK)
+  }));
 }
 
 function normalizeTopPlayers(top10 = [], meta = {}, aliasMap = {}) {
@@ -1394,6 +1411,112 @@ function buildLeagueTop10(rawTop10 = [], leagueKey = '') {
   return resolvedRows;
 }
 
+function buildPackLeagueTop10(players = [], leagueKey = '') {
+  const normalizedLeague = normalizeLeagueName(leagueKey || 'kids');
+
+  return (Array.isArray(players) ? players : [])
+    .filter((player) => {
+      const rowLeague = normalizeLeagueName(
+        player?.leagueKey ?? player?.league ?? normalizedLeague
+      );
+      if (rowLeague !== normalizedLeague) {
+        return false;
+      }
+      if (player?.isAdmin) {
+        return false;
+      }
+      const games = toFiniteNumber(player?.games);
+      const points = toFiniteNumber(player?.season_points ?? player?.totalPoints);
+      if (games !== null) {
+        return games > 0;
+      }
+      return points !== null && points > 0;
+    })
+    .sort((a, b) => {
+      const pointsA = toFiniteNumber(a?.season_points ?? a?.totalPoints) ?? 0;
+      const pointsB = toFiniteNumber(b?.season_points ?? b?.totalPoints) ?? 0;
+      if (pointsA !== pointsB) {
+        return pointsB - pointsA;
+      }
+
+      const gamesA = toFiniteNumber(a?.games) ?? 0;
+      const gamesB = toFiniteNumber(b?.games) ?? 0;
+      if (gamesA !== gamesB) {
+        return gamesB - gamesA;
+      }
+
+      const winsA = toFiniteNumber(a?.wins) ?? 0;
+      const winsB = toFiniteNumber(b?.wins) ?? 0;
+      if (winsA !== winsB) {
+        return winsB - winsA;
+      }
+
+      return (a?.nickname ?? '').localeCompare(b?.nickname ?? '');
+    })
+    .slice(0, TOP_LIMIT)
+    .map((row, index) => ({
+      ...row,
+      rank: index + 1,
+      rankTier:
+        row.rankTier && row.rankTier !== FALLBACK ? row.rankTier : getRankTierByPlace(index + 1)
+    }));
+}
+
+function buildPackLeagueStats(players = [], aggregates = {}, leagueKey = '') {
+  const stats = new Map();
+  const aliasMap = aliasMapGlobal;
+  const normalizedLeague = normalizeLeagueName(leagueKey || 'kids');
+
+  (Array.isArray(players) ? players : []).forEach((player) => {
+    const nicknameField =
+      (typeof player?.nickname === 'string' && player.nickname.trim()) ||
+      (typeof player?.canonicalNickname === 'string' && player.canonicalNickname.trim()) ||
+      (typeof player?.player === 'string' && player.player.trim()) ||
+      '';
+    const normalizedNickname = normalizeNickname(nicknameField, aliasMap);
+    if (!normalizedNickname) {
+      return;
+    }
+
+    stats.set(normalizedNickname, {
+      nickname: displayName(nicknameField),
+      canonicalNickname: resolveCanonicalNickname(nicknameField, aliasMap) || nicknameField,
+      normalizedNickname,
+      games: toFiniteNumber(player?.games),
+      wins: null,
+      losses: null,
+      draws: null,
+      rounds: null,
+      round_wins: null,
+      round_losses: null,
+      MVP: toFiniteNumber(player?.MVP),
+      bestStreak: null,
+      lossStreak: null,
+      currentWinStreak: null,
+      currentLossStreak: null,
+      winRate: toFiniteNumber(player?.winRate),
+      roundWR: null,
+      teammatesMost: [],
+      teammatesMostWins: [],
+      opponentsMost: [],
+      opponentsMostLosses: [],
+      recentScores: [],
+      leagueKey: normalizedLeague
+    });
+  });
+
+  return {
+    playerStats: stats,
+    metrics: {
+      totalGames: toFiniteNumber(aggregates?.total_games),
+      totalRounds: toFiniteNumber(aggregates?.total_rounds),
+      playersWithGames: toFiniteNumber(aggregates?.players_with_games),
+      avgPlayersPerGame: toFiniteNumber(aggregates?.avg_players_per_game),
+      avgRoundsPerGame: toFiniteNumber(aggregates?.avg_rounds_per_game)
+    }
+  };
+}
+
 function buildMetrics(aggregates = {}, players = [], leagueMetrics = {}) {
   const totalGames = toFiniteNumber(leagueMetrics?.totalGames ?? aggregates?.total_games);
   const totalRounds = toFiniteNumber(leagueMetrics?.totalRounds ?? aggregates?.total_rounds);
@@ -1575,7 +1698,10 @@ function renderMetricsFromAggregates(aggregates = {}, players = [], leagueMetric
     });
   }
 
-  seasonTickerMessages = buildTickerMessages(data);
+  seasonTickerMessages =
+    activeLeague === 'kids' && kidsEventsCount === 0
+      ? ['Немає ігор']
+      : buildTickerMessages(data);
   startTicker(seasonTickerMessages);
 }
 
@@ -1667,25 +1793,6 @@ function renderLeaderboard(players = topPlayers) {
   const hasNormalizedSearch = Boolean(normalizedSearch);
   const sourcePlayers = searchTerm ? activeLeaguePlayers : players;
   const rowsSource = Array.isArray(sourcePlayers) ? sourcePlayers : [];
-  const top10SourceRaw = activeLeague === 'kids' ? rawTop10Kids : rawTop10Sunday;
-
-  if (!searchTerm) {
-    if (activeLeague === 'kids' && top10SourceRaw.length === 0) {
-      leaderboardBody.innerHTML = '';
-      const emptyRow = document.createElement('tr');
-      emptyRow.innerHTML = '<td colspan="10">Немає даних TOP-10 для kids у файлі підсумку</td>';
-      leaderboardBody.append(emptyRow);
-      return;
-    }
-
-    if (activeLeague === 'kids' && top10SourceRaw.length > 0 && rowsSource.length === 0) {
-      leaderboardBody.innerHTML = '';
-      const emptyRow = document.createElement('tr');
-      emptyRow.innerHTML = '<td colspan="10">Не вдалося зіставити TOP-10 kids із pack</td>';
-      leaderboardBody.append(emptyRow);
-      return;
-    }
-  }
   const filtered = rowsSource.filter((player) => {
     if (player?.isAdmin && !searchTerm) {
       return false;
@@ -1784,7 +1891,15 @@ function renderLeaderboard(players = topPlayers) {
 
   if (sorted.length === 0) {
     const emptyRow = document.createElement('tr');
-    const message = searchTerm ? 'Немає гравців за цим запитом' : 'Немає гравців у цій лізі';
+    const message = (() => {
+      if (searchTerm) {
+        return 'Немає гравців за цим запитом';
+      }
+      if (activeLeague === 'kids' && kidsEventsCount === 0) {
+        return 'Немає ігор';
+      }
+      return 'Немає гравців у цій лізі';
+    })();
     emptyRow.innerHTML = `<td colspan="10">${message}</td>`;
     leaderboardBody.append(emptyRow);
     return;
@@ -2157,7 +2272,11 @@ function renderModal(playerInput) {
         .join(' · ')}.</p>`
     : '';
 
-  const timeline = buildPlayerTimelineData(player, EVENTS, aliasMapGlobal);
+  const showNoGames = activeLeague === 'kids' && kidsEventsCount === 0;
+  const timeline =
+    activeLeague === 'kids'
+      ? { delta: [], cumulative: [] }
+      : buildPlayerTimelineData(player, EVENTS, aliasMapGlobal);
   const hasTimeline = Array.isArray(timeline?.delta) && timeline.delta.length > 0;
   const defaultChartMode = 'cum';
   const chartControlsMarkup = hasTimeline
@@ -2168,7 +2287,7 @@ function renderModal(playerInput) {
     : '';
   const chartMarkup = hasTimeline
     ? buildPlayerChart(timeline, defaultChartMode)
-    : '<p>ще немає змін очок за датами</p>';
+    : `<p>${showNoGames ? 'Немає ігор' : 'ще немає змін очок за датами'}</p>`;
 
   modalBody.innerHTML = `
     <section>
@@ -2434,9 +2553,22 @@ function renderAll(targetLeague = activeLeague) {
     0
   );
 
+  const packAggregates = PACK?.aggregates ?? {};
   const leagueAggregates =
     effectiveLeague === 'kids'
-      ? {}
+      ? {
+          total_games: packAggregates.total_games,
+          total_rounds: packAggregates.total_rounds,
+          avg_rounds_per_game: packAggregates.avg_rounds_per_game,
+          avg_players_per_game: packAggregates.avg_players_per_game,
+          players_with_games: packAggregates.players_with_games,
+          players_in_rating: packAggregates.players_in_rating,
+          points_total: packAggregates.points_total,
+          points_positive_only: packAggregates.points_positive_only,
+          points_negative_only: packAggregates.points_negative_only,
+          longest_game_rounds: packAggregates.longest_game_rounds,
+          common_score: packAggregates.common_score
+        }
       : {
           total_games: leagueData.metrics.totalGames,
           total_rounds: leagueData.metrics.totalRounds,
@@ -2606,12 +2738,11 @@ async function boot() {
       event.leagueKey = normalizedLeague;
     });
 
+    kidsEventsCount = normalizedEvents.filter((event) => event?.league === 'kids').length;
+
     playerLeagueMap = buildPlayerLeagueMap(normalizedEvents);
 
     const aliasMap = aliasMapGlobal;
-    rawTop10Kids = Array.isArray(seasonTop10ByLeague?.top10_kids)
-      ? seasonTop10ByLeague.top10_kids
-      : [];
     rawTop10Sunday = Array.isArray(seasonTop10ByLeague?.top10_sundaygames)
       ? seasonTop10ByLeague.top10_sundaygames
       : [];
@@ -2627,6 +2758,24 @@ async function boot() {
 
     packAllPlayersNormalized = mergePlayerRecords(packAllPlayersBase, packTopPlayers, aliasMap);
     allPlayersNormalized = packAllPlayersNormalized;
+
+    const kidsPackAllPlayers = normalizePackPlayersForLeague(
+      Array.isArray(PACK?.allPlayers) ? PACK.allPlayers : [],
+      'kids',
+      aliasMap
+    );
+    const kidsPackTopPlayers = normalizePackPlayersForLeague(
+      Array.isArray(PACK?.top10) ? PACK.top10 : [],
+      'kids',
+      aliasMap
+    );
+    kidsPackPlayersNormalized = mergePlayerRecords(
+      kidsPackAllPlayers,
+      kidsPackTopPlayers,
+      aliasMap
+    );
+    const kidsTopSource =
+      kidsPackTopPlayers.length > 0 ? kidsPackTopPlayers : kidsPackPlayersNormalized;
 
 
     packPlayerIndex = new Map();
@@ -2646,7 +2795,7 @@ async function boot() {
     });
 
     normalizedTop10ByLeague = {
-      kids: buildLeagueTop10(rawTop10Kids, 'kids'),
+      kids: buildPackLeagueTop10(kidsTopSource, 'kids'),
       sundaygames: buildLeagueTop10(rawTop10Sunday, 'sundaygames')
     };
 
@@ -2664,6 +2813,13 @@ async function boot() {
         }
       }
     );
+
+    kidsPackPlayersNormalized.forEach((player) => {
+      const normalizedKey = canon(player?.nickname ?? player?.player ?? '');
+      if (normalizedKey) {
+        playerLeagueMap.set(normalizedKey, 'kids');
+      }
+    });
 
     profileLookupAll = buildProfileLookup(packAllPlayersNormalized, aliasMap);
     profileLookupTop = buildProfileLookup(
@@ -2683,7 +2839,7 @@ async function boot() {
         .filter(Boolean)
         .forEach((league) => availableLeagues.add(league));
     }
-    if (seasonTop10ByLeague?.top10_kids) {
+    if (kidsPackPlayersNormalized.length > 0) {
       availableLeagues.add('kids');
     }
     if (seasonTop10ByLeague?.top10_sundaygames) {
@@ -2698,6 +2854,13 @@ async function boot() {
     const leaguesForStats = new Set([...availableLeagues, 'kids', 'sundaygames']);
     leagueStatsCache = new Map();
     leaguesForStats.forEach((league) => {
+      if (league === 'kids') {
+        leagueStatsCache.set(
+          league,
+          buildPackLeagueStats(kidsPackPlayersNormalized, PACK?.aggregates, league)
+        );
+        return;
+      }
       leagueStatsCache.set(league, computeLeagueStats(normalizedEvents, league));
     });
 

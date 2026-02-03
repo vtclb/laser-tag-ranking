@@ -1,7 +1,7 @@
 import { log } from './logger.js?v=2025-09-19-avatars-2';
 import { getProfile, uploadAvatar, getPdfLinks, fetchPlayerGames, safeSet, safeGet, avatarNickKey, fetchAvatarForNick } from './api.js?v=2025-09-19-avatars-2';
 import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
-import * as Avatars from './avatars.client.js';
+import * as Avatars from './avatars.client.js?v=2025-09-19-avatars-2';
 import { noteAvatarFailure, setImgSafe, updateInlineAvatarImages } from './avatarAdmin.js?v=2025-09-19-avatars-2';
 import { AVATAR_PLACEHOLDER } from './avatarConfig.js?v=2025-09-19-avatars-2';
 
@@ -342,4 +342,3 @@ document.addEventListener('DOMContentLoaded', () => {
   currentNick = nick;
   loadProfile(nick, key);
 });
-

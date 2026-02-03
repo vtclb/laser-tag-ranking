@@ -22,7 +22,7 @@ import {
   getTeamNumber,
 } from './state.js?v=2025-09-19-avatars-2';
 import { refreshArenaTeams } from './scenario.js?v=2025-09-19-avatars-2';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
 import { recomputeAutoBalance } from './balance.js?v=2025-09-19-avatars-2';
 
 export const lobby = state.lobbyPlayers;

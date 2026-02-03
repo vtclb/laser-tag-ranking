@@ -7,6 +7,7 @@ import {
   ASSETS_VER
 } from './avatarConfig.js';
 import { GAS_PROXY_BASE, LEAGUE_CSV } from './config.js';
+import { normalizeLeague } from './constants.js';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -232,19 +233,14 @@ export function toFormUrlEncoded(obj = {}) {
 
 // ==================== CSV FEEDS (URLs таблиць) ====================
 // kids  → табличка "kids"
-// olds  → табличка "sundaygames" (стара назва старшої ліги)
+// sundaygames → табличка "sundaygames" (канонічна назва старшої ліги)
 export const CSV_URLS = {
   kids: {
     ranking: LEAGUE_CSV.kids,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   },
-  olds: {
-    ranking: LEAGUE_CSV.olds || LEAGUE_CSV.sundaygames,
-    games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
-  },
   sundaygames: {
-  
-    ranking: LEAGUE_CSV.olds || LEAGUE_CSV.sundaygames,
+    ranking: LEAGUE_CSV.sundaygames,
     games: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=249347260&single=true&output=csv'
   }
 };
@@ -491,47 +487,17 @@ export async function fetchOnce(url, ttlMs = 0, fetchFn) {
 }
 
 // ==================== LEAGUES ====================
-const LEAGUE_ALIASES = {
-  // молодша ліга
-  kids: 'kids',
-  kid: 'kids',
-  junior: 'kids',
-
-  // старша ліга (основний ключ – "olds")
-  olds: 'olds',
-  adult: 'olds',
-  adults: 'olds',
-  old: 'olds',
-
-  // історичні назви / псевдоніми
-  sundaygames: 'olds',
-  sunday: 'olds',
-  sundaygame: 'olds',
-  'старшаліга': 'olds',
-  'старша ліга': 'olds'
-};
-
-export function normalizeLeague(v) {
-  const key = String(v ?? '').trim().toLowerCase();
-  return LEAGUE_ALIASES[key] || 'kids';
-}
 
 export function getLeagueFeedUrl(league) {
-  const key = normalizeLeague(league); // kids / olds
-  let url = LEAGUE_CSV[key];
-  if (!url && key === 'olds') {
-    // fallback, якщо в config.js ще залишився тільки sundaygames
-    url = LEAGUE_CSV.sundaygames;
-  }
+  const key = normalizeLeague(league); // kids / sundaygames
+  const url = LEAGUE_CSV[key];
   if (!url) throw new Error('Unknown league: ' + league);
   return url;
 }
 
 export function getGamesFeedUrl(league) {
-  const key = normalizeLeague(league); // kids / olds
-  const url =
-    (CSV_URLS[key] && CSV_URLS[key].games) ||
-    (key === 'olds' ? CSV_URLS.sundaygames?.games : null);
+  const key = normalizeLeague(league); // kids / sundaygames
+  const url = CSV_URLS[key] && CSV_URLS[key].games;
   if (!url) throw new Error('Unknown league: ' + league);
   return url;
 }
@@ -558,9 +524,9 @@ async function resolveEffectiveLeague(requested) {
   const direct = await tryLoadCsv(preferred);
   if (direct) return direct;
 
-  // 2) fallback на olds (історичний sundaygames)
-  const olds = await tryLoadCsv('olds');
-  if (olds) return 'olds';
+  // 2) fallback на sundaygames (старша ліга)
+  const sundaygames = await tryLoadCsv('sundaygames');
+  if (sundaygames) return 'sundaygames';
 
   // 3) fallback на kids
   const kids = await tryLoadCsv('kids');
@@ -635,16 +601,15 @@ export async function fetchCsv(url, ttlMs = 0) {
 // прямі CSV (як запасний варіант, якщо щось піде не так з LEAGUE_CSV)
 const LEAGUE_DIRECT_URLS = {
   kids: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1648067737&single=true&output=csv',
-  olds: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
+  sundaygames: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSzum1H-NSUejvB_XMMWaTs04SPz7SQGpKkyFwz4NQjsN8hz2jAFAhl-jtRdYVAXgr36sN4RSoQSpEN/pub?gid=1286735969&single=true&output=csv'
 };
 
 export async function fetchLeagueCsv(league) {
   const targetLeague = normalizeLeague(league);
-  const proxyLeague = targetLeague === 'olds' ? 'sundaygames' : targetLeague;
 
   let base = null;
   if (GAS_PROXY_BASE) {
-    base = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=${proxyLeague}`;
+    base = `${GAS_PROXY_BASE}/fetchLeagueCsv?league=${targetLeague}`;
   }
 
   if (!base) {

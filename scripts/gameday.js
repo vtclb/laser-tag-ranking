@@ -1,7 +1,7 @@
-import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER } from './avatarConfig.js?v=2025-09-19-avatars-2';
-import { getPdfLinks, fetchOnce, CSV_URLS, avatarNickKey } from "./api.js?v=2025-09-19-avatars-2";
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
+import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
+import { getPdfLinks, fetchOnce, CSV_URLS, avatarNickKey } from "./api.js";
+import { rankLetterForPoints } from './rankUtils.js';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 (function () {
   const CSV_TTL = 60 * 1000;

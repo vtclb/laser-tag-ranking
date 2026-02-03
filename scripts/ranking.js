@@ -1,7 +1,7 @@
 import { log } from './logger.js';
 import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
-import { fetchOnce, CSV_URLS, normalizeLeague } from "./api.js";
-import { LEAGUE } from "./constants.js";
+import { fetchOnce, CSV_URLS } from "./api.js";
+import { LEAGUE, normalizeLeague } from "./constants.js";
 import { rankLetterForPoints } from './rankUtils.js';
 import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 
@@ -116,7 +116,7 @@ export function computeStats(rank, games, { alias = {}, league } = {}) {
   const stats = {};
   let totalRounds = 0;
   const leagueKey = league ? normalizeLeague(league) : "";
-  const validLeagues = ["kids", "olds", "sundaygames"];
+  const validLeagues = ["kids", "sundaygames"];
   const filtered = validLeagues.includes(leagueKey)
     ? games.filter((g) => {
         const rawLeague = g.League ? normalizeLeague(g.League) : "";
@@ -677,4 +677,3 @@ if (typeof document !== "undefined") {
     initRanking();
   }
 }
-

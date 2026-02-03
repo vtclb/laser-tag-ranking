@@ -5,11 +5,11 @@ import {
   loadPlayers,
   fetchTournamentData,
   fetchTournaments,
-  normalizeLeague,
   avatarNickKey,
   fetchAvatarsMap,
   avatarSrcFromRecord
 } from './api.js';
+import { normalizeLeague } from './constants.js';
 import { reloadAvatars } from './avatars.client.js';
 import { rankLetterForPoints } from './rankUtils.js';
 
@@ -560,7 +560,7 @@ async function renderSelector() {
 }
 
 async function loadBasePlayers(league) {
-  const effectiveLeague = normalizeLeague(league || 'olds');
+  const effectiveLeague = normalizeLeague(league || 'sundaygames');
   const players = await loadPlayers(effectiveLeague);
   const withAvatars = await enrichPlayersWithAvatars(players);
   state.basePlayers = withAvatars;
@@ -579,7 +579,7 @@ async function loadTournament(tournamentId) {
     state.teams = teams;
     state.games = games;
     state.players = players;
-    state.league = info.league || 'olds';
+    state.league = info.league || 'sundaygames';
 
     await loadBasePlayers(state.league);
 

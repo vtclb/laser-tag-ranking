@@ -7,9 +7,9 @@ import {
   saveTournamentGame,
   fetchTournamentData,
   fetchLeagueCsv,
-  normalizeLeague,
   parsePlayersFromCsv,
 } from './api.js';
+import { normalizeLeague } from './constants.js';
 import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js';
 import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
 

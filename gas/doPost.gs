@@ -27,6 +27,12 @@ function rankLetterForPoints(p) {
   return 'F';
 }
 
+function normalizeLeague_(value) {
+  const key = String(value || '').trim().toLowerCase();
+  if (key === 'olds') return 'sundaygames';
+  return key;
+}
+
 function doPost(e) {
   try {
     // ---------- JSON API ----------
@@ -163,7 +169,7 @@ function handleRegister_(payload) {
 
 // адмінське створення гравця з балансера
 function handleAdminCreatePlayer_(payload) {
-  const league = String(payload.league || '').toLowerCase();
+  const league = normalizeLeague_(payload.league);
   if (!league || (league !== 'kids' && league !== 'sundaygames')) throw new Error('Invalid league');
   const nick = (payload.nick || '').trim();
   if (!nick) throw new Error('Empty nick');
@@ -210,7 +216,7 @@ function handleAdminCreatePlayer_(payload) {
 
 // видати / оновити access_key
 function handleIssueAccessKey_(payload) {
-  const league = String(payload.league || '').toLowerCase();
+  const league = normalizeLeague_(payload.league);
   const nick = (payload.nick || '').trim();
   if (!league || !nick) throw new Error('league/nick required');
 
@@ -302,6 +308,7 @@ function handleRegularGame_(params) {
   const payload = params || {};
   const ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
   const now = new Date();
+  const normalizedLeague = normalizeLeague_(payload.league || '');
 
   // 1) Game log
   const gamesSheet = ss.getSheetByName('games');
@@ -317,7 +324,7 @@ function handleRegularGame_(params) {
   const rowGames = hdrGames.map(h => {
     switch (h) {
       case 'timestamp': return now;
-      case 'league':    return payload.league || '';
+      case 'league':    return normalizedLeague || '';
       case 'team1':     return payload.team1  || '';
       case 'team2':     return payload.team2  || '';
       case 'team3':     return payload.team3  || '';
@@ -334,7 +341,7 @@ function handleRegularGame_(params) {
   gamesSheet.appendRow(rowGames);
 
   // 2) Ranking update
-  const rankName  = (payload.league === 'kids') ? 'kids' : 'sundaygames';
+  const rankName  = (normalizedLeague === 'kids') ? 'kids' : 'sundaygames';
   const rankSheet = ss.getSheetByName(rankName);
   if (!rankSheet) throw new Error(rankName + ' not found');
   const hdrRank = rankSheet.getRange(1, 1, 1, rankSheet.getLastColumn()).getValues()[0];
@@ -397,7 +404,7 @@ function handleRegularGame_(params) {
     const updated = cur + delta;
 
     rankSheet.getRange(row, ptsCol).setValue(updated);
-    logS.appendRow([now, payload.league, nick, delta, updated]);
+    logS.appendRow([now, normalizedLeague || '', nick, delta, updated]);
 
     // --- Абонемент (опційно) ---
     if (typeCol > 0 && startCol > 0 && usageCol > 0) {
@@ -513,7 +520,7 @@ function createTournament_(payload) {
 
   const { hdr, map } = buildHeaderIndex_(sheet);
   const name = (payload.name || '').trim();
-  const league = String(payload.league || 'kids').trim();
+  const league = normalizeLeague_(payload.league || 'kids');
   const baseSlug = (name || 'TRN').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 8) || 'TRN';
   const leagueSlug = league.toUpperCase().slice(0, 3) || 'LG';
   const ts = Utilities.formatDate(new Date(), 'UTC', 'yyyyMMdd_HHmmss');
@@ -954,7 +961,7 @@ function saveTournamentGame_(payload) {
       ? rowsToObjects_(buildHeaderIndex_(tournamentSheet).hdr, tournamentSheet.getDataRange().getValues().slice(1))
         .find(r => String(r.tournamentId || '') === tournamentId)
       : null;
-    const league = tournamentRow ? tournamentRow.league : (payload.league || 'sundaygames');
+    const league = tournamentRow ? normalizeLeague_(tournamentRow.league) : normalizeLeague_(payload.league || 'sundaygames');
     const regularPayload = {
       league,
       team1: parsePlayers_(teamA.players).join(','),
@@ -1073,7 +1080,7 @@ function lookupAvatarUrl_(nick) {
 
 /* ===================== PDF LINKS (Drive /pdfs) ===================== */
 function handleGetPdfLinks_(payload) {
-  const league = String(payload.league || '').toLowerCase();
+  const league = normalizeLeague_(payload.league);
   const ymd    = String(payload.date || '').trim();
   if (!league || !ymd) throw new Error('league/date required');
   const map = listPdfLinks_(league, ymd);

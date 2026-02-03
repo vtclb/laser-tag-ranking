@@ -1,5 +1,5 @@
 // scripts/tournamentView.js
-import { fetchTournamentData, fetchTournaments } from './api.js?v=2025-09-19-balance-hotfix-1';
+import { fetchTournamentData, fetchTournaments } from './api.js?v=2025-09-19-avatars-2';
 
 const MODE_LABELS = { TR: 'TR', DM: 'DM', KT: 'KT' };
 const MODE_ORDER = ['TR', 'DM', 'KT'];

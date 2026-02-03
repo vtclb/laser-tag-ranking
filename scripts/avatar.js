@@ -1,6 +1,6 @@
 import { AVATAR_PLACEHOLDER } from './avatarConfig.js?v=2025-09-19-avatars-2';
 import { avatarNickKey } from './api.js?v=2025-09-19-avatars-2';
-import { renderAllAvatars } from './avatars.client.js';
+import { renderAllAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
 
 export async function setAvatar(img, nick, { width, height } = {}) {
   if (!img) return;

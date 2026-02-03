@@ -9,9 +9,9 @@ import {
   avatarNickKey,
   fetchAvatarsMap,
   avatarSrcFromRecord
-} from './api.js';
-import { reloadAvatars } from './avatars.client.js';
-import { rankLetterForPoints } from './rankUtils.js';
+} from './api.js?v=2025-09-19-avatars-2';
+import { reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
+import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
 
 const DEFAULT_AVATAR = 'assets/default_avatars/av0.png';
 const PLAYER_NICK_MAP = {
@@ -560,7 +560,7 @@ async function renderSelector() {
 }
 
 async function loadBasePlayers(league) {
-  const effectiveLeague = normalizeLeague(league || 'olds');
+  const effectiveLeague = normalizeLeague(league || 'sundaygames');
   const players = await loadPlayers(effectiveLeague);
   const withAvatars = await enrichPlayersWithAvatars(players);
   state.basePlayers = withAvatars;
@@ -579,7 +579,7 @@ async function loadTournament(tournamentId) {
     state.teams = teams;
     state.games = games;
     state.players = players;
-    state.league = info.league || 'olds';
+    state.league = info.league || 'sundaygames';
 
     await loadBasePlayers(state.league);
 

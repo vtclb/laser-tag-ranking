@@ -129,81 +129,90 @@ export async function showQuickStats(nick, evt) {
   }
 }
 
-function computeStats(rows, nick) {
-  let matches = 0;
+function computeStats(games, nick) {
+  const normNick = String(nick || '').trim();
+  if (!normNick) return null;
+
+  const getVal = (row, keys) => {
+    for (const k of keys) {
+      if (row && row[k] != null && row[k] !== '') return row[k];
+      const lk = String(k).toLowerCase();
+      for (const rk in row) {
+        if (String(rk).toLowerCase() === lk && row[rk] != null && row[rk] !== '') return row[rk];
+      }
+    }
+    return '';
+  };
+
+  const parseList = (v) => String(v || '')
+    .replace(/\r?\n/g, ',')
+    .split(/[;,]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  let matches = 0, wins = 0, losses = 0, draws = 0;
   let rounds = 0;
-  let wins = 0;
-  let losses = 0;
-  let kills = 0;
-  let deaths = 0;
-  let valid = true;
-  let lastOnTs = 0;
   let lastOn = null;
-  rows.forEach((g) => {
-    const t1 = (g.Team1 || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const t2 = (g.Team2 || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    let team;
-    if (t1.includes(nick)) {
-      team = t1;
-    } else if (t2.includes(nick)) {
-      team = t2;
-    } else return;
-    matches++;
-    const s1 = parseInt(g.Score1, 10);
-    const s2 = parseInt(g.Score2, 10);
-    const winner = g.Winner;
-    if (!isNaN(s1) && !isNaN(s2)) {
-      rounds += s1 + s2;
-      if (team === t1) {
-        kills += s1;
-        deaths += s2;
-      } else {
-        kills += s2;
-        deaths += s1;
+
+  for (const g of (games || [])) {
+    const teams = {
+      team1: parseList(getVal(g, ['team1','Team1','team 1','Team 1'])),
+      team2: parseList(getVal(g, ['team2','Team2','team 2','Team 2'])),
+      team3: parseList(getVal(g, ['team3','Team3','team 3','Team 3'])),
+      team4: parseList(getVal(g, ['team4','Team4','team 4','Team 4']))
+    };
+
+    const inAnyTeam = Object.values(teams).some(arr => arr.includes(normNick));
+    const isMvp = [getVal(g, ['mvp','MVP','mvp1']), getVal(g, ['mvp2','MVP2']), getVal(g, ['mvp3','MVP3'])]
+      .map(x => String(x || '').trim())
+      .includes(normNick);
+
+    if (!inAnyTeam && !isMvp) continue;
+
+    matches += 1;
+
+    const tsRaw = getVal(g, ['timestamp','Timestamp','time','Time']);
+    if (tsRaw) {
+      const d = new Date(tsRaw);
+      if (!isNaN(d)) {
+        if (!lastOn || d > lastOn) lastOn = d;
       }
+    }
+
+    // rounds: якщо є Score1/Score2 (старий формат) – рахуємо; якщо нема – лишаємо null
+    const s1 = Number(getVal(g, ['score1','Score1']));
+    const s2 = Number(getVal(g, ['score2','Score2']));
+    if (!isNaN(s1) && !isNaN(s2) && (s1 || s2)) rounds += (s1 + s2);
+
+    const winner = String(getVal(g, ['winner','Winner'])).trim().toLowerCase();
+
+    if (!winner || winner === 'n/a') continue;
+
+    if (winner === 'tie' || winner === 'draw') {
+      draws += 1;
+      continue;
+    }
+
+    // переможець як ключ команди (team1/team2/team3/team4)
+    if (teams[winner] && teams[winner].includes(normNick)) {
+      wins += 1;
     } else {
-      valid = false;
+      losses += 1;
     }
-    if (winner === "team1" || winner === "team2") {
-      const pt = team === t1 ? "team1" : "team2";
-      if (winner === pt) {
-        wins++;
-      } else {
-        losses++;
-      }
-    } else {
-      valid = false;
-    }
-    const ts = new Date(g.Timestamp).getTime();
-    if (!isNaN(ts) && ts > lastOnTs) {
-      lastOnTs = ts;
-      lastOn = g.Timestamp;
-    }
-  });
-  const kd =
-    !valid || deaths === 0
-      ? valid && kills > 0 && deaths === 0
-        ? "Inf"
-        : "N/A"
-      : (kills / deaths).toFixed(2);
-  const accuracy =
-    !valid || kills + deaths === 0
-      ? "N/A"
-      : ((kills / (kills + deaths)) * 100).toFixed(2) + "%";
+  }
+
+  const winRate = matches ? (wins / matches) : 0;
+
   return {
-    lastOn: lastOn || "N/A",
-    matches: valid ? matches : "N/A",
-    rounds: valid ? rounds : "N/A",
-    wins: valid ? wins : "N/A",
-    losses: valid ? losses : "N/A",
-    kd,
-    accuracy,
+    lastOn,
+    matches,
+    rounds: rounds || null,
+    wins,
+    losses,
+    draws,
+    winRate,
+    kd: null,
+    accuracy: null
   };
 }
 

@@ -27,6 +27,18 @@ const LEGACY_AWARDS = {
   },
 };
 
+const $ = (id) => document.getElementById(id);
+
+function escapeHtml(value) {
+  const str = String(value ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function parseQuery(search) {
   const result = {};
   if (typeof search !== 'string' || !search) return result;
@@ -140,53 +152,69 @@ function updateGamesLeft(used) {
 }
 
 async function renderGames(list, league) {
-  const tbody = document.getElementById('games-body');
-  const filterVal = document.getElementById('date-filter').value;
+  const tbody = $('games-body');
   tbody.innerHTML = '';
-  const filtered = list.filter(g => !filterVal || (g.Timestamp && g.Timestamp.startsWith(filterVal)));
-  const dates = [...new Set(filtered.map(g => {
-    const d = new Date(g.Timestamp);
-    return isNaN(d) ? '' : d.toISOString().split('T')[0];
-  }))].filter(Boolean);
 
-  for (const dt of dates) {
-    if (!pdfCache[dt]) {
-      try {
-        const links = await getPdfLinks({ league, date: dt });
-        pdfCache[dt] = links;
-      } catch (err) {
-        log('[ranking]', err);
-        pdfCache[dt] = {};
+  const getVal = (row, keys) => {
+    for (const k of keys) {
+      if (row && row[k] != null && row[k] !== '') return row[k];
+      const lk = String(k).toLowerCase();
+      for (const rk in row) {
+        if (String(rk).toLowerCase() === lk && row[rk] != null && row[rk] !== '') return row[rk];
       }
+    }
+    return '';
+  };
+
+  const ymdFilter = (document.getElementById('date-filter')?.value || '').trim(); // YYYY-MM-DD
+  let pdfMap = {};
+  if (ymdFilter) {
+    try {
+      pdfMap = await getPdfLinks(league, ymdFilter);
+    } catch (e) {
+      pdfMap = {};
     }
   }
 
-  filtered.forEach(g => {
-    const d = new Date(g.Timestamp);
-    const dateStr = isNaN(d) ? '' : d.toISOString().split('T')[0];
-    const id = g.ID || g.Id || g.GameID || g.game_id || g.gameId || g.id || '';
+  const games = Array.isArray(list) ? list : [];
+  const rows = [];
+
+  for (const g of games) {
+    const tsRaw = getVal(g, ['timestamp','Timestamp']);
+    const ts = tsRaw ? new Date(tsRaw) : null;
+
+    const ymd = ts && !isNaN(ts) ? ts.toISOString().slice(0,10) : '';
+
+    const matchId = String(getVal(g, ['matchid','MatchID','id','ID','series','Series'])).trim();
+
+    if (ymdFilter && ymd && ymd !== ymdFilter) continue;
+
+    rows.push({ ymd: ymd || ymdFilter || '', matchId });
+  }
+
+  // якщо ігор не знайдено, але є pdfMap — показуємо по файлам
+  if (!rows.length && ymdFilter && pdfMap && Object.keys(pdfMap).length) {
+    Object.keys(pdfMap).sort().forEach(matchId => {
+      rows.push({ ymd: ymdFilter, matchId });
+    });
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="opacity:.7">Немає даних</td></tr>';
+    return;
+  }
+
+  for (const r of rows) {
     const tr = document.createElement('tr');
-    const tdD = document.createElement('td');
-    tdD.textContent = dateStr;
-    const tdId = document.createElement('td');
-    tdId.textContent = id;
-    const tdPdf = document.createElement('td');
-    const btn = document.createElement('button');
-    const pdfUrl = (pdfCache[dateStr] || {})[id];
-    if (pdfUrl) {
-      btn.textContent = 'Переглянути звіт';
-      btn.addEventListener('click', () => window.open(pdfUrl, '_blank'));
-    } else {
-      btn.textContent = 'Звіт відсутній';
-      btn.disabled = true;
-    }
-    tdPdf.appendChild(btn);
-    tr.appendChild(tdD);
-    tr.appendChild(tdId);
-    tr.appendChild(tdPdf);
+    const url = (pdfMap && r.matchId && pdfMap[r.matchId]) ? pdfMap[r.matchId] : '';
+
+    tr.innerHTML = `
+      <td>${escapeHtml(r.ymd || '')}</td>
+      <td>${escapeHtml(r.matchId || '')}</td>
+      <td>${url ? `<a href="${url}" target="_blank" rel="noopener">PDF</a>` : ''}</td>
+    `;
     tbody.appendChild(tr);
-  });
-  updateGamesLeft(filtered.length);
+  }
 }
 
 function askKey(nick) {
@@ -238,7 +266,7 @@ async function loadProfile(nick, key = '') {
   }
   const profile = data.profile || {};
   const league = data.league || profile.league || '';
-  const games = await fetchPlayerGames(nick, league);
+  const games = await fetchPlayerGames(league, nick);
   await updateAvatar(nick);
   const rank = rankLetterForPoints(profile.points);
   document.getElementById('rating').textContent = `Рейтинг: ${profile.points} (${rank})`;

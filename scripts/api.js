@@ -688,31 +688,55 @@ export async function loadPlayers(league) {
 }
 export async function fetchPlayerData(league) { return loadPlayers(league); }
 
-export async function fetchPlayerGames(nick, league) {
-  const target = String(nick || '').trim().toLowerCase();
-  if (!target) return [];
+export async function fetchPlayerGames(league, nick) {
+  const url = getGamesFeedUrl(league);
+  const rows = await fetchCsv(url);
 
-  const normalizedLeague = normalizeLeague(league);
-  const rows = await fetchCsv(getGamesFeedUrl(normalizedLeague));
+  const normLeague = String(league || '').toLowerCase();
+  const normNick = String(nick || '').trim();
+  if (!normNick) return [];
 
-  const teamFields = ['Team1', 'Team 1', 'team1', 'team 1', 'Team2', 'Team 2', 'team2', 'team 2'];
-  const mvpFields = ['MVP', 'Mvp', 'mvp', 'MVP2', 'mvp2', 'MVP 2', 'mvp 2', 'MVP3', 'mvp3', 'MVP 3', 'mvp 3'];
-  const fieldsToCheck = [...teamFields, ...mvpFields];
-
-  const containsNick = (value) => {
-    if (!value) return false;
-    return String(value)
-      .split(/[;,]/)
-      .map(part => part.trim().toLowerCase())
-      .filter(Boolean)
-      .some(name => name === target);
+  const getVal = (row, keys) => {
+    for (const k of keys) {
+      if (row && row[k] != null && row[k] !== '') return row[k];
+      const lk = String(k).toLowerCase();
+      for (const rk in row) {
+        if (String(rk).toLowerCase() === lk && row[rk] != null && row[rk] !== '') return row[rk];
+      }
+    }
+    return '';
   };
 
-  return rows.filter(row => {
-    const rowLeague = row.League ? normalizeLeague(row.League) : '';
-    if (rowLeague && rowLeague !== normalizedLeague) return false;
-    return fieldsToCheck.some(field => containsNick(row[field]));
+  const teamFields = [
+    'team1','team 1','Team1','Team 1',
+    'team2','team 2','Team2','Team 2',
+    'team3','team 3','Team3','Team 3',
+    'team4','team 4','Team4','Team 4',
+    'mvp','MVP','mvp1','mvp2','mvp3','MVP2','MVP3'
+  ];
+
+  const containsNick = (val) => {
+    const s = String(val || '').replace(/\r?\n/g, ',');
+    return s.split(/[;,]/).map(x => x.trim()).filter(Boolean).includes(normNick);
+  };
+
+  let out = rows.filter(row => {
+    // league filter (якщо є колонка league/League)
+    const rowLeague = String(getVal(row, ['league','League'])).toLowerCase();
+    if (rowLeague && rowLeague !== normLeague) return false;
+
+    // чи є нік у будь-якому полі команд/мvp
+    return teamFields.some(f => containsNick(getVal(row, [f])));
   });
+
+  // sort newest -> oldest (timestamp/Timestamp)
+  out.sort((a, b) => {
+    const ta = new Date(getVal(a, ['timestamp','Timestamp'])).getTime() || 0;
+    const tb = new Date(getVal(b, ['timestamp','Timestamp'])).getTime() || 0;
+    return tb - ta;
+  });
+
+  return out;
 }
 
 // ==================== SAVE GAME (FORM-URLENCODED) ====================

@@ -2764,11 +2764,22 @@ async function boot() {
       'kids',
       aliasMap
     );
-    const kidsPackTopPlayers = normalizePackPlayersForLeague(
-      Array.isArray(PACK?.top10) ? PACK.top10 : [],
-      'kids',
-      aliasMap
-    );
+    const packLeague = String(PACK?.league || PACK?.meta?.league || '').toLowerCase();
+
+    // PACK для осені зараз = тільки sundaygames, тому kidsTop10 з PACK не беремо
+    const kidsPackTopPlayers =
+      packLeague === 'kids'
+        ? normalizePackPlayersForLeague(Array.isArray(PACK?.top10) ? PACK.top10 : [], 'kids', aliasMap)
+        : [];
+
+    const oldsPackTopPlayers =
+      packLeague === 'sundaygames' || packLeague === 'olds'
+        ? normalizePackPlayersForLeague(
+            Array.isArray(PACK?.top10) ? PACK.top10 : [],
+            'sundaygames',
+            aliasMap
+          )
+        : [];
     kidsPackPlayersNormalized = mergePlayerRecords(
       kidsPackAllPlayers,
       kidsPackTopPlayers,

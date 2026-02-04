@@ -1,14 +1,14 @@
 // scripts/lobby.js
-import { log } from './logger.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
 
-import { initTeams, teams } from './teams.js?v=2025-09-19-avatars-2';
-import { sortByName, sortByPtsDesc } from './sortUtils.js?v=2025-09-19-avatars-2';
+import { initTeams, teams } from './teams.js';
+import { sortByName, sortByPtsDesc } from './sortUtils.js';
 import {
   updateAbonement,
   adminCreatePlayer,
   issueAccessKey,
   getProfile,
-} from './api.js?v=2025-09-19-avatars-2';
+} from './api.js';
 import {
   state,
   setLeague,
@@ -20,10 +20,10 @@ import {
   getTeamKey,
   getTeamKeys,
   getTeamNumber,
-} from './state.js?v=2025-09-19-avatars-2';
-import { refreshArenaTeams } from './scenario.js?v=2025-09-19-avatars-2';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
-import { recomputeAutoBalance } from './balance.js?v=2025-09-19-avatars-2';
+} from './state.js';
+import { refreshArenaTeams } from './scenario.js';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
+import { recomputeAutoBalance } from './balance.js';
 
 export const lobby = state.lobbyPlayers;
 let players = [], filtered = [], selected = [];

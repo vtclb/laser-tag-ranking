@@ -1,5 +1,5 @@
 // avatars.client.js
-import { AVATAR_WORKER_BASE, AVATAR_PLACEHOLDER } from './avatarConfig.js?v=2025-09-19-avatars-2';
+import { AVATAR_WORKER_BASE, AVATAR_PLACEHOLDER } from './avatarConfig.js';
 
 // ---------------- BASE ----------------
 const RAW_BASE = typeof AVATAR_WORKER_BASE === 'string' ? AVATAR_WORKER_BASE.trim() : '';

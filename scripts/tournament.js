@@ -9,9 +9,9 @@ import {
   avatarNickKey,
   fetchAvatarsMap,
   avatarSrcFromRecord
-} from './api.js?v=2025-09-19-avatars-2';
-import { reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
+} from './api.js';
+import { reloadAvatars } from './avatars.client.js';
+import { rankLetterForPoints } from './rankUtils.js';
 
 const DEFAULT_AVATAR = 'assets/default_avatars/av0.png';
 const PLAYER_NICK_MAP = {

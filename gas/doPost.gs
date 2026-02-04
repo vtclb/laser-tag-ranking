@@ -29,6 +29,7 @@ function rankLetterForPoints(p) {
 
 function normalizeLeague_(value) {
   const key = String(value || '').trim().toLowerCase();
+  if (!key) return '';
   if (key === 'olds') return 'sundaygames';
   return key;
 }
@@ -249,6 +250,10 @@ function handleGetProfile_(payload) {
 
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const leagues = ['kids','sundaygames'];
+  const requestedLeague = normalizeLeague_(payload.league);
+  if (requestedLeague && leagues.includes(requestedLeague)) {
+    leagues.unshift(...leagues.splice(leagues.indexOf(requestedLeague), 1));
+  }
   let found = null, leagueUsed = null;
 
   for (let lg of leagues) {
@@ -1026,9 +1031,9 @@ function listTournaments_(payload) {
   const data = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 0), sheet.getLastColumn()).getValues();
   const items = rowsToObjects_(hdr, data).filter(row => {
     const status = String(params.status || '').toUpperCase();
-    const league = (params.league || '').toLowerCase();
+    const league = normalizeLeague_(params.league || '');
     const matchesStatus = status ? String(row.status || '').toUpperCase() === status : true;
-    const matchesLeague = league ? String(row.league || '').toLowerCase() === league : true;
+    const matchesLeague = league ? normalizeLeague_(row.league || '') === league : true;
     return matchesStatus && matchesLeague;
   });
   return JsonOK({ status: 'OK', tournaments: items });

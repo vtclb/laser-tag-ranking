@@ -1,5 +1,5 @@
-import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { registerPlayer } from './api.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
+import { registerPlayer } from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('reg-form');

@@ -1,8 +1,8 @@
 // scripts/avatarAdmin.js
-import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { uploadAvatar, loadPlayers, avatarNickKey } from './api.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER, AVATAR_WORKER_BASE } from './avatarConfig.js?v=2025-09-19-avatars-2';
-import { reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
+import { uploadAvatar, loadPlayers, avatarNickKey } from './api.js';
+import { AVATAR_PLACEHOLDER, AVATAR_WORKER_BASE } from './avatarConfig.js';
+import { reloadAvatars } from './avatars.client.js';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 

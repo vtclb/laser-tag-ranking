@@ -9,9 +9,9 @@ import {
   fetchLeagueCsv,
   normalizeLeague,
   parsePlayersFromCsv,
-} from './api.js?v=2025-09-19-avatars-2';
-import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER } from './avatarConfig.js?v=2025-09-19-avatars-2';
+} from './api.js';
+import { autoBalance2 as autoBalanceTwo, autoBalanceN as autoBalanceMany } from './balanceUtils.js';
+import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
 
 const DEFAULT_TEAMS = 3;
 const MIN_TEAMS = 2;

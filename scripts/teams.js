@@ -4,7 +4,7 @@ import {
   setTeams,
   getTeamKey,
   getTeamMembers,
-} from './state.js?v=2025-09-19-avatars-2';
+} from './state.js';
 
 export const teams = state.teams;
 

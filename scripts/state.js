@@ -1,3 +1,5 @@
+import { normalizeLeague } from './api.js';
+
 const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
 
 export const state = {
@@ -58,7 +60,7 @@ export function getTeamNumber(team) {
 
 export function setLeague(league) {
   if (typeof league === 'string' && league.trim()) {
-    state.league = league.trim();
+    state.league = normalizeLeague(league);
   }
   return state.league;
 }

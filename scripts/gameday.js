@@ -1,8 +1,8 @@
-import { log } from './logger.js?v=2025-09-19-avatars-2';
-import { AVATAR_PLACEHOLDER } from './avatarConfig.js?v=2025-09-19-avatars-2';
-import { getPdfLinks, fetchOnce, CSV_URLS, avatarNickKey } from "./api.js?v=2025-09-19-avatars-2";
-import { rankLetterForPoints } from './rankUtils.js?v=2025-09-19-avatars-2';
-import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
+import { AVATAR_PLACEHOLDER } from './avatarConfig.js';
+import { getPdfLinks, fetchOnce, CSV_URLS, avatarNickKey, normalizeLeague } from "./api.js";
+import { rankLetterForPoints } from './rankUtils.js';
+import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
 (function () {
   const CSV_TTL = 60 * 1000;
 
@@ -439,8 +439,9 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-1
 
   async function loadData(){
     if(!dateInput.value) return; // require date
-    const rURL = CSV_URLS[leagueSel.value].ranking;
-    const gURL = CSV_URLS[leagueSel.value].games;
+    const leagueKey = normalizeLeague(leagueSel.value);
+    const rURL = CSV_URLS[leagueKey].ranking;
+    const gURL = CSV_URLS[leagueKey].games;
     let rText, gText;
     try {
       [rText, gText] = await Promise.all([
@@ -459,7 +460,7 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-1
     const games   = Papa.parse(gText,{header:true,skipEmptyLines:true}).data;
     let pdfLinks = {};
     try{
-      pdfLinks = await getPdfLinks({ league: leagueSel.value, date: dateInput.value });
+      pdfLinks = await getPdfLinks({ league: leagueKey, date: dateInput.value });
     }catch(err){
       log('[ranking]', err);
     }
@@ -481,7 +482,7 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js?v=2025-09-1
     });
 
     const parsedGames = games
-      .filter(g => normalizeLeagueForFilter(g.League) === leagueSel.value)
+      .filter(g => normalizeLeagueForFilter(g.League) === leagueKey)
       .map(parseGameRow)
       .filter(g => g.timestamp || g.date);
 

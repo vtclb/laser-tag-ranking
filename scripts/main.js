@@ -1,10 +1,10 @@
 // scripts/main.js
-import { log } from './logger.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
 
-import { loadPlayers, safeGet, safeSet } from './api.js?v=2025-09-19-avatars-2';
-import { initLobby }   from './lobby.js?v=2025-09-19-avatars-2';
-import { initScenario } from './scenario.js?v=2025-09-19-avatars-2';
-import { initAvatarAdmin } from './avatarAdmin.js?v=2025-09-19-avatars-2';
+import { loadPlayers, safeGet, safeSet } from './api.js';
+import { initLobby }   from './lobby.js';
+import { initScenario } from './scenario.js';
+import { initAvatarAdmin } from './avatarAdmin.js';
 
 const CACHE_VERSION = window.CACHE_VERSION || '1';
 

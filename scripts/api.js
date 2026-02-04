@@ -1,12 +1,12 @@
 // scripts/api.js
-import { log } from './logger.js?v=2025-09-19-avatars-2';
+import { log } from './logger.js';
 import {
   AVATAR_PLACEHOLDER,
   AVATAR_WORKER_BASE,
   AVATAR_CACHE_BUST,
   ASSETS_VER
-} from './avatarConfig.js?v=2025-09-19-avatars-2';
-import { GAS_PROXY_BASE, LEAGUE_CSV } from './config.js?v=2025-09-19-avatars-2';
+} from './avatarConfig.js';
+import { GAS_PROXY_BASE, LEAGUE_CSV } from './config.js';
 
 // ==================== DIAGNOSTICS ====================
 const DEBUG_NETWORK = false;
@@ -1202,5 +1202,5 @@ export async function fetchTournamentData(tournamentId) {
 }
 
 // ===== Optional small helpers (UI aliases) =====
-window.uiLeagueToCsv = window.uiLeagueToCsv || function(v){ return String(v).toLowerCase()==='kids' ? 'kids' : 'sundaygames'; };
-window.uiLeagueToGas = window.uiLeagueToGas || function(v){ return String(v).toLowerCase()==='kids' ? 'kids' : 'sundaygames'; };
+window.uiLeagueToCsv = window.uiLeagueToCsv || function(v){ return normalizeLeague(v); };
+window.uiLeagueToGas = window.uiLeagueToGas || function(v){ return normalizeLeague(v); };

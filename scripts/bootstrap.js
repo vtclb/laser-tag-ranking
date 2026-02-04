@@ -1,8 +1,7 @@
-import { VERSION } from "./version.js";
 import "./snow.js";
 
 async function loadModule(name) {
-  const mod = await import(`./${name}?v=${VERSION}`);
+  const mod = await import(`./${name}`);
   console.log("[BOOT] loaded", name, mod);
 
   // Автоматичний запуск, якщо в модулі є main/initRanking

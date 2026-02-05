@@ -68,6 +68,40 @@ function normalizeLeagueName(value) {
   return trimmed;
 }
 
+function normalizePackPlayersForLeague(players = [], leagueKey = '', aliasMap = {}) {
+  const normalizedLeague = normalizeLeagueName(leagueKey || 'kids');
+
+  // намагаємось зрозуміти, чи в pack-рядках взагалі є маркер ліги
+  const hasLeagueMarkers = (players || []).some((p) =>
+    p && (p.league != null || p.leagueKey != null || p.sheet != null || p.tab != null || p.scope != null || p.mode != null)
+  );
+
+  const pickLeague = (p) => {
+    const raw = (p && (p.league ?? p.leagueKey ?? p.sheet ?? p.tab ?? p.scope ?? p.mode)) ?? '';
+    return normalizeLeagueName(String(raw));
+  };
+
+  // якщо маркери ліги є — фільтруємо строго
+  // якщо маркерів нема — НЕ ріжемо (щоб нічого випадково не зникло)
+  const filtered = hasLeagueMarkers
+    ? (players || []).filter((p) => pickLeague(p) === normalizedLeague)
+    : (players || []);
+
+  const normalized = normalizeTopPlayers(
+    filtered,
+    { ...(PACK?.meta ?? {}), league: normalizedLeague },
+    aliasMap
+  );
+
+  // підписуємо правильну лігу (тільки для цієї сторінки/виводу)
+  return normalized.map((player) => ({
+    ...player,
+    leagueKey: normalizedLeague,
+    league: normalizedLeague,
+    team: getLeagueLabel(normalizedLeague || FALLBACK)
+  }));
+}
+
 function parseWinner(rawWinner) {
   if (typeof rawWinner === 'number') {
     if (rawWinner === 1) {

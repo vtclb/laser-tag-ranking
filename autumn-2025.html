@@ -145,9 +145,6 @@
         display: grid;
         gap: 0.75rem;
       }
-      header .pixel-button {
-        justify-self: center;
-      }
       h1 {
         font-size: clamp(1.1rem, 4vw, 1.7rem);
         color: var(--primary);
@@ -339,27 +336,6 @@
         background: rgba(0, 0, 0, 0.45);
         box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.7);
       }
-      .avatar-chip {
-        width: 2.4rem;
-        height: 2.4rem;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(240, 138, 36, 0.18);
-        border: var(--pixel-border) solid rgba(240, 138, 36, 0.45);
-        color: var(--primary);
-        font-size: 0.6rem;
-      }
-      .podium-card strong {
-        color: #9dd7ff;
-        font-size: 0.55rem;
-      }
-      details summary {
-        cursor: pointer;
-        font-size: 0.65rem;
-        margin-bottom: 0.75rem;
-      }
       table {
         width: 100%;
         min-width: 640px;
@@ -468,17 +444,6 @@
       .pixel-button:hover,
       .pixel-button:focus-visible {
         transform: translateY(-1px);
-      }
-      .player-link {
-        background: transparent;
-        border: none;
-        color: inherit;
-        font-size: 0.6rem;
-        cursor: pointer;
-      }
-      .player-link:hover,
-      .player-link:focus-visible {
-        text-decoration: underline;
       }
       dialog {
         border: none;
@@ -653,7 +618,7 @@
     <main>
       <header>
         <h1>Осінній сезон 2025</h1>
-        <p class="season-subtitle" id="season-subtitle">
+        <p class="season-subtitle">
           Марафон із 12 турів, жаркі вечори та рекорди у 16-бітній атмосфері
         </p>
         <div
@@ -680,16 +645,13 @@
           </button>
         </div>
         <div class="season-ticker" id="season-ticker" aria-live="polite"></div>
-        <button type="button" class="pixel-button" id="download-report">
-          Export JSON
-        </button>
       </header>
       <section aria-labelledby="metrics-title">
         <h2 id="metrics-title" class="visually-hidden">Ключові показники</h2>
         <div class="metrics-grid" id="metrics-grid"></div>
       </section>
       <section aria-labelledby="podium-title">
-        <h2 id="podium-title">Лідери сезону</h2>
+        <h2 id="podium-title" class="visually-hidden">Подіум сезону</h2>
         <div class="podium-grid" id="podium-grid"></div>
       </section>
       <section aria-labelledby="leaderboard-title">
@@ -706,20 +668,19 @@
             <button class="tab-button" role="tab" data-sort="rank" aria-selected="true">
               Рейтинг
             </button>
-            <button class="tab-button" role="tab" data-sort="matches">
-              Матчі
+            <button
+              class="tab-button"
+              role="tab"
+              data-sort="games"
+              aria-label="Сортувати таблицю за кількістю ігор"
+            >
+              Ігри
             </button>
             <button class="tab-button" role="tab" data-sort="winRate">
               Win rate
             </button>
-            <button class="tab-button" role="tab" data-sort="kd">
-              K/D
-            </button>
-            <button class="tab-button" role="tab" data-sort="accuracy">
-              Accuracy
-            </button>
-            <button class="tab-button" role="tab" data-sort="mvp">
-              MVP
+            <button class="tab-button" role="tab" data-sort="roundWR">
+              WR раундів
             </button>
           </div>
         </div>
@@ -728,39 +689,20 @@
             <thead>
               <tr>
                 <th scope="col">#</th>
-                <th scope="col">Аватар</th>
                 <th scope="col">Гравець</th>
-                <th scope="col">Ранг</th>
-                <th scope="col">Матчі</th>
+                <th scope="col">Очки сезону</th>
+                <th scope="col">Ігор</th>
+                <th scope="col">Перемог</th>
+                <th scope="col">Поразок</th>
                 <th scope="col">WinRate %</th>
+                <th scope="col">Раундів</th>
                 <th scope="col">MVP</th>
-                <th scope="col">K/D</th>
-                <th scope="col">Accuracy</th>
+                <th scope="col">Ранг</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>
           </table>
         </div>
-      </section>
-      <section aria-labelledby="matchlog-title">
-        <h2 id="matchlog-title">Match log</h2>
-        <details open>
-          <summary>Показати матчі</summary>
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Дата</th>
-                  <th scope="col">Match ID</th>
-                  <th scope="col">Winner</th>
-                  <th scope="col">MVPs</th>
-                  <th scope="col">Players</th>
-                </tr>
-              </thead>
-              <tbody id="matchlog-body"></tbody>
-            </table>
-          </div>
-        </details>
       </section>
     </main>
     <dialog id="player-modal" aria-labelledby="modal-title">

@@ -1104,14 +1104,18 @@ function listPdfLinks_(league, ymd) {
   if (!df.hasNext()) return {};
   const dayFolder = df.next();
 
-  const files = dayFolder.getFilesByType(MimeType.PDF);
+  const allFiles = dayFolder.getFiles();
+  const pdfFiles = [];
+  while (allFiles.hasNext()) {
+    const f = allFiles.next();
+    if (f.getMimeType() === MimeType.PDF) pdfFiles.push(f);
+  }
   const map = {};
-  while (files.hasNext()) {
-    const f = files.next();
+  pdfFiles.forEach(f => {
     const name = f.getName();
     const matchId = name.replace(/\.pdf$/i, '');
     map[matchId] = publicFileUrl_(f.getId());
-  }
+  });
   return map;
 }
 

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | v2</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Player Profile</div>
+    <a class="nav-link" href="./league.html">League</a>
+  </header>
+  <main id="content"></main>
+
+  <script type="module">
+    import { getData } from '../core/dataHub.js';
+    import { getQueryParams, formatRatio } from '../core/utils.js';
+
+    const { seasonId, league = 'kids', nick = 'NovaFox' } = getQueryParams();
+    const data = getData({ seasonId, league, nick });
+    const profile = data.playerProfile;
+    const content = document.getElementById('content');
+
+    if (!profile) {
+      content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
+    } else {
+      content.innerHTML = `
+        <section class="card">
+          <h1 class="section-title">${profile.nick}</h1>
+          <p class="tag">${data.season.title} · ${data.league}</p>
+          <div class="kpi" style="margin-top:.8rem;">
+            <article class="card"><p class="tag">Season games</p><h3>${profile.overview.season.games}</h3></article>
+            <article class="card"><p class="tag">All-time games</p><h3>${profile.overview.allTime.games}</h3></article>
+            <article class="card"><p class="tag">All-time winrate</p><h3>${formatRatio(profile.overview.allTime.winrate)}</h3></article>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Stats by season</h2>
+          <ul class="list-clean">
+            ${profile.statsBySeason.map((item) => `<li>${item.seasonTitle}: ${item.points} pts / ${item.games} games</li>`).join('')}
+          </ul>
+        </section>
+        <section class="profile-grid">
+          <article class="card"><h3>With whom most often</h3><p>${profile.insights.teammateMost}</p></article>
+          <article class="card"><h3>Against whom most often</h3><p>${profile.insights.opponentMost}</p></article>
+          <article class="card"><h3>Winrate with / against</h3><p>${formatRatio(profile.insights.winrateWith)} / ${formatRatio(profile.insights.winrateAgainst)}</p></article>
+          <article class="card"><h3>Form (W/L streak)</h3><p>${profile.insights.form}</p></article>
+        </section>
+      `;
+    }
+  </script>
+</body>
+</html>

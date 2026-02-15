@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LaserTag v2</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">LaserTag v2</div>
+    <a class="nav-link" href="./season.html">Seasons</a>
+  </header>
+  <main>
+    <section class="card">
+      <h1 class="section-title">Game Menu</h1>
+      <p class="tag" id="currentSeason"></p>
+      <h2>Top-3 Kids</h2>
+      <div class="top3" id="kidsTop3"></div>
+      <h2>Top-3 Adults</h2>
+      <div class="top3" id="adultsTop3"></div>
+    </section>
+
+    <section class="menu-grid">
+      <a class="menu-btn" href="./league.html?league=kids">Kids League</a>
+      <a class="menu-btn" href="./league.html?league=sundaygames">Adults League</a>
+      <a class="menu-btn" href="./gameday.html">Game Day</a>
+      <a class="menu-btn" href="./season.html">Seasons</a>
+      <a class="menu-btn" href="./tournaments.html">Tournaments</a>
+      <a class="menu-btn" href="./rules.html">Rules</a>
+    </section>
+  </main>
+
+  <script type="module">
+    import { getData } from '../core/dataHub.js';
+    import { createTop3Markup } from '../core/utils.js';
+
+    const kids = getData({ league: 'kids' });
+    const adults = getData({ league: 'sundaygames' });
+
+    document.getElementById('currentSeason').textContent = `Current season: ${kids.season.title}`;
+    document.getElementById('kidsTop3').innerHTML = createTop3Markup(kids.top3);
+    document.getElementById('adultsTop3').innerHTML = createTop3Markup(adults.top3);
+  </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seasons | v2</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Seasons</div>
+    <a class="nav-link" href="./index.html">Menu</a>
+  </header>
+  <main>
+    <section class="card">
+      <h1 class="section-title">All seasons</h1>
+      <ul class="list-clean" id="seasonList"></ul>
+    </section>
+  </main>
+  <script type="module">
+    import { getSeasons } from '../core/dataHub.js';
+
+    const seasons = getSeasons();
+    const list = document.getElementById('seasonList');
+
+    list.innerHTML = Object.entries(seasons).map(([id, meta]) => `
+      <li>
+        <strong>${meta.title}</strong> ${meta.current ? '· current' : ''}
+        <div style="margin-top:.4rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+          <a class="chip" href="./league.html?season=${id}&league=kids">Kids</a>
+          <a class="chip" href="./league.html?season=${id}&league=sundaygames">Adults</a>
+        </div>
+      </li>
+    `).join('');
+  </script>
+</body>
+</html>

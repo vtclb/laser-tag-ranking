@@ -14,41 +14,54 @@
   <main id="content"></main>
 
   <script type="module">
-    import { getData } from '../core/dataHub.js';
-    import { getQueryParams, formatRatio } from '../core/utils.js';
+    import { getPlayerProfile } from '../core/dataHub.js';
+    import { getQueryParams } from '../core/utils.js';
 
-    const { seasonId, league = 'kids', nick = 'NovaFox' } = getQueryParams();
-    const data = getData({ seasonId, league, nick });
-    const profile = data.playerProfile;
+    const { nick = '' } = getQueryParams();
     const content = document.getElementById('content');
 
-    if (!profile) {
-      content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
-    } else {
-      content.innerHTML = `
-        <section class="card">
-          <h1 class="section-title">${profile.nick}</h1>
-          <p class="tag">${data.season.title} · ${data.league}</p>
-          <div class="kpi" style="margin-top:.8rem;">
-            <article class="card"><p class="tag">Season games</p><h3>${profile.overview.season.games}</h3></article>
-            <article class="card"><p class="tag">All-time games</p><h3>${profile.overview.allTime.games}</h3></article>
-            <article class="card"><p class="tag">All-time winrate</p><h3>${formatRatio(profile.overview.allTime.winrate)}</h3></article>
-          </div>
-        </section>
-        <section class="card">
-          <h2>Stats by season</h2>
-          <ul class="list-clean">
-            ${profile.statsBySeason.map((item) => `<li>${item.seasonTitle}: ${item.points} pts / ${item.games} games</li>`).join('')}
-          </ul>
-        </section>
-        <section class="profile-grid">
-          <article class="card"><h3>With whom most often</h3><p>${profile.insights.teammateMost}</p></article>
-          <article class="card"><h3>Against whom most often</h3><p>${profile.insights.opponentMost}</p></article>
-          <article class="card"><h3>Winrate with / against</h3><p>${formatRatio(profile.insights.winrateWith)} / ${formatRatio(profile.insights.winrateAgainst)}</p></article>
-          <article class="card"><h3>Form (W/L streak)</h3><p>${profile.insights.form}</p></article>
-        </section>
-      `;
+    async function init() {
+      if (!nick) {
+        content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
+        return;
+      }
+
+      try {
+        const profile = await getPlayerProfile({ nick });
+        if (!profile) {
+          content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
+          return;
+        }
+
+        content.innerHTML = `
+          <section class="card">
+            <h1 class="section-title">${profile.nick}</h1>
+            <p class="tag">All-time</p>
+            <div class="kpi" style="margin-top:.8rem;">
+              <article class="card"><p class="tag">Games</p><h3>${profile.allTime.games}</h3></article>
+              <article class="card"><p class="tag">Wins</p><h3>${profile.allTime.wins}</h3></article>
+              <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3></article>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Stats by season</h2>
+            <ul class="list-clean">
+              ${profile.bySeason.map((item) => `<li>${item.seasonTitle}: ${item.points} pts / ${item.games} games / ${item.wins} wins</li>`).join('')}
+            </ul>
+          </section>
+          <section class="profile-grid">
+            <article class="card"><h3>With whom most often</h3><p>${profile.insights.teammateMost ? `${profile.insights.teammateMost.nick} (${profile.insights.teammateMost.count})` : '—'}</p></article>
+            <article class="card"><h3>Against whom most often</h3><p>${profile.insights.opponentMost ? `${profile.insights.opponentMost.nick} (${profile.insights.opponentMost.count})` : '—'}</p></article>
+            <article class="card"><h3>Winrate with / against</h3><p>${profile.insights.winrateWith ?? '—'} / ${profile.insights.winrateAgainst ?? '—'}</p></article>
+            <article class="card"><h3>Form (last 5)</h3><p>${profile.insights.form.join(' ') || '—'}</p></article>
+          </section>
+        `;
+      } catch (error) {
+        content.innerHTML = '<section class="card"><h1>Не вдалося завантажити дані</h1></section>';
+      }
     }
+
+    init();
   </script>
 </body>
 </html>

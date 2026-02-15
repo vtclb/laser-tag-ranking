@@ -14,11 +14,15 @@
   <main>
     <section class="card">
       <h1 class="section-title">Tournaments</h1>
-      <div class="placeholder">
+      <div class="placeholder" id="placeholder">
         Заглушка: структура підготовлена під майбутні турнірні сітки,
         результати та сторінки окремих подій.
       </div>
     </section>
   </main>
+  <script type="module">
+    const tournamentsDataStub = { status: 'soon' };
+    document.getElementById('placeholder').dataset.status = tournamentsDataStub.status;
+  </script>
 </body>
 </html>

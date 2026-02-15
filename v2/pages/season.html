@@ -18,20 +18,29 @@
     </section>
   </main>
   <script type="module">
-    import { getSeasons } from '../core/dataHub.js';
+    import { getSeasonOverview, getSeasons } from '../core/dataHub.js';
 
-    const seasons = getSeasons();
+    const cfg = getSeasons();
     const list = document.getElementById('seasonList');
 
-    list.innerHTML = Object.entries(seasons).map(([id, meta]) => `
-      <li>
-        <strong>${meta.title}</strong> ${meta.current ? '· current' : ''}
-        <div style="margin-top:.4rem;display:flex;gap:.5rem;flex-wrap:wrap;">
-          <a class="chip" href="./league.html?season=${id}&league=kids">Kids</a>
-          <a class="chip" href="./league.html?season=${id}&league=sundaygames">Adults</a>
-        </div>
-      </li>
-    `).join('');
+    async function init() {
+      try {
+        const items = await Promise.all(cfg.seasons.map((season) => getSeasonOverview({ seasonId: season.id })));
+        list.innerHTML = items.map((item) => `
+          <li>
+            <strong>${item.seasonTitle}</strong> ${item.seasonId === cfg.currentSeasonId ? '· current' : ''}
+            <div style="margin-top:.4rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+              <a class="chip" href="${item.links.kids}">Kids</a>
+              <a class="chip" href="${item.links.olds}">Adults</a>
+            </div>
+          </li>
+        `).join('');
+      } catch (error) {
+        list.innerHTML = '<li>Не вдалося завантажити дані</li>';
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>

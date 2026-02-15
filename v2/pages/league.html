@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>League | v2</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">League</div>
+    <a class="nav-link" href="./index.html">Menu</a>
+  </header>
+  <main>
+    <section class="card">
+      <h1 class="section-title" id="leagueTitle"></h1>
+      <div class="top3" id="top3"></div>
+    </section>
+    <section class="kpi">
+      <article class="card"><p class="tag">Games</p><h3 id="games"></h3></article>
+      <article class="card"><p class="tag">Wins</p><h3 id="wins"></h3></article>
+      <article class="card"><p class="tag">Draws</p><h3 id="draws"></h3></article>
+    </section>
+    <section class="card">
+      <h2>Top-10</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>G</th><th>W</th><th>D</th><th>Rank</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="expand-toggle" id="toggleRows">Expand</div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { getData } from '../core/dataHub.js';
+    import { getQueryParams, createTop3Markup, statOrDash } from '../core/utils.js';
+
+    const { league = 'kids', seasonId } = getQueryParams();
+    const data = getData({ seasonId, league });
+    let expanded = false;
+
+    document.getElementById('leagueTitle').textContent = `${data.season.title} · ${data.league}`;
+    document.getElementById('top3').innerHTML = createTop3Markup(data.top3);
+    document.getElementById('games').textContent = data.seasonStats.games;
+    document.getElementById('wins').textContent = data.seasonStats.wins;
+    document.getElementById('draws').textContent = data.seasonStats.draws;
+
+    const renderTable = () => {
+      const rows = expanded ? data.table.slice(0, 10) : data.table.slice(0, 5);
+      document.getElementById('tableBody').innerHTML = rows.map((player, idx) => `
+        <tr class="${player.inactive ? 'inactive' : ''}">
+          <td>${idx + 1}</td>
+          <td><a class="nav-link" href="./profile.html?league=${data.league}&season=${data.season.id}&nick=${encodeURIComponent(player.nick)}">${player.nick}</a></td>
+          <td>${statOrDash(player.points)}</td>
+          <td>${statOrDash(player.games)}</td>
+          <td>${statOrDash(player.wins)}</td>
+          <td>${statOrDash(player.draws)}</td>
+          <td>${player.rank}</td>
+        </tr>
+      `).join('');
+      document.getElementById('toggleRows').textContent = expanded ? 'Collapse' : 'Expand';
+    };
+
+    document.getElementById('toggleRows').addEventListener('click', () => {
+      expanded = !expanded;
+      renderTable();
+    });
+
+    renderTable();
+  </script>
+</body>
+</html>

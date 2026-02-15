@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Day | v2</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Game Day</div>
+    <a class="nav-link" href="./index.html">Menu</a>
+  </header>
+  <main>
+    <section class="card">
+      <h1 class="section-title">Mode</h1>
+      <div style="display:flex;gap:.5rem;">
+        <button id="mobileBtn" class="chip">Mobile</button>
+        <button id="tvBtn" class="chip">TV</button>
+      </div>
+    </section>
+
+    <section id="layout" class="tv-layout">
+      <article class="card">
+        <h2>Lobby players</h2>
+        <ul class="list-clean" id="players"></ul>
+      </article>
+      <aside>
+        <article class="card">
+          <h2>Matches today</h2>
+          <ul class="list-clean" id="matches"></ul>
+        </article>
+        <article class="card">
+          <h2>MVP</h2>
+          <p id="mvp">NovaFox</p>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module">
+    const players = ['NovaFox', 'BlazeKid', 'Falcon', 'Raptor', 'Ares', 'Matrix'];
+    const matches = ['NovaFox vs BlazeKid', 'Raptor vs Ares', 'Falcon vs Matrix'];
+    document.getElementById('players').innerHTML = players.map((p) => `<li>${p}</li>`).join('');
+    document.getElementById('matches').innerHTML = matches.map((m) => `<li>${m}</li>`).join('');
+
+    const layout = document.getElementById('layout');
+    document.getElementById('mobileBtn').addEventListener('click', () => {
+      layout.classList.remove('tv-layout');
+    });
+    document.getElementById('tvBtn').addEventListener('click', () => {
+      layout.classList.add('tv-layout');
+    });
+  </script>
+</body>
+</html>

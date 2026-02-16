@@ -73,3 +73,13 @@ mark { background: #ffe066; color: #101320; border-radius: .2rem; padding: 0 .1r
   .top3, .menu-grid, .kpi, .kpi-5, .kpi-2, .tv-layout, .two-col { grid-template-columns: 1fr; }
   .player-modal { width: min(92vw, 520px); }
 }
+
+.top-card h3 { display: flex; align-items: center; justify-content: center; gap: .35rem; margin: .45rem 0; }
+.menu-btn { text-align: center; background: linear-gradient(160deg, rgba(49,208,255,.18), rgba(124,255,114,.08)); box-shadow: 0 6px 22px rgba(0,0,0,.18); }
+body.rank-F { background: radial-gradient(circle at top, rgba(154,167,189,.2), #090d16 52%); }
+body.rank-E { background: radial-gradient(circle at top, rgba(97,195,255,.2), #090d16 52%); }
+body.rank-D { background: radial-gradient(circle at top, rgba(85,216,150,.2), #090d16 52%); }
+body.rank-C { background: radial-gradient(circle at top, rgba(137,207,78,.22), #090d16 52%); }
+body.rank-B { background: radial-gradient(circle at top, rgba(255,209,102,.24), #090d16 52%); }
+body.rank-A { background: radial-gradient(circle at top, rgba(255,159,110,.24), #090d16 52%); }
+body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #090d16 52%); }

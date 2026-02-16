@@ -23,6 +23,7 @@
       </div>
       <p class="tag" id="seasonTitle"></p>
       <div class="top3" id="top3"></div>
+      <p class="tag" id="errorBox"></p>
     </section>
 
     <section class="card">
@@ -35,7 +36,7 @@
     </section>
   </main>
   <script type="module">
-    import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague } from '../core/dataHub.js';
+    import { getLeagueSnapshot, getSeasonOverview, loadSeasonsConfig, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
     import { getQueryParams, createTop3Markup, statOrDash } from '../core/utils.js';
 
     const query = getQueryParams();
@@ -61,10 +62,13 @@
     async function loadSnapshot() {
       const seasonId = seasonSelect.value;
       const league = normalizeLeague(leagueSelect.value) || 'kids';
-      const snapshot = await getLeagueSnapshot({ seasonId, league });
-      document.getElementById('seasonTitle').textContent = `${snapshot.seasonTitle} · ${league === 'kids' ? 'Молодша' : 'Старша'}`;
+      const [snapshot, overview] = await Promise.all([
+        getLeagueSnapshot({ seasonId, league }),
+        getSeasonOverview({ seasonId })
+      ]);
+      document.getElementById('seasonTitle').textContent = `${snapshot.seasonTitle} · ${league === 'kids' ? 'Молодша' : 'Старша'} · Top10: ${(overview.top10[league] || []).length}`;
       document.getElementById('top3').innerHTML = createTop3Markup(snapshot.top3);
-      renderRows(snapshot.leaderboard);
+      renderRows(snapshot.table);
 
       const url = new URL(window.location.href);
       url.searchParams.set('season', seasonId);
@@ -84,8 +88,9 @@
     seasonSelect.addEventListener('change', () => { loadSnapshot(); });
     leagueSelect.addEventListener('change', () => { loadSnapshot(); });
 
-    init().catch(() => {
+    init().catch((error) => {
       document.getElementById('seasonTitle').textContent = 'Не вдалося завантажити дані';
+      document.getElementById('errorBox').textContent = safeErrorMessage(error);
     });
   </script>
 </body>

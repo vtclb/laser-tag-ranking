@@ -14,7 +14,7 @@
   <main id="content"></main>
 
   <script type="module">
-    import { getPlayerProfile } from '../core/dataHub.js';
+    import { getPlayerProfile, safeErrorMessage } from '../core/dataHub.js';
     import { getQueryParams, statOrDash } from '../core/utils.js';
 
     const { nick = '', league = 'kids' } = getQueryParams();
@@ -40,9 +40,8 @@
         }
 
         const rank = profile.current?.rank || 'F';
-        const wins = profile.allTime.wins || 0;
+        document.body.classList.add(`rank-${rank}`);
         const games = profile.allTime.games || 0;
-        const streak = statOrDash(profile.current?.place ? Math.max(1, 15 - profile.current.place) : null);
 
         content.innerHTML = `
           <section class="card profile-header rank-theme-${rank}">
@@ -58,37 +57,32 @@
           </section>
 
           <section class="kpi kpi-5">
+            <article class="card"><p class="tag">Points</p><h3>${statOrDash(profile.current?.points)}</h3></article>
             <article class="card"><p class="tag">Games</p><h3>${games}</h3></article>
-            <article class="card"><p class="tag">Winrate</p><h3>${statOrDash(profile.allTime.winRate)}%</h3><div class="progress-shell"><div class="progress-bar" style="width:${Math.min(100, profile.allTime.winRate || 0)}%"></div></div></article>
-            <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3><div class="progress-shell"><div class="progress-bar" style="width:${Math.min(100, (profile.allTime.mvp / Math.max(1, profile.allTime.games)) * 100)}%"></div></div></article>
-            <article class="card"><p class="tag">Top3 finishes</p><h3>${(profile.allTime.mvp2 || 0) + (profile.allTime.mvp3 || 0)}</h3></article>
-            <article class="card"><p class="tag">Streak</p><h3>${streak}</h3></article>
+            <article class="card"><p class="tag">Winrate</p><h3>${statOrDash(profile.allTime.winRate)}%</h3></article>
+            <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3></article>
+            <article class="card"><p class="tag">Top2 / Top3</p><h3>${profile.allTime.top2} / ${profile.allTime.top3}</h3></article>
           </section>
 
           <section class="card">
             <h2>All-time</h2>
-            <p class="tag">W/L/D: ${wins}/${profile.allTime.losses}/${profile.allTime.draws}</p>
+            <p class="tag">W/L/D: ${profile.allTime.wins}/${profile.allTime.losses}/${profile.allTime.draws}</p>
           </section>
 
           <section class="card">
             <h2>По сезонах</h2>
             <ul class="list-clean">
-              ${profile.seasons.map((item) => `<li><strong>${item.seasonTitle}</strong> — games: ${item.games}, W/L/D: ${item.wins}/${item.losses}/${item.draws}, MVP/Top2/Top3: ${item.mvp}/${item.mvp2}/${item.mvp3}</li>`).join('')}
+              ${profile.seasons.map((item) => `<li><strong>${item.seasonTitle}</strong> — games: ${item.games}, W/L/D: ${item.wins}/${item.losses}/${item.draws}, MVP/Top2/Top3: ${item.mvp}/${item.top2}/${item.top3}</li>`).join('')}
             </ul>
           </section>
 
           <section class="profile-grid two-col">
-            <article class="card"><h3>Найчастіше в команді з</h3><ul class="list-clean">${renderList(profile.insights.topTeammates, 'gamesTogether')}</ul></article>
-            <article class="card"><h3>Найчастіше проти</h3><ul class="list-clean">${renderList(profile.insights.topOpponents, 'gamesAgainst')}</ul></article>
-          </section>
-
-          <section class="card">
-            <h3>Улюблена серія/режим</h3>
-            <p>${profile.insights.favoriteSeries?.length ? profile.insights.favoriteSeries.map((item) => `${item.series} (${item.gamesInSeries})`).join(', ') : '—'}</p>
+            <article class="card"><h3>Найчастіше в команді з</h3><p class="tag">Winrate з ним: ${statOrDash(profile.insights.teammateWinrate)}%</p><ul class="list-clean">${renderList(profile.insights.topTeammates, 'gamesTogether')}</ul></article>
+            <article class="card"><h3>Найчастіше проти</h3><p class="tag">Winrate проти нього: ${statOrDash(profile.insights.versusWinrate)}%</p><ul class="list-clean">${renderList(profile.insights.topOpponents, 'gamesAgainst')}</ul></article>
           </section>
         `;
-      } catch {
-        content.innerHTML = '<section class="card"><h1>Не вдалося завантажити дані</h1><p>Спробуйте оновити сторінку пізніше.</p></section>';
+      } catch (error) {
+        content.innerHTML = `<section class="card"><h1>Не вдалося завантажити дані</h1><p>${safeErrorMessage(error)}</p></section>`;
       }
     }
 

@@ -1,45 +1,48 @@
 {
   "currentSeasonId": "winter-2025-26",
   "endpoints": {
-    "gasUrl": "https://script.google.com/macros/s/AKfycbwBZaH4jz5J0Fk9QXj8SN_cxpgF83IwmktSzNEC1oitXXngc7aKkAfZSglt1t0UKAGWYw/exec"
-  },
-  "leagueAliases": {
-    "olds": "sundaygames"
+    "gasUrl": "https://script.google.com/macros/s/AKfycbwn6xtYqiQY0xFUI6flRas7Td0gttWATmNGV076jUh8KIw9-YphrKk37wxgsWuwVMAmzg/exec"
   },
   "leagues": {
     "kids": {
-      "label": "Молодша ліга"
+      "label": "Молодша",
+      "aliases": []
     },
     "sundaygames": {
-      "label": "Старша ліга"
+      "label": "Старша",
+      "aliases": ["olds"]
     }
   },
   "seasons": [
     {
+      "id": "summer-2025",
+      "uiLabel": "Summer 2025",
+      "enabled": true,
+      "sources": {
+        "kidsSheet": "kids",
+        "sundaygamesSheet": "sundaygames",
+        "gamesSheet": "archive"
+      }
+    },
+    {
+      "id": "autumn-2025",
+      "uiLabel": "Autumn 2025",
+      "enabled": true,
+      "sources": {
+        "kidsSheet": "kids",
+        "sundaygamesSheet": "sundaygames",
+        "gamesSheet": "ocinb2025"
+      }
+    },
+    {
       "id": "winter-2025-26",
-      "type": "live",
       "uiLabel": "Winter 2025/26",
       "enabled": true,
       "sources": {
         "kidsSheet": "kids",
         "sundaygamesSheet": "sundaygames",
-        "gamesSheet": "games",
-        "avatarsSheet": "avatars"
+        "gamesSheet": "games"
       }
-    },
-    {
-      "id": "summer-2025",
-      "type": "compositeSheetV2",
-      "uiLabel": "Summer 2025",
-      "enabled": true,
-      "sheet": "Архів"
-    },
-    {
-      "id": "autumn-2025",
-      "type": "compositeSheetV2",
-      "uiLabel": "Autumn 2025",
-      "enabled": true,
-      "sheet": "ocinb2025"
     }
   ]
 }

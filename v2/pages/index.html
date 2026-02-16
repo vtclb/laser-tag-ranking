@@ -9,25 +9,25 @@
 <body>
   <header class="topbar">
     <div class="brand">LaserTag v2</div>
-    <a class="nav-link" href="./season.html">Seasons</a>
+    <a class="nav-link" href="./season.html">Сезони</a>
   </header>
   <main>
     <section class="card">
-      <h1 class="section-title">Game Menu</h1>
+      <h1 class="section-title">Current season</h1>
       <p class="tag" id="currentSeason"></p>
-      <h2>Top-3 Kids</h2>
+      <h2>Top-3 Молодша</h2>
       <div class="top3" id="kidsTop3"></div>
-      <h2>Top-3 Adults</h2>
+      <h2>Top-3 Старша</h2>
       <div class="top3" id="adultsTop3"></div>
     </section>
 
     <section class="menu-grid">
-      <a class="menu-btn" href="./league.html?league=kids">Kids League</a>
-      <a class="menu-btn" href="./league.html?league=sundaygames">Adults League</a>
+      <a class="menu-btn" href="./league.html?league=kids">Молодша</a>
+      <a class="menu-btn" href="./league.html?league=sundaygames">Старша</a>
+      <a class="menu-btn" href="./season.html">Сезони</a>
       <a class="menu-btn" href="./gameday.html">Game Day</a>
-      <a class="menu-btn" href="./season.html">Seasons</a>
-      <a class="menu-btn" href="./tournaments.html">Tournaments</a>
-      <a class="menu-btn" href="./rules.html">Rules</a>
+      <a class="menu-btn" href="./rules.html">Правила</a>
+      <a class="menu-btn" href="./tournaments.html">Турніри (stub)</a>
     </section>
   </main>
 
@@ -41,10 +41,10 @@
         const seasonId = seasons.currentSeasonId;
         const overview = await getSeasonOverview({ seasonId });
 
-        document.getElementById('currentSeason').textContent = `Current season: ${overview.seasonTitle}`;
+        document.getElementById('currentSeason').textContent = overview.seasonTitle;
         document.getElementById('kidsTop3').innerHTML = createTop3Markup(overview.top3.kids);
         document.getElementById('adultsTop3').innerHTML = createTop3Markup(overview.top3.sundaygames);
-      } catch (error) {
+      } catch {
         document.getElementById('currentSeason').textContent = 'Не вдалося завантажити дані';
       }
     }

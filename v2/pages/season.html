@@ -8,12 +8,16 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">Seasons</div>
+    <div class="brand">Сезони</div>
     <a class="nav-link" href="./index.html">Menu</a>
   </header>
   <main>
     <section class="card">
       <h1 class="section-title">All seasons</h1>
+      <div class="search-row">
+        <input id="searchInput" class="search-input" type="search" placeholder="Пошук гравця...">
+        <button id="clearSearch" class="chip" type="button">Очистити</button>
+      </div>
       <ul class="list-clean" id="seasonList"></ul>
     </section>
   </main>
@@ -21,25 +25,39 @@
     import { getSeasonOverview, loadSeasonsConfig } from '../core/dataHub.js';
 
     const list = document.getElementById('seasonList');
+    let allItems = [];
+
+    function render() {
+      const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const items = allItems.filter((item) => !query || item.seasonTitle.toLowerCase().includes(query));
+      list.innerHTML = items.map((item) => `
+        <li>
+          <strong>${item.seasonTitle}</strong> ${item.isCurrent ? '· current' : ''}
+          <div style="margin-top:.4rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+            <a class="chip" href="${item.links.kids}">Молодша</a>
+            <a class="chip" href="${item.links.sundaygames}">Старша</a>
+          </div>
+        </li>
+      `).join('') || '<li>Нічого не знайдено</li>';
+    }
 
     async function init() {
       try {
         const cfg = await loadSeasonsConfig();
         const enabled = cfg.seasons.filter((season) => season.enabled !== false);
         const items = await Promise.all(enabled.map((season) => getSeasonOverview({ seasonId: season.id })));
-        list.innerHTML = items.map((item) => `
-          <li>
-            <strong>${item.seasonTitle}</strong> ${item.seasonId === cfg.currentSeasonId ? '· current' : ''}
-            <div style="margin-top:.4rem;display:flex;gap:.5rem;flex-wrap:wrap;">
-              <a class="chip" href="${item.links.kids}">Kids</a>
-              <a class="chip" href="${item.links.sundaygames}">Adults</a>
-            </div>
-          </li>
-        `).join('');
-      } catch (error) {
+        allItems = items.map((item) => ({ ...item, isCurrent: item.seasonId === cfg.currentSeasonId }));
+        render();
+      } catch {
         list.innerHTML = '<li>Не вдалося завантажити дані</li>';
       }
     }
+
+    document.getElementById('searchInput').addEventListener('input', render);
+    document.getElementById('clearSearch').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      render();
+    });
 
     init();
   </script>

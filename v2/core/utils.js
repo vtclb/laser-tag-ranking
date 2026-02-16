@@ -8,14 +8,12 @@ export function getQueryParams() {
 }
 
 export function formatRatio(value) {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return '—';
-  }
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
   return `${Math.round(value * 100)}%`;
 }
 
 export function statOrDash(value) {
-  return value === 0 ? '—' : value ?? '—';
+  return value === null || value === undefined || value === '' || Number.isNaN(value) ? '—' : value;
 }
 
 export function createTop3Markup(items) {
@@ -31,52 +29,20 @@ export function createTop3Markup(items) {
     .join('');
 }
 
-export function jsonp(url, timeoutMs = 12_000) {
-  return new Promise((resolve, reject) => {
-    if (typeof document === 'undefined') {
-      reject(new Error('JSONP unavailable outside browser'));
-      return;
-    }
+export function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
-    const callbackName = `__cb${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error('JSONP timeout'));
-    }, timeoutMs);
-
-    function cleanup() {
-      clearTimeout(timer);
-      if (script.parentNode) script.parentNode.removeChild(script);
-      try {
-        delete window[callbackName];
-      } catch {
-        window[callbackName] = undefined;
-      }
-    }
-
-    window[callbackName] = (payload) => {
-      try {
-        if (typeof payload === 'string') {
-          resolve(JSON.parse(payload));
-        } else {
-          resolve(payload);
-        }
-      } catch (error) {
-        reject(error);
-      } finally {
-        cleanup();
-      }
-    };
-
-    script.onerror = () => {
-      cleanup();
-      reject(new Error('JSONP request failed'));
-    };
-
-    const target = new URL(url, window.location.href);
-    target.searchParams.set('callback', callbackName);
-    script.src = target.toString();
-    document.head.appendChild(script);
-  });
+export function highlightMatch(text = '', query = '') {
+  const safeText = escapeHtml(text);
+  if (!query) return safeText;
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return safeText;
+  const re = new RegExp(`(${normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig');
+  return safeText.replace(re, '<mark>$1</mark>');
 }

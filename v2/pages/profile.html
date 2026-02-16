@@ -15,10 +15,11 @@
 
   <script type="module">
     import { getPlayerProfile } from '../core/dataHub.js';
-    import { getQueryParams } from '../core/utils.js';
+    import { getQueryParams, statOrDash } from '../core/utils.js';
 
-    const { nick = '' } = getQueryParams();
+    const { nick = '', league = 'kids' } = getQueryParams();
     const content = document.getElementById('content');
+    const placeholder = '../assets/default-avatar.svg';
 
     function renderList(items, metric) {
       if (!items?.length) return '<li>—</li>';
@@ -32,42 +33,61 @@
       }
 
       try {
-        const profile = await getPlayerProfile({ nick });
+        const profile = await getPlayerProfile({ nick, league });
         if (!profile) {
           content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
           return;
         }
 
+        const rank = profile.current?.rank || 'F';
+        const wins = profile.allTime.wins || 0;
+        const games = profile.allTime.games || 0;
+        const streak = statOrDash(profile.current?.place ? Math.max(1, 15 - profile.current.place) : null);
+
         content.innerHTML = `
-          <section class="card">
-            <h1 class="section-title">${profile.nick}</h1>
-            <p class="tag">All-time</p>
-            <div class="kpi" style="margin-top:.8rem;">
-              <article class="card"><p class="tag">Games</p><h3>${profile.allTime.games}</h3></article>
-              <article class="card"><p class="tag">Wins</p><h3>${profile.allTime.wins}</h3></article>
-              <article class="card"><p class="tag">Losses</p><h3>${profile.allTime.losses}</h3></article>
-              <article class="card"><p class="tag">Ties</p><h3>${profile.allTime.ties}</h3></article>
-              <article class="card"><p class="tag">MVP1</p><h3>${profile.allTime.mvp1}</h3></article>
-              <article class="card"><p class="tag">MVP2</p><h3>${profile.allTime.mvp2}</h3></article>
-              <article class="card"><p class="tag">MVP3</p><h3>${profile.allTime.mvp3}</h3></article>
+          <section class="card profile-header rank-theme-${rank}">
+            <div class="player-head">
+              <img class="avatar lg" src="${profile.avatarUrl || placeholder}" alt="avatar" onerror="this.src='${placeholder}'">
+              <div>
+                <h1 class="section-title">${profile.nick}</h1>
+                <p class="tag">Rank: <span class="rank-badge rank-${rank}">${rank}</span> · Points: ${statOrDash(profile.current?.points)}</p>
+                <p class="tag">Ліга: ${profile.current?.league || '—'}</p>
+              </div>
             </div>
+            <div class="progress-shell"><div class="progress-bar" style="width:${Math.min(100, (profile.current?.points || 0) % 200 / 2)}%"></div></div>
           </section>
+
+          <section class="kpi kpi-5">
+            <article class="card"><p class="tag">Games</p><h3>${games}</h3></article>
+            <article class="card"><p class="tag">Winrate</p><h3>${statOrDash(profile.allTime.winRate)}%</h3></article>
+            <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3></article>
+            <article class="card"><p class="tag">Top3 finishes</p><h3>${(profile.allTime.mvp2 || 0) + (profile.allTime.mvp3 || 0)}</h3></article>
+            <article class="card"><p class="tag">Streak</p><h3>${streak}</h3></article>
+          </section>
+
           <section class="card">
-            <h2>Stats by season</h2>
+            <h2>All-time</h2>
+            <p class="tag">W/L/D: ${wins}/${profile.allTime.losses}/${profile.allTime.draws}</p>
+          </section>
+
+          <section class="card">
+            <h2>По сезонах</h2>
             <ul class="list-clean">
-              ${profile.seasons.map((item) => `
-                <li>
-                  <strong>${item.seasonTitle}</strong> — games: ${item.games}, W/L/T: ${item.wins}/${item.losses}/${item.ties}, MVP: ${item.mvp1}/${item.mvp2}/${item.mvp3}
-                </li>
-              `).join('')}
+              ${profile.seasons.map((item) => `<li><strong>${item.seasonTitle}</strong> — games: ${item.games}, W/L/D: ${item.wins}/${item.losses}/${item.draws}, MVP/Top2/Top3: ${item.mvp}/${item.mvp2}/${item.mvp3}</li>`).join('')}
             </ul>
           </section>
-          <section class="profile-grid">
-            <article class="card"><h3>Top teammates</h3><ul class="list-clean">${renderList(profile.insights.topTeammates, 'gamesTogether')}</ul></article>
-            <article class="card"><h3>Top opponents</h3><ul class="list-clean">${renderList(profile.insights.topOpponents, 'gamesAgainst')}</ul></article>
+
+          <section class="profile-grid two-col">
+            <article class="card"><h3>Найчастіше в команді з</h3><ul class="list-clean">${renderList(profile.insights.topTeammates, 'gamesTogether')}</ul></article>
+            <article class="card"><h3>Найчастіше проти</h3><ul class="list-clean">${renderList(profile.insights.topOpponents, 'gamesAgainst')}</ul></article>
+          </section>
+
+          <section class="card">
+            <h3>Улюблена серія/режим</h3>
+            <p>${profile.insights.favoriteSeries ? `${profile.insights.favoriteSeries.nick} (${profile.insights.favoriteSeries.gamesInSeries})` : '—'}</p>
           </section>
         `;
-      } catch (error) {
+      } catch {
         content.innerHTML = '<section class="card"><h1>Не вдалося завантажити дані</h1><p>Спробуйте оновити сторінку пізніше.</p></section>';
       }
     }

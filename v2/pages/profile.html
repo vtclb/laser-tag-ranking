@@ -59,8 +59,8 @@
 
           <section class="kpi kpi-5">
             <article class="card"><p class="tag">Games</p><h3>${games}</h3></article>
-            <article class="card"><p class="tag">Winrate</p><h3>${statOrDash(profile.allTime.winRate)}%</h3></article>
-            <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3></article>
+            <article class="card"><p class="tag">Winrate</p><h3>${statOrDash(profile.allTime.winRate)}%</h3><div class="progress-shell"><div class="progress-bar" style="width:${Math.min(100, profile.allTime.winRate || 0)}%"></div></div></article>
+            <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3><div class="progress-shell"><div class="progress-bar" style="width:${Math.min(100, (profile.allTime.mvp / Math.max(1, profile.allTime.games)) * 100)}%"></div></div></article>
             <article class="card"><p class="tag">Top3 finishes</p><h3>${(profile.allTime.mvp2 || 0) + (profile.allTime.mvp3 || 0)}</h3></article>
             <article class="card"><p class="tag">Streak</p><h3>${streak}</h3></article>
           </section>
@@ -84,7 +84,7 @@
 
           <section class="card">
             <h3>Улюблена серія/режим</h3>
-            <p>${profile.insights.favoriteSeries ? `${profile.insights.favoriteSeries.nick} (${profile.insights.favoriteSeries.gamesInSeries})` : '—'}</p>
+            <p>${profile.insights.favoriteSeries?.length ? profile.insights.favoriteSeries.map((item) => `${item.series} (${item.gamesInSeries})`).join(', ') : '—'}</p>
           </section>
         `;
       } catch {

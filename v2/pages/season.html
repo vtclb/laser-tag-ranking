@@ -13,53 +13,80 @@
   </header>
   <main>
     <section class="card">
-      <h1 class="section-title">All seasons</h1>
+      <h1 class="section-title">Season view</h1>
       <div class="search-row">
-        <input id="searchInput" class="search-input" type="search" placeholder="Пошук гравця...">
-        <button id="clearSearch" class="chip" type="button">Очистити</button>
+        <select id="seasonSelect" class="search-input"></select>
+        <select id="leagueSelect" class="search-input">
+          <option value="kids">Молодша</option>
+          <option value="sundaygames">Старша</option>
+        </select>
       </div>
-      <ul class="list-clean" id="seasonList"></ul>
+      <p class="tag" id="seasonTitle"></p>
+      <div class="top3" id="top3"></div>
+    </section>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>Games</th><th>WinRate</th><th>MVP</th><th>Top2</th><th>Top3</th><th>Rank</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
   <script type="module">
-    import { getSeasonOverview, loadSeasonsConfig } from '../core/dataHub.js';
+    import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague } from '../core/dataHub.js';
+    import { getQueryParams, createTop3Markup, statOrDash } from '../core/utils.js';
 
-    const list = document.getElementById('seasonList');
-    let allItems = [];
+    const query = getQueryParams();
+    const seasonSelect = document.getElementById('seasonSelect');
+    const leagueSelect = document.getElementById('leagueSelect');
 
-    function render() {
-      const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-      const items = allItems.filter((item) => !query || item.seasonTitle.toLowerCase().includes(query));
-      list.innerHTML = items.map((item) => `
-        <li>
-          <strong>${item.seasonTitle}</strong> ${item.isCurrent ? '· current' : ''}
-          <div style="margin-top:.4rem;display:flex;gap:.5rem;flex-wrap:wrap;">
-            <a class="chip" href="${item.links.kids}">Молодша</a>
-            <a class="chip" href="${item.links.sundaygames}">Старша</a>
-          </div>
-        </li>
-      `).join('') || '<li>Нічого не знайдено</li>';
+    function renderRows(rows) {
+      document.getElementById('tableBody').innerHTML = rows.map((player) => `
+        <tr>
+          <td>${player.place}</td>
+          <td>${player.nick}</td>
+          <td>${statOrDash(player.points)}</td>
+          <td>${statOrDash(player.games)}</td>
+          <td>${player.winRate === null || player.winRate === 0 ? '—' : `${player.winRate}%`}</td>
+          <td>${statOrDash(player.mvp)}</td>
+          <td>${statOrDash(player.mvp2)}</td>
+          <td>${statOrDash(player.mvp3)}</td>
+          <td><span class="rank-badge rank-${player.rankLetter}">${player.rankLetter}</span></td>
+        </tr>
+      `).join('') || '<tr><td colspan="9">Дані відсутні</td></tr>';
+    }
+
+    async function loadSnapshot() {
+      const seasonId = seasonSelect.value;
+      const league = normalizeLeague(leagueSelect.value) || 'kids';
+      const snapshot = await getLeagueSnapshot({ seasonId, league });
+      document.getElementById('seasonTitle').textContent = `${snapshot.seasonTitle} · ${league === 'kids' ? 'Молодша' : 'Старша'}`;
+      document.getElementById('top3').innerHTML = createTop3Markup(snapshot.top3);
+      renderRows(snapshot.leaderboard);
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('season', seasonId);
+      url.searchParams.set('league', league);
+      history.replaceState({}, '', url);
     }
 
     async function init() {
-      try {
-        const cfg = await loadSeasonsConfig();
-        const enabled = cfg.seasons.filter((season) => season.enabled !== false);
-        const items = await Promise.all(enabled.map((season) => getSeasonOverview({ seasonId: season.id })));
-        allItems = items.map((item) => ({ ...item, isCurrent: item.seasonId === cfg.currentSeasonId }));
-        render();
-      } catch {
-        list.innerHTML = '<li>Не вдалося завантажити дані</li>';
-      }
+      const cfg = await loadSeasonsConfig();
+      const enabled = cfg.seasons.filter((s) => s.enabled !== false);
+      seasonSelect.innerHTML = enabled.map((s) => `<option value="${s.id}">${s.uiLabel}</option>`).join('');
+      seasonSelect.value = query.seasonId && enabled.some((s) => s.id === query.seasonId) ? query.seasonId : cfg.currentSeasonId;
+      leagueSelect.value = normalizeLeague(query.league) || 'kids';
+      await loadSnapshot();
     }
 
-    document.getElementById('searchInput').addEventListener('input', render);
-    document.getElementById('clearSearch').addEventListener('click', () => {
-      document.getElementById('searchInput').value = '';
-      render();
-    });
+    seasonSelect.addEventListener('change', () => { loadSnapshot(); });
+    leagueSelect.addEventListener('change', () => { loadSnapshot(); });
 
-    init();
+    init().catch(() => {
+      document.getElementById('seasonTitle').textContent = 'Не вдалося завантажити дані';
+    });
   </script>
 </body>
 </html>

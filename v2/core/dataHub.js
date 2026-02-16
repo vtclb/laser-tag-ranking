@@ -1,14 +1,26 @@
-import seasonsConfig from './seasons.config.json' assert { type: 'json' };
+let SEASONS_CONFIG = null;
+let GAS_URL = null;
 
-const GAS_URL = (() => {
-  const configuredUrl = seasonsConfig?.endpoints?.gasUrl;
+export async function loadSeasonsConfig() {
+  if (SEASONS_CONFIG) return SEASONS_CONFIG;
+  const res = await fetch('../core/seasons.config.json');
+  if (!res.ok) throw new Error('Failed to load seasons config');
+  SEASONS_CONFIG = await res.json();
+  return SEASONS_CONFIG;
+}
+
+async function getGasUrl() {
+  if (GAS_URL) return GAS_URL;
+  const cfg = await loadSeasonsConfig();
+  const configuredUrl = cfg?.endpoints?.gasUrl;
   if (!configuredUrl) throw new Error('Config load failed');
   try {
-    return new URL(configuredUrl).toString();
+    GAS_URL = new URL(configuredUrl).toString();
+    return GAS_URL;
   } catch {
     throw new Error('Config load failed');
   }
-})();
+}
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_RETRY_COUNT = 1;
 const DEFAULT_CACHE_TTL_MS = 45_000;
@@ -56,13 +68,13 @@ function normalizeLeague(league = 'kids') {
   return 'kids';
 }
 
-function getCurrentSeasonId() {
-  return seasonsConfig.currentSeasonId;
+function getCurrentSeasonId(cfg) {
+  return cfg.currentSeasonId;
 }
 
-function getSeasonById(seasonId) {
-  const id = seasonId || getCurrentSeasonId();
-  return seasonsConfig.seasons.find((season) => season.id === id) || seasonsConfig.seasons[0];
+function getSeasonById(cfg, seasonId) {
+  const id = seasonId || getCurrentSeasonId(cfg);
+  return cfg.seasons.find((season) => season.id === id) || cfg.seasons[0];
 }
 
 function toNumber(value, fallback = 0) {
@@ -151,8 +163,9 @@ async function fetchWithTimeoutRetry(url, options = {}, timeoutMs = DEFAULT_TIME
   throw lastError;
 }
 
-function gasUrl(action, params = {}) {
-  const url = new URL(GAS_URL);
+async function gasUrl(action, params = {}) {
+  const baseUrl = await getGasUrl();
+  const url = new URL(baseUrl);
   url.searchParams.set('action', action);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.set(key, String(value));
@@ -179,7 +192,7 @@ async function getSheetAllRows(sheet) {
   const key = `all:${sheet}`;
   const cached = readCache(key);
   if (cached) return cached;
-  const payload = await fetchWithTimeoutRetry(gasUrl('getSheetAll', { sheet }));
+  const payload = await fetchWithTimeoutRetry(await gasUrl('getSheetAll', { sheet }));
   return writeCache(key, asArrayRows(payload));
 }
 
@@ -187,7 +200,7 @@ async function getSheetRows(sheet) {
   const key = `sheet:${sheet}`;
   const cached = readCache(key);
   if (cached) return cached;
-  const payload = await fetchWithTimeoutRetry(gasUrl('getSheet', { sheet }));
+  const payload = await fetchWithTimeoutRetry(await gasUrl('getSheet', { sheet }));
   return writeCache(key, asArrayRows(payload));
 }
 
@@ -388,13 +401,14 @@ async function loadGamesRows(season) {
 }
 
 export function getSeasons() {
-  return seasonsConfig;
+  return SEASONS_CONFIG;
 }
 
 export { normalizeLeague };
 
 export async function getLeagueSnapshot({ league, leagueId, seasonId } = {}) {
-  const season = getSeasonById(seasonId);
+  const cfg = await loadSeasonsConfig();
+  const season = getSeasonById(cfg, seasonId);
   const normalizedLeague = normalizeLeague(league || leagueId);
   const key = `league:${season.id}:${normalizedLeague}`;
   const cached = readCache(key);
@@ -426,7 +440,8 @@ export async function getLeagueSnapshot({ league, leagueId, seasonId } = {}) {
 }
 
 export async function getSeasonOverview({ seasonId } = {}) {
-  const season = getSeasonById(seasonId);
+  const cfg = await loadSeasonsConfig();
+  const season = getSeasonById(cfg, seasonId);
   const [kids, adults] = await Promise.all([
     getLeagueSnapshot({ seasonId: season.id, league: 'kids' }),
     getLeagueSnapshot({ seasonId: season.id, league: 'sundaygames' })
@@ -450,8 +465,9 @@ export async function getSeasonOverview({ seasonId } = {}) {
 }
 
 async function collectPlayerBySeason(nick) {
+  const cfg = await loadSeasonsConfig();
   const normalizedNick = String(nick || '').trim().toLowerCase();
-  const seasons = seasonsConfig.seasons.filter((season) => season.enabled !== false && season.type !== 'legacy');
+  const seasons = cfg.seasons.filter((season) => season.enabled !== false && season.type !== 'legacy');
   const blocks = [];
 
   for (const season of seasons) {
@@ -484,8 +500,9 @@ async function collectPlayerBySeason(nick) {
 
 export async function getPlayerSummary({ nick } = {}) {
   if (!nick) return null;
+  const cfg = await loadSeasonsConfig();
   const bySeason = await collectPlayerBySeason(nick);
-  const current = bySeason.find((item) => item.seasonId === getCurrentSeasonId()) || null;
+  const current = bySeason.find((item) => item.seasonId === getCurrentSeasonId(cfg)) || null;
   const allTime = bySeason.reduce((acc, item) => {
     acc.games += item.games;
     acc.points += item.points;
@@ -497,7 +514,8 @@ export async function getPlayerSummary({ nick } = {}) {
 }
 
 async function collectGamesAcrossEnabledSeasons() {
-  const seasons = seasonsConfig.seasons.filter((season) => season.enabled !== false && season.type !== 'legacy');
+  const cfg = await loadSeasonsConfig();
+  const seasons = cfg.seasons.filter((season) => season.enabled !== false && season.type !== 'legacy');
   const bySeasonGames = [];
   for (const season of seasons) {
     const gameRows = await loadGamesRows(season);

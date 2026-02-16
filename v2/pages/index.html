@@ -32,13 +32,12 @@
   </main>
 
   <script type="module">
-    import { getSeasonOverview, getSeasons } from '../core/dataHub.js';
+    import { getSeasonOverview, loadSeasonsConfig } from '../core/dataHub.js';
     import { createTop3Markup } from '../core/utils.js';
-
-    const seasons = getSeasons();
 
     async function init() {
       try {
+        const seasons = await loadSeasonsConfig();
         const seasonId = seasons.currentSeasonId;
         const overview = await getSeasonOverview({ seasonId });
 

@@ -35,16 +35,16 @@
   </main>
 
   <script type="module">
-    import { getLeagueSnapshot, getSeasons, normalizeLeague } from '../core/dataHub.js';
+    import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague } from '../core/dataHub.js';
     import { getQueryParams, createTop3Markup, statOrDash } from '../core/utils.js';
 
     const { league = 'kids', season, seasonId } = getQueryParams();
     let expanded = false;
     let data = null;
-    const cfg = getSeasons();
 
     async function init() {
       try {
+        const cfg = await loadSeasonsConfig();
         const targetSeason = seasonId || season || cfg.currentSeasonId;
         const targetLeague = normalizeLeague(league);
         data = await getLeagueSnapshot({ seasonId: targetSeason, league: targetLeague });

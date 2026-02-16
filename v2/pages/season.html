@@ -18,13 +18,13 @@
     </section>
   </main>
   <script type="module">
-    import { getSeasonOverview, getSeasons } from '../core/dataHub.js';
+    import { getSeasonOverview, loadSeasonsConfig } from '../core/dataHub.js';
 
-    const cfg = getSeasons();
     const list = document.getElementById('seasonList');
 
     async function init() {
       try {
+        const cfg = await loadSeasonsConfig();
         const enabled = cfg.seasons.filter((season) => season.enabled !== false);
         const items = await Promise.all(enabled.map((season) => getSeasonOverview({ seasonId: season.id })));
         list.innerHTML = items.map((item) => `

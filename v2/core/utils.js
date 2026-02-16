@@ -30,3 +30,53 @@ export function createTop3Markup(items) {
     `)
     .join('');
 }
+
+export function jsonp(url, timeoutMs = 12_000) {
+  return new Promise((resolve, reject) => {
+    if (typeof document === 'undefined') {
+      reject(new Error('JSONP unavailable outside browser'));
+      return;
+    }
+
+    const callbackName = `__cb${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('JSONP timeout'));
+    }, timeoutMs);
+
+    function cleanup() {
+      clearTimeout(timer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      try {
+        delete window[callbackName];
+      } catch {
+        window[callbackName] = undefined;
+      }
+    }
+
+    window[callbackName] = (payload) => {
+      try {
+        if (typeof payload === 'string') {
+          resolve(JSON.parse(payload));
+        } else {
+          resolve(payload);
+        }
+      } catch (error) {
+        reject(error);
+      } finally {
+        cleanup();
+      }
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('JSONP request failed'));
+    };
+
+    const target = new URL(url, window.location.href);
+    target.searchParams.set('callback', callbackName);
+    script.src = target.toString();
+    document.head.appendChild(script);
+  });
+}

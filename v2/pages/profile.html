@@ -44,14 +44,22 @@
             <p class="tag">All-time</p>
             <div class="kpi" style="margin-top:.8rem;">
               <article class="card"><p class="tag">Games</p><h3>${profile.allTime.games}</h3></article>
-              <article class="card"><p class="tag">Points</p><h3>${profile.allTime.points}</h3></article>
-              <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3></article>
+              <article class="card"><p class="tag">Wins</p><h3>${profile.allTime.wins}</h3></article>
+              <article class="card"><p class="tag">Losses</p><h3>${profile.allTime.losses}</h3></article>
+              <article class="card"><p class="tag">Ties</p><h3>${profile.allTime.ties}</h3></article>
+              <article class="card"><p class="tag">MVP1</p><h3>${profile.allTime.mvp1}</h3></article>
+              <article class="card"><p class="tag">MVP2</p><h3>${profile.allTime.mvp2}</h3></article>
+              <article class="card"><p class="tag">MVP3</p><h3>${profile.allTime.mvp3}</h3></article>
             </div>
           </section>
           <section class="card">
             <h2>Stats by season</h2>
             <ul class="list-clean">
-              ${profile.seasons.map((item) => `<li>${item.seasonTitle}: ${item.points} pts / ${item.games} games / leagues: ${item.leagues.join(', ')}</li>`).join('')}
+              ${profile.seasons.map((item) => `
+                <li>
+                  <strong>${item.seasonTitle}</strong> — games: ${item.games}, W/L/T: ${item.wins}/${item.losses}/${item.ties}, MVP: ${item.mvp1}/${item.mvp2}/${item.mvp3}
+                </li>
+              `).join('')}
             </ul>
           </section>
           <section class="profile-grid">

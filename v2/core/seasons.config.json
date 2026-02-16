@@ -1,5 +1,55 @@
 {
-  "summer-2025": { "title": "Summer 2025" },
-  "autumn-2025": { "title": "Autumn 2025" },
-  "winter-2025-26": { "title": "Winter 2025–26", "current": true }
+  "currentSeasonId": "winter-2026",
+  "endpoints": {
+    "gasUrl": "https://script.google.com/macros/s/AKfycbwWws5KHALVToh4J3sQtRsQ5eaOftJr_leyell2d8NavGBlFdIgxufN8u6fQAxec73lyw/exec"
+  },
+  "leagues": {
+    "kids": {
+      "title": "Kids",
+      "sheet": "kids"
+    },
+    "olds": {
+      "title": "Olds",
+      "sheet": "sundaygames"
+    }
+  },
+  "seasons": [
+    {
+      "id": "summer-2025",
+      "title": "Summer 2025",
+      "theme": "summer",
+      "start": "2025-06-01",
+      "end": "2025-08-31",
+      "sourceSheets": {
+        "matches": "archive"
+      },
+      "enabledLeagues": ["kids", "olds"]
+    },
+    {
+      "id": "autumn-2025",
+      "title": "Autumn 2025",
+      "theme": "autumn",
+      "start": "2025-09-01",
+      "end": "2025-11-30",
+      "sourceSheets": {
+        "matches": "autumn2025"
+      },
+      "enabledLeagues": ["kids", "olds"]
+    },
+    {
+      "id": "winter-2026",
+      "title": "Winter 2026",
+      "theme": "winter",
+      "start": "2025-12-01",
+      "end": "2026-02-29",
+      "sourceSheets": {
+        "matches": "games",
+        "rankings": {
+          "kids": "kids",
+          "olds": "sundaygames"
+        }
+      },
+      "enabledLeagues": ["kids", "olds"]
+    }
+  ]
 }

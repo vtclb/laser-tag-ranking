@@ -32,17 +32,37 @@
         </article>
         <article class="card">
           <h2>MVP</h2>
-          <p id="mvp">NovaFox</p>
+          <p id="mvp">—</p>
         </article>
       </aside>
     </section>
   </main>
 
   <script type="module">
-    const players = ['NovaFox', 'BlazeKid', 'Falcon', 'Raptor', 'Ares', 'Matrix'];
-    const matches = ['NovaFox vs BlazeKid', 'Raptor vs Ares', 'Falcon vs Matrix'];
-    document.getElementById('players').innerHTML = players.map((p) => `<li>${p}</li>`).join('');
-    document.getElementById('matches').innerHTML = matches.map((m) => `<li>${m}</li>`).join('');
+    import { getGameDay } from '../core/dataHub.js';
+    import { getQueryParams } from '../core/utils.js';
+
+    const { league = 'kids' } = getQueryParams();
+
+    async function init() {
+      try {
+        const date = new Date().toISOString().slice(0, 10);
+        const data = await getGameDay({ date, leagueId: league });
+        document.getElementById('players').innerHTML = data.activePlayers
+          .map((p) => `<li>${p.nick} · ${p.matchesToday} matches</li>`)
+          .join('');
+        document.getElementById('matches').innerHTML = data.matches
+          .map((m) => `<li>${(m.teams.sideA || []).join(', ')} vs ${(m.teams.sideB || []).join(', ')}</li>`)
+          .join('');
+
+        const bestMvp = data.activePlayers.slice().sort((a, b) => b.mvpToday - a.mvpToday)[0];
+        document.getElementById('mvp').textContent = bestMvp ? `${bestMvp.nick} (${bestMvp.mvpToday})` : '—';
+      } catch (error) {
+        document.getElementById('players').innerHTML = '<li>Не вдалося завантажити дані</li>';
+      }
+    }
+
+    init();
 
     const layout = document.getElementById('layout');
     document.getElementById('mobileBtn').addEventListener('click', () => {

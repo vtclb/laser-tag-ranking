@@ -15,10 +15,11 @@
     <section class="card">
       <h1 class="section-title">Current season</h1>
       <p class="tag" id="currentSeason"></p>
-      <h2>Top-3 Молодша</h2>
-      <div class="top3" id="kidsTop3"></div>
-      <h2>Top-3 Старша</h2>
-      <div class="top3" id="adultsTop3"></div>
+      <div class="kpi kpi-2">
+        <article class="card mini"><p class="tag">Top-3 Молодша</p><div class="top3" id="kidsTop3"></div></article>
+        <article class="card mini"><p class="tag">Top-3 Старша</p><div class="top3" id="adultsTop3"></div></article>
+      </div>
+      <div class="progress-shell"><div id="homeProgress" class="progress-bar" style="width:0%"></div></div>
     </section>
 
     <section class="menu-grid">
@@ -32,18 +33,18 @@
   </main>
 
   <script type="module">
-    import { getSeasonOverview, loadSeasonsConfig } from '../core/dataHub.js';
+    import { getHomeSnapshot } from '../core/dataHub.js';
     import { createTop3Markup } from '../core/utils.js';
 
     async function init() {
       try {
-        const seasons = await loadSeasonsConfig();
-        const seasonId = seasons.currentSeasonId;
-        const overview = await getSeasonOverview({ seasonId });
-
+        const overview = await getHomeSnapshot();
         document.getElementById('currentSeason').textContent = overview.seasonTitle;
         document.getElementById('kidsTop3').innerHTML = createTop3Markup(overview.top3.kids);
         document.getElementById('adultsTop3').innerHTML = createTop3Markup(overview.top3.sundaygames);
+
+        const filled = Math.min(100, ((overview.top3.kids.length + overview.top3.sundaygames.length) / 6) * 100);
+        document.getElementById('homeProgress').style.width = `${filled}%`;
       } catch {
         document.getElementById('currentSeason').textContent = 'Не вдалося завантажити дані';
       }

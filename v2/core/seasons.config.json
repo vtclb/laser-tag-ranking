@@ -21,7 +21,8 @@
       "sources": {
         "kidsSheet": "kids",
         "sundaygamesSheet": "sundaygames",
-        "gamesSheet": "archive"
+        "gamesSheet": "Архів",
+        "logsSheet": "Архів"
       }
     },
     {
@@ -31,7 +32,8 @@
       "sources": {
         "kidsSheet": "kids",
         "sundaygamesSheet": "sundaygames",
-        "gamesSheet": "ocinb2025"
+        "gamesSheet": "ocinb2025",
+        "logsSheet": "ocinb2025"
       }
     },
     {
@@ -41,7 +43,8 @@
       "sources": {
         "kidsSheet": "kids",
         "sundaygamesSheet": "sundaygames",
-        "gamesSheet": "games"
+        "gamesSheet": "games",
+        "logsSheet": "logs"
       }
     }
   ]

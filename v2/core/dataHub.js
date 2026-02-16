@@ -1,6 +1,14 @@
 import seasonsConfig from './seasons.config.json' assert { type: 'json' };
 
-const GAS_URL = seasonsConfig?.endpoints?.gasUrl || '';
+const GAS_URL = (() => {
+  const configuredUrl = seasonsConfig?.endpoints?.gasUrl;
+  if (!configuredUrl) throw new Error('Config load failed');
+  try {
+    return new URL(configuredUrl).toString();
+  } catch {
+    throw new Error('Config load failed');
+  }
+})();
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_RETRY_COUNT = 1;
 const DEFAULT_CACHE_TTL_MS = 45_000;

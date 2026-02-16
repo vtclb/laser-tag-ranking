@@ -25,13 +25,14 @@
 
     async function init() {
       try {
-        const items = await Promise.all(cfg.seasons.map((season) => getSeasonOverview({ seasonId: season.id })));
+        const enabled = cfg.seasons.filter((season) => season.enabled !== false);
+        const items = await Promise.all(enabled.map((season) => getSeasonOverview({ seasonId: season.id })));
         list.innerHTML = items.map((item) => `
           <li>
             <strong>${item.seasonTitle}</strong> ${item.seasonId === cfg.currentSeasonId ? '· current' : ''}
             <div style="margin-top:.4rem;display:flex;gap:.5rem;flex-wrap:wrap;">
               <a class="chip" href="${item.links.kids}">Kids</a>
-              <a class="chip" href="${item.links.olds}">Adults</a>
+              <a class="chip" href="${item.links.sundaygames}">Adults</a>
             </div>
           </li>
         `).join('');

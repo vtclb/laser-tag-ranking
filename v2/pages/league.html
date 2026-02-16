@@ -15,17 +15,18 @@
     <section class="card">
       <h1 class="section-title" id="leagueTitle"></h1>
       <div class="top3" id="top3"></div>
+      <p class="tag" id="errorBox"></p>
     </section>
     <section class="kpi">
       <article class="card"><p class="tag">Games</p><h3 id="games"></h3></article>
-      <article class="card"><p class="tag">Wins A</p><h3 id="wins"></h3></article>
-      <article class="card"><p class="tag">Draws</p><h3 id="draws"></h3></article>
+      <article class="card"><p class="tag">Wins</p><h3 id="wins"></h3></article>
+      <article class="card"><p class="tag">Ties</p><h3 id="draws"></h3></article>
     </section>
     <section class="card">
       <h2>Top-10</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>G</th><th>W</th><th>MVP</th><th>Rank</th></tr></thead>
+          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>G</th><th>Win%</th><th>MVP</th><th>Rank</th></tr></thead>
           <tbody id="tableBody"></tbody>
         </table>
       </div>
@@ -34,38 +35,42 @@
   </main>
 
   <script type="module">
-    import { getLeagueSnapshot } from '../core/dataHub.js';
+    import { getLeagueSnapshot, getSeasons, normalizeLeague } from '../core/dataHub.js';
     import { getQueryParams, createTop3Markup, statOrDash } from '../core/utils.js';
 
-    const { league = 'kids', seasonId } = getQueryParams();
+    const { league = 'kids', season, seasonId } = getQueryParams();
     let expanded = false;
     let data = null;
+    const cfg = getSeasons();
 
     async function init() {
       try {
-        data = await getLeagueSnapshot({ seasonId, leagueId: league });
-        document.getElementById('leagueTitle').textContent = `${data.seasonTitle} · ${data.leagueId}`;
+        const targetSeason = seasonId || season || cfg.currentSeasonId;
+        const targetLeague = normalizeLeague(league);
+        data = await getLeagueSnapshot({ seasonId: targetSeason, league: targetLeague });
+        document.getElementById('leagueTitle').textContent = `${data.seasonTitle} · ${targetLeague}`;
         document.getElementById('top3').innerHTML = createTop3Markup(data.top3);
-        document.getElementById('games').textContent = data.seasonStats.gamesCount;
-        document.getElementById('wins').textContent = data.seasonStats.winsA + data.seasonStats.winsB;
-        document.getElementById('draws').textContent = data.seasonStats.draws;
+        document.getElementById('games').textContent = statOrDash(data.stats.gamesCount);
+        document.getElementById('wins').textContent = statOrDash(data.stats.winsBreakdown.wins);
+        document.getElementById('draws').textContent = statOrDash(data.stats.winsBreakdown.ties);
         renderTable();
       } catch (error) {
         document.getElementById('leagueTitle').textContent = 'Не вдалося завантажити дані';
+        document.getElementById('errorBox').textContent = 'Спробуйте оновити сторінку пізніше.';
       }
     }
 
     function renderTable() {
       if (!data) return;
-      const rows = expanded ? data.players.slice(0, 10) : data.players.slice(0, 5);
-      document.getElementById('tableBody').innerHTML = rows.map((player, idx) => `
+      const rows = expanded ? data.leaderboard.slice(0, 10) : data.leaderboard.slice(0, 5);
+      document.getElementById('tableBody').innerHTML = rows.map((player) => `
         <tr class="${player.inactive ? 'inactive' : ''}">
-          <td>${idx + 1}</td>
+          <td>${player.place}</td>
           <td><a class="nav-link" href="./profile.html?nick=${encodeURIComponent(player.nick)}">${player.nick}</a></td>
           <td>${statOrDash(player.points)}</td>
           <td>${statOrDash(player.games)}</td>
-          <td>${statOrDash(player.wins)}</td>
-          <td>${statOrDash((player.mvp1 || 0) + (player.mvp2 || 0) + (player.mvp3 || 0))}</td>
+          <td>${statOrDash(player.winPct)}</td>
+          <td>${statOrDash(player.mvp)}</td>
           <td>${player.rankLetter}</td>
         </tr>
       `).join('');

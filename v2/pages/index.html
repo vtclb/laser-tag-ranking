@@ -23,7 +23,7 @@
 
     <section class="menu-grid">
       <a class="menu-btn" href="./league.html?league=kids">Kids League</a>
-      <a class="menu-btn" href="./league.html?league=olds">Adults League</a>
+      <a class="menu-btn" href="./league.html?league=sundaygames">Adults League</a>
       <a class="menu-btn" href="./gameday.html">Game Day</a>
       <a class="menu-btn" href="./season.html">Seasons</a>
       <a class="menu-btn" href="./tournaments.html">Tournaments</a>
@@ -32,7 +32,7 @@
   </main>
 
   <script type="module">
-    import { getLeagueSnapshot, getSeasons } from '../core/dataHub.js';
+    import { getSeasonOverview, getSeasons } from '../core/dataHub.js';
     import { createTop3Markup } from '../core/utils.js';
 
     const seasons = getSeasons();
@@ -40,14 +40,11 @@
     async function init() {
       try {
         const seasonId = seasons.currentSeasonId;
-        const [kids, adults] = await Promise.all([
-          getLeagueSnapshot({ seasonId, leagueId: 'kids' }),
-          getLeagueSnapshot({ seasonId, leagueId: 'olds' })
-        ]);
+        const overview = await getSeasonOverview({ seasonId });
 
-        document.getElementById('currentSeason').textContent = `Current season: ${kids.seasonTitle}`;
-        document.getElementById('kidsTop3').innerHTML = createTop3Markup(kids.top3);
-        document.getElementById('adultsTop3').innerHTML = createTop3Markup(adults.top3);
+        document.getElementById('currentSeason').textContent = `Current season: ${overview.seasonTitle}`;
+        document.getElementById('kidsTop3').innerHTML = createTop3Markup(overview.top3.kids);
+        document.getElementById('adultsTop3').innerHTML = createTop3Markup(overview.top3.sundaygames);
       } catch (error) {
         document.getElementById('currentSeason').textContent = 'Не вдалося завантажити дані';
       }

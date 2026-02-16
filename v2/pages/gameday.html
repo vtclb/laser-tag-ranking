@@ -47,7 +47,7 @@
     async function init() {
       try {
         const date = new Date().toISOString().slice(0, 10);
-        const data = await getGameDay({ date, leagueId: league });
+        const data = await getGameDay({ date, league });
         document.getElementById('players').innerHTML = data.activePlayers
           .map((p) => `<li>${p.nick} · ${p.matchesToday} matches</li>`)
           .join('');

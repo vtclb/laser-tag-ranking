@@ -70,7 +70,7 @@ export function createTop3Markup(items) {
     .map((player, index) => `
       <article class="top-card rank-${index + 1}">
         <span class="rank-badge">#${index + 1}</span>
-        <h3>${player.nick}</h3>
+        <h3><img class="avatar" src="${player.avatarUrl || '../assets/default-avatar.svg'}" alt="">${player.nick}</h3>
         <p>${player.points ?? '—'} pts</p>
       </article>
     `)

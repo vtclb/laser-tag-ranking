@@ -57,7 +57,7 @@
   </dialog>
 
   <script type="module">
-    import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague } from '../core/dataHub.js';
+    import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
     import { getQueryParams, createTop3Markup, statOrDash, highlightMatch } from '../core/utils.js';
 
     const { league = 'kids', seasonId } = getQueryParams();
@@ -74,14 +74,14 @@
         data = await getLeagueSnapshot({ seasonId: targetSeason, league: targetLeague });
         document.getElementById('leagueTitle').textContent = `${data.seasonTitle} · ${targetLeague}`;
         document.getElementById('top3').innerHTML = createTop3Markup(data.top3);
-        document.getElementById('games').textContent = statOrDash(data.stats.gamesCount);
-        document.getElementById('wins').textContent = statOrDash(data.stats.winsBreakdown.wins);
-        document.getElementById('losses').textContent = statOrDash(data.stats.winsBreakdown.losses);
-        document.getElementById('draws').textContent = statOrDash(data.stats.winsBreakdown.ties);
+        document.getElementById('games').textContent = statOrDash(data.seasonStats.games);
+        document.getElementById('wins').textContent = statOrDash(data.seasonStats.wins);
+        document.getElementById('losses').textContent = statOrDash(data.seasonStats.losses);
+        document.getElementById('draws').textContent = statOrDash(data.seasonStats.draws);
         renderTable();
       } catch (error) {
         document.getElementById('leagueTitle').textContent = 'Не вдалося завантажити дані';
-        document.getElementById('errorBox').textContent = 'Спробуйте оновити сторінку пізніше.';
+        document.getElementById('errorBox').textContent = safeErrorMessage(error);
       }
     }
 
@@ -103,7 +103,7 @@
     function renderTable() {
       if (!data) return;
       const q = searchValue.trim().toLowerCase();
-      const rows = data.leaderboard.filter((player) => !q || player.nick.toLowerCase().includes(q));
+      const rows = data.table.filter((player) => !q || player.nick.toLowerCase().includes(q));
       document.getElementById('tableBody').innerHTML = rows.map((player) => `
         <tr class="${player.inactive ? 'inactive' : ''}">
           <td>${player.place}</td>
@@ -114,7 +114,7 @@
           </td>
           <td>${statOrDash(player.points)}</td>
           <td>${statOrDash(player.games)}</td>
-          <td>${player.winRate === null ? '—' : `${player.winRate}%`}</td>
+          <td>${player.winRate === null || player.winRate === 0 ? '—' : `${player.winRate}%`}</td>
           <td>${statOrDash(player.mvp)}</td>
           <td>${statOrDash(player.mvp2)}</td>
           <td>${statOrDash(player.mvp3)}</td>
@@ -127,7 +127,7 @@
       const trigger = event.target.closest('.player-trigger');
       if (!trigger || !data) return;
       const nick = decodeURIComponent(trigger.dataset.nick || '');
-      const player = data.leaderboard.find((item) => item.nick === nick);
+      const player = data.table.find((item) => item.nick === nick);
       if (player) openPlayerModal(player);
     });
 

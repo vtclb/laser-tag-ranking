@@ -19,7 +19,12 @@
         <article class="card mini"><p class="tag">Top-3 Молодша</p><div class="top3" id="kidsTop3"></div></article>
         <article class="card mini"><p class="tag">Top-3 Старша</p><div class="top3" id="adultsTop3"></div></article>
       </div>
+      <div class="kpi kpi-2">
+        <article class="card mini"><p class="tag">Kids: Games / W-D-L</p><h3 id="kidsStats">—</h3></article>
+        <article class="card mini"><p class="tag">Sundaygames: Games / W-D-L</p><h3 id="adultsStats">—</h3></article>
+      </div>
       <div class="progress-shell"><div id="homeProgress" class="progress-bar" style="width:0%"></div></div>
+      <p class="tag" id="errorBox"></p>
     </section>
 
     <section class="menu-grid">
@@ -33,8 +38,10 @@
   </main>
 
   <script type="module">
-    import { getHomeSnapshot } from '../core/dataHub.js';
+    import { getHomeSnapshot, safeErrorMessage } from '../core/dataHub.js';
     import { createTop3Markup } from '../core/utils.js';
+
+    const stringifyStats = (stats = {}) => `${stats.games || '—'} / ${stats.wins || '—'}-${stats.draws || '—'}-${stats.losses || '—'}`;
 
     async function init() {
       try {
@@ -42,11 +49,14 @@
         document.getElementById('currentSeason').textContent = overview.seasonTitle;
         document.getElementById('kidsTop3').innerHTML = createTop3Markup(overview.top3.kids);
         document.getElementById('adultsTop3').innerHTML = createTop3Markup(overview.top3.sundaygames);
+        document.getElementById('kidsStats').textContent = stringifyStats(overview.seasonStats.kids);
+        document.getElementById('adultsStats').textContent = stringifyStats(overview.seasonStats.sundaygames);
 
         const filled = Math.min(100, ((overview.top3.kids.length + overview.top3.sundaygames.length) / 6) * 100);
         document.getElementById('homeProgress').style.width = `${filled}%`;
-      } catch {
+      } catch (error) {
         document.getElementById('currentSeason').textContent = 'Не вдалося завантажити дані';
+        document.getElementById('errorBox').textContent = safeErrorMessage(error);
       }
     }
 

@@ -1,28 +1,8 @@
+import { jsonp } from './utils.js';
+
 let SEASONS_CONFIG = null;
 let GAS_URL = null;
 
-export async function loadSeasonsConfig() {
-  if (SEASONS_CONFIG) return SEASONS_CONFIG;
-  const res = await fetch('../core/seasons.config.json');
-  if (!res.ok) throw new Error('Failed to load seasons config');
-  SEASONS_CONFIG = await res.json();
-  return SEASONS_CONFIG;
-}
-
-async function getGasUrl() {
-  if (GAS_URL) return GAS_URL;
-  const cfg = await loadSeasonsConfig();
-  const configuredUrl = cfg?.endpoints?.gasUrl;
-  if (!configuredUrl) throw new Error('Config load failed');
-  try {
-    GAS_URL = new URL(configuredUrl).toString();
-    return GAS_URL;
-  } catch {
-    throw new Error('Config load failed');
-  }
-}
-const DEFAULT_TIMEOUT_MS = 10_000;
-const DEFAULT_RETRY_COUNT = 1;
 const DEFAULT_CACHE_TTL_MS = 45_000;
 const cache = new Map();
 
@@ -30,7 +10,6 @@ const HEADER_ALIASES = {
   nick: ['nickname', 'nick', 'player', 'name'],
   points: ['points', 'pts', 'score'],
   games: ['games', 'matches', 'played'],
-  winPct: ['win%', 'winrate', 'win pct', 'winpercent', 'win percentage'],
   wins: ['wins', 'victories'],
   ties: ['ties', 'draws'],
   mvp: ['mvp', 'mvp1'],
@@ -44,47 +23,65 @@ const HEADER_ALIASES = {
   series: ['series', 'score', 'result'],
   team1: ['team1'],
   team2: ['team2'],
-  team3: ['team3'],
-  team4: ['team4'],
-  delta: ['delta', 'pointsdelta'],
-  avatarUrl: ['avatarurl', 'avatar', 'url']
+  penalties: ['penalties']
 };
 
-const isMockMode = (() => {
-  try {
-    return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mock') === '1';
-  } catch {
-    return false;
+export async function loadSeasonsConfig() {
+  if (SEASONS_CONFIG) return SEASONS_CONFIG;
+  const attempts = [
+    '/laser-tag-ranking/v2/core/seasons.config.json',
+    '../core/seasons.config.json'
+  ];
+
+  let response = null;
+  for (const url of attempts) {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (res.ok) {
+      response = res;
+      break;
+    }
   }
-})();
+
+  if (!response) throw new Error('Failed to load seasons config');
+  SEASONS_CONFIG = await response.json();
+  console.log('[v2] config loaded', SEASONS_CONFIG);
+  return SEASONS_CONFIG;
+}
+
+function readCache(key, ttlMs = DEFAULT_CACHE_TTL_MS) {
+  const cached = cache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.ts > ttlMs) {
+    cache.delete(key);
+    return null;
+  }
+  return cached.data;
+}
+
+function writeCache(key, data) {
+  cache.set(key, { ts: Date.now(), data });
+  return data;
+}
 
 function normalizeHeader(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-function normalizeLeague(league = 'kids') {
-  const lg = String(league || '').trim().toLowerCase();
-  if (['olds', 'old', 'adult', 'adults', 'sunday', 'sundaygames'].includes(lg)) return 'sundaygames';
-  return 'kids';
-}
-
-function getCurrentSeasonId(cfg) {
-  return cfg.currentSeasonId;
-}
-
-function getSeasonById(cfg, seasonId) {
-  const id = seasonId || getCurrentSeasonId(cfg);
-  return cfg.seasons.find((season) => season.id === id) || cfg.seasons[0];
+function normalizeLeagueValue(league = '') {
+  const raw = normalizeHeader(league);
+  if (raw === 'olds') return 'sundaygames';
+  if (raw === 'kids' || raw === 'sundaygames') return raw;
+  return '';
 }
 
 function toNumber(value, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const parsed = Number(String(value || '').replace(',', '.').trim());
+  const parsed = Number(String(value ?? '').replace(',', '.').trim());
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function toBool(value) {
-  const norm = String(value || '').trim().toLowerCase();
+  const norm = normalizeHeader(value);
   return ['1', 'true', 'yes', 'inactive'].includes(norm);
 }
 
@@ -121,126 +118,59 @@ function rankLetterFromPoints(points) {
   return 'F';
 }
 
+function isValidTimestamp(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return true;
+  const raw = String(value ?? '').trim();
+  if (!raw) return false;
+  const d = new Date(raw);
+  return !Number.isNaN(d.getTime());
+}
+
 function ymd(value) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
   return d.toISOString().slice(0, 10);
 }
 
-function readCache(key, ttlMs = DEFAULT_CACHE_TTL_MS) {
-  const cached = cache.get(key);
-  if (!cached) return null;
-  if (Date.now() - cached.ts > ttlMs) {
-    cache.delete(key);
-    return null;
-  }
-  return cached.data;
+function getCurrentSeasonId(cfg) {
+  return cfg.currentSeasonId;
 }
 
-function writeCache(key, data) {
-  cache.set(key, { ts: Date.now(), data });
-  return data;
+function getSeasonById(cfg, seasonId) {
+  const id = seasonId || getCurrentSeasonId(cfg);
+  return cfg.seasons.find((season) => season.id === id) || cfg.seasons[0];
 }
 
-async function fetchWithTimeoutRetry(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS, retries = DEFAULT_RETRY_COUNT) {
-  let lastError;
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
-      clearTimeout(timer);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) return response.json();
-      const text = await response.text();
-      return JSON.parse(text);
-    } catch (error) {
-      clearTimeout(timer);
-      lastError = error;
-    }
-  }
-  throw lastError;
+async function getGasUrl() {
+  if (GAS_URL) return GAS_URL;
+  const cfg = await loadSeasonsConfig();
+  const configuredUrl = cfg?.endpoints?.gasUrl;
+  GAS_URL = new URL(configuredUrl).toString();
+  return GAS_URL;
 }
 
-async function gasUrl(action, params = {}) {
-  const baseUrl = await getGasUrl();
-  const url = new URL(baseUrl);
-  url.searchParams.set('action', action);
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.set(key, String(value));
-  });
-  return url.toString();
-}
-
-function asArrayRows(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.rows)) return payload.rows;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.values)) return payload.values;
-  return [];
-}
-
-function colLetterToIndex(letter) {
-  let idx = 0;
-  const chars = String(letter || '').toUpperCase().replace(/[^A-Z]/g, '');
-  for (let i = 0; i < chars.length; i += 1) idx = idx * 26 + chars.charCodeAt(i) - 64;
-  return Math.max(0, idx - 1);
-}
-
-async function getSheetAllRows(sheet) {
-  const key = `all:${sheet}`;
-  const cached = readCache(key);
-  if (cached) return cached;
-  const payload = await fetchWithTimeoutRetry(await gasUrl('getSheetAll', { sheet }));
-  return writeCache(key, asArrayRows(payload));
-}
-
-async function getSheetRows(sheet) {
-  const key = `sheet:${sheet}`;
-  const cached = readCache(key);
-  if (cached) return cached;
-  const payload = await fetchWithTimeoutRetry(await gasUrl('getSheet', { sheet }));
-  return writeCache(key, asArrayRows(payload));
-}
-
-function findHeaderValueAt(matrix, rowIdx, colIdx) {
-  return normalizeHeader(matrix?.[rowIdx]?.[colIdx]);
-}
-
-function discoverCompositeLeaderboardStart(matrix, preferredHeader = '') {
-  const rowsToScan = Math.min(4, matrix.length);
-  for (let row = 0; row < rowsToScan; row += 1) {
-    const values = matrix[row] || [];
-    for (let col = 0; col < values.length; col += 1) {
-      const nick = findHeaderValueAt(matrix, row + 1, col);
-      const points = findHeaderValueAt(matrix, row + 1, col + 1);
-      const marker = normalizeHeader(values[col]);
-      if (nick === 'nickname' && points === 'points') {
-        if (!preferredHeader || marker.includes(preferredHeader)) return { col, headerRow: row + 1, dataRow: row + 2 };
+function buildGasUrl(action, params = {}) {
+  return getGasUrl().then((base) => {
+    const url = new URL(base);
+    url.searchParams.set('action', action);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        url.searchParams.set(key, String(value));
       }
-    }
-  }
-  return null;
+    });
+    return url.toString();
+  });
 }
 
-function matrixBlockToObjects(matrix, { startCol, headerRow, dataStartRow }) {
-  const header = (matrix[headerRow] || []).slice(startCol).map((item) => normalizeHeader(item));
-  const width = header.findIndex((item) => !item);
-  const boundedHeader = (width === -1 ? header : header.slice(0, width)).filter(Boolean);
-  if (!boundedHeader.length) return [];
-
-  const rows = [];
-  for (let r = dataStartRow; r < matrix.length; r += 1) {
-    const nickCell = String(matrix[r]?.[startCol] || '').trim();
-    if (!nickCell) break;
-    const row = {};
-    boundedHeader.forEach((key, idx) => {
-      row[key] = matrix[r]?.[startCol + idx] ?? '';
-    });
-    rows.push(row);
-  }
-  return rows;
+export async function getSheetRaw(sheetName, range = null) {
+  const key = `raw:${sheetName}:${range || ''}`;
+  const cached = readCache(key);
+  if (cached) return cached;
+  const url = await buildGasUrl('getSheetRaw', { sheet: sheetName, range });
+  const payload = await jsonp(url, 15_000);
+  const values = Array.isArray(payload?.values) ? payload.values : [];
+  console.log('[v2] sheet raw rows', sheetName, values.length);
+  return writeCache(key, { values });
 }
 
 function parseLeaderboardRows(rows, avatarMap = {}) {
@@ -250,21 +180,17 @@ function parseLeaderboardRows(rows, avatarMap = {}) {
       const nick = String(pickByAliases(row, HEADER_ALIASES.nick) || '').trim();
       const points = toNumber(pickByAliases(row, HEADER_ALIASES.points), 0);
       const games = toNumber(pickByAliases(row, HEADER_ALIASES.games), 0);
-      const mvp = toNumber(pickByAliases(row, HEADER_ALIASES.mvp), 0);
       const wins = toNumber(pickByAliases(row, HEADER_ALIASES.wins), 0);
       const ties = toNumber(pickByAliases(row, HEADER_ALIASES.ties), 0);
-      const winPctRaw = pickByAliases(row, HEADER_ALIASES.winPct);
-      const winPct = typeof winPctRaw === 'string' || typeof winPctRaw === 'number'
-        ? String(winPctRaw).trim()
-        : (games > 0 ? `${Math.round((wins / games) * 100)}%` : '');
+      const mvp = toNumber(pickByAliases(row, HEADER_ALIASES.mvp), 0);
       return {
         nick,
         points,
         games,
-        winPct,
-        mvp,
         wins,
         ties,
+        winPct: games > 0 ? `${Math.round((wins / games) * 100)}%` : '',
+        mvp,
         rankLetter: String(pickByAliases(row, HEADER_ALIASES.rankLetter) || rankLetterFromPoints(points)).trim() || rankLetterFromPoints(points),
         inactive: toBool(pickByAliases(row, HEADER_ALIASES.inactive)),
         avatarUrl: avatarMap[nick.toLowerCase()] || ''
@@ -275,38 +201,119 @@ function parseLeaderboardRows(rows, avatarMap = {}) {
     .map((row, idx) => ({ place: idx + 1, ...row }));
 }
 
-function extractSeasonStats(leaderboard) {
-  const totals = leaderboard.reduce((acc, row) => {
-    acc.games += toNumber(row.games, 0);
-    acc.wins += toNumber(row.wins, 0);
-    acc.ties += toNumber(row.ties, 0);
-    return acc;
-  }, { games: 0, wins: 0, ties: 0 });
+function rowToObjectByHeader(headerRow = [], valueRow = []) {
+  const out = {};
+  headerRow.forEach((headerCell, index) => {
+    const key = normalizeHeader(headerCell);
+    if (key) out[key] = valueRow[index] ?? '';
+  });
+  return out;
+}
 
-  return {
-    gamesCount: totals.games,
-    roundsCount: null,
-    winsBreakdown: { wins: totals.wins, ties: totals.ties }
-  };
+function detectLeagueFromContext(values, rowIdx, colIdx) {
+  const probes = [
+    values[rowIdx]?.[colIdx - 1],
+    values[rowIdx]?.[colIdx - 2],
+    values[rowIdx - 1]?.[colIdx],
+    values[rowIdx - 1]?.[colIdx - 1],
+    values[rowIdx - 1]?.[colIdx - 2]
+  ];
+  for (const probe of probes) {
+    const normalized = normalizeLeagueValue(probe);
+    if (normalized) return normalized;
+  }
+  return '';
+}
+
+function parseRankingBlocks(values) {
+  const rankings = { kids: [], sundaygames: [] };
+  for (let r = 0; r < values.length; r += 1) {
+    const row = values[r] || [];
+    for (let c = 0; c < row.length - 1; c += 1) {
+      if (normalizeHeader(row[c]) !== 'nickname' || normalizeHeader(row[c + 1]) !== 'points') continue;
+      const league = detectLeagueFromContext(values, r, c);
+      if (!league) continue;
+      let cursor = r + 1;
+      while (cursor < values.length) {
+        const nick = String(values[cursor]?.[c] ?? '').trim();
+        if (!nick) break;
+        const points = toNumber(values[cursor]?.[c + 1], 0);
+        rankings[league].push({ nickname: nick, points });
+        cursor += 1;
+      }
+    }
+  }
+  return rankings;
+}
+
+export function parseCompositeSeasonSheet(values = []) {
+  const matrix = Array.isArray(values) ? values : [];
+  const requiredHeaders = ['timestamp', 'league', 'team1', 'team2', 'winner', 'mvp'];
+
+  let gamesHeaderRowIdx = -1;
+  let gamesHeaderMap = {};
+
+  for (let r = 0; r < matrix.length; r += 1) {
+    const row = (matrix[r] || []).map((cell) => normalizeHeader(cell));
+    const headerMap = {};
+    row.forEach((cell, idx) => {
+      if (cell) headerMap[cell] = idx;
+    });
+    const hasRequired = requiredHeaders.every((header) => headerMap[header] !== undefined);
+    if (hasRequired) {
+      gamesHeaderRowIdx = r;
+      gamesHeaderMap = headerMap;
+      break;
+    }
+  }
+
+  const matches = [];
+  if (gamesHeaderRowIdx !== -1) {
+    for (let r = gamesHeaderRowIdx + 1; r < matrix.length; r += 1) {
+      const timestamp = matrix[r]?.[gamesHeaderMap.timestamp];
+      if (!isValidTimestamp(timestamp)) break;
+      const rawLeague = matrix[r]?.[gamesHeaderMap.league];
+      const league = normalizeLeagueValue(rawLeague);
+      if (league !== 'kids' && league !== 'sundaygames') continue;
+
+      const rowObj = {
+        timestamp,
+        league,
+        team1: matrix[r]?.[gamesHeaderMap.team1] ?? '',
+        team2: matrix[r]?.[gamesHeaderMap.team2] ?? '',
+        winner: matrix[r]?.[gamesHeaderMap.winner] ?? '',
+        mvp: matrix[r]?.[gamesHeaderMap.mvp] ?? '',
+        mvp2: matrix[r]?.[gamesHeaderMap.mvp2] ?? '',
+        mvp3: matrix[r]?.[gamesHeaderMap.mvp3] ?? '',
+        series: matrix[r]?.[gamesHeaderMap.series] ?? '',
+        penalties: matrix[r]?.[gamesHeaderMap.penalties] ?? ''
+      };
+      matches.push(rowObj);
+    }
+  }
+
+  const rankings = parseRankingBlocks(matrix);
+  return { matches, rankings };
 }
 
 function parseGameRow(rawRow, fallbackLeague = '') {
   const row = normalizeObjectRow(rawRow);
+  const league = normalizeLeagueValue(pickByAliases(row, HEADER_ALIASES.league) || fallbackLeague);
   const team1 = parseNickList(pickByAliases(row, HEADER_ALIASES.team1));
   const team2 = parseNickList(pickByAliases(row, HEADER_ALIASES.team2));
-  const team3 = parseNickList(pickByAliases(row, HEADER_ALIASES.team3));
-  const team4 = parseNickList(pickByAliases(row, HEADER_ALIASES.team4));
-  const league = normalizeLeague(pickByAliases(row, HEADER_ALIASES.league) || fallbackLeague);
-  const winner = String(pickByAliases(row, HEADER_ALIASES.winner) || '').trim().toLowerCase();
-  let winnerSide = 'tie';
-  if (['team1', 'team2'].includes(winner)) winnerSide = 'teamA';
-  if (['team3', 'team4'].includes(winner)) winnerSide = 'teamB';
+  const winnerRaw = normalizeHeader(pickByAliases(row, HEADER_ALIASES.winner));
+
+  let winner = 'tie';
+  if (winnerRaw === 'team1') winner = 'team1';
+  if (winnerRaw === 'team2') winner = 'team2';
+
   return {
     date: ymd(pickByAliases(row, HEADER_ALIASES.timestamp)),
     timestamp: pickByAliases(row, HEADER_ALIASES.timestamp),
     league,
-    teams: { team1, team2, team3, team4, sideA: [...team1, ...team2], sideB: [...team3, ...team4] },
-    winner: winnerSide,
+    team1,
+    team2,
+    winner,
     series: String(pickByAliases(row, HEADER_ALIASES.series) || ''),
     mvp1: String(pickByAliases(row, HEADER_ALIASES.mvp) || '').trim(),
     mvp2: String(pickByAliases(row, HEADER_ALIASES.mvp2) || '').trim(),
@@ -314,128 +321,108 @@ function parseGameRow(rawRow, fallbackLeague = '') {
   };
 }
 
+function buildLeagueStats(matches) {
+  return matches.reduce((acc, match) => {
+    acc.gamesCount += 1;
+    if (match.winner === 'team1') acc.winsTeam1 += 1;
+    else if (match.winner === 'team2') acc.winsTeam2 += 1;
+    else acc.ties += 1;
+    return acc;
+  }, { gamesCount: 0, winsTeam1: 0, winsTeam2: 0, ties: 0 });
+}
+
 async function getAvatarMapForSeason(season) {
   const avatarsSheet = season?.sources?.avatarsSheet;
   if (!avatarsSheet) return {};
-  const rows = await getSheetRows(avatarsSheet);
-  return rows.reduce((acc, raw) => {
-    const row = normalizeObjectRow(raw);
-    const nick = String(pickByAliases(row, HEADER_ALIASES.nick) || '').trim();
-    const avatarUrl = String(pickByAliases(row, HEADER_ALIASES.avatarUrl) || '').trim();
+  const raw = await getSheetRaw(avatarsSheet);
+  const [header, ...rows] = raw.values;
+  return rows.reduce((acc, row) => {
+    const obj = normalizeObjectRow(rowToObjectByHeader(header, row));
+    const nick = String(pickByAliases(obj, HEADER_ALIASES.nick) || '').trim();
+    const avatarUrl = String(obj.avatarurl || obj.avatar || '').trim();
     if (nick && avatarUrl) acc[nick.toLowerCase()] = avatarUrl;
     return acc;
   }, {});
 }
 
-async function getLiveLeaderboardRows(season, league) {
-  const sheet = league === 'kids' ? season.sources.kidsSheet : season.sources.adultsSheet;
-  return getSheetRows(sheet);
-}
+async function getSeasonData(season) {
+  if (season.type === 'live') {
+    const [kidsRaw, adultsRaw, gamesRaw] = await Promise.all([
+      getSheetRaw(season.sources.kidsSheet),
+      getSheetRaw(season.sources.sundaygamesSheet),
+      getSheetRaw(season.sources.gamesSheet)
+    ]);
+    const [kidsHeader, ...kidsRows] = kidsRaw.values;
+    const [adultsHeader, ...adultsRows] = adultsRaw.values;
+    const [gamesHeader, ...gamesRows] = gamesRaw.values;
 
-async function getCompositeData(season) {
-  const raw = await getSheetAllRows(season.sourceSheet);
-  if (!raw.length) return { kidsRows: [], adultsRows: [], gameRows: [], logRows: [] };
-
-  if (!Array.isArray(raw[0])) {
-    const rows = raw.map((r) => normalizeObjectRow(r));
     return {
-      kidsRows: rows.filter((row) => normalizeLeague(pickByAliases(row, HEADER_ALIASES.league)) === 'kids'),
-      adultsRows: rows.filter((row) => normalizeLeague(pickByAliases(row, HEADER_ALIASES.league)) === 'sundaygames'),
-      gameRows: rows,
-      logRows: []
+      leaderboardRows: {
+        kids: kidsRows.map((row) => rowToObjectByHeader(kidsHeader, row)),
+        sundaygames: adultsRows.map((row) => rowToObjectByHeader(adultsHeader, row))
+      },
+      matches: gamesRows.map((row) => parseGameRow(rowToObjectByHeader(gamesHeader, row))).filter((m) => m.league === 'kids' || m.league === 'sundaygames')
     };
   }
 
-  const matrix = raw;
-  const mapCfg = season.mapping.blocks;
-  const kidsFound = discoverCompositeLeaderboardStart(matrix, mapCfg.kidsLeaderboard.preferredHeader);
-  const adultsFound = discoverCompositeLeaderboardStart(matrix, mapCfg.adultsLeaderboard.preferredHeader);
-  const kidsStart = kidsFound || {
-    col: colLetterToIndex(mapCfg.kidsLeaderboard.fallbackStartColumn),
-    headerRow: mapCfg.kidsLeaderboard.fallbackHeaderRow - 1,
-    dataRow: mapCfg.kidsLeaderboard.fallbackDataStartRow - 1
-  };
-  const adultsStart = adultsFound || {
-    col: colLetterToIndex(mapCfg.adultsLeaderboard.fallbackStartColumn),
-    headerRow: mapCfg.adultsLeaderboard.fallbackHeaderRow - 1,
-    dataRow: mapCfg.adultsLeaderboard.fallbackDataStartRow - 1
-  };
+  if (season.type === 'compositeSheetV2') {
+    const raw = await getSheetRaw(season.sheet);
+    const parsed = parseCompositeSeasonSheet(raw.values);
+    if (parsed.matches.length === 0) {
+      console.log('[v2] composite matches empty preview', season.sheet, raw.values.slice(0, 5));
+    }
 
-  const gamesCfg = mapCfg.games;
-  const logsCfg = mapCfg.logs;
-  const gameRows = matrixBlockToObjects(matrix, {
-    startCol: colLetterToIndex(gamesCfg.fallbackStartColumn),
-    headerRow: gamesCfg.fallbackHeaderRow - 1,
-    dataStartRow: gamesCfg.fallbackDataStartRow - 1
-  });
-  const logRows = matrixBlockToObjects(matrix, {
-    startCol: colLetterToIndex(logsCfg.fallbackStartColumn),
-    headerRow: logsCfg.fallbackHeaderRow - 1,
-    dataStartRow: logsCfg.fallbackDataStartRow - 1
-  });
-
-  return {
-    kidsRows: matrixBlockToObjects(matrix, { startCol: kidsStart.col, headerRow: kidsStart.headerRow, dataStartRow: kidsStart.dataRow }),
-    adultsRows: matrixBlockToObjects(matrix, { startCol: adultsStart.col, headerRow: adultsStart.headerRow, dataStartRow: adultsStart.dataRow }),
-    gameRows,
-    logRows
-  };
-}
-
-async function loadLeaderboardRows(season, league) {
-  if (season.type === 'live') return getLiveLeaderboardRows(season, league);
-  if (season.type === 'compositeSheetV1') {
-    const composite = await getCompositeData(season);
-    return league === 'kids' ? composite.kidsRows : composite.adultsRows;
+    return {
+      leaderboardRows: {
+        kids: parsed.rankings.kids,
+        sundaygames: parsed.rankings.sundaygames
+      },
+      matches: parsed.matches.map((row) => parseGameRow(row)).filter((m) => m.league === 'kids' || m.league === 'sundaygames')
+    };
   }
-  return [];
-}
 
-async function loadGamesRows(season) {
-  if (season.type === 'live') return getSheetRows(season.sources.gamesSheet);
-  if (season.type === 'compositeSheetV1') {
-    const composite = await getCompositeData(season);
-    return composite.gameRows;
-  }
-  return [];
+  return { leaderboardRows: { kids: [], sundaygames: [] }, matches: [] };
 }
 
 export function getSeasons() {
   return SEASONS_CONFIG;
 }
 
-export { normalizeLeague };
+export function normalizeLeague(league = '') {
+  return normalizeLeagueValue(league);
+}
 
 export async function getLeagueSnapshot({ league, leagueId, seasonId } = {}) {
   const cfg = await loadSeasonsConfig();
   const season = getSeasonById(cfg, seasonId);
-  const normalizedLeague = normalizeLeague(league || leagueId);
+  const normalizedLeague = normalizeLeagueValue(league || leagueId) || 'kids';
   const key = `league:${season.id}:${normalizedLeague}`;
   const cached = readCache(key);
   if (cached) return cached;
 
-  if (isMockMode) {
-    return writeCache(key, {
-      seasonId: season.id,
-      league: normalizedLeague,
-      leaderboard: [],
-      top3: [],
-      stats: { gamesCount: 0, roundsCount: 0, winsBreakdown: { wins: 0, ties: 0 } }
-    });
+  const [avatarMap, seasonData] = await Promise.all([getAvatarMapForSeason(season), getSeasonData(season)]);
+  const leaderboard = parseLeaderboardRows(seasonData.leaderboardRows[normalizedLeague] || [], avatarMap);
+  const matches = seasonData.matches.filter((match) => match.league === normalizedLeague);
+  if (matches.length === 0) {
+    console.log('[v2] matches empty preview', season.id, normalizedLeague, seasonData.matches.slice(0, 5));
   }
-
-  const [avatarMap, rows] = await Promise.all([getAvatarMapForSeason(season), loadLeaderboardRows(season, normalizedLeague)]);
-  const leaderboard = parseLeaderboardRows(rows, avatarMap);
-  const top3 = leaderboard.slice(0, 3);
-  const stats = extractSeasonStats(leaderboard);
+  const matchStats = buildLeagueStats(matches);
 
   return writeCache(key, {
     seasonId: season.id,
     seasonTitle: season.uiLabel,
     league: normalizedLeague,
     leaderboard,
-    top3,
-    stats
+    top3: leaderboard.slice(0, 3),
+    stats: {
+      gamesCount: matchStats.gamesCount,
+      roundsCount: null,
+      winsBreakdown: {
+        wins: matchStats.winsTeam1,
+        losses: matchStats.winsTeam2,
+        ties: matchStats.ties
+      }
+    }
   });
 }
 
@@ -464,95 +451,98 @@ export async function getSeasonOverview({ seasonId } = {}) {
   };
 }
 
-async function collectPlayerBySeason(nick) {
+async function collectGamesAcrossEnabledSeasons() {
   const cfg = await loadSeasonsConfig();
-  const normalizedNick = String(nick || '').trim().toLowerCase();
-  const seasons = cfg.seasons.filter((season) => season.enabled !== false && season.type !== 'legacy');
-  const blocks = [];
-
+  const seasons = cfg.seasons.filter((season) => season.enabled !== false);
+  const out = [];
   for (const season of seasons) {
-    const [kids, adults] = await Promise.all([
-      getLeagueSnapshot({ seasonId: season.id, league: 'kids' }),
-      getLeagueSnapshot({ seasonId: season.id, league: 'sundaygames' })
-    ]);
-
-    const fromKids = kids.leaderboard.find((row) => row.nick.toLowerCase() === normalizedNick);
-    const fromAdults = adults.leaderboard.find((row) => row.nick.toLowerCase() === normalizedNick);
-    if (!fromKids && !fromAdults) continue;
-
-    const merge = [fromKids, fromAdults].filter(Boolean).reduce((acc, row) => {
-      acc.games += toNumber(row.games, 0);
-      acc.points += toNumber(row.points, 0);
-      acc.mvp += toNumber(row.mvp, 0);
-      acc.leagues.push(row === fromKids ? 'kids' : 'sundaygames');
-      return acc;
-    }, { games: 0, points: 0, mvp: 0, leagues: [] });
-
-    blocks.push({
-      seasonId: season.id,
-      seasonTitle: season.uiLabel,
-      ...merge
-    });
+    const seasonData = await getSeasonData(season);
+    out.push({ seasonId: season.id, seasonTitle: season.uiLabel, matches: seasonData.matches });
   }
+  return out;
+}
 
-  return blocks;
+function matchResultForNick(match, nick) {
+  const normalizedNick = normalizeHeader(nick);
+  const inTeam1 = match.team1.some((name) => normalizeHeader(name) === normalizedNick);
+  const inTeam2 = match.team2.some((name) => normalizeHeader(name) === normalizedNick);
+  if (!inTeam1 && !inTeam2) return null;
+  if (match.winner === 'tie') return 'tie';
+  if (inTeam1 && match.winner === 'team1') return 'win';
+  if (inTeam2 && match.winner === 'team2') return 'win';
+  return 'loss';
 }
 
 export async function getPlayerSummary({ nick } = {}) {
   if (!nick) return null;
+  const normalizedNick = normalizeHeader(nick);
   const cfg = await loadSeasonsConfig();
-  const bySeason = await collectPlayerBySeason(nick);
-  const current = bySeason.find((item) => item.seasonId === getCurrentSeasonId(cfg)) || null;
-  const allTime = bySeason.reduce((acc, item) => {
-    acc.games += item.games;
-    acc.points += item.points;
-    acc.mvp += item.mvp;
-    return acc;
-  }, { games: 0, points: 0, mvp: 0 });
+  const seasons = cfg.seasons.filter((season) => season.enabled !== false);
 
-  return { nick, allTime, currentSeason: current, bySeason };
-}
+  const seasonBlocks = [];
+  const allTime = { games: 0, wins: 0, losses: 0, ties: 0, mvp1: 0, mvp2: 0, mvp3: 0 };
 
-async function collectGamesAcrossEnabledSeasons() {
-  const cfg = await loadSeasonsConfig();
-  const seasons = cfg.seasons.filter((season) => season.enabled !== false && season.type !== 'legacy');
-  const bySeasonGames = [];
   for (const season of seasons) {
-    const gameRows = await loadGamesRows(season);
-    bySeasonGames.push({ seasonId: season.id, seasonTitle: season.uiLabel, games: gameRows.map((row) => parseGameRow(row)) });
+    const seasonData = await getSeasonData(season);
+    const seasonStats = { games: 0, wins: 0, losses: 0, ties: 0, mvp1: 0, mvp2: 0, mvp3: 0 };
+
+    seasonData.matches.forEach((match) => {
+      const result = matchResultForNick(match, normalizedNick);
+      if (!result) return;
+      seasonStats.games += 1;
+      if (result === 'win') seasonStats.wins += 1;
+      else if (result === 'loss') seasonStats.losses += 1;
+      else seasonStats.ties += 1;
+
+      if (normalizeHeader(match.mvp1) === normalizedNick) seasonStats.mvp1 += 1;
+      if (normalizeHeader(match.mvp2) === normalizedNick) seasonStats.mvp2 += 1;
+      if (normalizeHeader(match.mvp3) === normalizedNick) seasonStats.mvp3 += 1;
+    });
+
+    if (seasonStats.games > 0) {
+      allTime.games += seasonStats.games;
+      allTime.wins += seasonStats.wins;
+      allTime.losses += seasonStats.losses;
+      allTime.ties += seasonStats.ties;
+      allTime.mvp1 += seasonStats.mvp1;
+      allTime.mvp2 += seasonStats.mvp2;
+      allTime.mvp3 += seasonStats.mvp3;
+      seasonBlocks.push({ seasonId: season.id, seasonTitle: season.uiLabel, ...seasonStats });
+    }
   }
-  return bySeasonGames;
+
+  if (allTime.games === 0) return null;
+  const currentSeason = seasonBlocks.find((item) => item.seasonId === getCurrentSeasonId(cfg)) || null;
+  return { nick, allTime, currentSeason, bySeason: seasonBlocks };
 }
 
 export async function getPlayerProfile({ nick } = {}) {
   if (!nick) return null;
-  const normalizedNick = String(nick).trim().toLowerCase();
   const summary = await getPlayerSummary({ nick });
-  if (!summary?.bySeason?.length) return null;
+  if (!summary) return null;
 
+  const normalizedNick = normalizeHeader(nick);
   const bySeasonGames = await collectGamesAcrossEnabledSeasons();
   const teammateCounts = new Map();
   const opponentCounts = new Map();
 
-  bySeasonGames.forEach(({ games }) => {
-    games.forEach((game) => {
-      const sideA = game.teams.sideA;
-      const sideB = game.teams.sideB;
-      const inA = sideA.some((n) => n.toLowerCase() === normalizedNick);
-      const inB = sideB.some((n) => n.toLowerCase() === normalizedNick);
-      if (!inA && !inB) return;
+  bySeasonGames.forEach(({ matches }) => {
+    matches.forEach((match) => {
+      const inTeam1 = match.team1.some((name) => normalizeHeader(name) === normalizedNick);
+      const inTeam2 = match.team2.some((name) => normalizeHeader(name) === normalizedNick);
+      if (!inTeam1 && !inTeam2) return;
 
-      const teammates = (inA ? sideA : sideB).filter((n) => n.toLowerCase() !== normalizedNick);
-      const opponents = inA ? sideB : sideA;
+      const teammates = (inTeam1 ? match.team1 : match.team2).filter((name) => normalizeHeader(name) !== normalizedNick);
+      const opponents = inTeam1 ? match.team2 : match.team1;
       teammates.forEach((name) => teammateCounts.set(name, (teammateCounts.get(name) || 0) + 1));
       opponents.forEach((name) => opponentCounts.set(name, (opponentCounts.get(name) || 0) + 1));
     });
   });
 
-  const toTopList = (map, keyName) => Array.from(map.entries())
+  const toTopList = (map, metricName) => Array.from(map.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([name, count]) => ({ nick: name, [keyName]: count }));
+    .map(([name, count]) => ({ nick: name, [metricName]: count }));
 
   return {
     nick,
@@ -569,7 +559,7 @@ export async function getPlayerProfile({ nick } = {}) {
 export async function getGameDay({ league, leagueId, date } = {}) {
   return {
     date: date || new Date().toISOString().slice(0, 10),
-    league: normalizeLeague(league || leagueId),
+    league: normalizeLeagueValue(league || leagueId) || 'kids',
     activePlayers: [],
     matches: []
   };

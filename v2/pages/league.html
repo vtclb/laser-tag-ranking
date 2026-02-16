@@ -19,7 +19,7 @@
     </section>
     <section class="kpi">
       <article class="card"><p class="tag">Games</p><h3 id="games"></h3></article>
-      <article class="card"><p class="tag">Wins</p><h3 id="wins"></h3></article>
+      <article class="card"><p class="tag">Wins Team1</p><h3 id="wins"></h3></article>
       <article class="card"><p class="tag">Ties</p><h3 id="draws"></h3></article>
     </section>
     <section class="card">
@@ -30,9 +30,18 @@
           <tbody id="tableBody"></tbody>
         </table>
       </div>
-      <div class="expand-toggle" id="toggleRows">Expand</div>
+      <div class="expand-toggle" id="toggleRows">Expand all</div>
     </section>
   </main>
+
+  <dialog id="playerModal" class="card" style="max-width:420px;">
+    <h3 id="modalNick"></h3>
+    <p class="tag" id="modalInfo"></p>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+      <a id="profileBtn" class="chip" href="#">Profile</a>
+      <button id="closeModal" class="chip" type="button">Close</button>
+    </div>
+  </dialog>
 
   <script type="module">
     import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague } from '../core/dataHub.js';
@@ -46,7 +55,7 @@
       try {
         const cfg = await loadSeasonsConfig();
         const targetSeason = seasonId || season || cfg.currentSeasonId;
-        const targetLeague = normalizeLeague(league);
+        const targetLeague = normalizeLeague(league) || 'kids';
         data = await getLeagueSnapshot({ seasonId: targetSeason, league: targetLeague });
         document.getElementById('leagueTitle').textContent = `${data.seasonTitle} · ${targetLeague}`;
         document.getElementById('top3').innerHTML = createTop3Markup(data.top3);
@@ -60,13 +69,21 @@
       }
     }
 
+    function openPlayerModal(player) {
+      const dialog = document.getElementById('playerModal');
+      document.getElementById('modalNick').textContent = player.nick;
+      document.getElementById('modalInfo').textContent = `${player.points} pts · ${player.games} games · MVP ${player.mvp}`;
+      document.getElementById('profileBtn').href = `./profile.html?nick=${encodeURIComponent(player.nick)}`;
+      dialog.showModal();
+    }
+
     function renderTable() {
       if (!data) return;
-      const rows = expanded ? data.leaderboard.slice(0, 10) : data.leaderboard.slice(0, 5);
-      document.getElementById('tableBody').innerHTML = rows.map((player) => `
-        <tr class="${player.inactive ? 'inactive' : ''}">
+      const baseRows = expanded ? data.leaderboard : data.leaderboard.slice(0, 10);
+      document.getElementById('tableBody').innerHTML = baseRows.map((player) => `
+        <tr class="${player.inactive ? 'inactive' : ''}" data-nick="${encodeURIComponent(player.nick)}">
           <td>${player.place}</td>
-          <td><a class="nav-link" href="./profile.html?nick=${encodeURIComponent(player.nick)}">${player.nick}</a></td>
+          <td><button class="chip" data-open-modal="1" data-nick="${encodeURIComponent(player.nick)}">${player.nick}</button></td>
           <td>${statOrDash(player.points)}</td>
           <td>${statOrDash(player.games)}</td>
           <td>${statOrDash(player.winPct)}</td>
@@ -74,12 +91,24 @@
           <td>${player.rankLetter}</td>
         </tr>
       `).join('');
-      document.getElementById('toggleRows').textContent = expanded ? 'Collapse' : 'Expand';
+      document.getElementById('toggleRows').textContent = expanded ? 'Show top-10' : 'Expand all';
     }
 
     document.getElementById('toggleRows').addEventListener('click', () => {
       expanded = !expanded;
       renderTable();
+    });
+
+    document.getElementById('tableBody').addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-open-modal="1"]');
+      if (!trigger || !data) return;
+      const nick = decodeURIComponent(trigger.dataset.nick || '');
+      const player = data.leaderboard.find((item) => item.nick === nick);
+      if (player) openPlayerModal(player);
+    });
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+      document.getElementById('playerModal').close();
     });
 
     init();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile | v2</title>
-  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
   <header class="topbar">
@@ -33,7 +33,7 @@
       }
 
       try {
-        const profile = await getPlayerProfile({ nick, league });
+        const profile = await getPlayerProfile(nick, league);
         if (!profile) {
           content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
           return;
@@ -74,6 +74,12 @@
             <ul class="list-clean">
               ${profile.seasons.map((item) => `<li><strong>${item.seasonTitle}</strong> — games: ${item.games}, W/L/D: ${item.wins}/${item.losses}/${item.draws}, MVP/Top2/Top3: ${item.mvp}/${item.top2}/${item.top3}</li>`).join('')}
             </ul>
+          </section>
+
+          
+          <section class="card">
+            <h2>🎖 Бейджі</h2>
+            <p>${profile.badges?.length ? profile.badges.join(' · ') : '—'}</p>
           </section>
 
           <section class="profile-grid two-col">

@@ -4,56 +4,61 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LaserTag v2</title>
-  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">LaserTag v2</div>
-    <a class="nav-link" href="./season.html">Сезони</a>
+    <div class="brand">🎮 LaserTag v2</div>
+    <a class="nav-link" href="./season.html">🏆 Season</a>
   </header>
   <main>
     <section class="card">
-      <h1 class="section-title">Current season</h1>
-      <p class="tag" id="currentSeason"></p>
+      <h1 class="section-title">Current Season</h1>
+      <p class="tag" id="currentSeason">—</p>
       <div class="kpi kpi-2">
-        <article class="card mini"><p class="tag">Top-3 Молодша</p><div class="top3" id="kidsTop3"></div></article>
-        <article class="card mini"><p class="tag">Top-3 Старша</p><div class="top3" id="adultsTop3"></div></article>
+        <article class="card mini"><p class="tag">Зіграно матчів</p><h3 id="totalGames">—</h3></article>
+        <article class="card mini"><p class="tag">Гравців</p><h3 id="totalPlayers">—</h3></article>
       </div>
       <div class="kpi kpi-2">
-        <article class="card mini"><p class="tag">Kids: Games / W-D-L</p><h3 id="kidsStats">—</h3></article>
-        <article class="card mini"><p class="tag">Sundaygames: Games / W-D-L</p><h3 id="adultsStats">—</h3></article>
+        <article class="card mini"><p class="tag">MVP сезону</p><h3 id="seasonMvp">—</h3></article>
+        <article class="card mini"><p class="tag">+/- очки</p><h3 id="pointsDelta">—</h3></article>
       </div>
-      <div class="progress-shell"><div id="homeProgress" class="progress-bar" style="width:0%"></div></div>
+      <div class="kpi kpi-2">
+        <article class="card mini"><p class="tag">Top-3 Kids</p><div class="top3" id="kidsTop3"></div></article>
+        <article class="card mini"><p class="tag">Top-3 Adults</p><div class="top3" id="adultsTop3"></div></article>
+      </div>
       <p class="tag" id="errorBox"></p>
     </section>
 
     <section class="menu-grid">
-      <a class="menu-btn" href="./league.html?league=kids">Молодша</a>
-      <a class="menu-btn" href="./league.html?league=sundaygames">Старша</a>
-      <a class="menu-btn" href="./season.html">Сезони</a>
-      <a class="menu-btn" href="./gameday.html">Game Day</a>
-      <a class="menu-btn" href="./rules.html">Правила</a>
-      <a class="menu-btn" href="./tournaments.html">Турніри (stub)</a>
+      <a class="menu-btn" href="./gameday.html">▶ Game Day</a>
+      <a class="menu-btn" href="./season.html">🏆 Season</a>
+      <a class="menu-btn" href="./league.html?league=kids">👥 Leagues</a>
+      <a class="menu-btn" href="./rules.html">📜 Rules</a>
+      <a class="menu-btn disabled" href="#" aria-disabled="true">🎯 Tournaments (Soon)</a>
     </section>
   </main>
 
   <script type="module">
-    import { getHomeSnapshot, safeErrorMessage } from '../core/dataHub.js';
+    import { getCurrentSeason, getSeasonOverview, getTopPlayers, safeErrorMessage } from '../core/dataHub.js';
     import { createTop3Markup } from '../core/utils.js';
-
-    const stringifyStats = (stats = {}) => `${stats.games || '—'} / ${stats.wins || '—'}-${stats.draws || '—'}-${stats.losses || '—'}`;
 
     async function init() {
       try {
-        const overview = await getHomeSnapshot();
-        document.getElementById('currentSeason').textContent = overview.seasonTitle;
-        document.getElementById('kidsTop3').innerHTML = createTop3Markup(overview.top3.kids);
-        document.getElementById('adultsTop3').innerHTML = createTop3Markup(overview.top3.sundaygames);
-        document.getElementById('kidsStats').textContent = stringifyStats(overview.seasonStats.kids);
-        document.getElementById('adultsStats').textContent = stringifyStats(overview.seasonStats.sundaygames);
+        const season = await getCurrentSeason();
+        const [overview, kidsTop, adultsTop] = await Promise.all([
+          getSeasonOverview(season.id),
+          getTopPlayers(season.id, 'kids', 3),
+          getTopPlayers(season.id, 'sundaygames', 3)
+        ]);
 
-        const filled = Math.min(100, ((overview.top3.kids.length + overview.top3.sundaygames.length) / 6) * 100);
-        document.getElementById('homeProgress').style.width = `${filled}%`;
+        document.getElementById('currentSeason').textContent = season.uiLabel;
+        document.getElementById('totalGames').textContent = overview.stats.games || '—';
+        document.getElementById('totalPlayers').textContent = overview.stats.players || '—';
+        document.getElementById('seasonMvp').textContent = overview.stats.mvp || '—';
+        document.getElementById('pointsDelta').textContent = overview.stats.pointsDelta || '—';
+        document.getElementById('kidsTop3').innerHTML = createTop3Markup(kidsTop);
+        document.getElementById('adultsTop3').innerHTML = createTop3Markup(adultsTop);
       } catch (error) {
         document.getElementById('currentSeason').textContent = 'Не вдалося завантажити дані';
         document.getElementById('errorBox').textContent = safeErrorMessage(error);

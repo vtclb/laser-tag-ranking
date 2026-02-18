@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>League | v2</title>
-  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
   <header class="topbar">
@@ -31,6 +31,7 @@
         <input id="searchInput" class="search-input" type="search" placeholder="Пошук по ніку..." autocomplete="off">
         <button id="clearSearch" class="chip" type="button">Очистити</button>
       </div>
+      <button id="toggleRows" class="chip" type="button">Показати всі</button>
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>Games</th><th>WinRate</th><th>MVP</th><th>Top2</th><th>Top3</th><th>Rank</th></tr></thead>
@@ -40,21 +41,7 @@
     </section>
   </main>
 
-  <dialog id="playerModal" class="player-modal">
-    <article class="card modal-card">
-      <button class="chip modal-close" id="closeModal" type="button">✕</button>
-      <div class="player-head">
-        <img id="modalAvatar" class="avatar lg" alt="avatar">
-        <div>
-          <h3 id="modalNick"></h3>
-          <p class="tag" id="modalInfo"></p>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <a id="profileBtn" class="chip" href="#">Профіль</a>
-      </div>
-    </article>
-  </dialog>
+  
 
   <script type="module">
     import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
@@ -63,6 +50,7 @@
     const { league = 'kids', seasonId } = getQueryParams();
     let data = null;
     let searchValue = '';
+    let expanded = false;
 
     const placeholder = '../assets/default-avatar.svg';
 
@@ -71,29 +59,19 @@
         const cfg = await loadSeasonsConfig();
         const targetSeason = seasonId || cfg.currentSeasonId;
         const targetLeague = normalizeLeague(league) || 'kids';
-        data = await getLeagueSnapshot({ seasonId: targetSeason, league: targetLeague });
+        data = await getLeagueSnapshot(targetLeague, targetSeason);
         document.getElementById('leagueTitle').textContent = `${data.seasonTitle} · ${targetLeague}`;
         document.getElementById('top3').innerHTML = createTop3Markup(data.top3);
         document.getElementById('games').textContent = statOrDash(data.seasonStats.games);
         document.getElementById('wins').textContent = statOrDash(data.seasonStats.wins);
         document.getElementById('losses').textContent = statOrDash(data.seasonStats.losses);
         document.getElementById('draws').textContent = statOrDash(data.seasonStats.draws);
+        document.getElementById('delta').textContent = statOrDash(data.seasonStats.pointsDelta);
         renderTable();
       } catch (error) {
         document.getElementById('leagueTitle').textContent = 'Не вдалося завантажити дані';
         document.getElementById('errorBox').textContent = safeErrorMessage(error);
       }
-    }
-
-    function openPlayerModal(player) {
-      const dialog = document.getElementById('playerModal');
-      document.getElementById('modalNick').textContent = player.nick;
-      document.getElementById('modalInfo').textContent = `${statOrDash(player.points)} pts · ${statOrDash(player.games)} games · MVP ${statOrDash(player.mvp)}`;
-      const avatar = document.getElementById('modalAvatar');
-      avatar.src = player.avatarUrl || placeholder;
-      avatar.onerror = () => { avatar.src = placeholder; };
-      document.getElementById('profileBtn').href = `./profile.html?nick=${encodeURIComponent(player.nick)}&league=${encodeURIComponent(data.league)}`;
-      dialog.showModal();
     }
 
     function rowNick(player) {
@@ -103,14 +81,15 @@
     function renderTable() {
       if (!data) return;
       const q = searchValue.trim().toLowerCase();
-      const rows = data.table.filter((player) => !q || player.nick.toLowerCase().includes(q));
+      let rows = data.table.filter((player) => !q || player.nick.toLowerCase().includes(q));
+      if (!expanded) rows = rows.slice(0, 10);
       document.getElementById('tableBody').innerHTML = rows.map((player) => `
         <tr class="${player.inactive ? 'inactive' : ''}">
           <td>${player.place}</td>
           <td>
-            <button class="chip player-trigger" data-nick="${encodeURIComponent(player.nick)}">
+            <a class="chip player-trigger" href="./profile.html?nick=${encodeURIComponent(player.nick)}&league=${encodeURIComponent(data.league)}">
               <img class="avatar" src="${player.avatarUrl || placeholder}" alt="" onerror="this.src='${placeholder}'"> ${rowNick(player)}
-            </button>
+            </a>
           </td>
           <td>${statOrDash(player.points)}</td>
           <td>${statOrDash(player.games)}</td>
@@ -121,15 +100,8 @@
           <td><span class="rank-badge rank-${player.rankLetter}">${player.rankLetter}</span></td>
         </tr>
       `).join('') || '<tr><td colspan="9">Нічого не знайдено</td></tr>';
+      document.getElementById('toggleRows').textContent = expanded ? 'Показати Top-10' : 'Показати всі';
     }
-
-    document.getElementById('tableBody').addEventListener('click', (event) => {
-      const trigger = event.target.closest('.player-trigger');
-      if (!trigger || !data) return;
-      const nick = decodeURIComponent(trigger.dataset.nick || '');
-      const player = data.table.find((item) => item.nick === nick);
-      if (player) openPlayerModal(player);
-    });
 
     document.getElementById('searchInput').addEventListener('input', (event) => {
       searchValue = event.target.value || '';
@@ -142,8 +114,9 @@
       renderTable();
     });
 
-    document.getElementById('closeModal').addEventListener('click', () => {
-      document.getElementById('playerModal').close();
+    document.getElementById('toggleRows').addEventListener('click', () => {
+      expanded = !expanded;
+      renderTable();
     });
 
     init();

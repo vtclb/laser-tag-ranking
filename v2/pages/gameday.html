@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Game Day | v2</title>
-  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
   <header class="topbar">
@@ -15,24 +15,20 @@
     <section class="card">
       <h1 class="section-title">Mode</h1>
       <div style="display:flex;gap:.5rem;">
-        <button id="mobileBtn" class="chip">Mobile</button>
-        <button id="tvBtn" class="chip">TV</button>
+        <button id="mobileBtn" class="chip">📱 Mobile</button>
+        <button id="tvBtn" class="chip">📺 TV</button>
       </div>
     </section>
 
     <section id="layout" class="tv-layout">
       <article class="card">
-        <h2>Lobby players</h2>
+        <h2>Гравці сьогодні</h2>
         <ul class="list-clean" id="players"></ul>
       </article>
       <aside>
         <article class="card">
-          <h2>Matches today</h2>
+          <h2>Матчі</h2>
           <ul class="list-clean" id="matches"></ul>
-        </article>
-        <article class="card">
-          <h2>MVP</h2>
-          <p id="mvp">—</p>
         </article>
       </aside>
     </section>
@@ -47,16 +43,14 @@
     async function init() {
       try {
         const date = new Date().toISOString().slice(0, 10);
-        const data = await getGameDay({ date, league });
+        const data = await getGameDay(date, league);
         document.getElementById('players').innerHTML = data.activePlayers
-          .map((p) => `<li>${p.nick} · ${p.matchesToday} matches</li>`)
-          .join('');
-        document.getElementById('matches').innerHTML = data.matches
-          .map((m) => `<li>${(m.teams.sideA || []).join(', ')} vs ${(m.teams.sideB || []).join(', ')}</li>`)
-          .join('');
+          .map((p) => `<li>${p.nick} · #${p.rankingPlace || '—'} · <span style="color:#39d353">+${p.mvpToday}</span>/<span style="color:#f85149">-${Math.max(0, p.matchesToday - p.mvpToday)}</span></li>`)
+          .join('') || '<li>Немає активних гравців</li>';
 
-        const bestMvp = data.activePlayers.slice().sort((a, b) => b.mvpToday - a.mvpToday)[0];
-        document.getElementById('mvp').textContent = bestMvp ? `${bestMvp.nick} (${bestMvp.mvpToday})` : '—';
+        document.getElementById('matches').innerHTML = data.matches
+          .map((m) => `<li>${(m.teams.sideA || []).join(', ')} vs ${(m.teams.sideB || []).join(', ')} · MVP: ${m.mvp || '—'}</li>`)
+          .join('') || '<li>На цей день матчів не знайдено</li>';
       } catch (error) {
         document.getElementById('players').innerHTML = '<li>Не вдалося завантажити дані</li>';
       }
@@ -65,12 +59,8 @@
     init();
 
     const layout = document.getElementById('layout');
-    document.getElementById('mobileBtn').addEventListener('click', () => {
-      layout.classList.remove('tv-layout');
-    });
-    document.getElementById('tvBtn').addEventListener('click', () => {
-      layout.classList.add('tv-layout');
-    });
+    document.getElementById('mobileBtn').addEventListener('click', () => { layout.classList.remove('tv-layout'); });
+    document.getElementById('tvBtn').addEventListener('click', () => { layout.classList.add('tv-layout'); });
   </script>
 </body>
 </html>

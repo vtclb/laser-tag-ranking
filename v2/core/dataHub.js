@@ -1,5 +1,3 @@
-import { jsonp } from './utils.js';
-
 const DEFAULT_CONFIG_URL = new URL('./seasons.config.json', import.meta.url);
 const cache = new Map();
 const inFlight = new Map();
@@ -17,7 +15,6 @@ const TTL = {
   config: 300_000
 };
 
-const ACTION_FALLBACKS = ['getSheetRaw', 'getSheetAll', 'getSheet'];
 const SHEET_RANGES = {
   kids: 'A1:Z600',
   sundaygames: 'A1:Z600',
@@ -116,20 +113,44 @@ function writeCache(key, value) {
   return value;
 }
 
-async function fetchJson(url, params = {}, timeoutMs = 12_000) {
-  const requestUrl = new URL(url);
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') requestUrl.searchParams.set(k, String(v)); });
+async function gasPost(payload = {}, timeoutMs = 12_000) {
+  const config = await loadSeasonsConfig();
+  const gasUrl = config?.gasEndpoint || config?.endpoints?.gasUrl;
+  if (!gasUrl) throw new Error('GAS endpoint не налаштований');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(requestUrl.toString(), { signal: controller.signal });
+    const res = await fetch(gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch {
-    return jsonp(url, params, timeoutMs);
+    const json = await res.json();
+    if (json?.status !== 'OK') throw new Error(json?.message || 'GAS error');
+    return json;
+  } catch (error) {
+    if ((error?.name || '').includes('Abort')) throw new Error('GAS недоступний / timeout');
+    throw error;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function readSheetAll(sheetName) {
+  return gasPost({ action: 'getSheetAll', sheet: sheetName });
+}
+
+async function readSheetRange(sheetName, rangeA1) {
+  return gasPost({ action: 'getSheet', sheet: sheetName, range: rangeA1 });
+}
+
+function normalizeSheet(resp) {
+  const values = Array.isArray(resp?.values) ? resp.values : [];
+  const header = Array.isArray(values[0]) ? values[0].map((value) => String(value)) : [];
+  const rows = header.length ? values.slice(1) : [];
+  return { header, rows };
 }
 
 export async function loadSeasonsConfig() {
@@ -150,7 +171,6 @@ function getSeasonByDate(config, isoDate = new Date().toISOString().slice(0, 10)
 }
 
 async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.sheet) {
-  const config = await loadSeasonsConfig();
   const key = `gas:${action}:${JSON.stringify(params)}`;
   const cached = readCache(key, ttlMs);
   if (cached) return cached;
@@ -160,14 +180,7 @@ async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.shee
     let lastError = null;
     for (let i = 0; i < 2; i += 1) {
       try {
-        const gasUrl = config?.gasEndpoint || config?.endpoints?.gasUrl;
-        const payload = await fetchJson(gasUrl, { action, ...params }, timeoutMs);
-        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-          throw new Error(`GAS повернув не-JSON відповідь для action=${action}: ${String(payload).slice(0, 240)}`);
-        }
-        if (!Object.prototype.hasOwnProperty.call(payload, 'status')) {
-          throw new Error(`GAS відповідь без поля status для action=${action}: ${JSON.stringify(payload).slice(0, 240)}`);
-        }
+        const payload = await gasPost({ action, ...params }, timeoutMs);
         return writeCache(key, payload);
       } catch (error) {
         lastError = error;
@@ -181,31 +194,20 @@ async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.shee
   try { return await promise; } finally { inFlight.delete(key); }
 }
 
-function normalizeSheetPayload(payload, fallbackSheet = '') {
-  if (!payload) return { status: 'ERROR', message: 'Empty response', header: [], rows: [], sheet: fallbackSheet };
-  if (Array.isArray(payload?.rows)) return { status: payload.status || 'OK', message: payload.message || '', header: payload.header || [], rows: payload.rows, sheet: payload.sheet || fallbackSheet };
-  if (Array.isArray(payload?.data)) return { status: payload.status || 'OK', message: payload.message || '', header: payload.header || [], rows: payload.data, sheet: payload.sheet || fallbackSheet };
-  if (Array.isArray(payload) && Array.isArray(payload[0])) return { status: 'OK', message: '', header: payload[0], rows: payload.slice(1), sheet: fallbackSheet };
-  return { status: payload.status || 'ERROR', message: payload.message || payload.error || 'Некоректний формат таблиці', header: Array.isArray(payload.header) ? payload.header : [], rows: [], sheet: payload.sheet || fallbackSheet };
-}
-
 async function tryReadSheetVariant(sheetName) {
-  let lastError = null;
   const canonical = normalizeHeader(sheetName).replace(/\s+/g, '');
   const range = SHEET_RANGES[canonical] || SHEET_RANGES[normalizeHeader(sheetName)] || '';
-  for (const action of ACTION_FALLBACKS) {
-    try {
-      const payload = normalizeSheetPayload(await gasCall(action, { sheet: sheetName, range }), sheetName);
-      const status = normalizeHeader(payload.status);
-      const message = normalizeHeader(payload.message);
-      if (status === 'error' && (message.includes('sheet not found') || message.includes('not found'))) throw new Error(`Немає вкладки сезону в таблиці: ${sheetName}`);
-      if (status === 'ok' || payload.rows.length || payload.header.length) return payload;
-      throw new Error(payload.message || `Некоректний формат таблиці: ${sheetName}`);
-    } catch (error) {
-      lastError = error;
+  try {
+    const response = range ? await readSheetRange(sheetName, range) : await readSheetAll(sheetName);
+    const normalized = normalizeSheet(response);
+    if (normalized.header.length || normalized.rows.length) return { status: 'OK', message: '', ...normalized, sheet: sheetName };
+    throw new Error(`Некоректний формат таблиці: ${sheetName}`);
+  } catch (error) {
+    if (normalizeHeader(error?.message).includes('sheet not found')) {
+      throw new Error(`Не вдалося завантажити sheet: ${sheetName}. ${error.message}`);
     }
+    throw error;
   }
-  throw lastError || new Error(`Немає вкладки сезону в таблиці: ${sheetName}`);
 }
 
 async function readSheet(sheetName) {

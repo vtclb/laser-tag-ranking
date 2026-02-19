@@ -111,3 +111,24 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 @media (max-width: 780px) {
   .hero-grid { grid-template-columns: 1fr; }
 }
+
+
+/* HOTFIX v2: modal/context readability override */
+.player-modal {
+  color: #eef3ff;
+}
+.player-modal::backdrop {
+  background: rgba(2, 6, 14, 0.72);
+}
+.player-modal .modal-card {
+  background: #0b1220;
+  color: #eef3ff;
+  max-height: min(80vh, 680px);
+  overflow-y: auto;
+}
+.player-modal .chip,
+.player-modal a,
+.player-modal p,
+.player-modal h3 {
+  color: #eef3ff;
+}

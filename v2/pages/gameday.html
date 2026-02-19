@@ -13,54 +13,64 @@
   </header>
   <main>
     <section class="card">
-      <h1 class="section-title">Mode</h1>
-      <div style="display:flex;gap:.5rem;">
-        <button id="mobileBtn" class="chip">📱 Mobile</button>
-        <button id="tvBtn" class="chip">📺 TV</button>
+      <div class="search-row">
+        <input id="dateInput" class="search-input" type="date">
+        <select id="leagueSelect" class="search-input">
+          <option value="kids">kids</option>
+          <option value="sundaygames">sundaygames</option>
+        </select>
+        <button id="showBtn" class="chip">Показати</button>
       </div>
+      <h1 class="section-title" id="header">—</h1>
+      <p class="tag" id="totals">—</p>
+      <p class="tag" id="state"></p>
     </section>
 
-    <section id="layout" class="tv-layout">
+    <section id="content" class="tv-layout">
       <article class="card">
-        <h2>Гравці сьогодні</h2>
+        <h2>Гравці дня</h2>
         <ul class="list-clean" id="players"></ul>
       </article>
-      <aside>
-        <article class="card">
-          <h2>Матчі</h2>
-          <ul class="list-clean" id="matches"></ul>
-        </article>
-      </aside>
+      <article class="card">
+        <h2>Матчі/місії</h2>
+        <ul class="list-clean" id="matches"></ul>
+      </article>
     </section>
   </main>
 
   <script type="module">
-    import { getGameDay } from '../core/dataHub.js';
-    import { getQueryParams } from '../core/utils.js';
+    import { getGameDayView, safeErrorMessage } from '../core/dataHub.js';
 
-    const { league = 'kids' } = getQueryParams();
+    const dateInput = document.getElementById('dateInput');
+    const leagueSelect = document.getElementById('leagueSelect');
+    const storageKey = 'v2:lastLeague';
 
-    async function init() {
+    function renderMatch(m) {
+      return `<li><strong>${(m.team1 || []).join(', ')} vs ${(m.team2 || []).join(', ')}</strong><br>Winner: ${m.winner || '—'} · MVP: ${m.mvp1 || '—'}/${m.mvp2 || '—'}/${m.mvp3 || '—'} · rounds: ${m.rounds || 1}</li>`;
+    }
+
+    async function load() {
+      const state = document.getElementById('state');
+      const ymd = dateInput.value;
+      const league = leagueSelect.value;
+      localStorage.setItem(storageKey, league);
+      state.textContent = 'Завантаження...';
       try {
-        const date = new Date().toISOString().slice(0, 10);
-        const data = await getGameDay(date, league);
-        document.getElementById('players').innerHTML = data.activePlayers
-          .map((p) => `<li>${p.nick} · #${p.rankingPlace || '—'} · <span style="color:#39d353">+${p.mvpToday}</span>/<span style="color:#f85149">-${Math.max(0, p.matchesToday - p.mvpToday)}</span></li>`)
-          .join('') || '<li>Немає активних гравців</li>';
-
-        document.getElementById('matches').innerHTML = data.matches
-          .map((m) => `<li>${(m.teams.sideA || []).join(', ')} vs ${(m.teams.sideB || []).join(', ')} · MVP: ${m.mvp || '—'}</li>`)
-          .join('') || '<li>На цей день матчів не знайдено</li>';
+        const data = await getGameDayView({ dateYMD: ymd, league });
+        document.getElementById('header').textContent = `${data.dateYMD} · ${data.league}`;
+        document.getElementById('totals').textContent = `Ігор: ${data.gamesCount} · Раундів: ${data.roundsCount}`;
+        document.getElementById('players').innerHTML = data.playersToday.map((p) => `<li>${p.nick} · ігор: ${p.games} · MVP: ${p.mvp}</li>`).join('') || '<li class="placeholder">Немає ігор за цю дату</li>';
+        document.getElementById('matches').innerHTML = data.matches.map(renderMatch).join('') || '<li class="placeholder">Немає ігор за цю дату</li>';
+        state.textContent = '';
       } catch (error) {
-        document.getElementById('players').innerHTML = '<li>Не вдалося завантажити дані</li>';
+        state.textContent = safeErrorMessage(error);
       }
     }
 
-    init();
-
-    const layout = document.getElementById('layout');
-    document.getElementById('mobileBtn').addEventListener('click', () => { layout.classList.remove('tv-layout'); });
-    document.getElementById('tvBtn').addEventListener('click', () => { layout.classList.add('tv-layout'); });
+    dateInput.value = new Date().toISOString().slice(0, 10);
+    leagueSelect.value = localStorage.getItem(storageKey) || 'sundaygames';
+    document.getElementById('showBtn').addEventListener('click', load);
+    load();
   </script>
 </body>
 </html>

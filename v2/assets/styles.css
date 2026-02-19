@@ -85,3 +85,20 @@ body.rank-A { background: radial-gradient(circle at top, rgba(255,159,110,.24), 
 body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #090d16 52%); }
 
 .menu-btn.disabled { opacity:.45; pointer-events:none; filter:grayscale(.3); }
+
+.hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-bottom:.75rem; }
+.hero-card { border:1px solid rgba(255,255,255,.18); border-radius:1rem; padding:.75rem; background:rgba(8,14,26,.82); box-shadow:0 8px 18px rgba(0,0,0,.25); }
+.dist-row { display:grid; grid-template-columns:24px 1fr 28px; align-items:center; gap:.4rem; margin:.25rem 0; }
+.dist-track { height:10px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden; }
+.dist-fill { height:100%; border-radius:999px; box-shadow:0 0 10px rgba(255,255,255,.18); }
+.rank-S.dist-fill, .dist-fill.rank-S { background:#ffd166; }
+.rank-A.dist-fill, .dist-fill.rank-A { background:#ff7b72; }
+.rank-B.dist-fill, .dist-fill.rank-B { background:#58a6ff; }
+.rank-C.dist-fill, .dist-fill.rank-C { background:#3fb950; }
+.rank-D.dist-fill, .dist-fill.rank-D { background:#9da7b3; }
+.rank-E.dist-fill, .dist-fill.rank-E { background:#8b949e; }
+.rank-F.dist-fill, .dist-fill.rank-F { background:#6e7681; }
+
+@media (max-width: 780px) {
+  .hero-grid { grid-template-columns: 1fr; }
+}

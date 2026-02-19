@@ -9,25 +9,16 @@
 <body>
   <header class="topbar">
     <div class="brand">🎮 LaserTag v2</div>
-    <a class="nav-link" href="./season.html">🏆 Season</a>
+    <a class="nav-link" href="./season.html">🏆 Seasons</a>
   </header>
   <main>
     <section class="card">
-      <h1 class="section-title">Current Season</h1>
-      <p class="tag" id="currentSeason">—</p>
-      <div class="kpi kpi-2">
-        <article class="card mini"><p class="tag">Зіграно матчів</p><h3 id="totalGames">—</h3></article>
-        <article class="card mini"><p class="tag">Гравців</p><h3 id="totalPlayers">—</h3></article>
-      </div>
-      <div class="kpi kpi-2">
-        <article class="card mini"><p class="tag">MVP сезону</p><h3 id="seasonMvp">—</h3></article>
-        <article class="card mini"><p class="tag">+/- очки</p><h3 id="pointsDelta">—</h3></article>
-      </div>
-      <div class="kpi kpi-2">
-        <article class="card mini"><p class="tag">Top-3 Kids</p><div class="top3" id="kidsTop3"></div></article>
-        <article class="card mini"><p class="tag">Top-3 Adults</p><div class="top3" id="adultsTop3"></div></article>
-      </div>
-      <p class="tag" id="errorBox"></p>
+      <h1 class="section-title">Головна</h1>
+      <p class="tag" id="currentSeason">Завантаження...</p>
+      <div class="hero-grid" id="topHeroes"></div>
+      <div class="kpi kpi-2" id="overviewStats"></div>
+      <div class="kpi kpi-2" id="charts"></div>
+      <p class="tag" id="stateBox"></p>
     </section>
 
     <section class="menu-grid">
@@ -35,33 +26,59 @@
       <a class="menu-btn" href="./season.html">🏆 Season</a>
       <a class="menu-btn" href="./league.html?league=kids">👥 Leagues</a>
       <a class="menu-btn" href="./rules.html">📜 Rules</a>
-      <a class="menu-btn disabled" href="#" aria-disabled="true">🎯 Tournaments (Soon)</a>
     </section>
   </main>
 
   <script type="module">
-    import { getCurrentSeason, getSeasonOverview, getTopPlayers, safeErrorMessage } from '../core/dataHub.js';
-    import { createTop3Markup } from '../core/utils.js';
+    import { getHomeOverview, safeErrorMessage, rankMeta } from '../core/dataHub.js';
+
+    const placeholder = '../assets/default-avatar.svg';
+    const ranks = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+
+    function heroCard(player, leagueLabel) {
+      if (!player) return `<article class="card mini"><p class="tag">${leagueLabel}</p><p>Немає даних</p></article>`;
+      const meta = rankMeta(player.rankLetter);
+      return `<article class="hero-card ${meta.cssClass}">
+        <p class="tag">Top-1 ${leagueLabel}</p>
+        <div class="player-head">
+          <img class="avatar lg" src="${player.avatarUrl || placeholder}" alt="avatar" onerror="this.src='${placeholder}'">
+          <div>
+            <h3>${player.nick}</h3>
+            <p><span class="rank-badge ${meta.cssClass}">${meta.label}</span></p>
+            <p class="tag">Points: ${player.points ?? '—'} · MVP: ${player.mvp ?? 0}</p>
+          </div>
+        </div>
+      </article>`;
+    }
+
+    function statsCard(title, stats) {
+      return `<article class="card mini"><p class="tag">${title}</p><h3>Ігри: ${stats.games}</h3><p>Раунди: ${stats.rounds}</p></article>`;
+    }
+
+    function distChart(title, dist) {
+      const total = Object.values(dist || {}).reduce((a, b) => a + b, 0) || 1;
+      const bars = ranks.map((r) => {
+        const v = dist?.[r] || 0;
+        const width = Math.round((v / total) * 100);
+        const meta = rankMeta(r);
+        return `<div class="dist-row"><span>${r}</span><div class="dist-track"><div class="dist-fill ${meta.cssClass}" style="width:${width}%"></div></div><b>${v}</b></div>`;
+      }).join('');
+      return `<article class="card mini"><p class="tag">${title}</p>${bars}</article>`;
+    }
 
     async function init() {
+      const stateBox = document.getElementById('stateBox');
       try {
-        const season = await getCurrentSeason();
-        const [overview, kidsTop, adultsTop] = await Promise.all([
-          getSeasonOverview(season.id),
-          getTopPlayers(season.id, 'kids', 3),
-          getTopPlayers(season.id, 'sundaygames', 3)
-        ]);
-
-        document.getElementById('currentSeason').textContent = season.uiLabel;
-        document.getElementById('totalGames').textContent = overview.stats.games || '—';
-        document.getElementById('totalPlayers').textContent = overview.stats.players || '—';
-        document.getElementById('seasonMvp').textContent = overview.stats.mvp || '—';
-        document.getElementById('pointsDelta').textContent = overview.stats.pointsDelta || '—';
-        document.getElementById('kidsTop3').innerHTML = createTop3Markup(kidsTop);
-        document.getElementById('adultsTop3').innerHTML = createTop3Markup(adultsTop);
+        stateBox.textContent = 'Завантаження...';
+        const data = await getHomeOverview();
+        document.getElementById('currentSeason').textContent = data.seasonTitle;
+        document.getElementById('topHeroes').innerHTML = heroCard(data.top1Kids, 'Kids') + heroCard(data.top1Adults, 'Sundaygames');
+        document.getElementById('overviewStats').innerHTML = statsCard('Kids статистика', data.statsKids) + statsCard('Sundaygames статистика', data.statsAdults);
+        document.getElementById('charts').innerHTML = distChart('Розподіл рангу: Kids', data.rankDistKids) + distChart('Розподіл рангу: Sundaygames', data.rankDistAdults);
+        stateBox.textContent = '';
       } catch (error) {
-        document.getElementById('currentSeason').textContent = 'Не вдалося завантажити дані';
-        document.getElementById('errorBox').textContent = safeErrorMessage(error);
+        document.getElementById('currentSeason').textContent = 'Помилка';
+        stateBox.textContent = safeErrorMessage(error);
       }
     }
 

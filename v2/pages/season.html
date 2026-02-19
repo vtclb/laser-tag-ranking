@@ -13,85 +13,109 @@
   </header>
   <main>
     <section class="card">
-      <h1 class="section-title">Season view</h1>
       <div class="search-row">
         <select id="seasonSelect" class="search-input"></select>
         <select id="leagueSelect" class="search-input">
-          <option value="kids">Молодша</option>
-          <option value="sundaygames">Старша</option>
+          <option value="kids">kids</option>
+          <option value="sundaygames">sundaygames</option>
         </select>
       </div>
-      <p class="tag" id="seasonTitle"></p>
+      <h1 class="section-title" id="seasonTitle">—</h1>
+      <div class="kpi kpi-2" id="totals"></div>
+      <div class="kpi kpi-2" id="charts"></div>
       <div class="top3" id="top3"></div>
-      <p class="tag" id="errorBox"></p>
+      <div class="kpi kpi-2" id="leaders"></div>
+      <p class="tag" id="state"></p>
     </section>
 
     <section class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>Games</th><th>WinRate</th><th>MVP</th><th>Top2</th><th>Top3</th><th>Rank</th></tr></thead>
+          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>Games</th><th>Winrate</th><th>Top1</th><th>Top2</th><th>Top3</th></tr></thead>
           <tbody id="tableBody"></tbody>
         </table>
       </div>
     </section>
   </main>
-  <script type="module">
-    import { getLeagueSnapshot, getSeasonOverview, loadSeasonsConfig, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
-    import { getQueryParams, createTop3Markup, statOrDash } from '../core/utils.js';
 
-    const query = getQueryParams();
+  <dialog id="playerModal" class="player-modal">
+    <article class="card modal-card" id="modalBody"></article>
+  </dialog>
+
+  <script type="module">
+    import { getSeasonsList, getSeasonDashboard, getSeasonPlayerQuickCard, rankMeta, safeErrorMessage } from '../core/dataHub.js';
+
     const seasonSelect = document.getElementById('seasonSelect');
     const leagueSelect = document.getElementById('leagueSelect');
+    const modal = document.getElementById('playerModal');
+    const modalBody = document.getElementById('modalBody');
+    const placeholder = '../assets/default-avatar.svg';
+
+    function distChart(dist) {
+      return ['S','A','B','C','D','E','F'].map((r) => {
+        const meta = rankMeta(r);
+        return `<div class="dist-row"><span>${r}</span><div class="dist-track"><div class="dist-fill ${meta.cssClass}" style="width:${(dist[r] || 0) * 8}%"></div></div><b>${dist[r] || 0}</b></div>`;
+      }).join('');
+    }
 
     function renderRows(rows) {
-      document.getElementById('tableBody').innerHTML = rows.map((player) => `
-        <tr>
-          <td>${player.place}</td>
-          <td>${player.nick}</td>
-          <td>${statOrDash(player.points)}</td>
-          <td>${statOrDash(player.games)}</td>
-          <td>${player.winRate === null || player.winRate === 0 ? '—' : `${player.winRate}%`}</td>
-          <td>${statOrDash(player.mvp)}</td>
-          <td>${statOrDash(player.mvp2)}</td>
-          <td>${statOrDash(player.mvp3)}</td>
-          <td><span class="rank-badge rank-${player.rankLetter}">${player.rankLetter}</span></td>
+      document.getElementById('tableBody').innerHTML = rows.map((p) => `
+        <tr data-nick="${p.nick}">
+          <td>${p.place}</td>
+          <td><button class="chip player-btn" data-nick="${p.nick}">${p.nick}</button></td>
+          <td>${p.points ?? '—'}</td><td>${p.games}</td><td>${p.winRate ?? '—'}%</td><td>${p.mvp}</td><td>${p.mvp2}</td><td>${p.mvp3}</td>
         </tr>
-      `).join('') || '<tr><td colspan="9">Дані відсутні</td></tr>';
+      `).join('') || '<tr><td colspan="8">Дані відсутні</td></tr>';
     }
 
-    async function loadSnapshot() {
-      const seasonId = seasonSelect.value;
-      const league = normalizeLeague(leagueSelect.value) || 'kids';
-      const [snapshot, overview] = await Promise.all([
-        getLeagueSnapshot({ seasonId, league }),
-        getSeasonOverview({ seasonId })
-      ]);
-      document.getElementById('seasonTitle').textContent = `${snapshot.seasonTitle} · ${league === 'kids' ? 'Молодша' : 'Старша'} · Top10: ${(overview.top10[league] || []).length}`;
-      document.getElementById('top3').innerHTML = createTop3Markup(snapshot.top3);
-      renderRows(snapshot.table);
-
-      const url = new URL(window.location.href);
-      url.searchParams.set('season', seasonId);
-      url.searchParams.set('league', league);
-      history.replaceState({}, '', url);
+    async function showPlayer(nick) {
+      const data = await getSeasonPlayerQuickCard({ seasonId: seasonSelect.value, league: leagueSelect.value, nick });
+      if (!data) return;
+      modalBody.innerHTML = `
+        <button class="chip modal-close" onclick="document.getElementById('playerModal').close()">✕</button>
+        <div class="player-head">
+          <img class="avatar lg" src="${data.avatarUrl || placeholder}" alt="avatar" onerror="this.src='${placeholder}'">
+          <div><h3>${data.nick}</h3><p><span class="rank-badge ${data.rank.cssClass}">${data.rank.label}</span> · points: ${data.points ?? '—'}</p></div>
+        </div>
+        <p>W/L/D: ${data.wins}/${data.losses}/${data.draws} · WR: ${data.winrate ?? '—'}%</p>
+        <p>Top1/2/3: ${data.mvp1}/${data.mvp2}/${data.mvp3}</p>
+        <div class="modal-actions"><a class="chip" href="./profile.html?nick=${encodeURIComponent(data.nick)}">Профіль</a></div>
+      `;
+      modal.showModal();
     }
+
+    async function loadDashboard() {
+      const state = document.getElementById('state');
+      try {
+        state.textContent = 'Завантаження...';
+        const data = await getSeasonDashboard(seasonSelect.value, leagueSelect.value);
+        document.getElementById('seasonTitle').textContent = `${data.seasonTitle} · ${data.league}`;
+        document.getElementById('totals').innerHTML = `<article class="card mini"><h3>Games ${data.totals.games}</h3><p>Rounds ${data.totals.rounds}</p></article><article class="card mini"><h3>Players ${data.totals.players}</h3><p>AVG ${data.totals.avgGamesPerPlayer}</p></article>`;
+        document.getElementById('charts').innerHTML = `<article class="card mini"><p class="tag">Rank distribution</p>${distChart(data.rankDistribution)}</article>`;
+        document.getElementById('top3').innerHTML = data.top3.map((p) => `<article class="top-card"><img class="avatar" src="${p.avatarUrl || placeholder}" onerror="this.src='${placeholder}'"> ${p.nick}<br><span class="rank-badge ${p.rank.cssClass}">${p.rank.label}</span></article>`).join('');
+        document.getElementById('leaders').innerHTML = `<article class="card mini">🥇 Гріндер: ${data.leaders.mostGames.nick || '—'} (${data.leaders.mostGames.count || 0})</article><article class="card mini">🎯 Снайпер: ${data.leaders.bestWinrate.nick || '—'} (${data.leaders.bestWinrate.winRate || 0}%)</article><article class="card mini">👑 Top1: ${data.leaders.mostTop1.nick || '—'}</article><article class="card mini">🥈 Top2: ${data.leaders.mostTop2.nick || '—'}</article><article class="card mini">🥉 Top3: ${data.leaders.mostTop3.nick || '—'}</article>`;
+        renderRows(data.tablePlayers);
+        state.textContent = '';
+      } catch (error) {
+        state.textContent = safeErrorMessage(error);
+      }
+    }
+
+    document.getElementById('tableBody').addEventListener('click', (event) => {
+      const btn = event.target.closest('.player-btn');
+      if (btn) showPlayer(btn.dataset.nick);
+    });
 
     async function init() {
-      const cfg = await loadSeasonsConfig();
-      const enabled = cfg.seasons.filter((s) => s.enabled !== false);
-      seasonSelect.innerHTML = enabled.map((s) => `<option value="${s.id}">${s.uiLabel}</option>`).join('');
-      seasonSelect.value = query.seasonId && enabled.some((s) => s.id === query.seasonId) ? query.seasonId : cfg.currentSeasonId;
-      leagueSelect.value = normalizeLeague(query.league) || 'kids';
-      await loadSnapshot();
+      const seasons = await getSeasonsList();
+      seasonSelect.innerHTML = seasons.map((s) => `<option value="${s.id}">${s.title}</option>`).join('');
+      seasonSelect.value = seasons[0]?.id;
+      seasonSelect.addEventListener('change', loadDashboard);
+      leagueSelect.addEventListener('change', loadDashboard);
+      await loadDashboard();
     }
 
-    seasonSelect.addEventListener('change', () => { loadSnapshot(); });
-    leagueSelect.addEventListener('change', () => { loadSnapshot(); });
-
-    init().catch((error) => {
-      document.getElementById('seasonTitle').textContent = 'Не вдалося завантажити дані';
-      document.getElementById('errorBox').textContent = safeErrorMessage(error);
-    });
+    init();
   </script>
 </body>
 </html>

@@ -3,6 +3,7 @@ import { jsonp } from './utils.js';
 const DEFAULT_CONFIG_URL = new URL('./seasons.config.json', import.meta.url);
 const cache = new Map();
 const inFlight = new Map();
+const STORAGE_PREFIX = 'lt_cache_v2::';
 
 const TTL = {
   home: 30_000,
@@ -17,7 +18,22 @@ const TTL = {
 };
 
 const ACTION_FALLBACKS = ['getSheetRaw', 'getSheetAll', 'getSheet'];
-const SHEET_FALLBACKS = { autumn2025: ['ocinb2025'] };
+const SHEET_RANGES = {
+  kids: 'A1:Z600',
+  sundaygames: 'A1:Z600',
+  games: 'A1:Z5000',
+  logs: 'A1:Z5000',
+  avatars: 'A1:Z2000',
+  autumn2025: 'A1:Z5000',
+  ocinb2025: 'A1:Z5000',
+  summer2025: 'A1:Z5000',
+  winter2025: 'A1:Z5000',
+  winter202526: 'A1:Z5000',
+  archive: 'A1:Z5000'
+};
+const SHEET_FALLBACKS = {
+  autumn2025: ['ocinb2025', 'Осінь2025', 'Осінь 2025', 'Ocinb2025', 'OCINB2025', 'AUTUMN2025']
+};
 const RANK_META = {
   S: { label: 'S', cssClass: 'rank-S', themeVars: { '--rank-color': '#ffd166', '--rank-glow': 'rgba(255,209,102,.45)' } },
   A: { label: 'A', cssClass: 'rank-A', themeVars: { '--rank-color': '#ff7b72', '--rank-glow': 'rgba(255,123,114,.4)' } },
@@ -65,7 +81,40 @@ function readCache(key, ttlMs) {
   }
   return hit.value;
 }
-function writeCache(key, value) { cache.set(key, { ts: Date.now(), value }); return value; }
+function readStorageCache(key, ttlMs) {
+  if (!key.startsWith('sheet:') || typeof window === 'undefined') return null;
+  const storageKey = `${STORAGE_PREFIX}${key}`;
+  const sources = [window.sessionStorage, window.localStorage];
+  for (const storage of sources) {
+    try {
+      const raw = storage.getItem(storageKey);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.ts || Date.now() - parsed.ts > ttlMs) {
+        storage.removeItem(storageKey);
+        continue;
+      }
+      return parsed.data ?? null;
+    } catch {
+      storage.removeItem(storageKey);
+    }
+  }
+  return null;
+}
+
+function writeStorageCache(key, value) {
+  if (!key.startsWith('sheet:') || typeof window === 'undefined') return;
+  const payload = JSON.stringify({ ts: Date.now(), data: value });
+  const storageKey = `${STORAGE_PREFIX}${key}`;
+  try { window.sessionStorage.setItem(storageKey, payload); } catch {}
+  try { window.localStorage.setItem(storageKey, payload); } catch {}
+}
+
+function writeCache(key, value) {
+  cache.set(key, { ts: Date.now(), value });
+  writeStorageCache(key, value);
+  return value;
+}
 
 async function fetchJson(url, params = {}, timeoutMs = 12_000) {
   const requestUrl = new URL(url);
@@ -111,7 +160,14 @@ async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.shee
     let lastError = null;
     for (let i = 0; i < 2; i += 1) {
       try {
-        const payload = await fetchJson(config.endpoints.gasUrl, { action, ...params }, timeoutMs);
+        const gasUrl = config?.gasEndpoint || config?.endpoints?.gasUrl;
+        const payload = await fetchJson(gasUrl, { action, ...params }, timeoutMs);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+          throw new Error(`GAS повернув не-JSON відповідь для action=${action}: ${String(payload).slice(0, 240)}`);
+        }
+        if (!Object.prototype.hasOwnProperty.call(payload, 'status')) {
+          throw new Error(`GAS відповідь без поля status для action=${action}: ${JSON.stringify(payload).slice(0, 240)}`);
+        }
         return writeCache(key, payload);
       } catch (error) {
         lastError = error;
@@ -135,9 +191,11 @@ function normalizeSheetPayload(payload, fallbackSheet = '') {
 
 async function tryReadSheetVariant(sheetName) {
   let lastError = null;
+  const canonical = normalizeHeader(sheetName).replace(/\s+/g, '');
+  const range = SHEET_RANGES[canonical] || SHEET_RANGES[normalizeHeader(sheetName)] || '';
   for (const action of ACTION_FALLBACKS) {
     try {
-      const payload = normalizeSheetPayload(await gasCall(action, { sheet: sheetName }), sheetName);
+      const payload = normalizeSheetPayload(await gasCall(action, { sheet: sheetName, range }), sheetName);
       const status = normalizeHeader(payload.status);
       const message = normalizeHeader(payload.message);
       if (status === 'error' && (message.includes('sheet not found') || message.includes('not found'))) throw new Error(`Немає вкладки сезону в таблиці: ${sheetName}`);
@@ -153,7 +211,7 @@ async function tryReadSheetVariant(sheetName) {
 async function readSheet(sheetName) {
   const variants = [sheetName, ...(SHEET_FALLBACKS[sheetName] || [])];
   const key = `sheet:${variants.join('|')}`;
-  const cached = readCache(key, TTL.sheet);
+  const cached = readCache(key, TTL.sheet) || readStorageCache(key, 10 * 60_000);
   if (cached) return cached;
   if (inFlight.has(key)) return inFlight.get(key);
 
@@ -167,7 +225,7 @@ async function readSheet(sheetName) {
         lastError = error;
       }
     }
-    throw lastError || new Error(`Немає вкладки сезону в таблиці: ${variants.join('/')}`);
+    throw lastError || new Error(`Немає вкладки сезону в таблиці. Спробували: ${variants.join(', ')}`);
   })();
 
   inFlight.set(key, promise);
@@ -453,6 +511,11 @@ export async function getSeasonDashboard(seasonId, league = 'kids') {
     tablePlayers: snapshot.table
   };
   return writeCache(key, result);
+}
+
+export async function getLeagueRankDistribution({ seasonId, league = 'kids' } = {}) {
+  const snapshot = await getLeagueSnapshot(league, seasonId);
+  return { seasonId: snapshot.seasonId, league: snapshot.league, distribution: snapshot.rankDistribution };
 }
 
 export async function getSeasonPlayerQuickCard({ seasonId, league, nick } = {}) {

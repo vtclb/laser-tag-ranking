@@ -1,5 +1,6 @@
 {
   "currentSeasonId": "winter-2025-26",
+  "gasEndpoint": "https://script.google.com/macros/s/AKfycbw14nCv9S-3X_fg84waGgHuuFbynLhTst_KrK4mYbZBVXQtd-pSRRNftKByoI5_Qnkn/exec",
   "endpoints": {
     "gasUrl": "https://script.google.com/macros/s/AKfycbw14nCv9S-3X_fg84waGgHuuFbynLhTst_KrK4mYbZBVXQtd-pSRRNftKByoI5_Qnkn/exec"
   },

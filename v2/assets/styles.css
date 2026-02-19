@@ -27,6 +27,15 @@ main { max-width: 1080px; margin: 0 auto; padding: 1rem; }
 .table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,.1); border-radius: .8rem; }
 table { width: 100%; border-collapse: collapse; min-width: 760px; }
 th, td { padding: .55rem .6rem; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; }
+tbody tr { cursor: pointer; transition: transform .12s ease, background .12s ease; }
+tbody tr:hover { transform: translateY(-1px); background: rgba(255,255,255,.05); }
+tbody tr.rank-S { background: linear-gradient(90deg, rgba(255,209,102,.22), transparent); }
+tbody tr.rank-A { background: linear-gradient(90deg, rgba(255,123,114,.18), transparent); }
+tbody tr.rank-B { background: linear-gradient(90deg, rgba(88,166,255,.16), transparent); }
+tbody tr.rank-C { background: linear-gradient(90deg, rgba(63,185,80,.15), transparent); }
+tbody tr.rank-D { background: linear-gradient(90deg, rgba(157,167,179,.15), transparent); }
+tbody tr.rank-E { background: linear-gradient(90deg, rgba(139,148,158,.15), transparent); }
+tbody tr.rank-F { background: linear-gradient(90deg, rgba(110,118,129,.14), transparent); }
 tr.inactive { opacity: .45; }
 .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
 .kpi-2 { grid-template-columns: repeat(2, 1fr); }

@@ -17,7 +17,7 @@
         <input id="dateInput" class="search-input" type="date">
         <select id="leagueSelect" class="search-input">
           <option value="kids">kids</option>
-          <option value="sundaygames">sundaygames</option>
+          <option value="sundaygames">olds</option>
         </select>
         <button id="showBtn" class="chip">Показати</button>
       </div>
@@ -38,39 +38,6 @@
     </section>
   </main>
 
-  <script type="module">
-    import { getGameDayView, safeErrorMessage } from '../core/dataHub.js';
-
-    const dateInput = document.getElementById('dateInput');
-    const leagueSelect = document.getElementById('leagueSelect');
-    const storageKey = 'v2:lastLeague';
-
-    function renderMatch(m) {
-      return `<li><strong>${(m.team1 || []).join(', ')} vs ${(m.team2 || []).join(', ')}</strong><br>Winner: ${m.winner || '—'} · MVP: ${m.mvp1 || '—'}/${m.mvp2 || '—'}/${m.mvp3 || '—'} · rounds: ${m.rounds || 1}</li>`;
-    }
-
-    async function load() {
-      const state = document.getElementById('state');
-      const ymd = dateInput.value;
-      const league = leagueSelect.value;
-      localStorage.setItem(storageKey, league);
-      state.textContent = 'Завантаження...';
-      try {
-        const data = await getGameDayView({ dateYMD: ymd, league });
-        document.getElementById('header').textContent = `${data.dateYMD} · ${data.league}`;
-        document.getElementById('totals').textContent = `Ігор: ${data.gamesCount} · Раундів: ${data.roundsCount}`;
-        document.getElementById('players').innerHTML = data.playersToday.map((p) => `<li>${p.nick} · ігор: ${p.games} · MVP: ${p.mvp}</li>`).join('') || '<li class="placeholder">Немає ігор за цю дату</li>';
-        document.getElementById('matches').innerHTML = data.matches.map(renderMatch).join('') || '<li class="placeholder">Немає ігор за цю дату</li>';
-        state.textContent = '';
-      } catch (error) {
-        state.textContent = safeErrorMessage(error);
-      }
-    }
-
-    dateInput.value = new Date().toISOString().slice(0, 10);
-    leagueSelect.value = localStorage.getItem(storageKey) || 'sundaygames';
-    document.getElementById('showBtn').addEventListener('click', load);
-    load();
-  </script>
+  <script type="module" src="./gameday.js"></script>
 </body>
 </html>

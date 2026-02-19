@@ -9,86 +9,59 @@
 <body>
   <header class="topbar">
     <div class="brand">Player Profile</div>
-    <a class="nav-link" href="./league.html">League</a>
+    <a class="nav-link" href="./season.html">Seasons</a>
   </header>
   <main id="content"></main>
 
   <script type="module">
-    import { getPlayerProfile, safeErrorMessage } from '../core/dataHub.js';
-    import { getQueryParams, statOrDash } from '../core/utils.js';
+    import { getPlayerAllTimeProfile, getPlayerSeasonLogs, getSeasonsList, safeErrorMessage } from '../core/dataHub.js';
+    import { getQueryParams } from '../core/utils.js';
 
-    const { nick = '', league = 'kids' } = getQueryParams();
+    const { nick = '' } = getQueryParams();
     const content = document.getElementById('content');
     const placeholder = '../assets/default-avatar.svg';
 
-    function renderList(items, metric) {
-      if (!items?.length) return '<li>—</li>';
-      return items.map((item) => `<li>${item.nick} (${item[metric]})</li>`).join('');
-    }
-
     async function init() {
-      if (!nick) {
-        content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
-        return;
-      }
-
+      if (!nick) { content.innerHTML = '<section class="card">Player not found</section>'; return; }
       try {
-        const profile = await getPlayerProfile(nick, league);
-        if (!profile) {
-          content.innerHTML = '<section class="card"><h1>Player not found</h1></section>';
-          return;
-        }
-
-        const rank = profile.current?.rank || 'F';
-        document.body.classList.add(`rank-${rank}`);
-        const games = profile.allTime.games || 0;
+        const [profile, seasons] = await Promise.all([getPlayerAllTimeProfile(nick), getSeasonsList()]);
+        if (!profile) { content.innerHTML = '<section class="card">Player not found</section>'; return; }
 
         content.innerHTML = `
-          <section class="card profile-header rank-theme-${rank}">
-            <div class="player-head">
-              <img class="avatar lg" src="${profile.avatarUrl || placeholder}" alt="avatar" onerror="this.src='${placeholder}'">
-              <div>
-                <h1 class="section-title">${profile.nick}</h1>
-                <p class="tag">Rank: <span class="rank-badge rank-${rank}">${rank}</span> · Points: ${statOrDash(profile.current?.points)}</p>
-                <p class="tag">Ліга: ${profile.current?.league || '—'}</p>
-              </div>
-            </div>
-            <div class="progress-shell"><div class="progress-bar" style="width:${Math.min(100, (profile.current?.points || 0) % 200 / 2)}%"></div></div>
-          </section>
-
-          <section class="kpi kpi-5">
-            <article class="card"><p class="tag">Points</p><h3>${statOrDash(profile.current?.points)}</h3></article>
-            <article class="card"><p class="tag">Games</p><h3>${games}</h3></article>
-            <article class="card"><p class="tag">Winrate</p><h3>${statOrDash(profile.allTime.winRate)}%</h3></article>
-            <article class="card"><p class="tag">MVP</p><h3>${profile.allTime.mvp}</h3></article>
-            <article class="card"><p class="tag">Top2 / Top3</p><h3>${profile.allTime.top2} / ${profile.allTime.top3}</h3></article>
-          </section>
-
           <section class="card">
-            <h2>All-time</h2>
-            <p class="tag">W/L/D: ${profile.allTime.wins}/${profile.allTime.losses}/${profile.allTime.draws}</p>
+            <div class="player-head"><img class="avatar lg" src="${profile.avatar || placeholder}" onerror="this.src='${placeholder}'"><div><h1>${profile.nick}</h1><p class="tag">Основна ліга: ${profile.league}</p></div></div>
+            <p>Games: ${profile.allTime.games} · Rounds: ${profile.allTime.rounds}</p>
+            <p>W/L/D: ${profile.allTime.wins}/${profile.allTime.losses}/${profile.allTime.draws} · WR: ${profile.allTime.winrate}%</p>
+            <p>Top1/2/3: ${profile.allTime.top1}/${profile.allTime.top2}/${profile.allTime.top3}</p>
+            <p>Улюблена роль: —</p>
           </section>
-
           <section class="card">
-            <h2>По сезонах</h2>
-            <ul class="list-clean">
-              ${profile.seasons.map((item) => `<li><strong>${item.seasonTitle}</strong> — games: ${item.games}, W/L/D: ${item.wins}/${item.losses}/${item.draws}, MVP/Top2/Top3: ${item.mvp}/${item.top2}/${item.top3}</li>`).join('')}
-            </ul>
-          </section>
-
-          
-          <section class="card">
-            <h2>🎖 Бейджі</h2>
-            <p>${profile.badges?.length ? profile.badges.join(' · ') : '—'}</p>
-          </section>
-
-          <section class="profile-grid two-col">
-            <article class="card"><h3>Найчастіше в команді з</h3><p class="tag">Winrate з ним: ${statOrDash(profile.insights.teammateWinrate)}%</p><ul class="list-clean">${renderList(profile.insights.topTeammates, 'gamesTogether')}</ul></article>
-            <article class="card"><h3>Найчастіше проти</h3><p class="tag">Winrate проти нього: ${statOrDash(profile.insights.versusWinrate)}%</p><ul class="list-clean">${renderList(profile.insights.topOpponents, 'gamesAgainst')}</ul></article>
+            <div class="search-row"><select id="seasonFilter" class="search-input"><option value="all">Всі сезони</option>${seasons.map((s) => `<option value="${s.id}">${s.title}</option>`).join('')}</select></div>
+            <div id="seasonStats"></div>
+            <div id="logs"></div>
           </section>
         `;
+
+        const filter = document.getElementById('seasonFilter');
+        async function renderSeason() {
+          const selected = filter.value;
+          const seasonStats = document.getElementById('seasonStats');
+          const logs = document.getElementById('logs');
+          if (selected === 'all') {
+            seasonStats.innerHTML = `<ul class="list-clean">${profile.seasons.map((s) => `<li>${s.seasonTitle} (${s.league}) · games ${s.games}, WR ${s.winrate}%</li>`).join('')}</ul>`;
+            logs.innerHTML = '<p class="tag">Оберіть сезон, щоб переглянути логи.</p>';
+            return;
+          }
+          const stat = profile.seasons.find((s) => s.seasonId === selected);
+          const logData = await getPlayerSeasonLogs({ nick, seasonId: selected });
+          seasonStats.innerHTML = stat ? `<p>${stat.seasonTitle}: W/L/D ${stat.wins}/${stat.losses}/${stat.draws}, top1/2/3 ${stat.top1}/${stat.top2}/${stat.top3}</p>` : '<p>Сезон без статистики</p>';
+          logs.innerHTML = logData.groups.map((g) => `<article class="card mini"><h3>${g.date}</h3><ul class="list-clean">${g.entries.map((m) => `<li>${m.team1.join(', ')} vs ${m.team2.join(', ')} · winner: ${m.winner || '—'} · MVP ${m.mvp1 || '—'}/${m.mvp2 || '—'}/${m.mvp3 || '—'} · rounds ${m.rounds || 1}</li>`).join('')}</ul></article>`).join('') || '<p class="placeholder">Немає логів за сезон</p>';
+        }
+
+        filter.addEventListener('change', renderSeason);
+        renderSeason();
       } catch (error) {
-        content.innerHTML = `<section class="card"><h1>Не вдалося завантажити дані</h1><p>${safeErrorMessage(error)}</p></section>`;
+        content.innerHTML = `<section class="card">${safeErrorMessage(error)}</section>`;
       }
     }
 

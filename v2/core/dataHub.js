@@ -1,4 +1,6 @@
-const DEFAULT_CONFIG_URL = new URL('./seasons.config.json', import.meta.url);
+import seasonsConfig from './seasons.config.js';
+import { fetchJson } from './utils.js';
+
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
@@ -28,8 +30,11 @@ const SHEET_RANGES = {
   winter202526: 'A1:Z5000',
   archive: 'A1:Z5000'
 };
-const SHEET_FALLBACKS = {
-  autumn2025: ['ocinb2025', 'Осінь2025', 'Осінь 2025', 'Ocinb2025', 'OCINB2025', 'AUTUMN2025']
+const SHEET_ALIASES = {
+  ocinb2025: ['autumn2025'],
+  autumn2025: ['ocinb2025'],
+  archive: ['Архів'],
+  архів: ['archive']
 };
 const RANK_META = {
   S: { label: 'S', cssClass: 'rank-S', themeVars: { '--rank-color': '#ffd166', '--rank-glow': 'rgba(255,209,102,.45)' } },
@@ -117,24 +122,16 @@ async function gasPost(payload = {}, timeoutMs = 12_000) {
   const config = await loadSeasonsConfig();
   const gasUrl = config?.gasEndpoint || config?.endpoints?.gasUrl;
   if (!gasUrl) throw new Error('GAS endpoint не налаштований');
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const action = payload?.action;
+  if (!action || !String(action).trim()) throw new Error('GAS action is required');
+
   try {
-    const res = await fetch(gasUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
+    const json = await fetchJson(gasUrl, action, { ...payload, action: undefined }, timeoutMs);
     if (json?.status !== 'OK') throw new Error(json?.message || 'GAS error');
     return json;
   } catch (error) {
     if ((error?.name || '').includes('Abort')) throw new Error('GAS недоступний / timeout');
     throw error;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -156,8 +153,7 @@ function normalizeSheet(resp) {
 export async function loadSeasonsConfig() {
   const cached = readCache('config', TTL.config);
   if (cached) return cached;
-  const cfg = await fetch(DEFAULT_CONFIG_URL.toString()).then((res) => res.json());
-  return writeCache('config', cfg);
+  return writeCache('config', seasonsConfig);
 }
 
 function getSeasonById(config, seasonId) {
@@ -211,7 +207,9 @@ async function tryReadSheetVariant(sheetName) {
 }
 
 async function readSheet(sheetName) {
-  const variants = [sheetName, ...(SHEET_FALLBACKS[sheetName] || [])];
+  const normalized = normalizeHeader(sheetName).replace(/\s+/g, '');
+  const aliases = SHEET_ALIASES[normalized] || SHEET_ALIASES[normalizeHeader(sheetName)] || [];
+  const variants = [sheetName, ...aliases].slice(0, 3);
   const key = `sheet:${variants.join('|')}`;
   const cached = readCache(key, TTL.sheet) || readStorageCache(key, 10 * 60_000);
   if (cached) return cached;
@@ -219,7 +217,9 @@ async function readSheet(sheetName) {
 
   const promise = (async () => {
     let lastError = null;
+    const tried = [];
     for (const variant of variants) {
+      tried.push(variant);
       try {
         const payload = await tryReadSheetVariant(variant);
         return writeCache(key, payload);
@@ -227,7 +227,10 @@ async function readSheet(sheetName) {
         lastError = error;
       }
     }
-    throw lastError || new Error(`Немає вкладки сезону в таблиці. Спробували: ${variants.join(', ')}`);
+    if (lastError) {
+      throw new Error(`${safeErrorMessage(lastError)}. Спробували sheet: ${tried.join(', ')}`);
+    }
+    throw new Error(`Немає вкладки сезону в таблиці. Спробували: ${tried.join(', ')}`);
   })();
 
   inFlight.set(key, promise);

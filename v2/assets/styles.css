@@ -121,8 +121,9 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   background: rgba(2, 6, 14, 0.72);
 }
 .player-modal .modal-card {
-  background: #0b1220;
-  color: #eef3ff;
+  background: #0a1020;
+  color: #f3f7ff;
+  border-color: rgba(255, 255, 255, 0.24);
   max-height: min(80vh, 680px);
   overflow-y: auto;
 }
@@ -130,5 +131,11 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .player-modal a,
 .player-modal p,
 .player-modal h3 {
-  color: #eef3ff;
+  color: #f3f7ff;
+}
+.player-modal .chip,
+.player-modal a.chip,
+.player-modal button.chip {
+  background: #1a2744;
+  border-color: rgba(255, 255, 255, 0.28);
 }

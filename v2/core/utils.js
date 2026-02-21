@@ -54,6 +54,47 @@ export function jsonp(url, params = {}, timeoutMs = 12_000) {
   });
 }
 
+function isCrossOriginRequest(url) {
+  const parsed = new URL(url, window.location.href);
+  return parsed.origin !== window.location.origin;
+}
+
+function shouldUseJsonp(url) {
+  const parsed = new URL(url, window.location.href);
+  return parsed.hostname.includes('script.google.com') || isCrossOriginRequest(parsed.toString());
+}
+
+export async function fetchJson(url, action, params = {}, timeoutMs = 12_000) {
+  if (!action || !String(action).trim()) {
+    throw new Error('GAS action is required for fetchJson()');
+  }
+
+  const normalizedAction = String(action).trim();
+  const requestParams = { action: normalizedAction, ...params };
+
+  if (shouldUseJsonp(url)) {
+    try {
+      return await jsonp(url, requestParams, timeoutMs);
+    } catch (error) {
+      throw new Error(`JSONP request failed for action="${normalizedAction}" params=${JSON.stringify(params)}: ${error.message || error}`);
+    }
+  }
+
+  const requestUrl = new URL(url, window.location.href);
+  Object.entries(requestParams).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      requestUrl.searchParams.set(key, String(value));
+    }
+  });
+
+  const response = await fetch(requestUrl.toString(), {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
 export function formatRatio(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return '—';
   return `${Math.round(value * 100)}%`;

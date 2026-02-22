@@ -1,5 +1,5 @@
 import seasonsConfig from './seasons.config.js';
-import { fetchJson } from './utils.js';
+import { jsonp } from './utils.js';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -31,8 +31,8 @@ const SHEET_RANGES = {
   archive: 'A1:Z5000'
 };
 const SHEET_ALIASES = {
-  ocinb2025: ['autumn2025'],
-  autumn2025: ['ocinb2025'],
+  ocinb2025: ['autumn2025', 'OcInB2025', 'ОСІНЬ2025', 'ocinb2025 '],
+  autumn2025: ['ocinb2025', 'OcInB2025', 'ОСІНЬ2025', 'ocinb2025 '],
   archive: ['Архів'],
   архів: ['archive']
 };
@@ -122,25 +122,67 @@ async function gasPost(payload = {}, timeoutMs = 12_000) {
   const config = await loadSeasonsConfig();
   const gasUrl = config?.gasEndpoint || config?.endpoints?.gasUrl;
   if (!gasUrl) throw new Error('GAS endpoint не налаштований');
-  const action = payload?.action;
-  if (!action || !String(action).trim()) throw new Error('GAS action is required');
+  const action = String(payload?.action || '').trim();
+  if (!action) throw new Error('GAS action is required');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const json = await fetchJson(gasUrl, action, { ...payload, action: undefined }, timeoutMs);
-    if (json?.status !== 'OK') throw new Error(json?.message || 'GAS error');
+    const response = await fetch(gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ ...payload, action }),
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    if (json?.status && json.status !== 'OK') throw new Error(json?.message || 'GAS error');
     return json;
   } catch (error) {
     if ((error?.name || '').includes('Abort')) throw new Error('GAS недоступний / timeout');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function normalizeGasPayload(payload = {}) {
+  if (Array.isArray(payload)) return { values: payload };
+  if (payload && typeof payload === 'object') return payload;
+  return { payload };
+}
+
+async function gasGetJsonp(params = {}, timeoutMs = 12_000) {
+  const config = await loadSeasonsConfig();
+  const gasUrl = config?.gasEndpoint || config?.endpoints?.gasUrl;
+  if (!gasUrl) throw new Error('GAS endpoint не налаштований');
+  const action = String(params?.action || '').trim();
+  if (!action) throw new Error('GAS action is required');
+  const requestParams = { ...params, action };
+  console.debug('[dataHub] GAS JSONP request', { gasUrl, action, params: requestParams });
+
+  try {
+    const raw = await jsonp(gasUrl, requestParams, timeoutMs);
+    const response = normalizeGasPayload(raw);
+    console.debug('[dataHub] GAS JSONP response', { action, status: response?.status, message: response?.message });
+    return response;
+  } catch (error) {
+    if (String(error?.message || '').includes('JSONP timeout')) {
+      console.debug('[dataHub] GAS JSONP timeout', { action, gasUrl, params: requestParams, error: String(error?.message || error) });
+      throw new Error('GAS недоступний / timeout');
+    }
     throw error;
   }
 }
 
 async function readSheetAll(sheetName) {
-  return gasPost({ action: 'getSheetAll', sheet: sheetName });
+  return gasGetJsonp({ action: 'getSheetRaw', sheet: sheetName, limitRows: 5000 });
 }
 
 async function readSheetRange(sheetName, rangeA1) {
-  return gasPost({ action: 'getSheet', sheet: sheetName, range: rangeA1 });
+  const match = String(rangeA1 || '').match(/:([A-Z]+)(\d+)$/i);
+  const limitRows = match ? Number(match[2]) : undefined;
+  return gasGetJsonp({ action: 'getSheetRaw', sheet: sheetName, limitRows });
 }
 
 function normalizeSheet(resp) {
@@ -176,7 +218,7 @@ async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.shee
     let lastError = null;
     for (let i = 0; i < 2; i += 1) {
       try {
-        const payload = await gasPost({ action, ...params }, timeoutMs);
+        const payload = await gasGetJsonp({ action, ...params }, timeoutMs);
         return writeCache(key, payload);
       } catch (error) {
         lastError = error;
@@ -199,6 +241,7 @@ async function tryReadSheetVariant(sheetName) {
     if (normalized.header.length || normalized.rows.length) return { status: 'OK', message: '', ...normalized, sheet: sheetName };
     throw new Error(`Некоректний формат таблиці: ${sheetName}`);
   } catch (error) {
+    console.debug('[dataHub] readSheet error', { sheetName, error: String(error?.message || error) });
     if (normalizeHeader(error?.message).includes('sheet not found')) {
       throw new Error(`Не вдалося завантажити sheet: ${sheetName}. ${error.message}`);
     }
@@ -269,7 +312,12 @@ function parseDateOnly(value = '') {
     return `${yyyy}-${mm}-${dd}`;
   }
   const dt = new Date(src);
-  if (!Number.isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
+  if (!Number.isNaN(dt.getTime())) {
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
   return src.slice(0, 10);
 }
 
@@ -391,6 +439,39 @@ export async function getCurrentSeason() {
   return getSeasonByDate(config);
 }
 
+
+function extractSnapshotPayload(payload = {}) {
+  return payload?.snapshot || payload?.data || payload?.result || payload;
+}
+
+function normalizeLeagueSnapshotResponse(payload, season, league) {
+  const snap = extractSnapshotPayload(payload);
+  if (!snap || typeof snap !== 'object') return null;
+  const table = Array.isArray(snap.table) ? snap.table : Array.isArray(snap.leaderboard) ? snap.leaderboard : [];
+  if (!table.length) return null;
+  const seasonStats = snap.seasonStats || snap.stats || {};
+  return {
+    seasonId: snap.seasonId || season.id,
+    seasonTitle: snap.seasonTitle || season.uiLabel,
+    league: normalizeLeague(snap.league) || league,
+    top3: Array.isArray(snap.top3) && snap.top3.length ? snap.top3 : table.slice(0, 3),
+    table,
+    leaderboard: table,
+    seasonStats: {
+      games: toNumber(seasonStats.games, 0) || 0,
+      wins: toNumber(seasonStats.wins, 0) || 0,
+      losses: toNumber(seasonStats.losses, 0) || 0,
+      draws: toNumber(seasonStats.draws, 0) || 0,
+      pointsDelta: toNumber(seasonStats.pointsDelta, 0) || 0,
+      players: toNumber(seasonStats.players, table.length) || table.length,
+      rounds: toNumber(seasonStats.rounds, 0) || 0,
+      mvp: seasonStats.mvp || null
+    },
+    rankDistribution: snap.rankDistribution || getRankDistribution(table),
+    matches: Array.isArray(snap.matches) ? snap.matches : []
+  };
+}
+
 export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   const config = await loadSeasonsConfig();
   const league = typeof leagueOrOptions === 'object' ? (leagueOrOptions.league || leagueOrOptions.leagueId) : leagueOrOptions;
@@ -400,6 +481,14 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   const cacheKey = `league:${season.id}:${selectedLeague}`;
   const cached = readCache(cacheKey, TTL.leagueSnapshot);
   if (cached) return cached;
+
+  try {
+    const snapshotPayload = await gasCall('getSnapshot', { scope: 'league', league: selectedLeague, seasonId: season.id }, 12_000, TTL.leagueSnapshot);
+    const normalizedSnapshot = normalizeLeagueSnapshotResponse(snapshotPayload, season, selectedLeague);
+    if (normalizedSnapshot) return writeCache(cacheKey, normalizedSnapshot);
+  } catch (error) {
+    console.debug('[dataHub] getSnapshot league fallback', { seasonId: season.id, league: selectedLeague, error: String(error?.message || error) });
+  }
 
   const [bundle, avatars] = await Promise.all([getSeasonBundle(season), getAvatarsMap()]);
   let rows = bundle.seasonSheet ? parseScoreboardRows(bundle.seasonSheet, selectedLeague) : [];
@@ -433,6 +522,25 @@ export async function getHomeOverview() {
   const cacheKey = `home:${season.id}`;
   const cached = readCache(cacheKey, TTL.home);
   if (cached) return cached;
+  try {
+    const snapshot = await gasCall('getSnapshot', { scope: 'index', seasonId: season.id }, 12_000, TTL.home);
+    const data = extractSnapshotPayload(snapshot);
+    if (data?.top1Kids || data?.top1Adults || data?.statsKids || data?.statsAdults) {
+      return writeCache(cacheKey, {
+        seasonId: data.seasonId || season.id,
+        seasonTitle: data.seasonTitle || season.uiLabel,
+        top1Kids: data.top1Kids || null,
+        top1Adults: data.top1Adults || null,
+        statsKids: data.statsKids || { games: 0, rounds: 0, players: 0 },
+        statsAdults: data.statsAdults || { games: 0, rounds: 0, players: 0 },
+        rankDistKids: data.rankDistKids || data.rankDistributionKids || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 },
+        rankDistAdults: data.rankDistAdults || data.rankDistributionAdults || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 }
+      });
+    }
+  } catch (error) {
+    console.debug('[dataHub] getSnapshot index fallback', { seasonId: season.id, error: String(error?.message || error) });
+  }
+
   const [kids, adults] = await Promise.all([getLeagueSnapshot('kids', season.id), getLeagueSnapshot('sundaygames', season.id)]);
   return writeCache(cacheKey, {
     seasonId: season.id,
@@ -453,7 +561,7 @@ export async function getGameDayView({ dateYMD, league } = {}) {
   const cached = readCache(key, TTL.gameday);
   if (cached) return cached;
 
-  const season = await getCurrentSeason();
+  const season = await getSeasonByDate((await loadSeasonsConfig()), day);
   const bundle = await getSeasonBundle(season);
   const matches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague && m.date === day);
   const mvpCounts = {};

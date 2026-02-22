@@ -1,7 +1,7 @@
 const seasonsConfig = {
   currentSeasonId: 'winter-2025-26',
   endpoints: {
-    gasUrl: 'https://script.google.com/macros/s/AKfycbw14nCv9S-3X_fg84waGgHuuFbynLhTst_KrK4mYbZBVXQtd-pSRRNftKByoI5_Qnkn/exec'
+    gasUrl: 'https://script.google.com/macros/s/AKfycbx4MNY6MpV90LiF9lN42BZ4CYle83dCC72WfGCINk-pTeHcpCc7WdxL2QtHGIqIBodf/exec'
   },
   leagues: {
     kids: { label: 'Молодша', aliases: [] },

@@ -39,10 +39,16 @@ async function showPlayer(nick) {
   modal.showModal();
 }
 
+function renderSkeleton() {
+  document.getElementById('totals').innerHTML = '<article class="card mini"><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div></article><article class="card mini"><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div></article>';
+  document.getElementById('charts').innerHTML = '<article class="card mini"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article>';
+  document.getElementById('tableBody').innerHTML = '<tr><td colspan="8"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></td></tr>';
+}
+
 async function loadDashboard() {
   const state = document.getElementById('state');
+  renderSkeleton();
   try {
-    state.textContent = 'Завантаження...';
     const data = await getSeasonDashboard(seasonSelect.value, leagueSelect.value);
     document.getElementById('seasonTitle').textContent = `${data.seasonTitle} · ${data.league} · Dashboard`;
     document.getElementById('totals').innerHTML = `<article class="card mini"><h3>Games ${data.totals.games}</h3><p>Rounds ${data.totals.rounds}</p></article><article class="card mini"><h3>Players ${data.totals.players}</h3><p><span title="AVG = середня зміна поінтів за гру">AVG Δ</span> ${data.totals.avgPointsDeltaPerGame}</p><p><span title="Перемоги/Поразки/Нічиї">WLD</span> ${data.totals.wldLabel}</p></article>`;
@@ -52,7 +58,7 @@ async function loadDashboard() {
     renderRows(data.tablePlayers);
     state.textContent = '';
   } catch (error) {
-    state.textContent = safeErrorMessage(error);
+    state.textContent = safeErrorMessage(error, 'Дані тимчасово недоступні');
   }
 }
 

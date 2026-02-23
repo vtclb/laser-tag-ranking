@@ -43,8 +43,8 @@ async function init() {
       }
       const stat = profile.seasons.find((s) => s.seasonId === selected);
       const logData = await getPlayerSeasonLogs({ nick, seasonId: selected });
-      seasonStats.innerHTML = stat ? `<p>${stat.seasonTitle}: W/L/D ${stat.wins}/${stat.losses}/${stat.draws}, top1/2/3 ${stat.top1}/${stat.top2}/${stat.top3}</p>` : '<p>Сезон без статистики</p>';
-      logs.innerHTML = logData.groups.map((g) => `<article class="card mini"><h3>${g.date}</h3><ul class="list-clean">${g.entries.map((m) => `<li>${m.team1.join(', ')} vs ${m.team2.join(', ')} · winner: ${m.winner || '—'} · MVP ${m.mvp1 || '—'}/${m.mvp2 || '—'}/${m.mvp3 || '—'} · rounds ${m.rounds || 1}</li>`).join('')}</ul></article>`).join('') || '<p class="placeholder">Немає логів за сезон</p>';
+      seasonStats.innerHTML = stat ? `<p>${stat.seasonTitle}: <span title="Перемоги/Поразки/Нічиї">WLD</span> ${stat.wins}/${stat.losses}/${stat.draws}, top1/2/3 ${stat.top1}/${stat.top2}/${stat.top3}</p><p>Season gain: ${logData.metrics.seasonGain} · Max points: ${logData.metrics.maxPoints} · Avg/day: ${logData.metrics.avgPerDay}</p>` : '<p>Сезон без статистики</p>';
+      logs.innerHTML = logData.groups.map((g) => `<article class="card mini" style="border:1px solid rgba(255,255,255,.18);margin-top:.6rem;padding:.5rem .7rem;"><h3>${g.date}</h3><ul class="list-clean">${g.entries.map((m) => `<li>${m.team1.join(', ')} vs ${m.team2.join(', ')} · winner: ${m.winner || '—'} · MVP ${m.mvp1 || '—'}/${m.mvp2 || '—'}/${m.mvp3 || '—'} · rounds ${m.rounds || 1}</li>`).join('')}</ul></article>`).join('') || '<p class="placeholder">Немає логів за сезон</p>';
     }
 
     filter.addEventListener('change', renderSeason);

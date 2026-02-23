@@ -1,0 +1,435 @@
+{
+  "seasonId": "summer-2025",
+  "seasonTitle": "Summer 2025",
+  "leagues": {
+    "kids": {
+      "table": [],
+      "summary": {
+        "games": 0,
+        "rounds": 0,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "pointsDelta": 0,
+        "players": 0,
+        "mvp": null
+      },
+      "days": []
+    },
+    "sundaygames": {
+      "table": [
+        {
+          "place": 1,
+          "nick": "Laston",
+          "points": 1181,
+          "games": 136,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 60,
+          "mvp": 45,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 2,
+          "nick": "Leres",
+          "points": 1105,
+          "games": 136,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 62,
+          "mvp": 17,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 3,
+          "nick": "Zavodchanyn",
+          "points": 991,
+          "games": 137,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 53,
+          "mvp": 31,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 4,
+          "nick": "Justy",
+          "points": 966,
+          "games": 151,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 52,
+          "mvp": 27,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 5,
+          "nick": "Slavon",
+          "points": 951,
+          "games": 167,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 51,
+          "mvp": 17,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 6,
+          "nick": "Kуmar",
+          "points": 896,
+          "games": 185,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 49,
+          "mvp": 12,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 7,
+          "nick": "Кицюня",
+          "points": 856,
+          "games": 124,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 48,
+          "mvp": 8,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 8,
+          "nick": "Voron",
+          "points": 851,
+          "games": 118,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 53,
+          "mvp": 16,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 9,
+          "nick": "RuBisCo",
+          "points": 822,
+          "games": 71,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 56,
+          "mvp": 18,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "A",
+          "rank": {
+            "label": "A",
+            "cssClass": "rank-A"
+          }
+        },
+        {
+          "place": 10,
+          "nick": "Оксанка",
+          "points": 796,
+          "games": 197,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": 38,
+          "mvp": 7,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "B",
+          "rank": {
+            "label": "B",
+            "cssClass": "rank-B"
+          }
+        },
+        {
+          "place": 11,
+          "nick": "Temostar",
+          "points": 666,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "B",
+          "rank": {
+            "label": "B",
+            "cssClass": "rank-B"
+          }
+        },
+        {
+          "place": 12,
+          "nick": "Gidora",
+          "points": 636,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "B",
+          "rank": {
+            "label": "B",
+            "cssClass": "rank-B"
+          }
+        },
+        {
+          "place": 13,
+          "nick": "Eks",
+          "points": 581,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "B",
+          "rank": {
+            "label": "B",
+            "cssClass": "rank-B"
+          }
+        },
+        {
+          "place": 14,
+          "nick": "Reabilitator",
+          "points": 556,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "B",
+          "rank": {
+            "label": "B",
+            "cssClass": "rank-B"
+          }
+        },
+        {
+          "place": 15,
+          "nick": "Юліііііі",
+          "points": 496,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "C",
+          "rank": {
+            "label": "C",
+            "cssClass": "rank-C"
+          }
+        },
+        {
+          "place": 16,
+          "nick": "Otg 141",
+          "points": 486,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "C",
+          "rank": {
+            "label": "C",
+            "cssClass": "rank-C"
+          }
+        },
+        {
+          "place": 17,
+          "nick": "tuff boi",
+          "points": 341,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "C",
+          "rank": {
+            "label": "C",
+            "cssClass": "rank-C"
+          }
+        },
+        {
+          "place": 18,
+          "nick": "Den",
+          "points": 311,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "C",
+          "rank": {
+            "label": "C",
+            "cssClass": "rank-C"
+          }
+        },
+        {
+          "place": 19,
+          "nick": "Люся",
+          "points": 291,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "C",
+          "rank": {
+            "label": "C",
+            "cssClass": "rank-C"
+          }
+        },
+        {
+          "place": 20,
+          "nick": "Nata",
+          "points": 261,
+          "games": null,
+          "wins": 0,
+          "losses": 0,
+          "draws": 0,
+          "winRate": null,
+          "mvp": 0,
+          "mvp2": 0,
+          "mvp3": 0,
+          "inactive": false,
+          "avatarUrl": "",
+          "rankLetter": "C",
+          "rank": {
+            "label": "C",
+            "cssClass": "rank-C"
+          }
+        }
+      ],
+      "summary": {
+        "games": 1422,
+        "rounds": 1269,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "pointsDelta": 14040,
+        "players": 20,
+        "mvp": "Laston"
+      },
+      "days": []
+    }
+  }
+}

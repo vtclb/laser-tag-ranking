@@ -136,14 +136,15 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .player-modal .chip,
 .player-modal a.chip,
 .player-modal button.chip {
-  background: rgba(10, 14, 22, 0.95);
+  background: rgba(8, 12, 20, 0.98);
   color: #f3f7ff;
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(182, 215, 255, 0.42);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
 }
 .player-modal .chip:hover,
 .player-modal a.chip:hover,
 .player-modal button.chip:hover {
-  background: rgba(44, 75, 128, 0.95);
-  border-color: rgba(150, 210, 255, 0.6);
+  background: rgba(58, 98, 162, 0.98);
+  color: #ffffff;
+  border-color: rgba(196, 229, 255, 0.8);
 }

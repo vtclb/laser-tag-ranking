@@ -185,11 +185,38 @@ async function readSheetRange(sheetName, rangeA1) {
   return gasGetJsonp({ action: 'getSheetRaw', sheet: sheetName, limitRows });
 }
 
-function normalizeSheet(resp) {
-  const values = Array.isArray(resp?.values) ? resp.values : [];
-  const header = Array.isArray(values[0]) ? values[0].map((value) => String(value)) : [];
-  const rows = header.length ? values.slice(1) : [];
-  return { header, rows };
+function normalizeSheetPayload(payload) {
+  if (Array.isArray(payload)) {
+    const header = Array.isArray(payload[0]) ? payload[0].map((value) => String(value)) : [];
+    const rows = header.length ? payload.slice(1) : [];
+    return { header, rows };
+  }
+
+  if (!payload || typeof payload !== 'object') return { header: [], rows: [] };
+
+  if (Array.isArray(payload.header) || Array.isArray(payload.rows)) {
+    const header = Array.isArray(payload.header) ? payload.header.map((value) => String(value)) : [];
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    return { header, rows };
+  }
+
+  if (Array.isArray(payload.values)) {
+    const header = Array.isArray(payload.values[0]) ? payload.values[0].map((value) => String(value)) : [];
+    const rows = header.length ? payload.values.slice(1) : [];
+    return { header, rows };
+  }
+
+  if (payload.data) {
+    const normalized = normalizeSheetPayload(payload.data);
+    if (normalized.header.length || normalized.rows.length) return normalized;
+  }
+
+  if (payload.result) {
+    const normalized = normalizeSheetPayload(payload.result);
+    if (normalized.header.length || normalized.rows.length) return normalized;
+  }
+
+  return { header: [], rows: [] };
 }
 
 export async function loadSeasonsConfig() {
@@ -235,13 +262,21 @@ async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.shee
 async function tryReadSheetVariant(sheetName) {
   const canonical = normalizeHeader(sheetName).replace(/\s+/g, '');
   const range = SHEET_RANGES[canonical] || SHEET_RANGES[normalizeHeader(sheetName)] || '';
+  let payload = null;
   try {
-    const response = range ? await readSheetRange(sheetName, range) : await readSheetAll(sheetName);
-    const normalized = normalizeSheet(response);
-    if (normalized.header.length || normalized.rows.length) return { status: 'OK', message: '', ...normalized, sheet: sheetName };
-    throw new Error(`Некоректний формат таблиці: ${sheetName}`);
+    payload = range ? await readSheetRange(sheetName, range) : await readSheetAll(sheetName);
+    const normalized = normalizeSheetPayload(payload);
+    if (!normalized.header.length && !normalized.rows.length) {
+      console.warn('[dataHub] readSheet empty payload', { sheetName, status: payload?.status, keys: payload ? Object.keys(payload) : [] });
+    }
+    return { status: payload?.status || 'OK', message: payload?.message || '', ...normalized, sheet: sheetName };
   } catch (error) {
-    console.debug('[dataHub] readSheet error', { sheetName, error: String(error?.message || error) });
+    console.debug('[dataHub] readSheet error', {
+      sheetName,
+      status: payload?.status,
+      keys: payload ? Object.keys(payload) : [],
+      error: String(error?.message || error)
+    });
     if (normalizeHeader(error?.message).includes('sheet not found')) {
       throw new Error(`Не вдалося завантажити sheet: ${sheetName}. ${error.message}`);
     }

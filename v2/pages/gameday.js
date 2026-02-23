@@ -5,7 +5,8 @@ const leagueSelect = document.getElementById('leagueSelect');
 const storageKey = 'v2:lastLeague';
 
 function renderMatch(m) {
-  return `<li><strong>${(m.teams.sideA || []).join(', ')} vs ${(m.teams.sideB || []).join(', ')}</strong><br>Winner: ${m.winner || '—'} · MVP: ${m.mvp || '—'}</li>`;
+  const changes = (m.pointsChanges || []).map((entry) => `${entry.nick}: ${entry.delta >= 0 ? '+' : ''}${entry.delta ?? 0}`).join(' · ');
+  return `<li style="padding:.55rem 0;border-bottom:1px solid rgba(255,255,255,.14);"><strong>${(m.teams.sideA || []).join(', ')} vs ${(m.teams.sideB || []).join(', ')}</strong><br>Winner: ${m.winner || '—'} · MVP: ${m.mvp || '—'} · Rounds: ${m.rounds || 1}<br><span class="tag">Δpoints: ${changes || '—'}</span></li>`;
 }
 
 async function load() {

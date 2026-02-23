@@ -4,6 +4,7 @@ import { jsonp } from './utils.js';
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
+const STATIC_SEASON_CACHE = new Map();
 
 const TTL = {
   home: 30_000,
@@ -219,10 +220,56 @@ function normalizeSheetPayload(payload) {
   return { header: [], rows: [] };
 }
 
+function normalizeGetSheetRawResponse(payload = {}, sheetName = '') {
+  let header = [];
+  let rows = null;
+
+  if (Array.isArray(payload)) {
+    header = Array.isArray(payload[0]) ? payload[0].map((value) => String(value)) : [];
+    rows = payload.slice(1);
+  } else if (payload && typeof payload === 'object' && Array.isArray(payload.values)) {
+    header = Array.isArray(payload.values[0]) ? payload.values[0].map((value) => String(value)) : [];
+    rows = payload.values.slice(1);
+  } else if (payload && typeof payload === 'object' && (Array.isArray(payload.header) || Array.isArray(payload.rows))) {
+    header = Array.isArray(payload.header) ? payload.header.map((value) => String(value)) : [];
+    rows = Array.isArray(payload.rows) ? payload.rows : null;
+  } else if (payload?.data || payload?.result) {
+    return normalizeGetSheetRawResponse(payload.data || payload.result, sheetName);
+  }
+
+  if (!header.length || !Array.isArray(rows)) {
+    throw new Error(`Некоректний формат таблиці: ${sheetName} (missing header/rows)`);
+  }
+  return {
+    status: payload?.status || 'OK',
+    sheet: sheetName,
+    header,
+    rows
+  };
+}
+
+async function readStaticSeason(seasonId) {
+  if (!seasonId || typeof fetch !== 'function') return null;
+  if (STATIC_SEASON_CACHE.has(seasonId)) return STATIC_SEASON_CACHE.get(seasonId);
+  try {
+    const response = await fetch(`../data/seasons/${encodeURIComponent(seasonId)}.json`, { cache: 'force-cache' });
+    if (!response.ok) return null;
+    const data = await response.json();
+    STATIC_SEASON_CACHE.set(seasonId, data);
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadSeasonsConfig() {
   const cached = readCache('config', TTL.config);
   if (cached) return cached;
-  return writeCache('config', seasonsConfig);
+  const mappedSeasons = (seasonsConfig.seasons || []).map((season) => ({
+    ...season,
+    sources: seasonsConfig.seasonSourcesMap?.[season.id] || season.sources || {}
+  }));
+  return writeCache('config', { ...seasonsConfig, seasons: mappedSeasons });
 }
 
 function getSeasonById(config, seasonId) {
@@ -265,11 +312,7 @@ async function tryReadSheetVariant(sheetName) {
   let payload = null;
   try {
     payload = range ? await readSheetRange(sheetName, range) : await readSheetAll(sheetName);
-    const normalized = normalizeSheetPayload(payload);
-    if (!normalized.header.length && !normalized.rows.length) {
-      console.warn('[dataHub] readSheet empty payload', { sheetName, status: payload?.status, keys: payload ? Object.keys(payload) : [] });
-    }
-    return { status: payload?.status || 'OK', message: payload?.message || '', ...normalized, sheet: sheetName };
+    return normalizeGetSheetRawResponse(payload, sheetName);
   } catch (error) {
     console.debug('[dataHub] readSheet error', {
       sheetName,
@@ -388,6 +431,29 @@ function parseMatches(sheet) {
   }).filter((m) => m.team1.length || m.team2.length);
 }
 
+function parseLogs(sheet) {
+  const header = (sheet.header || []).map(normalizeHeader);
+  const find = (names) => header.findIndex((h) => names.includes(h));
+  const i = {
+    timestamp: find(['timestamp', 'time', 'datetime', 'date']),
+    league: find(['league', 'division']),
+    nick: find(['nickname', 'nick', 'player']),
+    delta: find(['delta', 'pointsdelta', 'pointdelta']),
+    newPoints: find(['newpoints', 'points', 'pts'])
+  };
+
+  return (sheet.rows || []).map((row) => {
+    const timestamp = String(row[i.timestamp] || '').trim();
+    const league = normalizeLeague(row[i.league] || 'kids') || 'kids';
+    const nick = String(row[i.nick] || '').trim();
+    const delta = toNumber(row[i.delta], null);
+    const newPoints = toNumber(row[i.newPoints], null);
+    const date = parseDateOnly(timestamp);
+    const tsMs = Date.parse(timestamp);
+    return { timestamp, tsMs: Number.isFinite(tsMs) ? tsMs : null, date, league, nick, delta, newPoints };
+  }).filter((entry) => entry.nick && (entry.delta !== null || entry.newPoints !== null));
+}
+
 function buildStatsFromMatches(matches, league, pointsByNick = new Map()) {
   const map = new Map();
   const touch = (nick) => {
@@ -441,14 +507,16 @@ async function getSeasonBundle(season) {
   const key = `bundle:${season.id}`;
   const cached = readCache(key, TTL.ratings);
   if (cached) return cached;
-  const bundle = { seasonSheet: null, kidsSheet: null, sundaySheet: null, gamesSheet: null, matches: [] };
+  const bundle = { seasonSheet: null, kidsSheet: null, sundaySheet: null, gamesSheet: null, logsSheet: null, matches: [], logs: [] };
   const tasks = [];
   if (season.sources.seasonSheet) tasks.push(readSheet(season.sources.seasonSheet).then((s) => { bundle.seasonSheet = s; }));
   if (season.sources.kidsSheet) tasks.push(readSheet(season.sources.kidsSheet).then((s) => { bundle.kidsSheet = s; }));
   if (season.sources.sundaygamesSheet) tasks.push(readSheet(season.sources.sundaygamesSheet).then((s) => { bundle.sundaySheet = s; }));
   if (season.sources.gamesSheet) tasks.push(readSheet(season.sources.gamesSheet).then((s) => { bundle.gamesSheet = s; }));
+  if (season.sources.logsSheet) tasks.push(readSheet(season.sources.logsSheet).then((s) => { bundle.logsSheet = s; }));
   await Promise.all(tasks);
   bundle.matches = parseMatches(bundle.gamesSheet || bundle.seasonSheet || { header: [], rows: [] });
+  bundle.logs = parseLogs(bundle.logsSheet || { header: [], rows: [] });
   return writeCache(key, bundle);
 }
 
@@ -517,6 +585,24 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   const cached = readCache(cacheKey, TTL.leagueSnapshot);
   if (cached) return cached;
 
+  if (season.isStatic) {
+    const staticData = await readStaticSeason(season.id);
+    const leagueData = staticData?.leagues?.[selectedLeague];
+    if (leagueData?.table?.length) {
+      return writeCache(cacheKey, {
+        seasonId: season.id,
+        seasonTitle: staticData.seasonTitle || season.uiLabel,
+        league: selectedLeague,
+        top3: leagueData.table.slice(0, 3),
+        table: leagueData.table,
+        leaderboard: leagueData.table,
+        seasonStats: leagueData.summary || { games: 0, wins: 0, losses: 0, draws: 0, pointsDelta: 0, players: leagueData.table.length, rounds: 0, mvp: null },
+        rankDistribution: leagueData.rankDistribution || getRankDistribution(leagueData.table),
+        matches: Array.isArray(leagueData.matches) ? leagueData.matches : []
+      });
+    }
+  }
+
   try {
     const snapshotPayload = await gasCall('getSnapshot', { scope: 'league', league: selectedLeague, seasonId: season.id }, 12_000, TTL.leagueSnapshot);
     const normalizedSnapshot = normalizeLeagueSnapshotResponse(snapshotPayload, season, selectedLeague);
@@ -547,6 +633,7 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   }, { games: 0, wins: 0, draws: 0, losses: 0, pointsDelta: 0, players: leaderboard.length, rounds: 0, mvp: 0 });
   const leagueMatches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague);
   seasonStats.rounds = leagueMatches.reduce((sum, m) => sum + (m.rounds || 1), 0);
+  seasonStats.games = leagueMatches.length;
   seasonStats.mvp = leaderboard.reduce((best, p) => (p.mvp > (best.mvp || -1) ? p : best), {}).nick || null;
 
   return writeCache(cacheKey, { seasonId: season.id, seasonTitle: season.uiLabel, league: selectedLeague, top3: leaderboard.slice(0, 3), table: leaderboard, leaderboard, seasonStats, rankDistribution: getRankDistribution(leaderboard), matches: leagueMatches });
@@ -599,6 +686,18 @@ export async function getGameDayView({ dateYMD, league } = {}) {
   const season = await getSeasonByDate((await loadSeasonsConfig()), day);
   const bundle = await getSeasonBundle(season);
   const matches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague && m.date === day);
+  const logsByMatch = matches.map((match) => {
+    const centerTs = Date.parse(match.timestamp);
+    const participants = new Set([...match.team1, ...match.team2].map(normalizeHeader));
+    const entries = bundle.logs.filter((entry) => {
+      if (normalizeLeague(entry.league) !== selectedLeague) return false;
+      if (entry.date !== day) return false;
+      if (!participants.has(normalizeHeader(entry.nick))) return false;
+      if (!Number.isFinite(centerTs) || !Number.isFinite(entry.tsMs)) return true;
+      return Math.abs(entry.tsMs - centerTs) <= 60_000;
+    });
+    return entries;
+  });
   const mvpCounts = {};
   const playersMap = new Map();
   matches.forEach((m) => {
@@ -619,7 +718,8 @@ export async function getGameDayView({ dateYMD, league } = {}) {
     roundsCount: matches.reduce((sum, m) => sum + (m.rounds || 1), 0),
     gamesCount: matches.length,
     playersToday: [...playersMap.values()].sort((a, b) => b.games - a.games || a.nick.localeCompare(b.nick, 'uk')),
-    mvpCounts
+    mvpCounts,
+    logsByMatch
   };
   return writeCache(key, view);
 }
@@ -651,7 +751,9 @@ export async function getSeasonDashboard(seasonId, league = 'kids') {
       games: snapshot.seasonStats.games,
       rounds: snapshot.seasonStats.rounds,
       players: totalPlayers,
-      avgGamesPerPlayer: totalPlayers ? (snapshot.seasonStats.games / totalPlayers).toFixed(1) : '0.0'
+      avgGamesPerPlayer: totalPlayers ? (snapshot.seasonStats.games / totalPlayers).toFixed(1) : '0.0',
+      avgPointsDeltaPerGame: snapshot.seasonStats.games ? Number((snapshot.seasonStats.pointsDelta / snapshot.seasonStats.games).toFixed(2)) : 0,
+      wldLabel: `${snapshot.seasonStats.wins}/${snapshot.seasonStats.losses}/${snapshot.seasonStats.draws}`
     },
     rankDistribution: snapshot.rankDistribution,
     top3: snapshot.top3,
@@ -728,15 +830,31 @@ export async function getPlayerSeasonLogs({ nick, seasonId } = {}) {
   const season = getSeasonById(config, seasonId);
   const bundle = await getSeasonBundle(season);
   const nickname = normalizeHeader(nick);
-  const logs = bundle.matches.filter((m) => [...m.team1, ...m.team2].some((n) => normalizeHeader(n) === nickname));
+  const matchLogs = bundle.matches.filter((m) => [...m.team1, ...m.team2].some((n) => normalizeHeader(n) === nickname));
+  const playerLogs = bundle.logs.filter((entry) => normalizeHeader(entry.nick) === nickname);
+  const sortedByTime = [...playerLogs].sort((a, b) => (a.tsMs || 0) - (b.tsMs || 0));
+  const seasonGain = sortedByTime.length ? (sortedByTime[sortedByTime.length - 1].newPoints ?? 0) - (sortedByTime[0].newPoints ?? 0) : 0;
+  const maxPoints = sortedByTime.reduce((max, entry) => (entry.newPoints !== null && entry.newPoints > max ? entry.newPoints : max), Number.NEGATIVE_INFINITY);
+  const playedDays = new Set(sortedByTime.map((entry) => entry.date).filter(Boolean));
+  const avgPerDay = playedDays.size ? seasonGain / playedDays.size : 0;
   const grouped = new Map();
-  logs.forEach((entry) => {
+  matchLogs.forEach((entry) => {
     const day = entry.date || 'unknown';
     if (!grouped.has(day)) grouped.set(day, []);
     grouped.get(day).push(entry);
   });
   const groups = [...grouped.entries()].sort((a, b) => String(b[0]).localeCompare(String(a[0]))).map(([date, entries]) => ({ date, entries }));
-  return { seasonId, nick, groups };
+  return {
+    seasonId,
+    nick,
+    groups,
+    metrics: {
+      seasonGain,
+      maxPoints: Number.isFinite(maxPoints) ? maxPoints : 0,
+      avgPerDay: Number(avgPerDay.toFixed(2)),
+      playedDaysCount: playedDays.size
+    }
+  };
 }
 
 export async function getTopPlayers(seasonId, league = 'kids', limit = 3) { const snapshot = await getLeagueSnapshot(league, seasonId); return snapshot.table.slice(0, Math.max(1, limit)); }
@@ -778,7 +896,21 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dateYMD = typeof dateOrOptions === 'object' ? (dateOrOptions.date || dateOrOptions.dateYMD) : dateOrOptions;
   const league = typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg;
   const view = await getGameDayView({ dateYMD, league });
-  return { date: view.dateYMD, league: view.league, mode: { mobile: true, tv: true }, matches: view.matches.map((m) => ({ timestamp: m.timestamp, date: m.date, teams: { sideA: m.team1, sideB: m.team2 }, mvp: m.mvp1, winner: m.winner })), activePlayers: view.playersToday.map((p) => ({ nick: p.nick, matchesToday: p.games, mvpToday: p.mvp, rankingPlace: null })) };
+  return {
+    date: view.dateYMD,
+    league: view.league,
+    mode: { mobile: true, tv: true },
+    matches: view.matches.map((m, index) => ({
+      timestamp: m.timestamp,
+      date: m.date,
+      teams: { sideA: m.team1, sideB: m.team2 },
+      mvp: m.mvp1,
+      winner: m.winner,
+      rounds: m.rounds,
+      pointsChanges: (view.logsByMatch[index] || []).map((entry) => ({ nick: entry.nick, delta: entry.delta, newPoints: entry.newPoints }))
+    })),
+    activePlayers: view.playersToday.map((p) => ({ nick: p.nick, matchesToday: p.games, mvpToday: p.mvp, rankingPlace: null }))
+  };
 }
 
 export async function getSeasons() { return loadSeasonsConfig(); }

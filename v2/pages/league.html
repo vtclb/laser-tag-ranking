@@ -19,10 +19,10 @@
     </section>
 
     <section class="kpi kpi-5">
-      <article class="card"><p class="tag">Games</p><h3 id="games"></h3></article>
-      <article class="card"><p class="tag">Wins</p><h3 id="wins"></h3></article>
-      <article class="card"><p class="tag">Losses</p><h3 id="losses"></h3></article>
-      <article class="card"><p class="tag">Draws</p><h3 id="draws"></h3></article>
+      <article class="card"><p class="tag"><span class="tooltip-term" title="Games = зіграні матчі">Games</span></p><h3 id="games"></h3></article>
+      <article class="card"><p class="tag"><span class="tooltip-term" title="Wins / Losses / Draws">WLD Wins</span></p><h3 id="wins"></h3></article>
+      <article class="card"><p class="tag"><span class="tooltip-term" title="Wins / Losses / Draws">WLD Losses</span></p><h3 id="losses"></h3></article>
+      <article class="card"><p class="tag"><span class="tooltip-term" title="Wins / Losses / Draws">WLD Draws</span></p><h3 id="draws"></h3></article>
       <article class="card"><p class="tag">ΔPoints</p><h3 id="delta">—</h3></article>
     </section>
 
@@ -34,7 +34,7 @@
       <button id="toggleRows" class="chip" type="button">Показати всі</button>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>Games</th><th>WinRate</th><th>MVP</th><th>Top2</th><th>Top3</th><th>Rank</th></tr></thead>
+          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th><span class="tooltip-term" title="Games = зіграні матчі">Games</span></th><th>WinRate</th><th>MVP</th><th>Top2</th><th>Top3</th><th>Rank</th></tr></thead>
           <tbody id="tableBody"></tbody>
         </table>
       </div>
@@ -44,7 +44,7 @@
   
 
   <script type="module">
-    import { getLeagueSnapshot, loadSeasonsConfig, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
+    import { getCurrentSeason, getLeagueSnapshot, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
     import { getQueryParams, createTop3Markup, statOrDash, highlightMatch } from '../core/utils.js';
 
     const { league = 'kids', seasonId } = getQueryParams();
@@ -54,10 +54,16 @@
 
     const placeholder = '../assets/default-avatar.svg';
 
+    function showSkeleton() {
+      document.getElementById('top3').innerHTML = '<article class="top-card skeleton"></article><article class="top-card skeleton"></article><article class="top-card skeleton"></article>';
+      document.getElementById('tableBody').innerHTML = '<tr><td colspan="9"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></td></tr>';
+    }
+
     async function init() {
+      showSkeleton();
       try {
-        const cfg = await loadSeasonsConfig();
-        const targetSeason = seasonId || cfg.currentSeasonId;
+        const currentSeason = await getCurrentSeason();
+        const targetSeason = seasonId || currentSeason.id;
         const targetLeague = normalizeLeague(league) || 'kids';
         data = await getLeagueSnapshot(targetLeague, targetSeason);
         document.getElementById('leagueTitle').textContent = `${data.seasonTitle} · ${targetLeague}`;
@@ -69,8 +75,8 @@
         document.getElementById('delta').textContent = statOrDash(data.seasonStats.pointsDelta);
         renderTable();
       } catch (error) {
-        document.getElementById('leagueTitle').textContent = 'Не вдалося завантажити дані';
-        document.getElementById('errorBox').textContent = safeErrorMessage(error);
+        document.getElementById('leagueTitle').textContent = 'Дані тимчасово недоступні';
+        document.getElementById('errorBox').textContent = safeErrorMessage(error, 'Дані тимчасово недоступні');
       }
     }
 

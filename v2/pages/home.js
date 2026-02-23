@@ -19,12 +19,12 @@ function top5Card(players, leagueLabel, leagueSlug) {
   return `<article class="card mini top5-card">
     <p class="tag">${leagueLabel}</p>
     <ol class="top5-list">${rows || '<li class="top5-empty">Немає даних</li>'}</ol>
-    <a class="chip" href="./league.html?league=${leagueSlug}">Статистика ліги</a>
+    <a class="chip" href="./league.html?league=${leagueSlug}">${leagueSlug === 'kids' ? 'Перейти до дитячої ліги' : 'Перейти до дорослої ліги'}</a>
   </article>`;
 }
 
 function statsCard(title, stats) {
-  return `<article class="card mini"><p class="tag">${title}</p><h3>Бої: ${stats.battles}</h3><p>Раундів: ${stats.rounds}</p><p>Гравців: ${stats.players}</p></article>`;
+  return `<article class="card mini"><p class="tag">${title}</p><h3><span class="tooltip-term" title="Games = зіграні матчі">Games</span>: ${stats.games}</h3><p><span class="tooltip-term" title="Rounds = серії боїв">Rounds</span>: ${stats.rounds}</p><p><span class="tooltip-term" title="Battles = окремі бої">Battles</span>: ${stats.battles}</p></article>`;
 }
 
 function distChart(title, dist, leagueClass = '') {
@@ -42,19 +42,25 @@ function distChart(title, dist, leagueClass = '') {
   return `<article class="card mini"><p class="tag">${title}</p><p class="tag">Всього гравців: ${total}</p>${rows}</article>`;
 }
 
+function renderSkeleton() {
+  document.getElementById('topHeroes').innerHTML = '<article class="card mini skeleton-block skeleton"></article><article class="card mini skeleton-block skeleton"></article>';
+  document.getElementById('overviewStats').innerHTML = '<article class="card mini"><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article><article class="card mini"><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article>';
+  document.getElementById('charts').innerHTML = '<article class="card mini"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article><article class="card mini"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article>';
+}
+
 async function init() {
   const stateBox = document.getElementById('stateBox');
+  renderSkeleton();
   try {
-    stateBox.textContent = 'Завантаження...';
     const data = await getHomeOverview();
     document.getElementById('currentSeason').textContent = data.seasonTitle;
     document.getElementById('topHeroes').innerHTML = top5Card(data.top5Kids, 'Kids — TOP 5', 'kids') + top5Card(data.top5Adults, 'Sundaygames — TOP 5', 'sundaygames');
-    document.getElementById('overviewStats').innerHTML = statsCard('Kids статистика', data.statsKids) + statsCard('Sundaygames статистика', data.statsAdults);
+    document.getElementById('overviewStats').innerHTML = statsCard('Kids статистика', data.statsKids) + statsCard('Sundaygames статистика', data.statsAdults) + statsCard('Загалом по лігах', data.statsTotal);
     document.getElementById('charts').innerHTML = distChart('Ранги: Kids', data.rankDistKids, 'league-kids') + distChart('Ранги: Sundaygames', data.rankDistAdults, 'league-adults');
-    stateBox.textContent = '';
+    stateBox.innerHTML = '<span class="tooltip-term" title="AVG = середня кількість поінтів за гру">AVG</span> · <span class="tooltip-term" title="Wins / Losses / Draws">WLD</span> · <span class="tooltip-term" title="Games = зіграні матчі">Games</span> · <span class="tooltip-term" title="Rounds = серії боїв">Rounds</span> · <span class="tooltip-term" title="Battles = окремі бої">Battles</span>';
   } catch (error) {
-    document.getElementById('currentSeason').textContent = 'Помилка';
-    stateBox.textContent = safeErrorMessage(error);
+    document.getElementById('currentSeason').textContent = 'Дані тимчасово недоступні';
+    stateBox.textContent = safeErrorMessage(error, 'Дані тимчасово недоступні');
   }
 }
 

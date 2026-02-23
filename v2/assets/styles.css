@@ -173,3 +173,42 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   box-shadow: 0 12px 30px rgba(0,0,0,.42);
 }
 .context-menu *, .ctx-menu *, .dropdown-menu * { color: #f4f8ff !important; }
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #202734 0%, #2a3342 50%, #202734 100%);
+  background-size: 200% 100%;
+  border-radius: .65rem;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-line { height: 14px; margin: .35rem 0; }
+.skeleton-line.lg { height: 22px; }
+.skeleton-line.sm { height: 10px; }
+.skeleton-block { min-height: 140px; }
+
+.tooltip-term {
+  border-bottom: 1px dashed rgba(255,255,255,.4);
+  cursor: help;
+}
+
+.terms-help {
+  margin-top: .8rem;
+  display: flex;
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+
+.result-chip {
+  display: inline-block;
+  margin: .2rem .3rem .2rem 0;
+  padding: .2rem .45rem;
+  border-radius: .5rem;
+  background: rgba(255,255,255,.08);
+}

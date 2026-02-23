@@ -566,8 +566,10 @@ function extractSnapshotPayload(payload = {}) {
 }
 
 function normalizeHomeStats(raw = {}) {
+  const games = toNumber(raw.games, 0) ?? 0;
   return {
-    battles: toNumber(raw.battles, null) ?? toNumber(raw.battlesCount, null) ?? toNumber(raw.games, 0) ?? 0,
+    games,
+    battles: toNumber(raw.battles, null) ?? toNumber(raw.battlesCount, null) ?? games ?? 0,
     rounds: toNumber(raw.rounds, null) ?? toNumber(raw.roundsCount, 0) ?? 0,
     players: toNumber(raw.players, null) ?? toNumber(raw.playersCount, 0) ?? 0
   };
@@ -683,6 +685,8 @@ export async function getHomeOverview() {
     if (data?.top1Kids || data?.top1Adults || data?.statsKids || data?.statsAdults || data?.top5Kids || data?.top5Adults) {
       const top5Kids = normalizeHomeTop5(data.top5Kids || data.topKids, data.top1Kids);
       const top5Adults = normalizeHomeTop5(data.top5Adults || data.topAdults, data.top1Adults);
+      const statsKids = normalizeHomeStats(data.statsKids || {});
+      const statsAdults = normalizeHomeStats(data.statsAdults || {});
       return writeCache(cacheKey, {
         seasonId: data.seasonId || season.id,
         seasonTitle: data.seasonTitle || season.uiLabel,
@@ -690,8 +694,14 @@ export async function getHomeOverview() {
         top5Adults,
         top1Kids: data.top1Kids || null,
         top1Adults: data.top1Adults || null,
-        statsKids: normalizeHomeStats(data.statsKids || {}),
-        statsAdults: normalizeHomeStats(data.statsAdults || {}),
+        statsKids,
+        statsAdults,
+        statsTotal: {
+          games: statsKids.games + statsAdults.games,
+          rounds: statsKids.rounds + statsAdults.rounds,
+          battles: statsKids.battles + statsAdults.battles,
+          players: statsKids.players + statsAdults.players
+        },
         rankDistKids: data.rankDistKids || data.rankDistributionKids || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 },
         rankDistAdults: data.rankDistAdults || data.rankDistributionAdults || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 }
       });
@@ -701,6 +711,8 @@ export async function getHomeOverview() {
   }
 
   const [kids, adults] = await Promise.all([getLeagueSnapshot('kids', season.id), getLeagueSnapshot('sundaygames', season.id)]);
+  const statsKids = normalizeHomeStats(kids.seasonStats);
+  const statsAdults = normalizeHomeStats(adults.seasonStats);
   return writeCache(cacheKey, {
     seasonId: season.id,
     seasonTitle: season.uiLabel,
@@ -708,8 +720,14 @@ export async function getHomeOverview() {
     top5Adults: adults.table.slice(0, 5),
     top1Kids: kids.table[0] || null,
     top1Adults: adults.table[0] || null,
-    statsKids: normalizeHomeStats(kids.seasonStats),
-    statsAdults: normalizeHomeStats(adults.seasonStats),
+    statsKids,
+    statsAdults,
+    statsTotal: {
+      games: statsKids.games + statsAdults.games,
+      rounds: statsKids.rounds + statsAdults.rounds,
+      battles: statsKids.battles + statsAdults.battles,
+      players: statsKids.players + statsAdults.players
+    },
     rankDistKids: kids.rankDistribution,
     rankDistAdults: adults.rankDistribution
   });

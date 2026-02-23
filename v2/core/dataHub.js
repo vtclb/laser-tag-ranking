@@ -1,3 +1,4 @@
+// Changelog (Codex): safe rounds parsing, home snapshot top5/stats normalization, and battles/rounds consistency for Home/GameDay summaries.
 import seasonsConfig from './seasons.config.js';
 import { jsonp } from './utils.js';
 
@@ -399,6 +400,16 @@ function parseDateOnly(value = '') {
   return src.slice(0, 10);
 }
 
+function safeRoundCount(rawSeries, maxRounds = 12) {
+  const normalized = String(rawSeries ?? '').trim();
+  if (!normalized) return 1;
+  if (!/^\d+$/.test(normalized)) return 1;
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed)) return 1;
+  if (parsed < 1 || parsed > maxRounds) return 1;
+  return parsed;
+}
+
 function parseMatches(sheet) {
   const header = (sheet.header || []).map(normalizeHeader);
   const find = (names) => header.findIndex((h) => names.includes(h));
@@ -415,7 +426,8 @@ function parseMatches(sheet) {
   };
   return (sheet.rows || []).map((row) => {
     const ts = row[i.timestamp] || '';
-    const rounds = parseInt(row[i.rounds] || 1, 10);
+    const rawSeries = String(row[i.rounds] ?? '').trim();
+    const roundsCount = safeRoundCount(rawSeries);
     return {
       timestamp: ts,
       date: parseDateOnly(ts),
@@ -426,7 +438,9 @@ function parseMatches(sheet) {
       mvp1: String(row[i.mvp1] || '').trim(),
       mvp2: String(row[i.mvp2] || '').trim(),
       mvp3: String(row[i.mvp3] || '').trim(),
-      rounds: Number.isFinite(rounds) && rounds > 0 ? rounds : 1
+      rawSeries,
+      roundsCount,
+      rounds: roundsCount
     };
   }).filter((m) => m.team1.length || m.team2.length);
 }
@@ -481,6 +495,10 @@ function buildStatsFromMatches(matches, league, pointsByNick = new Map()) {
   }
 
   map.forEach((row) => { row.winRate = row.games ? Math.round((row.wins / row.games) * 100) : null; });
+
+  const leagueMatches = matches.filter((match) => normalizeLeague(match.league) === normalizeLeague(league));
+  map.battles = leagueMatches.length;
+  map.rounds = leagueMatches.reduce((sum, match) => sum + safeRoundCount(match.roundsCount ?? match.rounds ?? match.rawSeries), 0);
   return map;
 }
 
@@ -545,6 +563,21 @@ export async function getCurrentSeason() {
 
 function extractSnapshotPayload(payload = {}) {
   return payload?.snapshot || payload?.data || payload?.result || payload;
+}
+
+function normalizeHomeStats(raw = {}) {
+  return {
+    battles: toNumber(raw.battles, null) ?? toNumber(raw.battlesCount, null) ?? toNumber(raw.games, 0) ?? 0,
+    rounds: toNumber(raw.rounds, null) ?? toNumber(raw.roundsCount, 0) ?? 0,
+    players: toNumber(raw.players, null) ?? toNumber(raw.playersCount, 0) ?? 0
+  };
+}
+
+function normalizeHomeTop5(rawTop5, fallbackTop1) {
+  if (Array.isArray(rawTop5) && rawTop5.length) return rawTop5;
+  if (Array.isArray(fallbackTop1) && fallbackTop1.length) return fallbackTop1.slice(0, 5);
+  if (fallbackTop1 && typeof fallbackTop1 === 'object') return [fallbackTop1];
+  return [];
 }
 
 function normalizeLeagueSnapshotResponse(payload, season, league) {
@@ -632,7 +665,7 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     return acc;
   }, { games: 0, wins: 0, draws: 0, losses: 0, pointsDelta: 0, players: leaderboard.length, rounds: 0, mvp: 0 });
   const leagueMatches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague);
-  seasonStats.rounds = leagueMatches.reduce((sum, m) => sum + (m.rounds || 1), 0);
+  seasonStats.rounds = leagueMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0);
   seasonStats.games = leagueMatches.length;
   seasonStats.mvp = leaderboard.reduce((best, p) => (p.mvp > (best.mvp || -1) ? p : best), {}).nick || null;
 
@@ -647,14 +680,18 @@ export async function getHomeOverview() {
   try {
     const snapshot = await gasCall('getSnapshot', { scope: 'index', seasonId: season.id }, 12_000, TTL.home);
     const data = extractSnapshotPayload(snapshot);
-    if (data?.top1Kids || data?.top1Adults || data?.statsKids || data?.statsAdults) {
+    if (data?.top1Kids || data?.top1Adults || data?.statsKids || data?.statsAdults || data?.top5Kids || data?.top5Adults) {
+      const top5Kids = normalizeHomeTop5(data.top5Kids || data.topKids, data.top1Kids);
+      const top5Adults = normalizeHomeTop5(data.top5Adults || data.topAdults, data.top1Adults);
       return writeCache(cacheKey, {
         seasonId: data.seasonId || season.id,
         seasonTitle: data.seasonTitle || season.uiLabel,
+        top5Kids,
+        top5Adults,
         top1Kids: data.top1Kids || null,
         top1Adults: data.top1Adults || null,
-        statsKids: data.statsKids || { games: 0, rounds: 0, players: 0 },
-        statsAdults: data.statsAdults || { games: 0, rounds: 0, players: 0 },
+        statsKids: normalizeHomeStats(data.statsKids || {}),
+        statsAdults: normalizeHomeStats(data.statsAdults || {}),
         rankDistKids: data.rankDistKids || data.rankDistributionKids || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 },
         rankDistAdults: data.rankDistAdults || data.rankDistributionAdults || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 }
       });
@@ -667,10 +704,12 @@ export async function getHomeOverview() {
   return writeCache(cacheKey, {
     seasonId: season.id,
     seasonTitle: season.uiLabel,
+    top5Kids: kids.table.slice(0, 5),
+    top5Adults: adults.table.slice(0, 5),
     top1Kids: kids.table[0] || null,
     top1Adults: adults.table[0] || null,
-    statsKids: { games: kids.seasonStats.games, rounds: kids.seasonStats.rounds, players: kids.seasonStats.players },
-    statsAdults: { games: adults.seasonStats.games, rounds: adults.seasonStats.rounds, players: adults.seasonStats.players },
+    statsKids: normalizeHomeStats(kids.seasonStats),
+    statsAdults: normalizeHomeStats(adults.seasonStats),
     rankDistKids: kids.rankDistribution,
     rankDistAdults: adults.rankDistribution
   });
@@ -715,7 +754,7 @@ export async function getGameDayView({ dateYMD, league } = {}) {
     dateYMD: day,
     league: selectedLeague,
     matches,
-    roundsCount: matches.reduce((sum, m) => sum + (m.rounds || 1), 0),
+    roundsCount: matches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0),
     gamesCount: matches.length,
     playersToday: [...playersMap.values()].sort((a, b) => b.games - a.games || a.nick.localeCompare(b.nick, 'uk')),
     mvpCounts,
@@ -815,7 +854,7 @@ export async function getPlayerAllTimeProfile(nick) {
     playedSeasons.push({ seasonId: season.id, seasonTitle: season.title, league: lg, games: p.games, wins: p.wins, losses: p.losses, draws: p.draws, winrate: p.winRate, top1: p.mvp, top2: p.mvp2, top3: p.mvp3, points: p.points, rank: p.rankLetter });
     total.games += p.games; total.wins += p.wins; total.losses += p.losses; total.draws += p.draws; total.top1 += p.mvp; total.top2 += p.mvp2; total.top3 += p.mvp3;
     const matchSet = (pKids ? kids.matches : adults.matches).filter((m) => [...m.team1, ...m.team2].some((n) => normalizeHeader(n) === nickname));
-    total.rounds += matchSet.reduce((sum, m) => sum + (m.rounds || 1), 0);
+    total.rounds += matchSet.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0);
   });
 
   if (!total.games) return null;

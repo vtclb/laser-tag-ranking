@@ -1,3 +1,4 @@
+/* Changelog (Codex): compact Home Top-5 list layout, compact rank distribution rows, and improved context menu readability. */
 :root {
   --bg: #090d16;
   --card: #11192a;
@@ -148,3 +149,27 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   color: #ffffff;
   border-color: rgba(196, 229, 255, 0.8);
 }
+
+
+.top5-card .chip { margin-top: .6rem; }
+.top5-list { list-style: none; padding: 0; margin: .35rem 0 0; }
+.top5-row { display: grid; grid-template-columns: 24px 28px 1fr auto auto; align-items: center; gap: .45rem; padding: .34rem 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+.top5-pos { font-weight: 700; color: var(--muted); }
+.top5-nick { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top5-points { font-weight: 600; color: #d7e7ff; }
+.top5-empty { color: var(--muted); padding: .35rem 0; }
+.dist-row.compact { grid-template-columns: 64px 1fr auto; border-bottom: 1px solid rgba(255,255,255,.08); padding: .3rem 0; margin: 0; }
+.dist-row.compact .dist-rank { width: 42px; justify-content: center; }
+.dist-row.compact .dist-count { color: #d7e7ff; }
+.dist-row.compact .dist-percent { color: var(--muted); font-weight: 600; }
+.dist-row.compact.league-kids .dist-count { color: #7dd3ff; }
+.dist-row.compact.league-adults .dist-count { color: #9eea88; }
+
+/* Context menu readability hotfix (minimal visual change) */
+.context-menu, .ctx-menu, .dropdown-menu {
+  background: rgba(8, 13, 24, 0.96);
+  color: #f4f8ff;
+  border: 1px solid rgba(194, 219, 255, 0.35);
+  box-shadow: 0 12px 30px rgba(0,0,0,.42);
+}
+.context-menu *, .ctx-menu *, .dropdown-menu * { color: #f4f8ff !important; }

@@ -222,31 +222,32 @@ function normalizeSheetPayload(payload) {
 }
 
 function normalizeGetSheetRawResponse(payload = {}, sheetName = '') {
-  let header = [];
-  let rows = null;
-
-  if (Array.isArray(payload)) {
-    header = Array.isArray(payload[0]) ? payload[0].map((value) => String(value)) : [];
-    rows = payload.slice(1);
-  } else if (payload && typeof payload === 'object' && Array.isArray(payload.values)) {
-    header = Array.isArray(payload.values[0]) ? payload.values[0].map((value) => String(value)) : [];
-    rows = payload.values.slice(1);
-  } else if (payload && typeof payload === 'object' && (Array.isArray(payload.header) || Array.isArray(payload.rows))) {
-    header = Array.isArray(payload.header) ? payload.header.map((value) => String(value)) : [];
-    rows = Array.isArray(payload.rows) ? payload.rows : null;
-  } else if (payload?.data || payload?.result) {
+  if (payload?.data || payload?.result) {
     return normalizeGetSheetRawResponse(payload.data || payload.result, sheetName);
   }
 
-  if (!header.length || !Array.isArray(rows)) {
-    throw new Error(`Некоректний формат таблиці: ${sheetName} (missing header/rows)`);
+  if (payload && typeof payload === 'object' && Array.isArray(payload.header) && Array.isArray(payload.rows)) {
+    return {
+      status: payload?.status || 'OK',
+      sheet: sheetName,
+      header: payload.header.map((value) => String(value)),
+      rows: payload.rows
+    };
   }
-  return {
-    status: payload?.status || 'OK',
-    sheet: sheetName,
-    header,
-    rows
-  };
+
+  if (payload && typeof payload === 'object' && Array.isArray(payload.values)) {
+    const header = Array.isArray(payload.values[0]) ? payload.values[0].map((value) => String(value)) : [];
+    const rows = header.length ? payload.values.slice(1) : [];
+    return { status: payload?.status || 'OK', sheet: sheetName, header, rows };
+  }
+
+  if (Array.isArray(payload)) {
+    const header = Array.isArray(payload[0]) ? payload[0].map((value) => String(value)) : [];
+    const rows = header.length ? payload.slice(1) : [];
+    return { status: 'OK', sheet: sheetName, header, rows };
+  }
+
+  throw new Error(`Некоректний формат таблиці: ${sheetName} (missing header/rows)`);
 }
 
 async function readStaticSeason(seasonId) {
@@ -566,10 +567,10 @@ function extractSnapshotPayload(payload = {}) {
 }
 
 function normalizeHomeStats(raw = {}) {
-  const games = toNumber(raw.games, 0) ?? 0;
+  const playerGames = toNumber(raw.playerGames, null) ?? toNumber(raw.games, 0) ?? 0;
   return {
-    games,
-    battles: toNumber(raw.battles, null) ?? toNumber(raw.battlesCount, null) ?? games ?? 0,
+    playerGames,
+    battles: toNumber(raw.battles, null) ?? toNumber(raw.battlesCount, null) ?? 0,
     rounds: toNumber(raw.rounds, null) ?? toNumber(raw.roundsCount, 0) ?? 0,
     players: toNumber(raw.players, null) ?? toNumber(raw.playersCount, 0) ?? 0
   };
@@ -667,8 +668,10 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     return acc;
   }, { games: 0, wins: 0, draws: 0, losses: 0, pointsDelta: 0, players: leaderboard.length, rounds: 0, mvp: 0 });
   const leagueMatches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague);
+  seasonStats.playerGames = seasonStats.games;
   seasonStats.rounds = leagueMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0);
-  seasonStats.games = leagueMatches.length;
+  seasonStats.battles = leagueMatches.length;
+  seasonStats.games = seasonStats.battles;
   seasonStats.mvp = leaderboard.reduce((best, p) => (p.mvp > (best.mvp || -1) ? p : best), {}).nick || null;
 
   return writeCache(cacheKey, { seasonId: season.id, seasonTitle: season.uiLabel, league: selectedLeague, top3: leaderboard.slice(0, 3), table: leaderboard, leaderboard, seasonStats, rankDistribution: getRankDistribution(leaderboard), matches: leagueMatches });
@@ -679,57 +682,47 @@ export async function getHomeOverview() {
   const cacheKey = `home:${season.id}`;
   const cached = readCache(cacheKey, TTL.home);
   if (cached) return cached;
-  try {
-    const snapshot = await gasCall('getSnapshot', { scope: 'index', seasonId: season.id }, 12_000, TTL.home);
-    const data = extractSnapshotPayload(snapshot);
-    if (data?.top1Kids || data?.top1Adults || data?.statsKids || data?.statsAdults || data?.top5Kids || data?.top5Adults) {
-      const top5Kids = normalizeHomeTop5(data.top5Kids || data.topKids, data.top1Kids);
-      const top5Adults = normalizeHomeTop5(data.top5Adults || data.topAdults, data.top1Adults);
-      const statsKids = normalizeHomeStats(data.statsKids || {});
-      const statsAdults = normalizeHomeStats(data.statsAdults || {});
-      return writeCache(cacheKey, {
-        seasonId: data.seasonId || season.id,
-        seasonTitle: data.seasonTitle || season.uiLabel,
-        top5Kids,
-        top5Adults,
-        top1Kids: data.top1Kids || null,
-        top1Adults: data.top1Adults || null,
-        statsKids,
-        statsAdults,
-        statsTotal: {
-          games: statsKids.games + statsAdults.games,
-          rounds: statsKids.rounds + statsAdults.rounds,
-          battles: statsKids.battles + statsAdults.battles,
-          players: statsKids.players + statsAdults.players
-        },
-        rankDistKids: data.rankDistKids || data.rankDistributionKids || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 },
-        rankDistAdults: data.rankDistAdults || data.rankDistributionAdults || { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 }
-      });
-    }
-  } catch (error) {
-    console.debug('[dataHub] getSnapshot index fallback', { seasonId: season.id, error: String(error?.message || error) });
-  }
+  const [kidsSheet, adultsSheet, gamesSheet, avatars] = await Promise.all([
+    readSheet('kids'),
+    readSheet('sundaygames'),
+    readSheet('games'),
+    getAvatarsMap()
+  ]);
 
-  const [kids, adults] = await Promise.all([getLeagueSnapshot('kids', season.id), getLeagueSnapshot('sundaygames', season.id)]);
-  const statsKids = normalizeHomeStats(kids.seasonStats);
-  const statsAdults = normalizeHomeStats(adults.seasonStats);
+  const kidsTable = mapToRows(new Map(parseScoreboardRows(kidsSheet, 'kids').map((p) => [normalizeHeader(p.nick), p])), avatars);
+  const adultsTable = mapToRows(new Map(parseScoreboardRows(adultsSheet, 'sundaygames').map((p) => [normalizeHeader(p.nick), p])), avatars);
+  const matches = parseMatches(gamesSheet || {});
+  const kidsMatches = matches.filter((m) => normalizeLeague(m.league) === 'kids');
+  const adultsMatches = matches.filter((m) => normalizeLeague(m.league) === 'sundaygames');
+  const statsKids = normalizeHomeStats({
+    battles: kidsMatches.length,
+    rounds: kidsMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0),
+    playerGames: kidsTable.reduce((sum, p) => sum + (Number(p.games) || 0), 0),
+    players: kidsTable.length
+  });
+  const statsAdults = normalizeHomeStats({
+    battles: adultsMatches.length,
+    rounds: adultsMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0),
+    playerGames: adultsTable.reduce((sum, p) => sum + (Number(p.games) || 0), 0),
+    players: adultsTable.length
+  });
   return writeCache(cacheKey, {
     seasonId: season.id,
     seasonTitle: season.uiLabel,
-    top5Kids: kids.table.slice(0, 5),
-    top5Adults: adults.table.slice(0, 5),
-    top1Kids: kids.table[0] || null,
-    top1Adults: adults.table[0] || null,
+    top5Kids: kidsTable.slice(0, 5),
+    top5Adults: adultsTable.slice(0, 5),
+    top1Kids: kidsTable[0] || null,
+    top1Adults: adultsTable[0] || null,
     statsKids,
     statsAdults,
     statsTotal: {
-      games: statsKids.games + statsAdults.games,
+      playerGames: statsKids.playerGames + statsAdults.playerGames,
       rounds: statsKids.rounds + statsAdults.rounds,
       battles: statsKids.battles + statsAdults.battles,
       players: statsKids.players + statsAdults.players
     },
-    rankDistKids: kids.rankDistribution,
-    rankDistAdults: adults.rankDistribution
+    rankDistKids: getRankDistribution(kidsTable),
+    rankDistAdults: getRankDistribution(adultsTable)
   });
 }
 

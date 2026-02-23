@@ -96,7 +96,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 
 .menu-btn.disabled { opacity:.45; pointer-events:none; filter:grayscale(.3); }
 
-.hero-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-bottom:.75rem; }
+.hero-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; margin-bottom:.75rem; align-items:stretch; }
 .hero-card { border:1px solid rgba(255,255,255,.18); border-radius:1rem; padding:.75rem; background:rgba(8,14,26,.82); box-shadow:0 8px 18px rgba(0,0,0,.25); }
 .dist-row { display:grid; grid-template-columns:24px 1fr 28px; align-items:center; gap:.4rem; margin:.25rem 0; }
 .dist-track { height:10px; border-radius:999px; background:rgba(255,255,255,.12); overflow:hidden; }
@@ -111,6 +111,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 
 @media (max-width: 780px) {
   .hero-grid { grid-template-columns: 1fr; }
+  .hero-grid > .card, .kpi > .card { width: 100%; }
 }
 
 
@@ -191,8 +192,54 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .skeleton-line { height: 14px; margin: .35rem 0; }
 .skeleton-line.lg { height: 22px; }
 .skeleton-line.sm { height: 10px; }
-.skeleton-block { min-height: 140px; }
+.skeleton-block { min-height: 182px; display:flex; flex-direction:column; justify-content:center; gap:.3rem; }
 
+
+.home-loader-fx {
+  position: relative;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: .8rem;
+  height: 28px;
+  margin: .4rem 0 .8rem;
+  overflow: hidden;
+  background: rgba(255,255,255,.04);
+}
+.scan-beam {
+  position: absolute;
+  top: 0;
+  left: -28%;
+  width: 28%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(49,208,255,0), rgba(49,208,255,.58), rgba(49,208,255,0));
+  animation: beam-run 2.2s linear infinite;
+}
+.dot-run {
+  position: absolute;
+  right: .55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  gap: .28rem;
+}
+.dot-run span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.72);
+  animation: dot-hop .9s ease-in-out infinite;
+}
+.dot-run span:nth-child(2) { animation-delay: .15s; }
+.dot-run span:nth-child(3) { animation-delay: .3s; }
+
+@keyframes beam-run {
+  from { left: -30%; }
+  to { left: 102%; }
+}
+
+@keyframes dot-hop {
+  0%, 100% { transform: translateY(0); opacity: .45; }
+  50% { transform: translateY(-2px); opacity: 1; }
+}
 .tooltip-term {
   border-bottom: 1px dashed rgba(255,255,255,.4);
   cursor: help;

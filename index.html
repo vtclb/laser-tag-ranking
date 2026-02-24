@@ -4,361 +4,126 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Молодша ліга | Лазертаг</title>
-   
     <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/layout.css" />
+    <link rel="stylesheet" href="styles/theme-game.css" />
+    <link rel="stylesheet" href="styles/pixel-layer.css" />
     <script type="module" src="scripts/bootstrap.js?v=1"></script>
-    <script type="module" src="./scripts/snow.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js?v=2025-09-19-avatars-3"></script>
-    <style>
-   
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        font-family: "Press Start 2P", monospace;
-        background: #111 url("assets/background_marathon.png") no-repeat
-          center/cover;
-        color: #fff;
-      }
-
-      #snow-canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        pointer-events: none;
-        z-index: 2;
-      }
-   
-      nav {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.5rem;
-        background: rgba(0, 0, 0, 0.7);
-        padding: 0.5rem;
-      }
-      nav a {
-        color: #f39c12;
-        text-decoration: none;
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        transition:
-          color 0.2s,
-          background 0.2s;
-        border-radius: 3px;
-      }
-      nav a:hover {
-        color: #000;
-        background: #ffd700;
-      }
-      nav a.active {
-        border-bottom: 2px solid #ffd700;
-      }
-  
-      .container {
-        max-width: 1200px;
-        margin: 1rem auto;
-        padding: 0 1rem;
-      }
-      .season-info,
-      .summary {
-        text-align: center;
-        margin-bottom: 1rem;
-      }
-      .season-info {
-        color: #f39c12;
-      }
-      .rank-chart {
-        display: flex;
-        height: 1rem;
-        max-width: 400px;
-        margin: 0.5rem auto;
-        border: 1px solid #555;
-        border-radius: 4px;
-        overflow: hidden;
-        font-size: 0.6rem;
-        color: #000;
-      }
-      .rank-chart div {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .seg-S {
-        background: magenta;
-      }
-      .seg-A {
-        background: red;
-      }
-      .seg-B {
-        background: yellow;
-      }
-      .seg-C {
-        background: cyan;
-      }
-      .seg-D {
-        background: lime;
-      }
-      .seg-E {
-        background: green;
-      }
-      .seg-F {
-        background: gray;
-      }
-      .summary {
-        color: #ccc;
-        font-size: 0.9rem;
-      }
-   
-      .search-box {
-        text-align: center;
-        margin-bottom: 1rem;
-      }
-      .search-box input {
-        padding: 0.5rem;
-        width: 100%;
-        max-width: 300px;
-        border: 2px solid #555;
-        background: rgba(0, 0, 0, 0.5);
-        color: #fff;
-        border-radius: 4px;
-        font-size: 0.75rem;
-      }
-    
-      .top-mvp {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1.5rem;
-      }
-      .mvp-card {
-        background: rgba(243, 156, 18, 0.2);
-        border: 2px solid #f39c12;
-        border-radius: 6px;
-        padding: 1rem;
-        min-width: 140px;
-        text-align: center;
-        animation: pulse 1.5s infinite;
-      }
-      @keyframes pulse {
-        0%,
-        100% {
-          box-shadow: 0 0 8px rgba(243, 156, 18, 0.6);
-        }
-        50% {
-          box-shadow: 0 0 16px rgba(243, 156, 18, 1);
-        }
-      }
-    
-      .table-container {
-        overflow-x: auto;
-        margin-bottom: 1rem;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 600px;
-        font-size: 0.75rem;
-      }
-      thead th {
-        position: sticky;
-        top: 0;
-        background: #222;
-        color: #f39c12;
-        padding: 0.75rem;
-        border-bottom: 2px solid #555;
-        z-index: 1;
-      }
-      th,
-      td {
-        padding: 0.5rem;
-        border: 1px solid #444;
-        text-align: center;
-      }
-      tbody tr:nth-child(odd) {
-        background: rgba(255, 255, 255, 0.05);
-      }
-      tbody tr:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-      .tr-inactive {
-        opacity: 0.4;
-      }
-      .tr-inactive:hover {
-        opacity: 0.7;
-      }
-      .avatar-img {
-        width: 40px;
-        height: 40px;
-        object-fit: cover;
-      }
-     
-      .pagination {
-        display: flex;
-        justify-content: center;
-        gap: 0.5rem;
-        margin: 1rem 0;
-      }
-      .pagination button {
-        padding: 0.75rem 1.5rem;
-        background: #222;
-        color: #f39c12;
-          border: 2px solid #f39c12;
-          border-radius: 4px;
-          font-family: "Press Start 2P", monospace;
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          box-shadow: 0 0 8px #f39c12;
-          cursor: pointer;
-          transition: transform 0.2s;
-        }
-      .pagination button:hover {
-        transform: scale(1.05);
-      }
-      .page-info {
-        align-self: center;
-      }
-     
-      .rank-S td {
-        border-left: 4px solid magenta;
-      }
-      .rank-A td {
-        border-left: 4px solid red;
-      }
-      .rank-B td {
-        border-left: 4px solid yellow;
-      }
-      .rank-C td {
-        border-left: 4px solid cyan;
-      }
-      .rank-D td {
-        border-left: 4px solid lime;
-      }
-      .rank-E td {
-        border-left: 4px solid green;
-      }
-      .rank-F td {
-        border-left: 4px solid gray;
-      }
-     
-      .nick-S {
-        color: magenta;
-      }
-      .nick-A {
-        color: red;
-      }
-      .nick-B {
-        color: yellow;
-      }
-      .nick-C {
-        color: cyan;
-      }
-      .nick-D {
-        color: lime;
-      }
-      .nick-E {
-        color: green;
-      }
-      .nick-F {
-        color: gray;
-      }
-      .hidden {
-        display: none;
-      }
-      .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-      }
-      .modal.hidden {
-        display: none;
-      }
-      .modal-content {
-        background: #222;
-        padding: 1rem;
-        border-radius: 4px;
-        max-height: 90%;
-        overflow: auto;
-      }
-      #stats-close {
-        float: right;
-        background: #444;
-        border: none;
-        color: #fff;
-        cursor: pointer;
-        padding: 0.25rem 0.5rem;
-      }
-      @media (max-width: 600px) {
-        table {
-          min-width: 480px;
-        }
-        .mvp-card {
-          min-width: 45%;
-        }
-      }
-    </style>
   </head>
- <body data-league="kids">
-    <nav>
-      <a href="index.html" class="active">Молодша Ліга</a>
-      <a href="sunday.html">Старша Ліга</a>
-      <a href="gameday.html">Ігровий день</a>
-      <a href="rules.html">Правила</a>
-      <a href="about.html">Про клуб</a>
-    </nav>
-    <div class="container">
-      <div id="season-info" class="season-info"></div>
-      <div class="summary" id="summary"></div>
-      <div id="rank-chart" class="rank-chart"></div>
-      <div class="search-box">
-        <input type="text" id="search" placeholder="Пошук нікнейму…" />
-      </div>
-      <div class="top-mvp" id="top-mvp"></div>
-      <div class="table-container">
-        <table id="ranking">
-          <thead>
-            <tr>
-              <th data-key="place">Місце <span class="sort-arrow"></span></th>
-              <th>Аватар</th>
-              <th data-key="nickname">Нікнейм <span class="sort-arrow"></span></th>
-              <th data-key="rank">Ранг <span class="sort-arrow"></span></th>
-              <th data-key="points">Бали <span class="sort-arrow"></span></th>
-              <th data-key="games">Ігор <span class="sort-arrow"></span></th>
-              <th data-key="winRate">%Win <span class="sort-arrow"></span></th>
-              <th data-key="mvp">MVP <span class="sort-arrow"></span></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="pagination">
-        <button id="prev-page">Назад</button>
-        <span id="page-info" class="page-info"></span>
-        <button id="next-page">Вперед</button>
-        <button id="show-all">Показати всі</button>
-      </div>
+  <body data-league="kids">
+    <div class="page-shell">
+      <nav class="topnav">
+        <div class="container topnav__inner">
+          <a href="index.html" class="active">Молодша Ліга</a>
+          <a href="sunday.html">Старша Ліга</a>
+          <a href="gameday.html">Ігровий день</a>
+          <a href="rules.html">Правила</a>
+          <a href="about.html">Про клуб</a>
+        </div>
+      </nav>
+
+      <section class="section hero section--manifest">
+        <div class="container">
+          <div class="grid grid--12">
+            <div class="hero__copy stack">
+              <span class="kicker px-badge">Молодша Ліга</span>
+              <h1>Laser Tag Ranking</h1>
+              <div id="season-info" class="season-info"></div>
+              <div class="summary" id="summary"></div>
+              <div class="hero__actions">
+                <a class="btn btn--primary" href="gameday.html">Ігровий день</a>
+                <a class="btn btn--secondary" href="rules.html">Правила</a>
+                <a class="btn btn--secondary" href="about.html">Про клуб</a>
+              </div>
+              <div class="status-bar">
+                <span class="px-badge">kids</span>
+                <hr class="px-divider" style="flex: 1" />
+                <span class="status-bar__text">rating / rules / gameday</span>
+              </div>
+            </div>
+            <div class="hero__panel">
+              <aside class="system-panel stack">
+                <h2>Поточний розподіл рангів</h2>
+                <p>Структура сезонного рейтингу по класах S-F.</p>
+                <div id="rank-chart" class="rank-chart"></div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--manifest">
+        <div class="container stack">
+          <h2 class="section-title">Пошук і MVP</h2>
+          <div class="grid grid--12">
+            <div class="menu-card" style="grid-column: span 5">
+              <div class="search-box">
+                <label class="px-badge" for="search">Пошук нікнейму</label>
+                <input type="text" id="search" placeholder="Пошук нікнейму…" />
+              </div>
+            </div>
+            <div class="menu-card" style="grid-column: span 7">
+              <div class="top-mvp" id="top-mvp"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--manifest">
+        <div class="container stack">
+          <h2 class="section-title">Таблиця рейтингу</h2>
+          <div class="table-container">
+            <table id="ranking">
+              <thead>
+                <tr>
+                  <th data-key="place">Місце <span class="sort-arrow"></span></th>
+                  <th>Аватар</th>
+                  <th data-key="nickname">Нікнейм <span class="sort-arrow"></span></th>
+                  <th data-key="rank">Ранг <span class="sort-arrow"></span></th>
+                  <th data-key="points">Бали <span class="sort-arrow"></span></th>
+                  <th data-key="games">Ігор <span class="sort-arrow"></span></th>
+                  <th data-key="winRate">%Win <span class="sort-arrow"></span></th>
+                  <th data-key="mvp">MVP <span class="sort-arrow"></span></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <button id="prev-page">Назад</button>
+            <span id="page-info" class="page-info"></span>
+            <button id="next-page">Вперед</button>
+            <button id="show-all">Показати всі</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--manifest">
+        <div class="container stack">
+          <h2 class="section-title">Статистика гравця</h2>
+          <div id="stats-modal" class="hidden">
+            <div class="modal-content">
+              <button id="stats-close">✕</button>
+              <div id="stats-body"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-    <div id="stats-modal" class="modal hidden">
-      <div class="modal-content">
-        <button id="stats-close">✕</button>
-        <div id="stats-body"></div>
-      </div>
-    </div>
-    <canvas id="snow-canvas"></canvas>
   </body>
 </html>

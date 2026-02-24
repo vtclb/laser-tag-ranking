@@ -152,3 +152,137 @@ main { width: 100%; }
 .theme-game * {
   box-shadow: none !important;
 }
+
+@media (max-width: 760px) {
+  .season-header {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
+  .season-header .px-card__title {
+    text-align: center;
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .stat-tile {
+    border: 1px solid var(--line);
+    padding: 0.5rem;
+    background: rgba(8, 13, 24, 0.74);
+    display: grid;
+    gap: 0.25rem;
+    font-family: var(--font-mono);
+  }
+
+  .stat-tile small { color: var(--fg-1); text-transform: uppercase; }
+
+  .rank-bars { display: grid; gap: 0.5rem; }
+
+  .rank-row {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+  }
+
+  .rank-bar { height: 10px; border: 1px solid var(--line); background: rgba(5, 10, 20, 0.9); }
+  .rank-fill { height: 100%; background: #b7ff2a; }
+
+  .player-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px 34px 38px 1fr auto auto;
+    gap: 0.4rem;
+    align-items: center;
+    border: 1px solid rgba(173, 232, 255, 0.22);
+    padding: 0.45rem;
+    margin-bottom: 0.45rem;
+    background: rgba(8, 13, 24, 0.75);
+  }
+
+  .player-rankbadge {
+    text-align: center;
+    border: 1px solid currentColor;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    padding: 0.15rem;
+  }
+
+  .player-rankbadge.rank-A { color: #ff7b72; }
+  .player-rankbadge.rank-B { color: #58a6ff; }
+  .player-rankbadge.rank-C { color: #3fb950; }
+
+  .player-meta { display: grid; gap: 0.1rem; }
+  .player-meta span { color: var(--fg-1); font-size: 0.75rem; }
+  .player-score { text-align: right; font-family: var(--font-mono); }
+  .player-score span { display: block; color: var(--fg-1); font-size: 0.75rem; }
+
+  .player-actions { position: relative; }
+  .player-actions .btn { min-width: 38px; padding: 0.45rem; }
+
+  .ctxmenu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 164px;
+    border: 1px solid var(--line);
+    background: rgba(8, 13, 24, 0.96);
+    z-index: 4;
+    display: grid;
+  }
+
+  .ctxmenu__item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.4rem;
+    border: 0;
+    border-bottom: 1px solid rgba(173, 232, 255, 0.15);
+    background: transparent;
+    color: var(--fg-0);
+    text-align: left;
+    padding: 0.55rem;
+    font-family: var(--font-mono);
+  }
+
+  .ctxmenu__item:last-child { border-bottom: 0; }
+  .ctxmenu__item--disabled { opacity: 0.6; }
+
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+  }
+
+  .modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.66);
+  }
+
+  .modal__panel {
+    position: relative;
+    z-index: 1;
+    width: min(94vw, 410px);
+    max-height: 90vh;
+    overflow: auto;
+  }
+
+  .modal__close { width: 100%; }
+
+  .radar { display: grid; place-items: center; }
+
+  .season-page [class*='card'],
+  .season-page [class*='panel'] {
+    background: rgba(11, 16, 32, 0.55) !important;
+    border: 1px solid var(--line) !important;
+  }
+}

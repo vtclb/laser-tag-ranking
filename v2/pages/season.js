@@ -2,78 +2,267 @@ import { getSeasonsList, getSeasonDashboard, getSeasonPlayerQuickCard, rankMeta,
 
 const seasonSelect = document.getElementById('seasonSelect');
 const leagueSelect = document.getElementById('leagueSelect');
+const seasonPageTitle = document.getElementById('seasonPageTitle');
+const heroStats = document.getElementById('heroStats');
+const rankDistribution = document.getElementById('rankDistribution');
+const playersList = document.getElementById('playersList');
+const state = document.getElementById('state');
+const seasonMenuBtn = document.getElementById('seasonMenuBtn');
 const modal = document.getElementById('playerModal');
 const modalBody = document.getElementById('modalBody');
 const placeholder = '../assets/default-avatar.svg';
 
-function distChart(dist) {
-  return ['S', 'A', 'B', 'C', 'D', 'E', 'F'].map((r) => {
-    const meta = rankMeta(r);
-    return `<div class="dist-row"><span>${r}</span><div class="dist-track"><div class="dist-fill ${meta.cssClass}" style="width:${(dist[r] || 0) * 12}%"></div></div><b>${dist[r] || 0}</b></div>`;
+const viewState = {
+  players: [],
+  openMenuForPlayerId: null,
+  selectedPlayer: null
+};
+
+function safeValue(value, suffix = '') {
+  if (value === null || value === undefined || value === '') return '—';
+  return `${value}${suffix}`;
+}
+
+function rankRows(dist = {}) {
+  const maxValue = Math.max(1, ...Object.values(dist).map((value) => Number(value) || 0));
+  const ranks = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+  return ranks.map((rank) => {
+    const count = Number(dist[rank]) || 0;
+    const width = Math.max(6, Math.round((count / maxValue) * 100));
+    return `<div class="rank-row"><span>${rank}</span><div class="rank-bar"><div class="rank-fill" style="width:${width}%"></div></div><b>${count}</b></div>`;
   }).join('');
 }
 
-function renderRows(rows) {
-  document.getElementById('tableBody').innerHTML = rows.map((p) => `
-    <tr data-nick="${p.nick}" class="${p.rank.cssClass}">
-      <td>${p.place}</td>
-      <td><strong>${p.nick}</strong></td>
-      <td>${p.points ?? '—'}</td><td>${p.games}</td><td>${p.winRate ?? '—'}%</td><td>${p.mvp}</td><td>${p.mvp2}</td><td>${p.mvp3}</td>
-    </tr>
-  `).join('') || '<tr><td colspan="8">Дані відсутні</td></tr>';
+function playerRow(player) {
+  const menuOpened = viewState.openMenuForPlayerId === player.nick;
+  const mvpEnabled = player.mvp > 0 || player.mvp2 > 0 || player.mvp3 > 0;
+  return `
+    <article class="player-row" data-player-id="${player.nick}">
+      <div>#${safeValue(player.place)}</div>
+      <div class="player-rankbadge ${player.rank.cssClass}">${player.rank.label}</div>
+      <img class="avatar" src="${player.avatarUrl || placeholder}" alt="${player.nick}" onerror="this.src='${placeholder}'">
+      <div class="player-meta">
+        <strong>${player.nick}</strong>
+        <span>${safeValue(player.games)} ігор</span>
+      </div>
+      <div class="player-score">
+        <strong>${safeValue(player.points)}</strong>
+        <span>WR ${safeValue(player.winRate, '%')}</span>
+      </div>
+      <div class="player-actions">
+        <button type="button" class="btn" data-action="toggle-menu" data-player-id="${player.nick}" aria-haspopup="menu" aria-expanded="${menuOpened ? 'true' : 'false'}">⋯</button>
+        ${menuOpened ? `
+          <div class="ctxmenu" role="menu" aria-label="Дії гравця">
+            <button class="ctxmenu__item" role="menuitem" data-action="open-stats" data-player-id="${player.nick}">📊 Статистика</button>
+            <button class="ctxmenu__item ${mvpEnabled ? '' : 'ctxmenu__item--disabled'}" role="menuitem" ${mvpEnabled ? `data-action="open-hls" data-player-id="${player.nick}"` : 'disabled'}>✨ HLS гравця ${mvpEnabled ? '' : '<span class="px-badge">SOON</span>'}</button>
+          </div>` : ''}
+      </div>
+    </article>`;
 }
 
-async function showPlayer(nick) {
-  const data = await getSeasonPlayerQuickCard({ seasonId: seasonSelect.value, league: leagueSelect.value, nick });
-  if (!data) return;
+function renderPlayers() {
+  playersList.innerHTML = viewState.players.length ? viewState.players.map(playerRow).join('') : '<p class="px-card__text">Дані відсутні</p>';
+}
+
+function computeRadarAxes(player) {
+  const candidates = [
+    { key: 'WR', value: Number(player.winrate), max: 100 },
+    { key: 'WINS', value: Number(player.wins), max: Math.max(1, Number(player.games) || 1) },
+    { key: 'TOP1', value: Number(player.mvp1), max: Math.max(1, Number(player.games) || 1) },
+    { key: 'TOP2', value: Number(player.mvp2), max: Math.max(1, Number(player.games) || 1) },
+    { key: 'TOP3', value: Number(player.mvp3), max: Math.max(1, Number(player.games) || 1) },
+    { key: 'POINTS', value: Number(player.points), max: Math.max(200, Number(player.points) || 200) }
+  ].filter((axis) => Number.isFinite(axis.value));
+
+  return candidates.slice(0, 5);
+}
+
+function renderRadarSVG(player) {
+  const axes = computeRadarAxes(player);
+  if (axes.length < 3) return '<p class="px-card__text">Недостатньо даних для графіка</p>';
+
+  const size = 220;
+  const center = size / 2;
+  const radius = 78;
+  const angleStep = (Math.PI * 2) / axes.length;
+
+  const axisPoints = axes.map((axis, index) => {
+    const angle = -Math.PI / 2 + (angleStep * index);
+    const x = center + (Math.cos(angle) * radius);
+    const y = center + (Math.sin(angle) * radius);
+    return { ...axis, x, y, angle };
+  });
+
+  const polygon = axisPoints.map((axis) => {
+    const ratio = Math.max(0, Math.min(1, axis.value / (axis.max || 1)));
+    const px = center + (Math.cos(axis.angle) * radius * ratio);
+    const py = center + (Math.sin(axis.angle) * radius * ratio);
+    return `${px},${py}`;
+  }).join(' ');
+
+  return `
+    <div class="radar" aria-label="Radar chart">
+      <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Radar quick stats">
+        <circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="rgba(173,232,255,0.25)"></circle>
+        <circle cx="${center}" cy="${center}" r="${radius * 0.66}" fill="none" stroke="rgba(173,232,255,0.18)"></circle>
+        <circle cx="${center}" cy="${center}" r="${radius * 0.33}" fill="none" stroke="rgba(173,232,255,0.12)"></circle>
+        ${axisPoints.map((axis) => `<line x1="${center}" y1="${center}" x2="${axis.x}" y2="${axis.y}" stroke="rgba(173,232,255,0.25)"></line>`).join('')}
+        <polygon points="${polygon}" fill="rgba(183,255,42,0.25)" stroke="rgba(183,255,42,0.8)" stroke-width="2"></polygon>
+        ${axisPoints.map((axis) => `<text x="${axis.x}" y="${axis.y - 6}" text-anchor="middle" font-size="9" fill="#d8e9ff">${axis.key}</text>`).join('')}
+      </svg>
+    </div>`;
+}
+
+function closePlayerStats() {
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  viewState.selectedPlayer = null;
+}
+
+function renderPlayerModal(player) {
   modalBody.innerHTML = `
-    <button class="chip modal-close" onclick="document.getElementById('playerModal').close()">✕</button>
-    <div class="player-head">
-      <img class="avatar lg" src="${data.avatarUrl || placeholder}" alt="avatar" onerror="this.src='${placeholder}'">
-      <div><h3>${data.nick}</h3><p><span class="rank-badge ${data.rank.cssClass}">${data.rank.label}</span> · points: ${data.points ?? '—'}</p></div>
-    </div>
-    <p><span title="Перемоги/Поразки/Нічиї">WLD</span>: ${data.wins}/${data.losses}/${data.draws} · WR: ${data.winrate ?? '—'}%</p>
-    <p>Top1/2/3: ${data.mvp1}/${data.mvp2}/${data.mvp3}</p>
-    <div class="modal-actions"><a class="chip" href="./profile.html?nick=${encodeURIComponent(data.nick)}">Profile</a></div>
+    <header class="player-head">
+      <img class="avatar lg" src="${player.avatarUrl || placeholder}" alt="${player.nick}" onerror="this.src='${placeholder}'">
+      <div>
+        <h3>${player.nick}</h3>
+        <p><span class="player-rankbadge ${player.rank.cssClass}">${player.rank.label}</span></p>
+      </div>
+    </header>
+    <section class="stat-grid">
+      <article class="stat-tile"><small>Points</small><strong>${safeValue(player.points)}</strong></article>
+      <article class="stat-tile"><small>Games</small><strong>${safeValue(player.games)}</strong></article>
+      <article class="stat-tile"><small>W/L/D</small><strong>${safeValue(player.wins)}/${safeValue(player.losses)}/${safeValue(player.draws)}</strong></article>
+      <article class="stat-tile"><small>WR%</small><strong>${safeValue(player.winrate, '%')}</strong></article>
+      <article class="stat-tile"><small>AVG Δ</small><strong>${safeValue(player.pointsDelta)}</strong></article>
+    </section>
+    ${renderRadarSVG(player)}
+    <section class="px-card__text">
+      <p>• TOP1: ${safeValue(player.mvp1)}</p>
+      <p>• TOP2: ${safeValue(player.mvp2)}</p>
+      <p>• TOP3: ${safeValue(player.mvp3)}</p>
+      <p>• Серія: ${safeValue(player.bestStreak)}</p>
+    </section>
+    <button type="button" class="btn modal__close" data-close-modal="1">ЗАКРИТИ</button>
   `;
-  modal.showModal();
+}
+
+async function openPlayerStats(nick) {
+  const player = await getSeasonPlayerQuickCard({ seasonId: seasonSelect.value, league: leagueSelect.value, nick });
+  if (!player) return;
+  viewState.selectedPlayer = player;
+  renderPlayerModal(player);
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderDashboard(data) {
+  seasonPageTitle.textContent = 'СЕЗОН';
+  const leagueLabel = data.league === 'kids' ? 'МОЛОДША ЛІГА' : 'СТАРША ЛІГА';
+  heroStats.innerHTML = `
+    <div class="px-badge">${leagueLabel}</div>
+    <h2 class="px-card__title">${data.seasonTitle}</h2>
+    <div class="stat-grid">
+      <article class="stat-tile"><small>Rounds</small><strong>${safeValue(data.totals.rounds)}</strong></article>
+      <article class="stat-tile"><small>Players</small><strong>${safeValue(data.totals.players)}</strong></article>
+      <article class="stat-tile"><small>AVG Δ</small><strong>${safeValue(data.totals.avgPointsDeltaPerGame)}</strong></article>
+      <article class="stat-tile"><small>WLD</small><strong>${safeValue(data.totals.wldLabel)}</strong></article>
+    </div>
+  `;
+
+  rankDistribution.innerHTML = `
+    <h2 class="px-card__title">RANK DISTRIBUTION</h2>
+    <div class="rank-bars">${rankRows(data.rankDistribution)}</div>
+  `;
+
+  viewState.players = data.tablePlayers;
+  viewState.openMenuForPlayerId = null;
+  renderPlayers();
 }
 
 function renderSkeleton() {
-  document.getElementById('totals').innerHTML = '<article class="card mini"><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div></article><article class="card mini"><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div></article>';
-  document.getElementById('charts').innerHTML = '<article class="card mini"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article>';
-  document.getElementById('tableBody').innerHTML = '<tr><td colspan="8"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></td></tr>';
+  heroStats.innerHTML = '<div class="stat-grid"><article class="stat-tile">...</article><article class="stat-tile">...</article><article class="stat-tile">...</article><article class="stat-tile">...</article></div>';
+  rankDistribution.innerHTML = '<h2 class="px-card__title">RANK DISTRIBUTION</h2><p class="px-card__text">Loading...</p>';
+  playersList.innerHTML = '<p class="px-card__text">Loading players...</p>';
 }
 
 async function loadDashboard() {
-  const state = document.getElementById('state');
   renderSkeleton();
   try {
     const data = await getSeasonDashboard(seasonSelect.value, leagueSelect.value);
-    document.getElementById('seasonTitle').textContent = `${data.seasonTitle} · ${data.league} · Dashboard`;
-    document.getElementById('totals').innerHTML = `<article class="card mini"><h3>Games ${data.totals.games}</h3><p>Rounds ${data.totals.rounds}</p></article><article class="card mini"><h3>Players ${data.totals.players}</h3><p><span title="AVG = середня зміна поінтів за гру">AVG Δ</span> ${data.totals.avgPointsDeltaPerGame}</p><p><span title="Перемоги/Поразки/Нічиї">WLD</span> ${data.totals.wldLabel}</p></article>`;
-    document.getElementById('charts').innerHTML = `<article class="card mini"><p class="tag">Rank distribution</p>${distChart(data.rankDistribution)}</article>`;
-    document.getElementById('top3').innerHTML = data.top3.map((p) => `<article class="top-card ${p.rank.cssClass}"><img class="avatar" src="${p.avatarUrl || placeholder}" onerror="this.src='${placeholder}'"> ${p.nick}<br><span class="rank-badge ${p.rank.cssClass}">${p.rank.label}</span></article>`).join('');
-    document.getElementById('leaders').innerHTML = `<article class="card mini">🥇 Найбільше ігор: ${data.leaders.mostGames.nick || '—'} (${data.leaders.mostGames.count || 0})</article><article class="card mini">🎯 Найкращий WR: ${data.leaders.bestWinrate.nick || '—'} (${data.leaders.bestWinrate.winRate || 0}%)</article><article class="card mini">👑 TOP1: ${data.leaders.mostTop1.nick || '—'} (${data.leaders.mostTop1.count || 0})</article><article class="card mini">🥈 TOP2: ${data.leaders.mostTop2.nick || '—'} (${data.leaders.mostTop2.count || 0})</article><article class="card mini">🥉 TOP3: ${data.leaders.mostTop3.nick || '—'} (${data.leaders.mostTop3.count || 0})</article>`;
-    renderRows(data.tablePlayers);
+    renderDashboard(data);
     state.textContent = '';
   } catch (error) {
     state.textContent = safeErrorMessage(error, 'Дані тимчасово недоступні');
   }
 }
 
-document.getElementById('tableBody').addEventListener('click', (event) => {
-  const row = event.target.closest('tr[data-nick]');
-  if (row) showPlayer(row.dataset.nick);
+playersList.addEventListener('click', async (event) => {
+  const target = event.target.closest('[data-action]');
+  if (!target) return;
+  const playerId = target.dataset.playerId;
+
+  if (target.dataset.action === 'toggle-menu') {
+    viewState.openMenuForPlayerId = viewState.openMenuForPlayerId === playerId ? null : playerId;
+    renderPlayers();
+    return;
+  }
+
+  if (target.dataset.action === 'open-stats') {
+    viewState.openMenuForPlayerId = null;
+    renderPlayers();
+    await openPlayerStats(playerId);
+    return;
+  }
+
+  if (target.dataset.action === 'open-hls') {
+    viewState.openMenuForPlayerId = null;
+    renderPlayers();
+    state.textContent = `HLS для ${playerId} скоро буде доступний.`;
+  }
+});
+
+playersList.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    viewState.openMenuForPlayerId = null;
+    renderPlayers();
+  }
+});
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.player-actions')) {
+    if (viewState.openMenuForPlayerId !== null) {
+      viewState.openMenuForPlayerId = null;
+      renderPlayers();
+    }
+  }
 });
 
 modal.addEventListener('click', (event) => {
-  if (event.target === modal) modal.close();
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (target.dataset.closeModal === '1') closePlayerStats();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    if (!modal.hidden) closePlayerStats();
+    if (viewState.openMenuForPlayerId !== null) {
+      viewState.openMenuForPlayerId = null;
+      renderPlayers();
+    }
+  }
+});
+
+seasonMenuBtn.addEventListener('click', () => {
+  const navTrigger = document.querySelector('.topbar .topnav__pill, .topbar .nav-link');
+  if (navTrigger instanceof HTMLElement) navTrigger.click();
 });
 
 async function init() {
   const seasons = await getSeasonsList();
-  seasonSelect.innerHTML = seasons.map((s) => `<option value="${s.id}">${s.title}</option>`).join('');
+  seasonSelect.innerHTML = seasons.map((season) => `<option value="${season.id}">${season.title}</option>`).join('');
   seasonSelect.value = seasons[0]?.id;
   seasonSelect.addEventListener('change', loadDashboard);
   leagueSelect.addEventListener('change', loadDashboard);

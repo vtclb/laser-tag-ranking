@@ -1,193 +1,74 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uk">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Правила | Лазертаг</title>
-  <!-- Піксельний шрифт -->
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Press Start 2P', monospace;
-      background: #111 url('assets/background_marathon.png') no-repeat center/cover;
-      color: #fff;
-      line-height: 1.4;
-    }
-    nav {
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem;
-      background: rgba(0, 0, 0, 0.7); padding: 0.75rem;
-    }
-    nav a {
-      color: #f39c12; text-decoration: none; transition: 0.2s;
-      padding: 0.25rem 0.5rem;
-    }
-    nav a.active, nav a:hover {
-      color: #ffd700;
-      border-bottom: 2px solid #ffd700;
-    }
-    .container {
-      max-width: 900px; margin: 1rem auto; padding: 1rem;
-      background: rgba(0, 0, 0, 0.8); border: 2px solid #f39c12;
-      border-radius: 8px; box-shadow: 0 0 12px rgba(243,156,18,0.5);
-    }
-    h1 {
-      color: #f39c12; text-align: center; margin-bottom: 1rem;
-      font-size: 1.25rem; text-shadow: 2px 2px 4px #000;
-    }
-    .highlight {
-      background: rgba(243,156,18,0.2); border-left: 4px solid #f39c12;
-      padding: 0.75rem; margin: 1rem 0; font-size: 0.75rem;
-    }
-    h2 {
-      color: #ffd700; margin-top: 1rem; font-size: 1rem;
-      text-shadow: 1px 1px 2px #000;
-    }
-    ul, ol {
-      margin: 0.5rem 0 1rem 1.5rem; font-size: 0.75rem;
-    }
-    .points-table {
-      width: 100%; border-collapse: collapse; margin: 0.5rem 0 1rem;
-      font-size: 0.75rem;
-    }
-    .points-table th, .points-table td {
-      border: 1px solid #555; padding: 0.5rem; text-align: center;
-    }
-    .points-table th {
-      background: rgba(243,156,18,0.2); color: #000;
-    }
-    .rank-list {
-      display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0;
-    }
-    .rank-item {
-      flex: 1 1 45%; background: rgba(0,0,0,0.6);
-      padding: 0.5rem; border: 2px solid #f39c12;
-      border-radius: 6px; display: flex; align-items: center; gap: 0.5rem;
-      font-size: 0.75rem;
-    }
-    .rank-icon { font-size: 1.5rem; }
-    .badge {
-      background: #f39c12; color: #000;
-      padding: 0.25rem 0.5rem; border-radius: 4px;
-      font-size: 0.6rem; margin-top: 0.5rem; display: inline-block;
-    }
-    .btn {
-      display: inline-block; background: #f39c12; color: #000;
-      padding: 0.5rem 1rem; border: none; border-radius: 4px;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 0.75rem; text-transform: uppercase;
-      margin-top: 1rem;
-      transition: background 0.2s;
-    }
-    .btn:hover { background: #ffd700; }
-    @media(max-width:600px) {
-      nav a { margin: 0.25rem; font-size: 0.65rem; }
-      .container { padding: 0.5rem; }
-      h1 { font-size: 1rem; }
-      h2 { font-size: 0.9rem; }
-      ul, ol, .points-table, .rank-item { font-size: 0.65rem; }
-    }
-  </style>
-</head>
-<body>
-  <nav>
-    <a href="index.html">Молодша Ліга</a>
-    <a href="sunday.html">Старша Ліга</a>
-    <a href="gameday.html">Ігровий день</a>
-    <a href="rules.html" class="active">Правила</a>
-    <a href="about.html">Про клуб</a>
-  </nav>
-  <div class="container">
-    <h1>Правила клубу та рейтингових ігор</h1>
-    <div class="highlight">⚠️ Тестовий сезон. Деякі правила можуть змінюватись!</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Правила | Лазертаг</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/layout.css" />
+    <link rel="stylesheet" href="styles/theme-game.css" />
+    <link rel="stylesheet" href="styles/pixel-layer.css" />
+    <script src="scripts/ui-shell.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <div class="container stack">
+        <section class="px-card">
+          <span class="hero__kicker px-badge">RULES</span>
+          <h1 class="hero__title">ПРАВИЛА</h1>
+          <p class="hero__subtitle">Тестовий сезон. Деякі правила можуть змінюватись.</p>
+        </section>
 
-    <h2>Загальні правила поведінки</h2>
-    <ul>
-      <li>Дотримуйся вказівок інструктора.</li>
-      <li>Не використовуй нецензурну лексику та агресію.</li>
-      <li>Бережи обладнання та майно клубу.</li>
-      <li>Грай чесно — фейрплей понад усе!</li>
-      <li>Після гри поверни все обладнання.</li>
-    </ul>
+        <div class="px-divider"></div>
 
-    <h2>Нарахування балів</h2>
-    <table class="points-table">
-      <thead>
-        <tr><th>Подія</th><th>Бали</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Перемога</td><td>+20</td></tr>
-        <tr><td>MVP (1-й у списку)</td><td>+12</td></tr>
-        <tr><td>MVP (2-й у списку)</td><td>+7</td></tr>
-        <tr><td>MVP (3-й у списку)</td><td>+3</td></tr>
-        <tr><td>Участь F ранг</td><td>+0</td></tr>
-        <tr><td>Участь E ранг</td><td>-4</td></tr>
-        <tr><td>Участь D ранг</td><td>-6</td></tr>
-        <tr><td>Участь C ранг</td><td>-8</td></tr>
-        <tr><td>Участь B ранг</td><td>-10</td></tr>
-        <tr><td>Участь A ранг</td><td>-12</td></tr>
-        <tr><td>Участь S ранг</td><td>-14</td></tr>
-      </tbody>
-    </table>
+        <section class="px-card">
+          <h2 class="px-card__title">Безпека</h2>
+          <p class="px-card__text">Дотримуйся вказівок інструктора, бережи обладнання та після гри поверни спорядження.</p>
+        </section>
 
-    <h2>Ранги гравців</h2>
-    <div class="rank-list">
-      <div class="rank-item">
-        <div class="rank-icon">⚪</div>
-        <div>
-          <strong>F ранг</strong><br>0–199 — новачки
-          <div class="badge">0</div>
-        </div>
-      </div>
-      <div class="rank-item">
-        <div class="rank-icon">🟢</div>
-        <div>
-          <strong>E ранг</strong><br>200–399 — початківці
-          <div class="badge">-4</div>
-        </div>
-      </div>
-      <div class="rank-item">
-        <div class="rank-icon">🔵</div>
-        <div>
-          <strong>D ранг</strong><br>400–599 — з досвідом
-          <div class="badge">-6</div>
-        </div>
-      </div>
-      <div class="rank-item">
-        <div class="rank-icon">🟡</div>
-        <div>
-          <strong>C ранг</strong><br>600–799 — досвідчені
-          <div class="badge">-8</div>
-        </div>
-      </div>
-      <div class="rank-item">
-        <div class="rank-icon">🟠</div>
-        <div>
-          <strong>B ранг</strong><br>800–999 — профі
-          <div class="badge">-10</div>
-        </div>
-      </div>
-      <div class="rank-item">
-        <div class="rank-icon">🔴</div>
-        <div>
-          <strong>A ранг</strong><br>1000–1199 — майстри
-          <div class="badge">-12</div>
-        </div>
-      </div>
-      <div class="rank-item">
-        <div class="rank-icon">🟣</div>
-        <div>
-          <strong>S ранг</strong><br>1200+ — еліта
-          <div class="badge">-14</div>
-        </div>
-      </div>
-    </div>
+        <section class="px-card">
+          <h2 class="px-card__title">Поведінка</h2>
+          <p class="px-card__text">Не використовуй нецензурну лексику та агресію. Грай чесно — фейрплей понад усе.</p>
+        </section>
 
-    <h2>Прогрес та сезон</h2>
-    <p>Кожен сезон триває 3 місяці. Після завершення — нагородження ТОП гравців та обнулення статистики.</p>
+        <section class="px-card">
+          <h2 class="px-card__title">MVP / бали</h2>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr><th>Подія</th><th>Бали</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Перемога</td><td>+20</td></tr>
+                <tr><td>MVP (1-й у списку)</td><td>+12</td></tr>
+                <tr><td>MVP (2-й у списку)</td><td>+7</td></tr>
+                <tr><td>MVP (3-й у списку)</td><td>+3</td></tr>
+                <tr><td>Участь F/E/D/C/B/A/S ранг</td><td>0 / -4 / -6 / -8 / -10 / -12 / -14</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-    <h2>Питання?</h2>
-    <p>Є ідеї чи зауваження? <button class="btn" onclick="window.open('https://t.me/lasertag_if?fbclid=PAZXh0bgNhZW0CMTEAAad-4UbeHPisvclN2yKLlvTB-sJCERxLSylGIx_Zik8gGqJnohB-QRKhAAsGlg_aem_xz02YefK1HLdKuu2Tv3YBA')">Напиши в Telegram</button></p>
-  </div>
-</body>
+        <section class="px-card">
+          <h2 class="px-card__title">Рейтинг / ранги</h2>
+          <p class="px-card__text">F: 0–199, E: 200–399, D: 400–599, C: 600–799, B: 800–999, A: 1000–1199, S: 1200+.</p>
+          <p class="px-card__text">Кожен сезон триває 3 місяці. Після завершення — нагородження ТОП гравців та обнулення статистики.</p>
+        </section>
+      </div>
+    </main>
+  </body>
 </html>

@@ -401,6 +401,41 @@ function parseDateOnly(value = '') {
   return src.slice(0, 10);
 }
 
+function getKyivTodayYMD() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Kyiv',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    const read = (type) => parts.find((item) => item.type === type)?.value;
+    const yyyy = read('year');
+    const mm = read('month');
+    const dd = read('day');
+    if (yyyy && mm && dd) return `${yyyy}-${mm}-${dd}`;
+  } catch {}
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getSeasonBoundsByDate(todayYMD = getKyivTodayYMD()) {
+  const [yearRaw, monthRaw] = String(todayYMD).split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return { seasonStart: '', seasonEnd: '' };
+  }
+  const seasonStartMonth = month <= 2 ? 12 : month <= 5 ? 3 : month <= 8 ? 6 : 9;
+  const seasonStartYear = month <= 2 ? year - 1 : year;
+  const seasonEndMonth = seasonStartMonth === 12 ? 2 : seasonStartMonth + 2;
+  const seasonEndYear = seasonStartMonth === 12 ? seasonStartYear + 1 : seasonStartYear;
+  const lastDay = new Date(seasonEndYear, seasonEndMonth, 0).getDate();
+  return {
+    seasonStart: `${seasonStartYear}-${String(seasonStartMonth).padStart(2, '0')}-01`,
+    seasonEnd: `${seasonEndYear}-${String(seasonEndMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  };
+}
+
 function safeRoundCount(rawSeries, maxRounds = 12) {
   const normalized = String(rawSeries ?? '').trim();
   if (!normalized) return 1;
@@ -475,20 +510,60 @@ function parseHomeGamesRows(sheet = {}) {
     const league = normalizeLeague(row[indices.league] || 'kids') || 'kids';
     const day = parseDateOnly(timestamp);
     const winner = normalizeWinnerToken(row[indices.winner]);
-    const roundsCount = safeRoundCount(row[indices.rounds]);
-    const teamSlots = [indices.team1, indices.team2, indices.team3, indices.team4]
-      .filter((idx) => idx >= 0)
-      .flatMap((idx) => parseNickList(row[idx]));
+    const rawSeries = String(row[indices.rounds] ?? '').trim();
+    const roundsCount = safeRoundCount(rawSeries);
+    const teams = {
+      team1: indices.team1 >= 0 ? parseNickList(row[indices.team1]) : [],
+      team2: indices.team2 >= 0 ? parseNickList(row[indices.team2]) : [],
+      team3: indices.team3 >= 0 ? parseNickList(row[indices.team3]) : [],
+      team4: indices.team4 >= 0 ? parseNickList(row[indices.team4]) : []
+    };
+    const teamSlots = Object.values(teams).flat();
 
     return {
       league,
       timestamp,
       day,
       winner,
+      rawSeries,
       roundsCount,
+      teams,
       players: [...new Set(teamSlots.map((nick) => String(nick || '').trim()).filter(Boolean))]
     };
   }).filter((entry) => entry.day);
+}
+
+function buildLeaguePlayerStats(games = []) {
+  const leagueStats = new Map();
+  const touch = (league, nick) => {
+    if (!leagueStats.has(league)) leagueStats.set(league, new Map());
+    const byPlayer = leagueStats.get(league);
+    const key = normalizeHeader(nick);
+    if (!byPlayer.has(key)) byPlayer.set(key, { playedGames: 0, wins: 0, draws: 0, losses: 0, winRate: null });
+    return byPlayer.get(key);
+  };
+
+  games.forEach((entry) => {
+    const league = normalizeLeague(entry.league) || 'kids';
+    const winner = normalizeWinnerToken(entry.winner);
+    const teams = entry.teams || {};
+    const participants = new Set((entry.players || []).map(normalizeHeader).filter(Boolean));
+    participants.forEach((nick) => {
+      const row = touch(league, nick);
+      row.playedGames += 1;
+      if (winner === 'tie') row.draws += 1;
+      else if (Array.isArray(teams[winner]) && teams[winner].map(normalizeHeader).includes(nick)) row.wins += 1;
+      else row.losses += 1;
+    });
+  });
+
+  leagueStats.forEach((byPlayer) => {
+    byPlayer.forEach((row) => {
+      row.winRate = row.playedGames ? Math.round(((row.wins + 0.5 * row.draws) / row.playedGames) * 100) : null;
+    });
+  });
+
+  return leagueStats;
 }
 
 function computeLeagueHomeStats(games = [], dateStart = '', dateEnd = '') {
@@ -504,17 +579,21 @@ function computeLeagueHomeStats(games = [], dateStart = '', dateEnd = '') {
     entry.players.forEach((nick) => activePlayers.add(normalizeHeader(nick)));
   });
 
-  const roundsCount = filtered.reduce((sum, entry) => sum + safeRoundCount(entry.roundsCount), 0);
+  const hasSeries = filtered.some((entry) => String(entry.rawSeries || '').trim());
+  const roundsCount = hasSeries
+    ? filtered.reduce((sum, entry) => sum + safeRoundCount(entry.roundsCount), 0)
+    : filtered.length;
 
   return {
     battlesCount: filtered.length,
+    gamesCount: filtered.length,
     roundsCount,
     gameDaysCount: days.size,
     activePlayersCount: activePlayers.size
   };
 }
 
-function countScheduledDays(dateStart = '', dateEnd = '', todayYMD = new Date().toISOString().slice(0, 10)) {
+function countScheduledDays(dateStart = '', dateEnd = '', todayYMD = getKyivTodayYMD()) {
   if (!dateStart || !dateEnd) return { total: 0, completed: 0, upcoming: 0 };
   const gameWeekdays = new Set([0, 3, 5]);
   const startDate = new Date(`${dateStart}T00:00:00`);
@@ -770,7 +849,11 @@ export async function getHomeOverview() {
 
 export async function getHomeFast() {
   const season = await getCurrentSeason();
-  const cacheKey = `home:${season.id}`;
+  const todayYMD = getKyivTodayYMD();
+  const dynamicSeason = getSeasonBoundsByDate(todayYMD);
+  const seasonStart = dynamicSeason.seasonStart || season.dateStart;
+  const seasonEnd = dynamicSeason.seasonEnd || season.dateEnd;
+  const cacheKey = `home:${season.id}:${seasonStart}:${seasonEnd}`;
   const cached = readCache(cacheKey, TTL.home);
   if (cached) return cached;
   const [kidsSheet, adultsSheet, gamesSheet, avatars] = await Promise.all([
@@ -783,20 +866,26 @@ export async function getHomeFast() {
   const kidsTable = mapToRows(new Map(parseScoreboardRows(kidsSheet, 'kids').map((p) => [normalizeHeader(p.nick), p])), avatars);
   const adultsTable = mapToRows(new Map(parseScoreboardRows(adultsSheet, 'sundaygames').map((p) => [normalizeHeader(p.nick), p])), avatars);
   const allGames = parseHomeGamesRows(gamesSheet || {});
+  const seasonGames = allGames.filter((entry) => entry.day >= seasonStart && entry.day <= seasonEnd);
+  const winRateByLeague = buildLeaguePlayerStats(seasonGames);
   const kidsGames = allGames.filter((entry) => entry.league === 'kids');
   const adultsGames = allGames.filter((entry) => entry.league === 'sundaygames');
-  const statsKids = computeLeagueHomeStats(kidsGames, season.dateStart, season.dateEnd);
-  const statsAdults = computeLeagueHomeStats(adultsGames, season.dateStart, season.dateEnd);
-  const seasonSchedule = countScheduledDays(season.dateStart, season.dateEnd);
+  const statsKids = computeLeagueHomeStats(kidsGames, seasonStart, seasonEnd);
+  const statsAdults = computeLeagueHomeStats(adultsGames, seasonStart, seasonEnd);
+  const seasonSchedule = countScheduledDays(seasonStart, seasonEnd, todayYMD);
+  const enrichTop = (table, league) => table.map((row) => {
+    const stats = winRateByLeague.get(league)?.get(normalizeHeader(row.nick));
+    return { ...row, winRate: stats?.winRate ?? null, playedGames: stats?.playedGames ?? 0 };
+  });
 
   return writeCache(cacheKey, {
     seasonId: season.id,
     seasonTitle: season.uiLabel,
-    seasonDateStart: season.dateStart,
-    seasonDateEnd: season.dateEnd,
+    seasonDateStart: seasonStart,
+    seasonDateEnd: seasonEnd,
     seasonSchedule,
-    top5Kids: kidsTable.slice(0, 5),
-    top5Adults: adultsTable.slice(0, 5),
+    top5Kids: enrichTop(kidsTable, 'kids').slice(0, 5),
+    top5Adults: enrichTop(adultsTable, 'sundaygames').slice(0, 5),
     kidsMetrics: statsKids,
     adultsMetrics: statsAdults,
     rankDistKids: getRankDistribution(kidsTable),

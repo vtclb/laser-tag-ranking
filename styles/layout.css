@@ -1,0 +1,41 @@
+.container {
+  width: min(1240px, 100% - 2rem);
+  margin-inline: auto;
+}
+
+.section {
+  padding-block: clamp(3.5rem, 8vw, 8.5rem);
+  position: relative;
+  z-index: 1;
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.grid--12 {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.stack > * + * {
+  margin-top: var(--space-4);
+}
+
+.hide-mobile {
+  display: initial;
+}
+
+.hide-desktop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .hide-mobile {
+    display: none;
+  }
+
+  .hide-desktop {
+    display: initial;
+  }
+}

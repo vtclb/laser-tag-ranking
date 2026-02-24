@@ -1,0 +1,85 @@
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  z-index: -1;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgba(242, 245, 255, 0.045) 0,
+      rgba(242, 245, 255, 0.045) 1px,
+      transparent 1px,
+      transparent 8px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(242, 245, 255, 0.04) 0,
+      rgba(242, 245, 255, 0.04) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+}
+
+body::after {
+  z-index: -1;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.03) 0,
+    rgba(0, 0, 0, 0.03) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+.px-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  padding: 0.2rem 0.5rem;
+}
+
+.px-badge::before {
+  content: "■";
+  font-size: 0.7em;
+  color: var(--accent);
+}
+
+.px-card {
+  border: 1px solid var(--line);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  padding: var(--space-4);
+}
+
+.px-divider {
+  border: 0;
+  border-top: 1px solid var(--line);
+  position: relative;
+  margin: var(--space-2) 0;
+}
+
+.px-divider::before,
+.px-divider::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  position: absolute;
+  top: -3px;
+}
+
+.px-divider::before {
+  left: 0;
+}
+
+.px-divider::after {
+  right: 0;
+}

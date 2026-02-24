@@ -463,6 +463,7 @@ function parseHomeGamesRows(sheet = {}) {
     timestamp: find(['timestamp', 'datetime', 'date', 'createdat']),
     league: find(['league', 'division']),
     winner: find(['winner', 'winnerteam', 'result']),
+    rounds: find(['series', 'rounds']),
     team1: find(['team1', 'team a', 'teama']),
     team2: find(['team2', 'team b', 'teamb']),
     team3: find(['team3', 'player3', 'p3']),
@@ -474,6 +475,7 @@ function parseHomeGamesRows(sheet = {}) {
     const league = normalizeLeague(row[indices.league] || 'kids') || 'kids';
     const day = parseDateOnly(timestamp);
     const winner = normalizeWinnerToken(row[indices.winner]);
+    const roundsCount = safeRoundCount(row[indices.rounds]);
     const teamSlots = [indices.team1, indices.team2, indices.team3, indices.team4]
       .filter((idx) => idx >= 0)
       .flatMap((idx) => parseNickList(row[idx]));
@@ -483,6 +485,7 @@ function parseHomeGamesRows(sheet = {}) {
       timestamp,
       day,
       winner,
+      roundsCount,
       players: [...new Set(teamSlots.map((nick) => String(nick || '').trim()).filter(Boolean))]
     };
   }).filter((entry) => entry.day);
@@ -501,21 +504,7 @@ function computeLeagueHomeStats(games = [], dateStart = '', dateEnd = '') {
     entry.players.forEach((nick) => activePlayers.add(normalizeHeader(nick)));
   });
 
-  let roundsCount = 0;
-  for (const dayGames of days.values()) {
-    let win1 = 0;
-    let win2 = 0;
-    dayGames.forEach((entry) => {
-      if (entry.winner === 'team1') win1 += 1;
-      else if (entry.winner === 'team2') win2 += 1;
-      if (win1 === 3 || win2 === 3) {
-        roundsCount += 1;
-        win1 = 0;
-        win2 = 0;
-      }
-    });
-    if (win1 !== 0 || win2 !== 0) roundsCount += 1;
-  }
+  const roundsCount = filtered.reduce((sum, entry) => sum + safeRoundCount(entry.roundsCount), 0);
 
   return {
     battlesCount: filtered.length,

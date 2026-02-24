@@ -6,6 +6,7 @@ const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
 const STATIC_SEASON_CACHE = new Map();
+let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 
 const TTL = {
   home: 60_000,
@@ -62,7 +63,11 @@ function toNumber(value, fallback = null) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 function parseNickList(raw = '') {
-  return String(raw || '').replace(/\r?\n/g, ',').split(/[;,|]/).map((p) => p.trim()).filter(Boolean);
+  const cleaned = String(raw || '')
+    .replace(/[\[\]"]+/g, '')
+    .replace(/\r?\n/g, ',')
+    .replace(/\s*\/\s*/g, ',');
+  return cleaned.split(/[;,|,]/).map((p) => p.trim()).filter(Boolean);
 }
 function safeErrorMessage(error, fallback = 'Не вдалося завантажити дані') {
   if (!error) return fallback;
@@ -533,6 +538,18 @@ function parseHomeGamesRows(sheet = {}) {
   }).filter((entry) => entry.day);
 }
 
+function parseHomeGamesRowsCached(sheet = {}) {
+  const header = Array.isArray(sheet.header) ? sheet.header.join('|') : '';
+  const rowCount = Array.isArray(sheet.rows) ? sheet.rows.length : 0;
+  const key = `${header}::${rowCount}`;
+  if (homeGamesParseCache.rows.length && homeGamesParseCache.key === key && Date.now() - homeGamesParseCache.ts <= TTL.home) {
+    return homeGamesParseCache.rows;
+  }
+  const parsed = parseHomeGamesRows(sheet);
+  homeGamesParseCache = { ts: Date.now(), key, rows: parsed };
+  return parsed;
+}
+
 function buildLeaguePlayerStats(games = []) {
   const leagueStats = new Map();
   const touch = (league, nick) => {
@@ -579,10 +596,9 @@ function computeLeagueHomeStats(games = [], dateStart = '', dateEnd = '') {
     entry.players.forEach((nick) => activePlayers.add(normalizeHeader(nick)));
   });
 
-  const hasSeries = filtered.some((entry) => String(entry.rawSeries || '').trim());
-  const roundsCount = hasSeries
-    ? filtered.reduce((sum, entry) => sum + safeRoundCount(entry.roundsCount), 0)
-    : filtered.length;
+  const roundIds = new Set(filtered.map((entry) => String(entry.rawSeries || '').trim()).filter(Boolean));
+  const hasSeries = roundIds.size > 0;
+  const roundsCount = hasSeries ? roundIds.size : filtered.length;
 
   return {
     battlesCount: filtered.length,
@@ -596,18 +612,23 @@ function computeLeagueHomeStats(games = [], dateStart = '', dateEnd = '') {
 function countScheduledDays(dateStart = '', dateEnd = '', todayYMD = getKyivTodayYMD()) {
   if (!dateStart || !dateEnd) return { total: 0, completed: 0, upcoming: 0 };
   const gameWeekdays = new Set([0, 3, 5]);
-  const startDate = new Date(`${dateStart}T00:00:00`);
-  const endDate = new Date(`${dateEnd}T00:00:00`);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) {
+  const toUtcDate = (ymd) => {
+    const [y, m, d] = String(ymd || '').split('-').map(Number);
+    if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+    return new Date(Date.UTC(y, m - 1, d));
+  };
+  const startDate = toUtcDate(dateStart);
+  const endDate = toUtcDate(dateEnd);
+  if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) {
     return { total: 0, completed: 0, upcoming: 0 };
   }
   let total = 0;
   let completed = 0;
-  for (const cursor = new Date(startDate); cursor <= endDate; cursor.setDate(cursor.getDate() + 1)) {
-    if (!gameWeekdays.has(cursor.getDay())) continue;
+  const todayDate = toUtcDate(todayYMD);
+  for (const cursor = new Date(startDate); cursor <= endDate; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+    if (!gameWeekdays.has(cursor.getUTCDay())) continue;
     total += 1;
-    const ymd = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
-    if (ymd <= todayYMD) completed += 1;
+    if (todayDate && cursor <= todayDate) completed += 1;
   }
   return { total, completed, upcoming: Math.max(0, total - completed) };
 }
@@ -865,7 +886,7 @@ export async function getHomeFast() {
 
   const kidsTable = mapToRows(new Map(parseScoreboardRows(kidsSheet, 'kids').map((p) => [normalizeHeader(p.nick), p])), avatars);
   const adultsTable = mapToRows(new Map(parseScoreboardRows(adultsSheet, 'sundaygames').map((p) => [normalizeHeader(p.nick), p])), avatars);
-  const allGames = parseHomeGamesRows(gamesSheet || {});
+  const allGames = parseHomeGamesRowsCached(gamesSheet || {});
   const seasonGames = allGames.filter((entry) => entry.day >= seasonStart && entry.day <= seasonEnd);
   const winRateByLeague = buildLeaguePlayerStats(seasonGames);
   const kidsGames = allGames.filter((entry) => entry.league === 'kids');

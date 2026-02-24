@@ -12,14 +12,19 @@
     <a class="nav-link" href="./seasons.html">🏆 Seasons</a>
   </header>
   <main>
-    <section class="card">
+    <section class="card home-root" id="homeRoot">
       <h1 class="section-title">Головна</h1>
       <p class="tag" id="currentSeason">—</p>
-      <div id="homeLoader" class="home-loader" aria-live="polite"></div>
       <div class="hero-grid" id="topHeroes"></div>
       <div class="kpi kpi-2" id="overviewStats"></div>
       <div class="kpi kpi-2" id="charts"></div>
       <p class="tag" id="stateBox" aria-live="polite"></p>
+      <div class="loaderOverlay" aria-hidden="true">
+        <div class="pixel-loader" role="presentation">
+          <div class="pixel-track"><span class="pixel-runner"></span></div>
+          <p>Підтягуємо сезонні дані…</p>
+        </div>
+      </div>
     </section>
 
     <section class="menu-grid">

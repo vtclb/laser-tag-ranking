@@ -17,14 +17,14 @@ function top5Card(players, leagueLabel, leagueSlug, ctaLabel) {
     </li>`;
   }).join('');
 
-  return `<article class="card mini px-card top5-card home-block stack">
-    <p class="tag px-badge">Маніфест ліги</p>
-    <h3 class="home-block-title">${leagueLabel}</h3>
+  return `<article class="px-card px-card--accent top5-card home-block section">
+    <span class="px-badge">Маніфест ліги</span>
+    <h3 class="px-card__title">${leagueLabel}</h3>
     <div class="top5-head">
       <span>Позиція</span><span>Ранг</span><span>Нік</span><span>Points</span><span>WR%</span>
     </div>
     <ol class="top5-list">${rows || '<li class="top5-empty">Немає даних</li>'}</ol>
-    <a class="chip btn--secondary" href="./league.html?league=${leagueSlug}">${ctaLabel}</a>
+    <div class="px-card__actions"><a class="btn btn--secondary" href="./league.html?league=${leagueSlug}">${ctaLabel}</a></div>
   </article>`;
 }
 
@@ -33,10 +33,10 @@ function seasonProgressCard(metrics, schedule, leagueLabel) {
   const total = schedule?.total || 0;
   const progress = total ? Math.round((completed / total) * 100) : 0;
 
-  return `<article class="card mini px-card home-block stack">
-    <p class="tag px-badge">Стан сезону</p>
-    <h3 class="home-block-title">Сезонний прогрес · ${leagueLabel}</h3>
-    <p class="tag">Season progress: <strong>зіграно ${completed} / всього ${total} ігрових днів</strong></p>
+  return `<article class="px-card home-block section">
+    <span class="px-badge">Стан сезону</span>
+    <h3 class="px-card__title">Сезонний прогрес · ${leagueLabel}</h3>
+    <p class="px-card__text">Season progress: <strong>зіграно ${completed} / всього ${total} ігрових днів</strong></p>
     <div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div>
     <div class="season-kpi-grid">
       <p><span>Rounds</span><strong>${metrics.roundsCount || 0}</strong></p>
@@ -64,7 +64,7 @@ function buildBarSegments(dist, leagueLabel) {
   }).join('');
 
   return `<div class="rank-compare-row">
-    <p class="tag rank-label">${leagueLabel}</p>
+    <span class="px-badge rank-label">${leagueLabel}</span>
     <div class="rank-stack" role="img" aria-label="${leagueLabel} rank distribution">${segments || '<span class="tag">Немає даних</span>'}</div>
     <p class="tag rank-total">${total} players</p>
     <ul class="rank-legend">${legend}</ul>
@@ -72,16 +72,16 @@ function buildBarSegments(dist, leagueLabel) {
 }
 
 function rankDistributionCard(kidsDist, adultsDist) {
-  return `<article class="card mini px-card home-block rank-merged stack">
-    <p class="tag px-badge">Баланс рангів</p>
-    <h3 class="home-block-title">Ранги (Kids vs Sundaygames)</h3>
+  return `<article class="px-card home-block rank-merged section">
+    <span class="px-badge">Баланс рангів</span>
+    <h3 class="px-card__title">Ранги (Kids vs Sundaygames)</h3>
     ${buildBarSegments(kidsDist, 'Kids')}
     ${buildBarSegments(adultsDist, 'Adults')}
   </article>`;
 }
 
 function renderBlockSkeleton() {
-  return '<article class="card mini skeleton-block home-block"><div class="skeleton-overlay"><div class="laser-scan"></div><div class="pixel-sparks"><span></span><span></span><span></span></div><div class="runner-mini"></div></div><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article>';
+  return '<article class="px-card skeleton-block home-block"><div class="skeleton-overlay"><div class="laser-scan"></div><div class="pixel-sparks"><span></span><span></span><span></span></div><div class="runner-mini"></div></div><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article>';
 }
 
 function renderSkeleton() {
@@ -94,46 +94,63 @@ function renderHomeStructure() {
   const homeRoot = document.getElementById('homeRoot');
   if (!homeRoot) return;
 
-  homeRoot.innerHTML = `<section class="section section--manifest hero-entry-screen">
-    <div class="container stack">
-      <p class="tag px-badge">Game Entry Screen</p>
-      <h1 class="section-title">Головна</h1>
-      <p class="tag" id="currentSeason">—</p>
-      <p class="tag" id="stateBox" aria-live="polite"></p>
-      <div class="grid">
-        <a class="chip btn--primary" href="./gameday.html">▶ Game Day</a>
-        <a class="chip btn--secondary" href="./seasons.html">🏆 Season</a>
-      </div>
-    </div>
-  </section>
+  homeRoot.innerHTML = `<main>
+    <div class="container section">
+      <section class="hero">
+        <div class="hero__kicker">Game Entry Screen</div>
+        <h1 class="hero__title">Головна</h1>
+        <p class="hero__subtitle" id="currentSeason">—</p>
+        <p class="px-card__text" id="stateBox" aria-live="polite"></p>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="./gameday.html">▶ Game Day</a>
+          <a class="btn btn--secondary" href="./seasons.html">🏆 Season</a>
+        </div>
+      </section>
 
-  <section class="section section--manifest">
-    <div class="container stack">
-      <h2 class="section-title">Герої сезону</h2>
-      <p class="tag">ТОП-5 гравців у двох лігах.</p>
-      <div class="hero-grid grid" id="topHeroes"></div>
-    </div>
-  </section>
+      <div class="px-divider"></div>
 
-  <section class="section section--manifest">
-    <div class="container stack">
-      <h2 class="section-title">Прогрес сезону</h2>
-      <p class="tag">Ключові метрики активності по лігах.</p>
-      <div class="kpi kpi-2 grid" id="overviewStats"></div>
-    </div>
-  </section>
+      <section class="section">
+        <span class="px-badge">heroes</span>
+        <h2 class="px-card__title">Герої сезону</h2>
+        <p class="px-card__text">ТОП-5 гравців у двох лігах.</p>
+        <div class="hero-grid section" id="topHeroes"></div>
+      </section>
 
-  <section class="section section--manifest">
-    <div class="container stack">
-      <h2 class="section-title">Маніфест рангів</h2>
-      <p class="tag">Розподіл рангів між Kids та Sundaygames.</p>
-      <div class="kpi kpi-2 grid" id="charts"></div>
+      <div class="px-divider"></div>
+
+      <section class="section">
+        <span class="px-badge">progress</span>
+        <h2 class="px-card__title">Прогрес сезону</h2>
+        <p class="px-card__text">Ключові метрики активності по лігах.</p>
+        <div class="kpi kpi-2 section" id="overviewStats"></div>
+      </section>
+
+      <div class="px-divider"></div>
+
+      <section class="section">
+        <span class="px-badge">rank</span>
+        <h2 class="px-card__title">Маніфест рангів</h2>
+        <p class="px-card__text">Розподіл рангів між Kids та Sundaygames.</p>
+        <div class="kpi kpi-2 section" id="charts"></div>
+      </section>
+
+      <div class="px-divider"></div>
+
+      <section class="px-card section">
+        <span class="px-badge">rules</span>
+        <h2 class="px-card__title">Швидкі переходи</h2>
+        <p class="px-card__text">Усі ключові розділи Home збережено.</p>
+        <div class="px-card__actions">
+          <a class="btn btn--secondary" href="./league.html?league=kids">👥 Leagues</a>
+          <a class="btn btn--secondary" href="./rules.html">📜 Rules</a>
+        </div>
+      </section>
     </div>
-  </section>`;
+  </main>`;
 }
 
 function renderErrorBlocks(msg) {
-  const err = `<article class="card mini home-block"><h3 class="home-block-title">Не вдалося завантажити дані</h3><p class="tag">${msg}</p></article>`;
+  const err = `<article class="px-card home-block"><h3 class="px-card__title">Не вдалося завантажити дані</h3><p class="px-card__text">${msg}</p></article>`;
   document.getElementById('topHeroes').innerHTML = err + err;
   document.getElementById('overviewStats').innerHTML = err + err;
   document.getElementById('charts').innerHTML = err;

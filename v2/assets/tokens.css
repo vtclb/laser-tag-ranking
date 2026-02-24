@@ -1,0 +1,21 @@
+:root {
+  --bg-0: #06080d;
+  --bg-1: #0b1120;
+  --bg-2: #131a2c;
+  --fg-0: #f2f5ff;
+  --fg-1: rgba(242, 245, 255, 0.78);
+  --accent: #b7ff2a;
+  --accent-2: #53b6ff;
+  --line: rgba(242, 245, 255, 0.18);
+  --panel: rgba(10, 16, 31, 0.86);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+
+  --font-head: 'Oswald', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}

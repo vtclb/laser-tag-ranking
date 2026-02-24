@@ -113,3 +113,42 @@ main { width: 100%; }
 .px-card--accent { border-color: rgba(183, 255, 42, 0.55); }
 .px-card__title { margin: 0; font-size: 1.15rem; }
 .px-card__text { margin: 0; color: var(--fg-1); }
+
+/* --- LEGACY OVERRIDES (apply new look to old components) --- */
+.theme-game .card,
+.theme-game .glass,
+.theme-game .panel,
+.theme-game .stats-card,
+.theme-game .season-card,
+.theme-game .box,
+.theme-game [class*='card'],
+.theme-game [class*='panel'] {
+  background: rgba(11, 16, 32, 0.55) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 18px !important;
+  color: var(--fg-0) !important;
+}
+
+.theme-game button,
+.theme-game .btn,
+.theme-game a.button,
+.theme-game [class*='btn'] {
+  background: rgba(11, 16, 32, 0.45) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  color: var(--fg-0) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.theme-game h1,
+.theme-game h2,
+.theme-game h3 {
+  font-family: var(--font-head) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.theme-game * {
+  box-shadow: none !important;
+}

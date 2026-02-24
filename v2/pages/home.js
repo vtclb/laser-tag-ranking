@@ -6,7 +6,7 @@ function top5Card(players, leagueLabel, leagueSlug, ctaLabel) {
   const rows = (players || []).slice(0, 5).map((player, idx) => {
     const meta = rankMeta(player.rankLetter);
     const gamesPlayed = Number.isFinite(player.playedGames) ? player.playedGames : 0;
-    const wr = Number.isFinite(player.winRate) ? `${Math.round(player.winRate)}%` : '—';
+    const wr = Number.isFinite(player.winRate) ? `${Math.round(player.winRate)}%` : (gamesPlayed ? '0%' : '—');
     return `<li class="top5-row">
       <span class="top5-pos">#${idx + 1}</span>
       <span class="rank-badge ${meta.cssClass}">${meta.label}</span>
@@ -109,7 +109,7 @@ async function init() {
     document.getElementById('topHeroes').innerHTML = top5Card(data.top5Kids, 'ТОП-5 Kids', 'kids', 'Перейти до статистики Kids')
       + top5Card(data.top5Adults, 'ТОП-5 Sundaygames', 'sundaygames', 'Перейти до статистики Sundaygames');
     document.getElementById('overviewStats').innerHTML = seasonProgressCard(data.kidsMetrics, data.seasonSchedule, 'Kids')
-      + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'Sundaygames');
+      + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'Adults');
     document.getElementById('charts').innerHTML = rankDistributionCard(data.rankDistKids, data.rankDistAdults);
     stateBox.textContent = 'Home показує сезонні метрики та прогрес ігрових днів (Wed/Fri/Sun).';
   } catch (error) {

@@ -33,15 +33,17 @@ function seasonProgressCard(metrics, schedule, leagueLabel) {
   const total = schedule?.total || 0;
   const progress = total ? Math.round((completed / total) * 100) : 0;
 
+  const metricValue = (value) => (Number.isFinite(value) ? value : 'N/A');
+
   return `<article class="px-card home-block section">
     <span class="px-badge">Стан сезону</span>
     <h3 class="px-card__title">Сезонний прогрес · ${leagueLabel}</h3>
     <p class="px-card__text">Season progress: <strong>зіграно ${completed} / всього ${total} ігрових днів</strong></p>
     <div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div>
     <div class="season-kpi-grid">
-      <p><span>Rounds</span><strong>${metrics.roundsCount || 0}</strong></p>
-      <p><span>Games</span><strong>${metrics.gamesCount || 0}</strong></p>
-      <p><span>Active players in season</span><strong>${metrics.activePlayersCount || 0}</strong></p>
+      <p><span>Rounds</span><strong>${metricValue(metrics.roundsCount)}</strong></p>
+      <p><span>Games</span><strong>${metricValue(metrics.gamesCount)}</strong></p>
+      <p><span>Active players in season</span><strong>${metricValue(metrics.activePlayersCount)}</strong></p>
       <p><span>Залишилось днів</span><strong>${schedule?.upcoming || 0}</strong></p>
     </div>
   </article>`;

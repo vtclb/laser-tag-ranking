@@ -49,6 +49,7 @@ const RANK_META = {
   F: { label: 'F', cssClass: 'rank-F', themeVars: { '--rank-color': '#6e7681', '--rank-glow': 'rgba(110,118,129,.2)' } }
 };
 const RANK_THRESHOLDS = [['S', 1200], ['A', 1000], ['B', 800], ['C', 600], ['D', 400], ['E', 200], ['F', 0]];
+const MAX_BATTLES_PER_GAME = 7;
 
 function normalizeHeader(value = '') { return String(value || '').trim().toLowerCase(); }
 function normalizeLeague(league = '') {
@@ -451,6 +452,51 @@ function safeRoundCount(rawSeries, maxRounds = 12) {
   return parsed;
 }
 
+function normalizeTeamKey(team = []) {
+  return [...new Set((team || []).map((nick) => normalizeHeader(nick)).filter(Boolean))].sort().join(',');
+}
+
+function buildGameGroupingKey(entry = {}) {
+  const dateKey = String(entry.day || entry.date || '').trim();
+  const leagueKey = normalizeLeague(entry.league) || 'kids';
+  const teamA = normalizeTeamKey(entry.team1 || entry.teams?.team1 || []);
+  const teamB = normalizeTeamKey(entry.team2 || entry.teams?.team2 || []);
+  if (!dateKey || !teamA || !teamB) return '';
+  const orderedTeams = [teamA, teamB].sort();
+  return `${dateKey}::${leagueKey}::${orderedTeams[0]}::${orderedTeams[1]}`;
+}
+
+function deriveGameAndBattleCounts(entries = []) {
+  if (!Array.isArray(entries) || !entries.length) {
+    return { gamesCount: 0, battlesCount: 0, exact: true };
+  }
+
+  const keyedGroups = new Map();
+  for (const entry of entries) {
+    const explicitGameRef = String(entry.gameRef || '').trim();
+    if (explicitGameRef) {
+      const explicitKey = `ref::${explicitGameRef}`;
+      keyedGroups.set(explicitKey, (keyedGroups.get(explicitKey) || 0) + 1);
+      continue;
+    }
+    const inferredKey = buildGameGroupingKey(entry);
+    if (!inferredKey) {
+      return { gamesCount: null, battlesCount: null, exact: false };
+    }
+    keyedGroups.set(inferredKey, (keyedGroups.get(inferredKey) || 0) + 1);
+  }
+
+  if ([...keyedGroups.values()].some((count) => count > MAX_BATTLES_PER_GAME)) {
+    return { gamesCount: null, battlesCount: null, exact: false };
+  }
+
+  return {
+    gamesCount: keyedGroups.size,
+    battlesCount: entries.length,
+    exact: true
+  };
+}
+
 function parseMatches(sheet) {
   const header = (sheet.header || []).map(normalizeHeader);
   const find = (names) => header.findIndex((h) => names.includes(h));
@@ -463,7 +509,8 @@ function parseMatches(sheet) {
     mvp1: find(['mvp', 'mvp1', 'top1']),
     mvp2: find(['mvp2', 'top2']),
     mvp3: find(['mvp3', 'top3']),
-    rounds: find(['rounds', 'series'])
+    rounds: find(['rounds', 'series']),
+    gameRef: find(['gameid', 'game', 'matchid', 'match', 'sessionid', 'session'])
   };
   return (sheet.rows || []).map((row) => {
     const ts = row[i.timestamp] || '';
@@ -479,6 +526,7 @@ function parseMatches(sheet) {
       mvp1: String(row[i.mvp1] || '').trim(),
       mvp2: String(row[i.mvp2] || '').trim(),
       mvp3: String(row[i.mvp3] || '').trim(),
+      gameRef: String(row[i.gameRef] || '').trim(),
       rawSeries,
       roundsCount,
       rounds: roundsCount
@@ -504,6 +552,7 @@ function parseHomeGamesRows(sheet = {}) {
     league: find(['league', 'division']),
     winner: find(['winner', 'winnerteam', 'result']),
     rounds: find(['series', 'rounds']),
+    gameRef: find(['gameid', 'game', 'matchid', 'match', 'sessionid', 'session']),
     team1: find(['team1', 'team a', 'teama']),
     team2: find(['team2', 'team b', 'teamb']),
     team3: find(['team3', 'player3', 'p3']),
@@ -532,6 +581,7 @@ function parseHomeGamesRows(sheet = {}) {
       winner,
       rawSeries,
       roundsCount,
+      gameRef: String(row[indices.gameRef] || '').trim(),
       teams,
       players: [...new Set(teamSlots.map((nick) => String(nick || '').trim()).filter(Boolean))]
     };
@@ -596,13 +646,12 @@ function computeLeagueHomeStats(games = [], dateStart = '', dateEnd = '') {
     entry.players.forEach((nick) => activePlayers.add(normalizeHeader(nick)));
   });
 
-  const roundIds = new Set(filtered.map((entry) => String(entry.rawSeries || '').trim()).filter(Boolean));
-  const hasSeries = roundIds.size > 0;
-  const roundsCount = hasSeries ? roundIds.size : filtered.length;
+  const roundsCount = filtered.reduce((sum, entry) => sum + safeRoundCount(entry.roundsCount ?? entry.rawSeries), 0);
+  const volume = deriveGameAndBattleCounts(filtered);
 
   return {
-    battlesCount: filtered.length,
-    gamesCount: filtered.length,
+    battlesCount: volume.battlesCount,
+    gamesCount: volume.gamesCount,
     roundsCount,
     gameDaysCount: days.size,
     activePlayersCount: activePlayers.size
@@ -855,10 +904,12 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     return acc;
   }, { games: 0, wins: 0, draws: 0, losses: 0, pointsDelta: 0, players: leaderboard.length, rounds: 0, mvp: 0 });
   const leagueMatches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague);
+  const volume = deriveGameAndBattleCounts(leagueMatches);
   seasonStats.playerGames = seasonStats.games;
   seasonStats.rounds = leagueMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0);
-  seasonStats.battles = leagueMatches.length;
-  seasonStats.games = seasonStats.battles;
+  seasonStats.battles = volume.battlesCount;
+  seasonStats.games = volume.gamesCount;
+  seasonStats.metricsExact = volume.exact;
   seasonStats.mvp = leaderboard.reduce((best, p) => (p.mvp > (best.mvp || -1) ? p : best), {}).nick || null;
 
   return writeCache(cacheKey, { seasonId: season.id, seasonTitle: season.uiLabel, league: selectedLeague, top3: leaderboard.slice(0, 3), table: leaderboard, leaderboard, seasonStats, rankDistribution: getRankDistribution(leaderboard), matches: leagueMatches });
@@ -954,7 +1005,7 @@ export async function getGameDayView({ dateYMD, league } = {}) {
     league: selectedLeague,
     matches,
     roundsCount: matches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0),
-    gamesCount: matches.length,
+    ...deriveGameAndBattleCounts(matches),
     playersToday: [...playersMap.values()].sort((a, b) => b.games - a.games || a.nick.localeCompare(b.nick, 'uk')),
     mvpCounts,
     logsByMatch
@@ -987,10 +1038,13 @@ export async function getSeasonDashboard(seasonId, league = 'kids') {
     league: selectedLeague,
     totals: {
       games: snapshot.seasonStats.games,
+      battles: snapshot.seasonStats.battles,
       rounds: snapshot.seasonStats.rounds,
       players: totalPlayers,
-      avgGamesPerPlayer: totalPlayers ? (snapshot.seasonStats.games / totalPlayers).toFixed(1) : '0.0',
-      avgPointsDeltaPerGame: snapshot.seasonStats.games ? Number((snapshot.seasonStats.pointsDelta / snapshot.seasonStats.games).toFixed(2)) : 0,
+      avgGamesPerPlayer: (totalPlayers && Number.isFinite(snapshot.seasonStats.games)) ? (snapshot.seasonStats.games / totalPlayers).toFixed(1) : 'N/A',
+      avgPointsDeltaPerGame: Number.isFinite(snapshot.seasonStats.games) && snapshot.seasonStats.games
+        ? Number((snapshot.seasonStats.pointsDelta / snapshot.seasonStats.games).toFixed(2))
+        : 'N/A',
       wldLabel: `${snapshot.seasonStats.wins}/${snapshot.seasonStats.losses}/${snapshot.seasonStats.draws}`
     },
     rankDistribution: snapshot.rankDistribution,
@@ -1147,6 +1201,10 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       rounds: m.rounds,
       pointsChanges: (view.logsByMatch[index] || []).map((entry) => ({ nick: entry.nick, delta: entry.delta, newPoints: entry.newPoints }))
     })),
+    gamesCount: view.gamesCount,
+    battlesCount: view.battlesCount,
+    roundsCount: view.roundsCount,
+    metricsExact: view.exact,
     activePlayers: view.playersToday.map((p) => ({ nick: p.nick, matchesToday: p.games, mvpToday: p.mvp, rankingPlace: null }))
   };
 }

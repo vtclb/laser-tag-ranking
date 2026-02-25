@@ -16,6 +16,7 @@ function renderSkeleton() {
 }
 
 function renderResults(data) {
+  const metricValue = (value) => (Number.isFinite(value) ? value : 'N/A');
   const deltas = data.matches.flatMap((match) => match.pointsChanges || []);
   const topChanges = deltas
     .sort((a, b) => Math.abs(b.delta || 0) - Math.abs(a.delta || 0))
@@ -23,7 +24,9 @@ function renderResults(data) {
     .map((entry) => `<span class="result-chip">${entry.nick}: ${entry.delta >= 0 ? '+' : ''}${entry.delta ?? 0}</span>`)
     .join('');
 
-  return `<p><span class="tooltip-term" title="Games = зіграні матчі">Games</span>: ${data.matches.length}</p>
+  return `<p><span class="tooltip-term" title="Games = зіграні матчі">Games</span>: ${metricValue(data.gamesCount)}</p>
+    <p>Battles: ${metricValue(data.battlesCount)}</p>
+    <p>Rounds: ${metricValue(data.roundsCount)}</p>
     <p>Гравці: ${data.activePlayers.length}</p>
     <p><span class="tooltip-term" title="Wins / Losses / Draws">WLD</span>: див. матчі по днях</p>
     <div>${topChanges || '<span class="tag">Немає змін поінтів</span>'}</div>`;
@@ -38,7 +41,7 @@ async function load() {
   try {
     const data = await getGameDay({ date: ymd, league });
     document.getElementById('header').textContent = `${data.date} · ${data.league}`;
-    document.getElementById('totals').textContent = `Ігор: ${data.matches.length} · Активних: ${data.activePlayers.length}`;
+    document.getElementById('totals').textContent = `Ігор: ${Number.isFinite(data.gamesCount) ? data.gamesCount : 'N/A'} · Боїв: ${Number.isFinite(data.battlesCount) ? data.battlesCount : 'N/A'} · Активних: ${data.activePlayers.length}`;
     document.getElementById('players').innerHTML = data.activePlayers.map((p) => `<li>${p.nick} · ігор: ${p.matchesToday} · MVP: ${p.mvpToday}</li>`).join('') || '<li class="placeholder">Нема ігор за цю дату.</li>';
     document.getElementById('matches').innerHTML = data.matches.map(renderMatch).join('') || '<li class="placeholder">Нема ігор за цю дату.</li>';
     document.getElementById('results').innerHTML = renderResults(data);

@@ -4,6 +4,7 @@ export function clearTeams() {
   state.teams.team1 = [];
   state.teams.team2 = [];
   state.teams.team3 = [];
+  state.teams.team4 = [];
 }
 
 export function syncSelectedFromTeamsAndBench() {

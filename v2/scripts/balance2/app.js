@@ -1,5 +1,5 @@
 import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap } from './state.js';
-import { autoBalance2, autoBalance3 } from './balance.js';
+import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setActiveTab } from './ui.js';
 import { loadPlayers, saveMatch } from './api.js';
@@ -7,20 +7,32 @@ import { saveLobby, restoreLobby, peekLobbyRestore } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 
 const $ = (id) => document.getElementById(id);
+const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
 let saveLocked = false;
+
+function setTeamCount(rawValue) {
+  state.teamCount = Math.min(4, Math.max(2, Number(rawValue) || 2));
+  TEAM_KEYS.slice(state.teamCount).forEach((key) => { state.teams[key] = []; });
+  state.series = state.series.map((value) => {
+    if (value === '-') return value;
+    const numeric = Number(value);
+    if (value === '0' || (numeric >= 1 && numeric <= state.teamCount)) return value;
+    return '-';
+  });
+}
 
 function runBalance() {
   const selected = getSelectedPlayers();
   clearTeams();
-  if (state.teamsCount === 2) {
+  if (state.teamCount === 2) {
     const t = autoBalance2(selected);
     state.teams.team1 = t.team1.map((p) => p.nick);
     state.teams.team2 = t.team2.map((p) => p.nick);
   } else {
-    const t = autoBalance3(selected);
-    state.teams.team1 = t.team1.map((p) => p.nick);
-    state.teams.team2 = t.team2.map((p) => p.nick);
-    state.teams.team3 = t.team3.map((p) => p.nick);
+    const t = balanceIntoNTeams(selected, state.teamCount);
+    TEAM_KEYS.forEach((key) => {
+      state.teams[key] = (t[key] || []).map((p) => p.nick);
+    });
   }
   state.mode = 'auto';
   saveLobby();
@@ -36,7 +48,8 @@ function toPenaltiesString() {
 function syncSaveButtonState() {
   const btn = $('saveBtn');
   if (!btn) return;
-  const hasTeams = state.teams.team1.length && state.teams.team2.length;
+  const keys = TEAM_KEYS.slice(0, state.teamCount);
+  const hasTeams = keys.every((key) => state.teams[key].length > 0);
   const canSave = hasTeams && computeSeriesSummary().played >= 3;
   btn.disabled = saveLocked || !canSave;
 }
@@ -54,7 +67,8 @@ function buildPayload() {
     league: state.league,
     team1: state.teams.team1.join(', '),
     team2: state.teams.team2.join(', '),
-    team3: state.teamsCount === 3 ? state.teams.team3.join(', ') : '',
+    team3: state.teamCount >= 3 ? state.teams.team3.join(', ') : '',
+    team4: state.teamCount >= 4 ? state.teams.team4.join(', ') : '',
     winner: summary.winner,
     mvp1: state.match.mvp1,
     mvp2: state.match.mvp2,
@@ -65,8 +79,8 @@ function buildPayload() {
 }
 
 function validateSave() {
-  const hasTeams = state.teams.team1.length && state.teams.team2.length;
-  if (!hasTeams) return 'Команди не заповнені';
+  const keys = TEAM_KEYS.slice(0, state.teamCount);
+  if (!keys.every((key) => state.teams[key].length > 0)) return 'Команди не заповнені';
   if (computeSeriesSummary().played < 3) return 'Потрібно мінімум 3 зіграні бої';
   return '';
 }
@@ -126,7 +140,6 @@ async function init() {
   $('restoreBtn').addEventListener('click', async () => {
     if (restoreLobby()) {
       $('leagueSelect').value = state.league;
-      $('teamsCount').value = String(state.teamsCount);
       $('sortMode').value = state.sortMode;
       await ensurePlayersLoaded();
       renderAndSync();
@@ -137,12 +150,6 @@ async function init() {
   $('leagueSelect').addEventListener('change', (e) => {
     state.league = normalizeLeague(e.target.value);
     saveLobby();
-  });
-  $('teamsCount').addEventListener('change', (e) => {
-    state.teamsCount = Number(e.target.value) === 3 ? 3 : 2;
-    if (state.teamsCount === 2) state.teams.team3 = [];
-    saveLobby();
-    renderAndSync();
   });
 
   $('sortMode').addEventListener('change', (e) => {
@@ -189,11 +196,16 @@ async function init() {
       saveLobby();
       renderAndSync();
     },
+    onTeamCount(count) {
+      setTeamCount(count);
+      saveLobby();
+      renderAndSync();
+    },
     onSeriesResult(idx, val) {
       const rounds = Array.isArray(state.series) ? state.series.slice(0, 7) : ['-', '-', '-', '-', '-', '-', '-'];
       while (rounds.length < 7) rounds.push('-');
       if (idx < 0 || idx >= state.seriesCount) return;
-      const nextVal = val === '1' || val === '2' || val === '0' ? val : '-';
+      const nextVal = ['0', '1', '2', '3', '4'].includes(val) ? val : '-';
       rounds[idx] = rounds[idx] === nextVal ? '-' : nextVal;
       state.series = rounds;
       const summary = computeSeriesSummary();
@@ -225,7 +237,7 @@ async function init() {
     onRenameStart(teamKey) { startRenameTeam(teamKey); },
     onRenameSave(teamKey, value) { saveTeamName(teamKey, value); },
     onBackTab(tab) { setActiveTab(tab); },
-    onChanged() { saveLobby(); renderAndSync(); }
+    onChanged() { saveLobby(); renderAndSync(); },
   });
 
   $('leagueSelect').value = state.league;

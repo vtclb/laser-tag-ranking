@@ -15,10 +15,11 @@
         <option value="kids">Дитяча ліга</option>
         <option value="sundaygames">Доросла ліга</option>
       </select>
-      <select id="teamsCount" class="chip">
-        <option value="2">2 Teams</option>
-        <option value="3">3 Teams</option>
-      </select>
+      <div id="teamCountControl" class="series-count-choices">
+        <button type="button" class="chip" data-team-count="2">2 teams</button>
+        <button type="button" class="chip" data-team-count="3">3 teams</button>
+        <button type="button" class="chip" data-team-count="4">4 teams</button>
+      </div>
       <button id="loadPlayersBtn" class="chip">Завантажити</button>
     </div>
   </header>

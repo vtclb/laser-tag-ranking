@@ -69,7 +69,18 @@
 
     <section class="card" id="matchCard">
       <h3>Match</h3>
-      <h4>Series (бої)</h4>
+      <h4>Серія (3–7 боїв)</h4>
+      <div class="series-count" id="seriesCountOptions">
+        <span>К-сть боїв:</span>
+        <div class="series-count-choices">
+          <button class="chip" type="button" data-series-count="3">3</button>
+          <button class="chip" type="button" data-series-count="4">4</button>
+          <button class="chip" type="button" data-series-count="5">5</button>
+          <button class="chip" type="button" data-series-count="6">6</button>
+          <button class="chip" type="button" data-series-count="7">7</button>
+          <button class="chip" type="button" data-series-reset="1">Очистити серію</button>
+        </div>
+      </div>
       <div id="seriesOptions" class="series-options"></div>
       <div id="matchSummary" class="match-summary"></div>
       <div class="kpi kpi-2">

@@ -8,36 +8,39 @@
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">Сезони</div>
-    <a class="nav-link" href="./index.html">Menu</a>
-  </header>
+  <header class="topbar"></header>
 
-  <main class="container season-page">
-    <section class="px-card season-header" aria-label="Сезонна навігація">
-      <a class="btn" href="./seasons.html">← Назад</a>
-      <h1 class="px-card__title" id="seasonPageTitle">СЕЗОН</h1>
-      <button type="button" class="topnav__pill" id="seasonMenuBtn">Menu</button>
-    </section>
+  <main>
+    <div class="container season-page section">
+      <section class="px-card season-header" aria-label="Сезонна навігація">
+        <a class="btn" href="./seasons.html"><span class="icon icon--back"></span> Назад</a>
+        <h1 class="px-card__title" id="seasonPageTitle">LEAGUE SEASON DETAILS</h1>
+        <button type="button" class="topnav__pill" data-open-global-menu="1">Menu</button>
+      </section>
 
-    <section class="px-card px-card--accent">
-      <div class="search-row">
-        <select id="seasonSelect" class="search-input" aria-label="Обрати сезон"></select>
-        <select id="leagueSelect" class="search-input" aria-label="Обрати лігу">
-          <option value="kids">kids</option>
-          <option value="sundaygames">olds</option>
-        </select>
-      </div>
-      <div id="heroStats"></div>
-    </section>
+      <div class="px-divider"></div>
 
-    <section class="px-card" id="rankDistribution"></section>
+      <section class="px-card px-card--accent">
+        <div class="search-row">
+          <select id="seasonSelect" class="search-input" aria-label="Обрати сезон"></select>
+          <select id="leagueSelect" class="search-input" aria-label="Обрати лігу">
+            <option value="kids">kids</option>
+            <option value="sundaygames">olds</option>
+          </select>
+        </div>
+        <div id="heroStats"></div>
+      </section>
 
-    <section class="px-card">
-      <h2 class="px-card__title">Гравці сезону</h2>
-      <div id="playersList"></div>
-      <p class="px-card__text" id="state"></p>
-    </section>
+      <div class="px-divider"></div>
+      <section class="px-card" id="rankDistribution"></section>
+
+      <div class="px-divider"></div>
+      <section class="px-card">
+        <h2 class="px-card__title">Гравці сезону</h2>
+        <div id="playersList"></div>
+        <p class="px-card__text" id="state"></p>
+      </section>
+    </div>
   </main>
 
   <div id="playerModal" class="modal" hidden aria-hidden="true">

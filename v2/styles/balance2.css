@@ -18,7 +18,7 @@
   gap:.5rem; padding:.5rem .6rem; border:1px solid rgba(255,255,255,.1); border-radius:.7rem;
   background: rgba(255,255,255,.03);
 }
-.player-row button, .lobby-row button, .team-actions button, .winner-options button, .penalty-controls button { min-height:44px; }
+.player-row button, .lobby-row button, .team-actions button, .series-options button, .penalty-controls button, .save-btn { min-height:44px; }
 .section-head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
 .row-btns { display:flex; gap:.5rem; }
 .lobby-list { display:grid; gap:.35rem; }
@@ -32,11 +32,16 @@
 .team-card h4 { margin:.15rem 0 .35rem; }
 .team-player { display:flex; justify-content:space-between; align-items:center; gap:.35rem; font-size:.92rem; padding:.2rem 0; }
 .team-actions { display:flex; gap:.3rem; flex-wrap:wrap; }
-.winner-options { display:grid; grid-template-columns:1fr; gap:.5rem; margin-bottom:.7rem; }
-.winner-options button.active { border-color: rgba(124,255,114,.8); background: rgba(124,255,114,.15); }
+.series-options { display:grid; gap:.5rem; margin-bottom:.7rem; }
+.series-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap; }
+.series-choices { display:flex; flex-wrap:wrap; gap:.35rem; }
+.series-options button.active { border-color: rgba(124,255,114,.8); background: rgba(124,255,114,.15); }
+.match-summary { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:.4rem; margin-bottom:.8rem; }
+.summary-pill { border:1px solid rgba(255,255,255,.15); border-radius:.7rem; padding:.45rem .55rem; background:rgba(255,255,255,.04); }
 .penalties-list { display:grid; gap:.35rem; }
 .penalty-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
 .penalty-controls { display:flex; align-items:center; gap:.35rem; }
+.save-sticky { position: sticky; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); padding-top: .45rem; background: linear-gradient(180deg, rgba(9,13,22,0) 0%, rgba(9,13,22,.95) 30%); }
 .save-btn { width:100%; font-size:1rem; margin-top:.7rem; }
 .bottom-nav {
   position: fixed;
@@ -52,6 +57,6 @@
   gap:.45rem;
 }
 @media (min-width: 900px) {
-  .winner-options { grid-template-columns: repeat(3,1fr); }
   .teams-grid { grid-template-columns: repeat(3,1fr); }
+  .match-summary { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }

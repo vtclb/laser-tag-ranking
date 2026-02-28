@@ -10,6 +10,7 @@ export function saveLobby() {
     selected: state.selected,
     teams: state.teams,
     mode: state.mode,
+    match: state.match,
   };
   localStorage.setItem(KEY, JSON.stringify(data));
 }
@@ -30,6 +31,16 @@ export function restoreLobby() {
     team3: Array.isArray(data?.teams?.team3) ? data.teams.team3 : [],
   };
   state.mode = data.mode === 'manual' ? 'manual' : 'auto';
+  state.match = {
+    winner: data?.match?.winner || '',
+    mvp1: data?.match?.mvp1 || '',
+    mvp2: data?.match?.mvp2 || '',
+    mvp3: data?.match?.mvp3 || '',
+    series: data?.match?.series || '',
+    seriesRounds: Array.isArray(data?.match?.seriesRounds) ? data.match.seriesRounds.slice(0, 3) : ['', '', ''],
+    penalties: data?.match?.penalties && typeof data.match.penalties === 'object' ? data.match.penalties : {},
+  };
+  while (state.match.seriesRounds.length < 3) state.match.seriesRounds.push('');
   return true;
 }
 

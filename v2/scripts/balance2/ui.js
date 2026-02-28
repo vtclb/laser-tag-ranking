@@ -79,16 +79,25 @@ function renderTeams() {
 
 function renderSeriesEditor() {
   const root = document.getElementById('seriesOptions');
+  const countRoot = document.getElementById('seriesCountOptions');
   if (!root) return;
-  const rounds = Array.isArray(state.match.seriesRounds) ? state.match.seriesRounds : ['', '', ''];
-  root.innerHTML = rounds.map((round, idx) => {
+  const rounds = Array.isArray(state.series) ? state.series.slice(0, 7) : ['-', '-', '-', '-', '-', '-', '-'];
+  const count = Math.min(7, Math.max(3, Number(state.seriesCount) || 3));
+
+  if (countRoot) {
+    countRoot.querySelectorAll('[data-series-count]').forEach((btn) => {
+      btn.classList.toggle('active', Number(btn.dataset.seriesCount) === count);
+    });
+  }
+
+  root.innerHTML = rounds.slice(0, count).map((round, idx) => {
     const options = [
-      { val: '1', label: 'Team 1' },
-      { val: '2', label: 'Team 2' },
+      { val: '1', label: 'T1' },
       { val: '0', label: 'Нічия' },
+      { val: '2', label: 'T2' },
     ];
     const row = options.map((option) => `<button class="chip ${round === option.val ? 'active' : ''}" data-series="${idx}:${option.val}">${option.label}</button>`).join('');
-    return `<div class="series-row"><span>Бій ${idx + 1}</span><div class="series-choices">${row}<button class="chip" data-series-clear="${idx}">—</button></div></div>`;
+    return `<div class="series-row"><span>Бій ${idx + 1}</span><div class="series-choices">${row}</div></div>`;
   }).join('');
 }
 
@@ -96,13 +105,12 @@ function renderMatchSummary() {
   const root = document.getElementById('matchSummary');
   if (!root) return;
   const summary = computeSeriesSummary();
-  const winnerLabel = summary.winner === 'team1' ? 'Team 1' : summary.winner === 'team2' ? 'Team 2' : 'Нічия';
+  const winnerLabel = summary.winner === 'team1' ? 'Team1' : summary.winner === 'team2' ? 'Team2' : 'Нічия';
   root.innerHTML = [
-    `<div class="summary-pill">series: <strong>${summary.series || '—'}</strong></div>`,
-    `<div class="summary-pill">wins1: <strong>${summary.wins1}</strong></div>`,
-    `<div class="summary-pill">wins2: <strong>${summary.wins2}</strong></div>`,
-    `<div class="summary-pill">draws: <strong>${summary.draws}</strong></div>`,
-    `<div class="summary-pill">winner: <strong>${winnerLabel}</strong></div>`
+    `<div class="summary-pill">T1: <strong>${summary.wins1}</strong> T2: <strong>${summary.wins2}</strong> Нічиї: <strong>${summary.draws}</strong></div>`,
+    `<div class="summary-pill">Зіграно: <strong>${summary.played}</strong> / <strong>${state.seriesCount}</strong></div>`,
+    `<div class="summary-pill">Підсумок: <strong>${winnerLabel}</strong></div>`,
+    `<div class="summary-pill">series: <strong>${summary.series || '—'}</strong></div>`
   ].join('');
 }
 
@@ -138,7 +146,8 @@ export function bindUiEvents(handlers) {
     const remove = e.target.closest('[data-remove]')?.dataset.remove;
     const move = e.target.closest('[data-move]')?.dataset.move;
     const series = e.target.closest('[data-series]')?.dataset.series;
-    const seriesClear = e.target.closest('[data-series-clear]')?.dataset.seriesClear;
+    const seriesCount = e.target.closest('[data-series-count]')?.dataset.seriesCount;
+    const clearSeries = e.target.closest('[data-series-reset]');
     const pen = e.target.closest('[data-pen]')?.dataset.pen;
     if (add) handlers.onAdd(add);
     if (remove) handlers.onRemove(remove);
@@ -151,7 +160,8 @@ export function bindUiEvents(handlers) {
       const [idx, val] = series.split(':');
       handlers.onSeriesResult(Number(idx), val);
     }
-    if (seriesClear != null) handlers.onSeriesResult(Number(seriesClear), '');
+    if (seriesCount) handlers.onSeriesCount(Number(seriesCount));
+    if (clearSeries) handlers.onSeriesReset();
     if (pen) {
       const [nick, delta] = pen.split(':');
       handlers.onPenalty(nick, Number(delta));

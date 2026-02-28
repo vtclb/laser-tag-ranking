@@ -1,4 +1,4 @@
-import { state, normalizeLeague } from './state.js';
+import { state, normalizeLeague, computeSeriesSummary } from './state.js';
 
 const KEY = 'balance2:lobby';
 const PLAYERS_KEY = 'balance2:playersCache';
@@ -10,6 +10,8 @@ export function saveLobby() {
     selected: state.selected,
     teams: state.teams,
     mode: state.mode,
+    seriesCount: state.seriesCount,
+    series: state.series,
     match: state.match,
   };
   localStorage.setItem(KEY, JSON.stringify(data));
@@ -31,16 +33,29 @@ export function restoreLobby() {
     team3: Array.isArray(data?.teams?.team3) ? data.teams.team3 : [],
   };
   state.mode = data.mode === 'manual' ? 'manual' : 'auto';
+  state.seriesCount = Math.min(7, Math.max(3, Number(data?.seriesCount) || 3));
+  const restoredSeries = Array.isArray(data?.series) ? data.series.slice(0, 7) : [];
+  state.series = restoredSeries.map((v) => (v === '1' || v === '2' || v === '0' ? v : '-'));
+  while (state.series.length < 7) state.series.push('-');
   state.match = {
     winner: data?.match?.winner || '',
     mvp1: data?.match?.mvp1 || '',
     mvp2: data?.match?.mvp2 || '',
     mvp3: data?.match?.mvp3 || '',
     series: data?.match?.series || '',
-    seriesRounds: Array.isArray(data?.match?.seriesRounds) ? data.match.seriesRounds.slice(0, 3) : ['', '', ''],
     penalties: data?.match?.penalties && typeof data.match.penalties === 'object' ? data.match.penalties : {},
   };
-  while (state.match.seriesRounds.length < 3) state.match.seriesRounds.push('');
+
+  if (!Array.isArray(data?.series) && Array.isArray(data?.match?.seriesRounds)) {
+    const legacy = data.match.seriesRounds.slice(0, 7).map((v) => (v === '1' || v === '2' || v === '0' ? v : '-'));
+    while (legacy.length < 7) legacy.push('-');
+    state.series = legacy;
+    state.seriesCount = Math.min(7, Math.max(3, Number(legacy.filter((v) => v !== '-').length) || 3));
+  }
+
+  const summary = computeSeriesSummary();
+  state.match.winner = summary.winner;
+  state.match.series = summary.series;
   return true;
 }
 

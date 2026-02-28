@@ -32,6 +32,9 @@
 .team-card h4 { margin:.15rem 0 .35rem; }
 .team-player { display:flex; justify-content:space-between; align-items:center; gap:.35rem; font-size:.92rem; padding:.2rem 0; }
 .team-actions { display:flex; gap:.3rem; flex-wrap:wrap; }
+.series-count { display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.55rem; }
+.series-count-choices { display:flex; flex-wrap:wrap; gap:.35rem; }
+.series-count .chip.active { border-color: rgba(124,255,114,.8); background: rgba(124,255,114,.15); }
 .series-options { display:grid; gap:.5rem; margin-bottom:.7rem; }
 .series-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap; }
 .series-choices { display:flex; flex-wrap:wrap; gap:.35rem; }

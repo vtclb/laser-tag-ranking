@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LaserTag v2 · Балансер</title>
+  <link rel="stylesheet" href="./assets/styles.css">
+  <link rel="stylesheet" href="./styles/balance2.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">⚖️ LaserTag v2 Balance</div>
+    <div class="header-actions">
+      <select id="leagueSelect" class="chip">
+        <option value="kids">Kids</option>
+        <option value="sundaygames">Sundaygames</option>
+        <option value="olds">Olds (alias)</option>
+      </select>
+      <select id="teamsCount" class="chip">
+        <option value="2">2 Teams</option>
+        <option value="3">3 Teams</option>
+      </select>
+      <button id="loadPlayersBtn" class="chip">Load</button>
+    </div>
+  </header>
+
+  <main class="balance2-root">
+    <section class="card status-card" id="statusBox" data-state="idle">
+      <strong>Status:</strong>
+      <span id="statusText">IDLE</span>
+      <button id="retrySaveBtn" class="chip hidden" type="button">Retry</button>
+    </section>
+
+    <section class="card hidden" id="restoreCard">
+      <div class="restore-row">
+        <span>Є збережене лобі. Відновити?</span>
+        <button id="restoreBtn" class="chip">Відновити лобі</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="search-row">
+        <input id="searchInput" class="search-input" type="search" placeholder="Швидкий пошук...">
+      </div>
+      <div id="playersCount" class="tag">Players: 0</div>
+      <div id="playerList" class="player-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h3>Lobby (max 15)</h3>
+        <div class="row-btns">
+          <button id="clearLobbyBtn" class="chip">Clear</button>
+        </div>
+      </div>
+      <div id="lobbyList" class="lobby-list"></div>
+    </section>
+
+    <section class="card" id="teamsCard">
+      <div class="section-head">
+        <h3>Teams</h3>
+        <div class="row-btns">
+          <button id="balanceBtn" class="chip">Balance</button>
+          <button id="manualBtn" class="chip">Manual</button>
+        </div>
+      </div>
+      <div id="teamsGrid" class="teams-grid"></div>
+    </section>
+
+    <section class="card" id="matchCard">
+      <h3>Match</h3>
+      <div id="winnerOptions" class="winner-options"></div>
+      <div class="kpi kpi-2">
+        <label>MVP1 <input id="mvp1" list="participantsDatalist"></label>
+        <label>MVP2 <input id="mvp2" list="participantsDatalist"></label>
+        <label>MVP3 <input id="mvp3" list="participantsDatalist"></label>
+        <label>Series <input id="seriesInput" placeholder="2-1"></label>
+      </div>
+      <datalist id="participantsDatalist"></datalist>
+      <div>
+        <h4>Penalties</h4>
+        <div id="penaltiesList" class="penalties-list"></div>
+      </div>
+      <button id="saveBtn" class="chip save-btn">Save Match</button>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button data-tab="teams" class="chip">Balance</button>
+    <button data-tab="teams" class="chip">Manual</button>
+    <button data-tab="match" class="chip">Match / Save</button>
+  </nav>
+
+  <script type="module" src="./scripts/balance2/app.js"></script>
+</body>
+</html>

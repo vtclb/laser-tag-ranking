@@ -1,4 +1,4 @@
-import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary } from './state.js';
+import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap } from './state.js';
 import { autoBalance2, autoBalance3 } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setActiveTab } from './ui.js';
@@ -91,6 +91,34 @@ async function doSave(retry = false) {
   syncSaveButtonState();
 }
 
+function toggleSelectedPlayer(nick) {
+  if (state.selectedMap.has(nick)) {
+    state.selected = state.selected.filter((n) => n !== nick);
+    Object.keys(state.teams).forEach((k) => { state.teams[k] = state.teams[k].filter((n) => n !== nick); });
+  } else if (state.selected.length < 15) {
+    state.selected = [...state.selected, nick];
+  }
+  syncSelectedMap();
+}
+
+function startRenameTeam(teamKey) {
+  const wrap = document.querySelector(`[data-team-name-wrap="${teamKey}"]`);
+  if (!wrap) return;
+  const current = state.teamNames[teamKey] || '';
+  wrap.innerHTML = `<input class="search-input" data-team-name-input="${teamKey}" value="${current}" maxlength="32" />`;
+  const input = wrap.querySelector('input');
+  input.focus();
+  input.select();
+}
+
+function saveTeamName(teamKey, rawValue) {
+  if (!state.teamNames[teamKey]) return;
+  const value = String(rawValue || '').trim();
+  state.teamNames[teamKey] = value || `Team ${teamKey.replace('team', '')}`;
+  saveLobby();
+  renderAndSync();
+}
+
 async function init() {
   if (peekLobbyRestore()) $('restoreCard').classList.remove('hidden');
   else $('restoreCard').classList.add('hidden');
@@ -99,6 +127,7 @@ async function init() {
     if (restoreLobby()) {
       $('leagueSelect').value = state.league;
       $('teamsCount').value = String(state.teamsCount);
+      $('sortMode').value = state.sortMode;
       await ensurePlayersLoaded();
       renderAndSync();
       $('restoreCard').classList.add('hidden');
@@ -116,10 +145,16 @@ async function init() {
     renderAndSync();
   });
 
+  $('sortMode').addEventListener('change', (e) => {
+    state.sortMode = e.target.value;
+    saveLobby();
+    renderAndSync();
+  });
+
   $('loadPlayersBtn').addEventListener('click', ensurePlayersLoaded);
   $('balanceBtn').addEventListener('click', () => { runBalance(); renderAndSync(); });
   $('manualBtn').addEventListener('click', () => { state.mode = 'manual'; syncSelectedFromTeamsAndBench(); saveLobby(); renderAndSync(); });
-  $('clearLobbyBtn').addEventListener('click', () => { state.selected = []; clearTeams(); saveLobby(); renderAndSync(); });
+  $('clearLobbyBtn').addEventListener('click', () => { state.selected = []; syncSelectedMap(); clearTeams(); saveLobby(); renderAndSync(); });
 
   const debouncedSearch = (() => {
     let t;
@@ -142,14 +177,14 @@ async function init() {
   });
 
   bindUiEvents({
-    onAdd(nick) {
-      if (state.selected.includes(nick) || state.selected.length >= 15) return;
-      state.selected.push(nick);
+    onTogglePlayer(nick) {
+      toggleSelectedPlayer(nick);
       saveLobby();
       renderAndSync();
     },
     onRemove(nick) {
       state.selected = state.selected.filter((n) => n !== nick);
+      syncSelectedMap();
       Object.keys(state.teams).forEach((k) => { state.teams[k] = state.teams[k].filter((n) => n !== nick); });
       saveLobby();
       renderAndSync();
@@ -187,19 +222,35 @@ async function init() {
       saveLobby();
       renderAndSync();
     },
+    onRenameStart(teamKey) { startRenameTeam(teamKey); },
+    onRenameSave(teamKey, value) { saveTeamName(teamKey, value); },
+    onBackTab(tab) { setActiveTab(tab); },
     onChanged() { saveLobby(); renderAndSync(); }
   });
 
+  $('leagueSelect').value = state.league;
+  $('sortMode').value = state.sortMode;
+  syncSelectedMap();
   await ensurePlayersLoaded();
   renderAndSync();
   setActiveTab('teams');
 }
 
 async function ensurePlayersLoaded() {
+  const btn = $('loadPlayersBtn');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Loading…';
+  setStatus({ state: 'saving', text: 'Loading…', retryVisible: false });
   try {
     state.players = await loadPlayers(state.league);
+    setStatus({ state: 'saved', text: `Loaded ${state.players.length} players`, retryVisible: false });
   } catch (e) {
     setStatus({ state: 'error', text: `ERROR ✗ ${e.message}`, retryVisible: false });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+    renderAndSync();
   }
 }
 

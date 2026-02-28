@@ -3,11 +3,14 @@ export const state = {
   teamsCount: 2,
   mode: 'auto',
   query: '',
+  sortMode: 'name_asc',
   seriesCount: 3,
   series: ['-', '-', '-', '-', '-', '-', '-'],
   players: [],
   selected: [],
+  selectedMap: new Set(),
   teams: { team1: [], team2: [], team3: [] },
+  teamNames: { team1: 'Team 1', team2: 'Team 2', team3: 'Team 3' },
   match: { winner: '', mvp1: '', mvp2: '', mvp3: '', series: '', penalties: {} },
   lastPayload: null,
   cache: {},
@@ -22,6 +25,18 @@ export function normalizeLeague(league) {
 export function getSelectedPlayers() {
   const map = new Map(state.players.map((p) => [p.nick, p]));
   return state.selected.map((nick) => map.get(nick)).filter(Boolean);
+}
+
+export function syncSelectedMap() {
+  state.selectedMap = new Set(state.selected);
+}
+
+export function isSelected(nick) {
+  return state.selectedMap.has(nick);
+}
+
+export function getTeamLabel(teamKey) {
+  return state.teamNames[teamKey] || teamKey.toUpperCase();
 }
 
 export function getParticipants() {

@@ -12,15 +12,14 @@
     <div class="brand">⚖️ LaserTag v2 Balance</div>
     <div class="header-actions">
       <select id="leagueSelect" class="chip">
-        <option value="kids">Kids</option>
-        <option value="sundaygames">Sundaygames</option>
-        <option value="olds">Olds (alias)</option>
+        <option value="kids">Дитяча ліга</option>
+        <option value="sundaygames">Доросла ліга</option>
       </select>
       <select id="teamsCount" class="chip">
         <option value="2">2 Teams</option>
         <option value="3">3 Teams</option>
       </select>
-      <button id="loadPlayersBtn" class="chip">Load</button>
+      <button id="loadPlayersBtn" class="chip">Завантажити</button>
     </div>
   </header>
 
@@ -41,8 +40,17 @@
     <section class="card">
       <div class="search-row">
         <input id="searchInput" class="search-input" type="search" placeholder="Швидкий пошук...">
+        <select id="sortMode" class="chip">
+          <option value="name_asc">A→Z (Nickname)</option>
+          <option value="name_desc">Z→A (Nickname)</option>
+          <option value="points_desc">Points ↓</option>
+          <option value="points_asc">Points ↑</option>
+        </select>
       </div>
-      <div id="playersCount" class="tag">Players: 0</div>
+      <div class="counts-row">
+        <div id="playersCount" class="tag">Players: 0</div>
+        <div id="selectedCount" class="tag">Обрано: 0 / 15</div>
+      </div>
       <div id="playerList" class="player-list"></div>
     </section>
 
@@ -69,6 +77,7 @@
 
     <section class="card" id="matchCard">
       <h3>Match</h3>
+      <div id="matchTeamsPreview" class="teams-grid"></div>
       <h4>Серія (3–7 боїв)</h4>
       <div class="series-count" id="seriesCountOptions">
         <span>К-сть боїв:</span>

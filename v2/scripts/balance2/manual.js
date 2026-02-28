@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state, syncSelectedMap } from './state.js';
 
 export function clearTeams() {
   state.teams.team1 = [];
@@ -13,6 +13,7 @@ export function syncSelectedFromTeamsAndBench() {
     if (!inTeams.has(nick)) withBench.push(nick);
   }
   state.selected = [...new Set(withBench)].slice(0, 15);
+  syncSelectedMap();
 }
 
 export function movePlayerToTeam(nick, teamKey) {

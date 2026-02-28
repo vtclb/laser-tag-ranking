@@ -12,12 +12,16 @@
 .status-card[data-state="error"] { border-color: rgba(255,90,95,.65); }
 .hidden { display:none !important; }
 .restore-row { display:flex; justify-content:space-between; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.search-row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.counts-row { display:flex; gap:.5rem; flex-wrap:wrap; margin:.4rem 0; }
 .player-list { max-height: 38vh; overflow:auto; display:grid; gap:.35rem; }
 .player-row, .lobby-row {
   display:flex; align-items:center; justify-content:space-between;
   gap:.5rem; padding:.5rem .6rem; border:1px solid rgba(255,255,255,.1); border-radius:.7rem;
   background: rgba(255,255,255,.03);
 }
+.player-row { cursor:pointer; }
+.player-row.selected { border-color: rgba(124,255,114,.8); background: rgba(124,255,114,.12); }
 .player-row button, .lobby-row button, .team-actions button, .series-options button, .penalty-controls button, .save-btn { min-height:44px; }
 .section-head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
 .row-btns { display:flex; gap:.5rem; }
@@ -29,7 +33,10 @@
   border-radius:1rem;
   padding:.6rem;
 }
-.team-card h4 { margin:.15rem 0 .35rem; }
+.team-card h4 { margin:.15rem 0 .35rem; display:flex; justify-content:space-between; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.team-name-wrap { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
+.team-name-wrap .chip { min-height: 34px; }
+.team-list-preview { margin: 0; padding-left: 1.2rem; display: grid; gap: .25rem; }
 .team-player { display:flex; justify-content:space-between; align-items:center; gap:.35rem; font-size:.92rem; padding:.2rem 0; }
 .team-actions { display:flex; gap:.3rem; flex-wrap:wrap; }
 .series-count { display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.55rem; }

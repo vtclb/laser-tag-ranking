@@ -1,4 +1,4 @@
-import { state, normalizeLeague, computeSeriesSummary } from './state.js';
+import { state, normalizeLeague, computeSeriesSummary, syncSelectedMap } from './state.js';
 
 const KEY = 'balance2:lobby';
 const PLAYERS_KEY = 'balance2:playersCache';
@@ -9,7 +9,9 @@ export function saveLobby() {
     teamsCount: state.teamsCount,
     selected: state.selected,
     teams: state.teams,
+    teamNames: state.teamNames,
     mode: state.mode,
+    sortMode: state.sortMode,
     seriesCount: state.seriesCount,
     series: state.series,
     match: state.match,
@@ -27,12 +29,19 @@ export function restoreLobby() {
   state.league = normalizeLeague(data.league);
   state.teamsCount = Number(data.teamsCount) === 3 ? 3 : 2;
   state.selected = Array.isArray(data.selected) ? data.selected.slice(0, 15) : [];
+  syncSelectedMap();
   state.teams = {
     team1: Array.isArray(data?.teams?.team1) ? data.teams.team1 : [],
     team2: Array.isArray(data?.teams?.team2) ? data.teams.team2 : [],
     team3: Array.isArray(data?.teams?.team3) ? data.teams.team3 : [],
   };
+  state.teamNames = {
+    team1: String(data?.teamNames?.team1 || 'Team 1').trim() || 'Team 1',
+    team2: String(data?.teamNames?.team2 || 'Team 2').trim() || 'Team 2',
+    team3: String(data?.teamNames?.team3 || 'Team 3').trim() || 'Team 3',
+  };
   state.mode = data.mode === 'manual' ? 'manual' : 'auto';
+  state.sortMode = ['name_asc', 'name_desc', 'points_desc', 'points_asc'].includes(data?.sortMode) ? data.sortMode : 'name_asc';
   state.seriesCount = Math.min(7, Math.max(3, Number(data?.seriesCount) || 3));
   const restoredSeries = Array.isArray(data?.series) ? data.series.slice(0, 7) : [];
   state.series = restoredSeries.map((v) => (v === '1' || v === '2' || v === '0' ? v : '-'));

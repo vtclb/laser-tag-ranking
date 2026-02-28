@@ -69,19 +69,20 @@
 
     <section class="card" id="matchCard">
       <h3>Match</h3>
-      <div id="winnerOptions" class="winner-options"></div>
+      <h4>Series (бої)</h4>
+      <div id="seriesOptions" class="series-options"></div>
+      <div id="matchSummary" class="match-summary"></div>
       <div class="kpi kpi-2">
         <label>MVP1 <input id="mvp1" list="participantsDatalist"></label>
         <label>MVP2 <input id="mvp2" list="participantsDatalist"></label>
         <label>MVP3 <input id="mvp3" list="participantsDatalist"></label>
-        <label>Series <input id="seriesInput" placeholder="2-1"></label>
       </div>
       <datalist id="participantsDatalist"></datalist>
       <div>
         <h4>Penalties</h4>
         <div id="penaltiesList" class="penalties-list"></div>
       </div>
-      <button id="saveBtn" class="chip save-btn">Save Match</button>
+      <div class="save-sticky"><button id="saveBtn" class="chip save-btn">Save Match</button></div>
     </section>
   </main>
 

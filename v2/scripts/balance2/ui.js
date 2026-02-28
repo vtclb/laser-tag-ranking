@@ -1,4 +1,4 @@
-import { state, getParticipants } from './state.js';
+import { state, getParticipants, computeSeriesSummary } from './state.js';
 import { movePlayerToTeam } from './manual.js';
 
 function sumByNicks(nicks) {
@@ -10,9 +10,11 @@ export function render() {
   renderPlayers();
   renderLobby();
   renderTeams();
-  renderWinnerOptions();
+  renderSeriesEditor();
+  renderMatchSummary();
   renderPenalties();
   renderMatchDatalist();
+  renderMatchFields();
 }
 
 export function setActiveTab(tab) {
@@ -75,13 +77,33 @@ function renderTeams() {
   grid.replaceChildren(frag);
 }
 
-function renderWinnerOptions() {
-  const root = document.getElementById('winnerOptions');
+function renderSeriesEditor() {
+  const root = document.getElementById('seriesOptions');
   if (!root) return;
-  const keys = ['team1', 'team2', 'team3'].slice(0, state.teamsCount);
-  const btns = keys.map((k) => `<button class="chip ${state.match.winner === k ? 'active' : ''}" data-winner="${k}">${k.toUpperCase()} win</button>`);
-  btns.push(`<button class="chip ${state.match.winner === 'tie' ? 'active' : ''}" data-winner="tie">Draw</button>`);
-  root.innerHTML = btns.join('');
+  const rounds = Array.isArray(state.match.seriesRounds) ? state.match.seriesRounds : ['', '', ''];
+  root.innerHTML = rounds.map((round, idx) => {
+    const options = [
+      { val: '1', label: 'Team 1' },
+      { val: '2', label: 'Team 2' },
+      { val: '0', label: 'Нічия' },
+    ];
+    const row = options.map((option) => `<button class="chip ${round === option.val ? 'active' : ''}" data-series="${idx}:${option.val}">${option.label}</button>`).join('');
+    return `<div class="series-row"><span>Бій ${idx + 1}</span><div class="series-choices">${row}<button class="chip" data-series-clear="${idx}">—</button></div></div>`;
+  }).join('');
+}
+
+function renderMatchSummary() {
+  const root = document.getElementById('matchSummary');
+  if (!root) return;
+  const summary = computeSeriesSummary();
+  const winnerLabel = summary.winner === 'team1' ? 'Team 1' : summary.winner === 'team2' ? 'Team 2' : 'Нічия';
+  root.innerHTML = [
+    `<div class="summary-pill">series: <strong>${summary.series || '—'}</strong></div>`,
+    `<div class="summary-pill">wins1: <strong>${summary.wins1}</strong></div>`,
+    `<div class="summary-pill">wins2: <strong>${summary.wins2}</strong></div>`,
+    `<div class="summary-pill">draws: <strong>${summary.draws}</strong></div>`,
+    `<div class="summary-pill">winner: <strong>${winnerLabel}</strong></div>`
+  ].join('');
 }
 
 function renderPenalties() {
@@ -101,12 +123,22 @@ function renderMatchDatalist() {
   dl.innerHTML = participants.map((nick) => `<option value="${nick}"></option>`).join('');
 }
 
+function renderMatchFields() {
+  ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const value = state.match[id] || '';
+    if (input.value !== value) input.value = value;
+  });
+}
+
 export function bindUiEvents(handlers) {
   document.addEventListener('click', (e) => {
     const add = e.target.closest('[data-add]')?.dataset.add;
     const remove = e.target.closest('[data-remove]')?.dataset.remove;
     const move = e.target.closest('[data-move]')?.dataset.move;
-    const winner = e.target.closest('[data-winner]')?.dataset.winner;
+    const series = e.target.closest('[data-series]')?.dataset.series;
+    const seriesClear = e.target.closest('[data-series-clear]')?.dataset.seriesClear;
     const pen = e.target.closest('[data-pen]')?.dataset.pen;
     if (add) handlers.onAdd(add);
     if (remove) handlers.onRemove(remove);
@@ -115,7 +147,11 @@ export function bindUiEvents(handlers) {
       movePlayerToTeam(nick, team === 'bench' ? '' : team);
       handlers.onChanged();
     }
-    if (winner) handlers.onWinner(winner);
+    if (series) {
+      const [idx, val] = series.split(':');
+      handlers.onSeriesResult(Number(idx), val);
+    }
+    if (seriesClear != null) handlers.onSeriesResult(Number(seriesClear), '');
     if (pen) {
       const [nick, delta] = pen.split(':');
       handlers.onPenalty(nick, Number(delta));

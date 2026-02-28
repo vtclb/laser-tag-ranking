@@ -1,4 +1,4 @@
-import { state, normalizeLeague, getSelectedPlayers } from './state.js';
+import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary } from './state.js';
 import { autoBalance2, autoBalance3 } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setActiveTab } from './ui.js';
@@ -33,24 +33,27 @@ function toPenaltiesString() {
 }
 
 function buildPayload() {
+  const summary = computeSeriesSummary();
+  state.match.series = summary.series;
+  state.match.winner = summary.winner;
   return {
     league: state.league,
     team1: state.teams.team1.join(', '),
     team2: state.teams.team2.join(', '),
     team3: state.teamsCount === 3 ? state.teams.team3.join(', ') : '',
-    winner: state.match.winner,
+    winner: summary.winner,
     mvp1: state.match.mvp1,
     mvp2: state.match.mvp2,
     mvp3: state.match.mvp3,
     penalties: toPenaltiesString(),
-    series: state.match.series,
+    series: summary.series,
   };
 }
 
 function validateSave() {
   const hasTeams = state.teams.team1.length && state.teams.team2.length;
   if (!hasTeams) return 'Команди не заповнені';
-  if (!state.match.winner) return 'Виберіть winner або Draw';
+  if (!computeSeriesSummary().series) return 'Виберіть результати хоча б одного бою';
   return '';
 }
 
@@ -112,7 +115,6 @@ async function init() {
   ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
     $(id).addEventListener('input', (e) => { state.match[id] = e.target.value.trim(); saveLobby(); });
   });
-  $('seriesInput').addEventListener('input', (e) => { state.match.series = e.target.value.trim(); saveLobby(); });
 
   $('saveBtn').addEventListener('click', () => doSave(false));
   $('retrySaveBtn').addEventListener('click', () => doSave(true));
@@ -134,8 +136,14 @@ async function init() {
       saveLobby();
       render();
     },
-    onWinner(winner) {
-      state.match.winner = winner;
+    onSeriesResult(idx, val) {
+      const rounds = Array.isArray(state.match.seriesRounds) ? state.match.seriesRounds.slice(0, 3) : ['', '', ''];
+      while (rounds.length < 3) rounds.push('');
+      if (idx >= 0 && idx < 3) rounds[idx] = val;
+      state.match.seriesRounds = rounds;
+      const summary = computeSeriesSummary();
+      state.match.winner = summary.winner;
+      state.match.series = summary.series;
       saveLobby();
       render();
     },

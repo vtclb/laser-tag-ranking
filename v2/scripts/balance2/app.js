@@ -1,0 +1,163 @@
+import { state, normalizeLeague, getSelectedPlayers } from './state.js';
+import { autoBalance2, autoBalance3 } from './balance.js';
+import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
+import { render, bindUiEvents, setActiveTab } from './ui.js';
+import { loadPlayers, saveMatch } from './api.js';
+import { saveLobby, restoreLobby, peekLobbyRestore } from './storage.js';
+import { setStatus, lockSaveButton } from './status.js';
+
+const $ = (id) => document.getElementById(id);
+
+function runBalance() {
+  const selected = getSelectedPlayers();
+  clearTeams();
+  if (state.teamsCount === 2) {
+    const t = autoBalance2(selected);
+    state.teams.team1 = t.team1.map((p) => p.nick);
+    state.teams.team2 = t.team2.map((p) => p.nick);
+  } else {
+    const t = autoBalance3(selected);
+    state.teams.team1 = t.team1.map((p) => p.nick);
+    state.teams.team2 = t.team2.map((p) => p.nick);
+    state.teams.team3 = t.team3.map((p) => p.nick);
+  }
+  state.mode = 'auto';
+  saveLobby();
+}
+
+function toPenaltiesString() {
+  return Object.entries(state.match.penalties)
+    .filter(([, v]) => Number(v))
+    .map(([n, v]) => `${n}:${v}`)
+    .join(',');
+}
+
+function buildPayload() {
+  return {
+    league: state.league,
+    team1: state.teams.team1.join(', '),
+    team2: state.teams.team2.join(', '),
+    team3: state.teamsCount === 3 ? state.teams.team3.join(', ') : '',
+    winner: state.match.winner,
+    mvp1: state.match.mvp1,
+    mvp2: state.match.mvp2,
+    mvp3: state.match.mvp3,
+    penalties: toPenaltiesString(),
+    series: state.match.series,
+  };
+}
+
+function validateSave() {
+  const hasTeams = state.teams.team1.length && state.teams.team2.length;
+  if (!hasTeams) return 'Команди не заповнені';
+  if (!state.match.winner) return 'Виберіть winner або Draw';
+  return '';
+}
+
+async function doSave(retry = false) {
+  const error = validateSave();
+  if (error) return setStatus({ state: 'error', text: `ERROR ✗ ${error}`, retryVisible: false });
+  const payload = retry ? state.lastPayload : buildPayload();
+  state.lastPayload = payload;
+  lockSaveButton(true);
+  setStatus({ state: 'saving', text: 'SAVING…', retryVisible: false });
+  const res = await saveMatch(payload, 14000);
+  if (res.ok) {
+    setStatus({ state: 'saved', text: `SAVED ✓ ${new Date().toLocaleTimeString('uk-UA')}`, retryVisible: false });
+  } else {
+    setStatus({ state: 'error', text: `ERROR ✗ ${res.message || 'Save failed'}`, retryVisible: true });
+  }
+  lockSaveButton(false);
+}
+
+async function init() {
+  if (peekLobbyRestore()) $('restoreCard').classList.remove('hidden');
+  else $('restoreCard').classList.add('hidden');
+
+  $('restoreBtn').addEventListener('click', async () => {
+    if (restoreLobby()) {
+      $('leagueSelect').value = state.league;
+      $('teamsCount').value = String(state.teamsCount);
+      await ensurePlayersLoaded();
+      render();
+      $('restoreCard').classList.add('hidden');
+    }
+  });
+
+  $('leagueSelect').addEventListener('change', (e) => {
+    state.league = normalizeLeague(e.target.value);
+    saveLobby();
+  });
+  $('teamsCount').addEventListener('change', (e) => {
+    state.teamsCount = Number(e.target.value) === 3 ? 3 : 2;
+    if (state.teamsCount === 2) state.teams.team3 = [];
+    saveLobby();
+    render();
+  });
+
+  $('loadPlayersBtn').addEventListener('click', ensurePlayersLoaded);
+  $('balanceBtn').addEventListener('click', () => { runBalance(); render(); });
+  $('manualBtn').addEventListener('click', () => { state.mode = 'manual'; syncSelectedFromTeamsAndBench(); saveLobby(); render(); });
+  $('clearLobbyBtn').addEventListener('click', () => { state.selected = []; clearTeams(); saveLobby(); render(); });
+
+  const debouncedSearch = (() => {
+    let t;
+    return (value) => {
+      clearTimeout(t);
+      t = setTimeout(() => { state.query = value; render(); }, 180);
+    };
+  })();
+  $('searchInput').addEventListener('input', (e) => debouncedSearch(e.target.value));
+
+  ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
+    $(id).addEventListener('input', (e) => { state.match[id] = e.target.value.trim(); saveLobby(); });
+  });
+  $('seriesInput').addEventListener('input', (e) => { state.match.series = e.target.value.trim(); saveLobby(); });
+
+  $('saveBtn').addEventListener('click', () => doSave(false));
+  $('retrySaveBtn').addEventListener('click', () => doSave(true));
+
+  document.querySelectorAll('.bottom-nav [data-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+  });
+
+  bindUiEvents({
+    onAdd(nick) {
+      if (state.selected.includes(nick) || state.selected.length >= 15) return;
+      state.selected.push(nick);
+      saveLobby();
+      render();
+    },
+    onRemove(nick) {
+      state.selected = state.selected.filter((n) => n !== nick);
+      Object.keys(state.teams).forEach((k) => { state.teams[k] = state.teams[k].filter((n) => n !== nick); });
+      saveLobby();
+      render();
+    },
+    onWinner(winner) {
+      state.match.winner = winner;
+      saveLobby();
+      render();
+    },
+    onPenalty(nick, delta) {
+      state.match.penalties[nick] = Number(state.match.penalties[nick] || 0) + delta;
+      saveLobby();
+      render();
+    },
+    onChanged() { saveLobby(); render(); }
+  });
+
+  await ensurePlayersLoaded();
+  render();
+  setActiveTab('teams');
+}
+
+async function ensurePlayersLoaded() {
+  try {
+    state.players = await loadPlayers(state.league);
+  } catch (e) {
+    setStatus({ state: 'error', text: `ERROR ✗ ${e.message}`, retryVisible: false });
+  }
+}
+
+init();

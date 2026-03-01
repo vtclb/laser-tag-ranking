@@ -1,4 +1,4 @@
-import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap } from './state.js';
+import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap, rankLetterForPoints } from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents } from './ui.js';
@@ -11,15 +11,35 @@ const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
 const LEAGUE_KEY = 'balance2:league';
 let saveLocked = false;
 
+function syncSeriesMirror() {
+  const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
+  while (rounds.length < 7) rounds.push(null);
+  state.seriesRounds = rounds;
+  state.series = rounds.map((value) => (value === null ? '-' : String(value)));
+}
+
+function normalizeLoadedPlayers(players = []) {
+  return players.map((player) => {
+    const points = Number(player.points ?? player.pts) || 0;
+    return {
+      ...player,
+      points,
+      pts: points,
+      rank: String(player.rank || rankLetterForPoints(points)),
+    };
+  });
+}
+
 function setTeamCount(rawValue) {
   state.teamCount = Math.min(4, Math.max(2, Number(rawValue) || 2));
   TEAM_KEYS.slice(state.teamCount).forEach((key) => { state.teams[key] = []; });
-  state.series = state.series.map((value) => {
-    if (value === '-') return value;
+  state.seriesRounds = state.seriesRounds.map((value) => {
     const numeric = Number(value);
-    if (value === '0' || (numeric >= 1 && numeric <= state.teamCount)) return value;
-    return '-';
+    if (value === null) return null;
+    if (numeric === 0 || (numeric >= 1 && numeric <= state.teamCount)) return numeric;
+    return null;
   });
+  syncSeriesMirror();
 }
 
 function runBalance() {
@@ -79,6 +99,21 @@ function buildPayload() {
   };
 }
 
+function applySavedPlayers(updatedPlayers = []) {
+  const byNick = new Map(updatedPlayers.map((p) => [String(p.nick || p.nickname || '').trim(), p]));
+  state.players = state.players.map((player) => {
+    const next = byNick.get(player.nick);
+    if (!next) return player;
+    const points = Number(next.points ?? player.points ?? player.pts) || 0;
+    return {
+      ...player,
+      points,
+      pts: points,
+      rank: String(next.rank || rankLetterForPoints(points)),
+    };
+  });
+}
+
 function validateSave() {
   const keys = TEAM_KEYS.slice(0, state.teamCount);
   if (!keys.every((key) => state.teams[key].length > 0)) return 'Команди не заповнені';
@@ -97,7 +132,15 @@ async function doSave(retry = false) {
   setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
   const res = await saveMatch(payload, 14000);
   if (res.ok) {
+    applySavedPlayers(res.data?.players || []);
+    try {
+      state.cache[state.league] = [];
+      state.players = normalizeLoadedPlayers(await loadPlayers(state.league));
+    } catch (_) {
+      // fallback: list is already updated from save response
+    }
     setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
+    renderAndSync();
   } else {
     setStatus({ state: 'error', text: `❌ Помилка: ${res.message || 'Не вдалося зберегти'}`, retryVisible: true });
   }
@@ -140,6 +183,13 @@ async function init() {
 
   $('restoreBtn').addEventListener('click', async () => {
     if (restoreLobby()) {
+      const restored = Array.isArray(state.series) ? state.series.slice(0, 7) : [];
+      while (restored.length < 7) restored.push('-');
+      state.seriesRounds = restored.map((value) => {
+        const numeric = Number(value);
+        return value === '-' || Number.isNaN(numeric) ? null : numeric;
+      });
+      syncSeriesMirror();
       $('leagueSelect').value = state.league;
       $('sortMode').value = state.sortMode;
       await ensurePlayersLoaded();
@@ -205,12 +255,14 @@ async function init() {
       renderAndSync();
     },
     onSeriesResult(idx, val) {
-      const rounds = Array.isArray(state.series) ? state.series.slice(0, 7) : ['-', '-', '-', '-', '-', '-', '-'];
-      while (rounds.length < 7) rounds.push('-');
+      const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
+      while (rounds.length < 7) rounds.push(null);
       if (idx < 0 || idx >= state.seriesCount) return;
-      const nextVal = ['0', '1', '2', '3', '4'].includes(val) ? val : '-';
-      rounds[idx] = rounds[idx] === nextVal ? '-' : nextVal;
-      state.series = rounds;
+      const parsed = Number(val);
+      const nextVal = parsed === 0 || (parsed >= 1 && parsed <= state.teamCount) ? parsed : null;
+      rounds[idx] = nextVal;
+      state.seriesRounds = rounds;
+      syncSeriesMirror();
       const summary = computeSeriesSummary();
       state.match.winner = summary.winner;
       state.match.series = summary.series;
@@ -219,13 +271,15 @@ async function init() {
     },
     onSeriesCount(count) {
       state.seriesCount = Math.min(7, Math.max(3, Number(count) || 3));
+      syncSeriesMirror();
       saveLobby();
       renderAndSync();
     },
     onSeriesReset() {
-      const rounds = Array.isArray(state.series) ? state.series.slice(0, 7) : ['-', '-', '-', '-', '-', '-', '-'];
-      for (let i = 0; i < state.seriesCount; i += 1) rounds[i] = '-';
-      state.series = rounds;
+      const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
+      for (let i = 0; i < state.seriesCount; i += 1) rounds[i] = null;
+      state.seriesRounds = rounds;
+      syncSeriesMirror();
       const summary = computeSeriesSummary();
       state.match.winner = summary.winner;
       state.match.series = summary.series;
@@ -246,6 +300,7 @@ async function init() {
   $('leagueSelect').value = state.league;
   $('sortMode').value = state.sortMode;
   syncSelectedMap();
+  syncSeriesMirror();
   renderAndSync();
 }
 
@@ -259,7 +314,7 @@ async function ensurePlayersLoaded() {
     const league = normalizeLeague($('leagueSelect')?.value || state.league);
     state.league = league;
     localStorage.setItem(LEAGUE_KEY, state.league);
-    state.players = await loadPlayers(league);
+    state.players = normalizeLoadedPlayers(await loadPlayers(league));
     setStatus({ state: 'saved', text: `✅ Завантажено: ${state.players.length} гравців`, retryVisible: false });
   } catch (e) {
     setStatus({ state: 'error', text: `❌ Помилка: ${e.message}`, retryVisible: false });

@@ -48,7 +48,22 @@
 .series-options { display:grid; gap:.5rem; margin-bottom:.7rem; }
 .series-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; flex-wrap:wrap; }
 .series-choices { display:flex; flex-wrap:wrap; gap:.35rem; }
-.series-options button.active { border-color: rgba(124,255,114,.8); background: rgba(124,255,114,.15); }
+.round-btn.active {
+  border-color: rgba(255, 214, 10, 0.95);
+  background: rgba(255, 214, 10, 0.22);
+  box-shadow: 0 0 0 2px rgba(255, 214, 10, 0.32);
+}
+.round-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.2rem;
+  padding: .1rem .4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.08);
+  font-size: .75rem;
+}
 .match-summary { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:.4rem; margin-bottom:.8rem; }
 .summary-pill { border:1px solid rgba(255,255,255,.15); border-radius:.7rem; padding:.45rem .55rem; background:rgba(255,255,255,.04); }
 .penalties-list { display:grid; gap:.35rem; }

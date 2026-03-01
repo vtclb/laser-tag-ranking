@@ -1,10 +1,11 @@
 const V2_BASE_URL = new URL('../', import.meta.url);
-const PAGES_BASE_URL = new URL('./', import.meta.url);
 
-const IS_PAGES_ROUTE = location.pathname.includes('/v2/pages/');
-
-function pageHref(pageName) {
-  return IS_PAGES_ROUTE ? `./${pageName}` : `./pages/${pageName}`;
+function hashHref(route, params = {}) {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+  return `#${route}${query ? `&${query}` : ''}`;
 }
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
@@ -25,11 +26,18 @@ function ensureThemeFlag() {
 }
 
 function ensureStyleOrder() {
-  const legacyStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).filter((link) => {
+  const disallowedStyles = [
+    'assets/styles.css',
+    'assets/css/main.css',
+    'assets/pixel-layer.css'
+  ];
+
+  Array.from(document.querySelectorAll('link[rel="stylesheet"]')).forEach((link) => {
     const href = link.getAttribute('href') || '';
-    return href.includes('styles.css') || href.includes('main.css') || href.includes('balance2.css');
+    if (disallowedStyles.some((style) => href.includes(style))) {
+      link.remove();
+    }
   });
-  legacyStyles.forEach((link) => document.head.appendChild(link));
 
   ensureLink({ id: 'v2-tokens', href: new URL('styles/tokens.css', V2_BASE_URL).href });
   ensureLink({ id: 'v2-pixel-layer', href: new URL('styles/pixel-layer.css', V2_BASE_URL).href });
@@ -38,10 +46,9 @@ function ensureStyleOrder() {
 }
 
 function pageCta() {
-  const path = location.pathname;
-  if (path.includes('/gameday')) return { href: pageHref('gameday.html'), label: 'GAME DAY' };
-  if (path.includes('/balance2')) return { href: IS_PAGES_ROUTE ? '../balance2.html' : './balance2.html', label: 'EXPORT' };
-  if (path.includes('/season')) return { href: pageHref('seasons.html'), label: 'SEASONS' };
+  const route = location.hash.replace(/^#/, '').split('&')[0] || 'home';
+  if (route === 'season') return { href: hashHref('seasons'), label: 'SEASONS' };
+  if (route === 'balance') return { href: hashHref('home'), label: 'HOME' };
   return null;
 }
 
@@ -56,7 +63,7 @@ function ensureTopNav() {
   header.className = 'topnav';
   header.innerHTML = `
     <div class="container topnav__row">
-      <a class="topnav__logo" href="${pageHref('index.html')}">LaserTag v2</a>
+      <a class="topnav__logo" href="${hashHref('home')}">LaserTag v2</a>
       <div class="topnav__actions">
         ${cta ? `<a class="topnav__pill" href="${cta.href}">${cta.label}</a>` : ''}
         <button type="button" class="topnav__pill" id="globalMenuBtn"><span class="icon icon--menu" aria-hidden="true"></span> MENU</button>
@@ -70,11 +77,11 @@ function ensureNavSheet() {
   if (document.getElementById('v2-navsheet')) return;
 
   const nav = [
-    { href: pageHref('index.html'), label: 'Home' },
-    { href: pageHref('seasons.html'), label: 'Seasons' },
-    { href: pageHref('league.html'), label: 'League stats' },
-    { href: IS_PAGES_ROUTE ? '../balance2.html' : './balance2.html', label: 'Balancer' },
-    { href: pageHref('rules.html'), label: 'Rules' }
+    { href: hashHref('home'), label: 'Home' },
+    { href: hashHref('seasons'), label: 'Seasons' },
+    { href: hashHref('season', { league: 'kids' }), label: 'League stats' },
+    { href: hashHref('balance'), label: 'Balancer' },
+    { href: hashHref('rules'), label: 'Rules' }
   ];
 
   const sheet = document.createElement('aside');
@@ -88,7 +95,7 @@ function ensureNavSheet() {
         <button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> CLOSE</button>
       </div>
       <section class="px-card"><h3 class="px-card__title">NAV</h3><div class="hero__actions">${nav.map((item) => `<a class="btn" href="${item.href}">${item.label}</a>`).join('')}</div></section>
-      <section class="px-card"><h3 class="px-card__title">LEAGUES</h3><div class="hero__actions"><a class="btn" href="${pageHref('league.html')}?league=kids">Kids</a><a class="btn" href="${pageHref('league.html')}?league=sundaygames">Olds</a></div></section>
+      <section class="px-card"><h3 class="px-card__title">LEAGUES</h3><div class="hero__actions"><a class="btn" href="${hashHref('season', { league: 'kids' })}">Kids</a><a class="btn" href="${hashHref('season', { league: 'olds' })}">Olds</a></div></section>
       <section class="px-card"><h3 class="px-card__title">SYSTEM</h3><div class="hero__actions"><button class="btn" type="button" data-nav-close="1">Theme: Game</button></div></section>
     </div>`;
 
@@ -149,16 +156,6 @@ function attachLoadingHooks() {
       if (activeRequests === 0) window.LoadingCubes?.hide();
     }
   };
-
-  document.addEventListener('click', (event) => {
-    const anchor = event.target.closest('a[href]');
-    if (!anchor) return;
-    const href = anchor.getAttribute('href');
-    if (!href || href.startsWith('#') || anchor.target === '_blank') return;
-    const url = new URL(href, PAGES_BASE_URL);
-    if (!url.pathname.includes('/v2/')) return;
-    window.LoadingCubes?.show('Routing…');
-  });
 
   window.addEventListener('pageshow', () => window.LoadingCubes?.hide());
   window.addEventListener('load', () => window.LoadingCubes?.hide());

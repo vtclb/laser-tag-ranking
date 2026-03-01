@@ -24,7 +24,7 @@ function top5Card(players, leagueLabel, leagueSlug, ctaLabel) {
       <span>Позиція</span><span>Ранг</span><span>Нік</span><span>Points</span><span>WR%</span>
     </div>
     <ol class="top5-list">${rows || '<li class="top5-empty">Немає даних</li>'}</ol>
-    <div class="px-card__actions"><a class="btn btn--secondary" href="./league.html?league=${leagueSlug}">${ctaLabel}</a></div>
+    <div class="px-card__actions"><a class="btn btn--secondary" href="#season&league=${leagueSlug === 'sundaygames' ? 'olds' : leagueSlug}">${ctaLabel}</a></div>
   </article>`;
 }
 
@@ -104,8 +104,8 @@ function renderHomeStructure() {
         <p class="hero__subtitle" id="currentSeason">—</p>
         <p class="px-card__text" id="stateBox" aria-live="polite"></p>
         <div class="hero__actions">
-          <a class="btn btn--primary" href="./gameday.html">▶ Game Day</a>
-          <a class="btn btn--secondary" href="./seasons.html">🏆 Season</a>
+          <a class="btn btn--primary" href="#home">▶ Game Day</a>
+          <a class="btn btn--secondary" href="#seasons">🏆 Season</a>
         </div>
       </section>
 
@@ -143,8 +143,8 @@ function renderHomeStructure() {
         <h2 class="px-card__title">Швидкі переходи</h2>
         <p class="px-card__text">Усі ключові розділи Home збережено.</p>
         <div class="px-card__actions">
-          <a class="btn btn--secondary" href="./league.html?league=kids">👥 Leagues</a>
-          <a class="btn btn--secondary" href="./rules.html">📜 Rules</a>
+          <a class="btn btn--secondary" href="#season&league=kids">👥 Leagues</a>
+          <a class="btn btn--secondary" href="#rules">📜 Rules</a>
         </div>
       </section>
     </div>

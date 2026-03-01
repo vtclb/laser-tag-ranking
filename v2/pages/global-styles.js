@@ -1,11 +1,13 @@
 const V2_BASE_URL = new URL('../', import.meta.url);
 
 function hashHref(route, params = {}) {
-  const query = Object.entries(params)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-    .join('&');
-  return `#${route}${query ? `&${query}` : ''}`;
+  const cleanRoute = String(route || 'home').replace(/^\/+/, '');
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') query.set(key, value);
+  });
+  const qs = query.toString();
+  return `#/${cleanRoute}${qs ? `?${qs}` : ''}`;
 }
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
@@ -46,9 +48,8 @@ function ensureStyleOrder() {
 }
 
 function pageCta() {
-  const route = location.hash.replace(/^#/, '').split('&')[0] || 'home';
+  const route = location.hash.replace(/^#\/?/, '').split('?')[0] || 'home';
   if (route === 'season') return { href: hashHref('seasons'), label: 'SEASONS' };
-  if (route === 'balance') return { href: hashHref('home'), label: 'HOME' };
   return null;
 }
 
@@ -57,8 +58,6 @@ function ensureTopNav() {
   if (!header || header.dataset.v2Topnav === '1') return;
 
   const cta = pageCta();
-  const legacyActions = header.querySelector('.header-actions');
-  const extraActions = legacyActions ? legacyActions.outerHTML : '';
 
   header.className = 'topnav';
   header.innerHTML = `
@@ -68,8 +67,7 @@ function ensureTopNav() {
         ${cta ? `<a class="topnav__pill" href="${cta.href}">${cta.label}</a>` : ''}
         <button type="button" class="topnav__pill" id="globalMenuBtn"><span class="icon icon--menu" aria-hidden="true"></span> MENU</button>
       </div>
-    </div>
-    ${extraActions ? `<div class="container topnav__extra">${extraActions}</div>` : ''}`;
+    </div>`;
   header.dataset.v2Topnav = '1';
 }
 
@@ -79,8 +77,7 @@ function ensureNavSheet() {
   const nav = [
     { href: hashHref('home'), label: 'Home' },
     { href: hashHref('seasons'), label: 'Seasons' },
-    { href: hashHref('season', { league: 'kids' }), label: 'League stats' },
-    { href: hashHref('balance'), label: 'Balancer' },
+    { href: hashHref('season', { league: 'kids' }), label: 'League Stats' },
     { href: hashHref('rules'), label: 'Rules' }
   ];
 
@@ -94,15 +91,38 @@ function ensureNavSheet() {
         <strong>MENU</strong>
         <button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> CLOSE</button>
       </div>
-      <section class="px-card"><h3 class="px-card__title">NAV</h3><div class="hero__actions">${nav.map((item) => `<a class="btn" href="${item.href}">${item.label}</a>`).join('')}</div></section>
-      <section class="px-card"><h3 class="px-card__title">LEAGUES</h3><div class="hero__actions"><a class="btn" href="${hashHref('season', { league: 'kids' })}">Kids</a><a class="btn" href="${hashHref('season', { league: 'olds' })}">Olds</a></div></section>
-      <section class="px-card"><h3 class="px-card__title">SYSTEM</h3><div class="hero__actions"><button class="btn" type="button" data-nav-close="1">Theme: Game</button></div></section>
+      <section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid">${nav.map((item) => `<a class="btn" href="${item.href}" data-nav-close="1">${item.label}</a>`).join('')}</div></section>
+      <section class="navsheet__section"><h3>LEAGUES</h3><div class="navsheet__grid"><a class="btn" href="${hashHref('season', { league: 'kids' })}" data-nav-close="1">Kids</a><a class="btn" href="${hashHref('season', { league: 'olds' })}" data-nav-close="1">Olds</a></div></section>
+      <section class="navsheet__section"><h3>SYSTEM</h3><div class="navsheet__grid"><span class="btn navsheet__label">Theme: Game</span></div></section>
     </div>`;
+
+  let scrollY = 0;
 
   const close = () => {
     sheet.classList.remove('is-open');
     document.body.classList.remove('navsheet-open');
+    document.body.style.top = '';
+    window.scrollTo(0, scrollY);
   };
+
+  const open = () => {
+    scrollY = window.scrollY;
+    sheet.classList.add('is-open');
+    document.body.classList.add('navsheet-open');
+    document.body.style.top = `-${scrollY}px`;
+  };
+
+  let touchStartY = null;
+  sheet.addEventListener('touchstart', (event) => {
+    touchStartY = event.touches[0]?.clientY ?? null;
+  }, { passive: true });
+
+  sheet.addEventListener('touchend', (event) => {
+    if (touchStartY === null) return;
+    const touchEndY = event.changedTouches[0]?.clientY ?? touchStartY;
+    if (touchEndY - touchStartY > 70) close();
+    touchStartY = null;
+  }, { passive: true });
 
   sheet.addEventListener('click', (event) => {
     const target = event.target;
@@ -119,8 +139,7 @@ function ensureNavSheet() {
     const trigger = event.target.closest('#globalMenuBtn, [data-open-global-menu="1"]');
     if (!trigger) return;
     event.preventDefault();
-    sheet.classList.add('is-open');
-    document.body.classList.add('navsheet-open');
+    open();
   });
 }
 

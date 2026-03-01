@@ -1,13 +1,27 @@
+import { getSeasonsList } from '../core/dataHub.js';
+import { leagueLabelUA } from '../core/naming.js';
+
 const V2_BASE_URL = new URL('../', import.meta.url);
+const lastSeasonCache = { kids: '', olds: '', loaded: false };
 
 function hashHref(route, params = {}) {
-  const cleanRoute = String(route || 'home').replace(/^\/+/, '');
+  const cleanRoute = String(route || 'main').replace(/^\/+/, '');
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') query.set(key, value);
   });
   const qs = query.toString();
-  return `#/${cleanRoute}${qs ? `?${qs}` : ''}`;
+  return `#${cleanRoute}${qs ? `?${qs}` : ''}`;
+}
+
+async function ensureLastSeasons() {
+  if (lastSeasonCache.loaded) return lastSeasonCache;
+  const seasons = await getSeasonsList();
+  const fallback = seasons[0]?.id || '';
+  lastSeasonCache.kids = fallback;
+  lastSeasonCache.olds = fallback;
+  lastSeasonCache.loaded = true;
+  return lastSeasonCache;
 }
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
@@ -47,60 +61,66 @@ function ensureStyleOrder() {
   ensureLink({ id: 'v2-loading-cubes', href: new URL('styles/loading-cubes.css', V2_BASE_URL).href });
 }
 
-function pageCta() {
-  return null;
-}
-
 function ensureTopNav() {
   const header = document.querySelector('header.topbar, header.topnav');
   if (!header || header.dataset.v2Topnav === '1') return;
 
-  const cta = pageCta();
-
   header.className = 'topnav';
   header.innerHTML = `
     <div class="container topnav__row">
-      <a class="topnav__logo" href="${hashHref('home')}">LaserTag v2</a>
+      <a class="topnav__logo" href="${hashHref('main')}">LaserTag v2</a>
       <div class="topnav__actions">
-        ${cta ? `<a class="topnav__pill" href="${cta.href}">${cta.label}</a>` : ''}
         <button type="button" class="topnav__pill" id="globalMenuBtn"><span class="icon icon--menu" aria-hidden="true"></span> MENU</button>
       </div>
     </div>`;
   header.dataset.v2Topnav = '1';
 }
 
-function ensureNavSheet() {
+function bindMenuLink(link, close, getTargetHash) {
+  link.addEventListener('click', (event) => {
+    event.preventDefault();
+    const targetHash = getTargetHash();
+    close(() => {
+      if (targetHash) location.hash = targetHash;
+    });
+  });
+}
+
+async function ensureNavSheet() {
   if (document.getElementById('v2-navsheet')) return;
 
+  const seasonMap = await ensureLastSeasons();
   const nav = [
-    { href: hashHref('home'), label: 'Home' },
-    { href: hashHref('seasons'), label: 'Seasons' },
-    { href: hashHref('season', { league: 'kids' }), label: 'League Stats' },
-    { href: hashHref('rules'), label: 'Rules' }
+    { href: hashHref('main'), label: 'Головна' },
+    { href: hashHref('seasons'), label: 'Сезони' },
+    { href: hashHref('league-stats', { league: 'kids' }), label: 'Статистика ліги' },
+    { href: hashHref('rules'), label: 'Правила' }
   ];
 
   const sheet = document.createElement('aside');
   sheet.id = 'v2-navsheet';
   sheet.className = 'navsheet';
   sheet.innerHTML = `
-    <button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Close menu"></button>
-    <div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Navigation">
+    <button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button>
+    <div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація">
       <div class="navsheet__head">
         <strong>MENU</strong>
-        <button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> CLOSE</button>
+        <button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> Закрити</button>
       </div>
-      <section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid">${nav.map((item) => `<a class="btn" href="${item.href}" data-nav-close="1">${item.label}</a>`).join('')}</div></section>
-      <section class="navsheet__section"><h3>LEAGUES</h3><div class="navsheet__grid"><a class="btn" href="${hashHref('season', { league: 'kids' })}" data-nav-close="1">Kids</a><a class="btn" href="${hashHref('season', { league: 'olds' })}" data-nav-close="1">Olds</a></div></section>
-      <section class="navsheet__section"><h3>SYSTEM</h3><div class="navsheet__grid"><span class="btn navsheet__label">Theme: Game</span></div></section>
+      <section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid">${nav.map((item) => `<a class="btn" href="${item.href}" data-nav-link="1">${item.label}</a>`).join('')}</div></section>
+      <section class="navsheet__section"><h3>ЛІГИ</h3><div class="navsheet__grid"><a class="btn" href="${hashHref('season', { league: 'kids', season: seasonMap.kids })}" data-nav-link="1">${leagueLabelUA('kids')}</a><a class="btn" href="${hashHref('season', { league: 'olds', season: seasonMap.olds })}" data-nav-link="1">${leagueLabelUA('olds')}</a></div></section>
     </div>`;
 
   let scrollY = 0;
 
-  const close = () => {
+  const close = (afterClose) => {
     sheet.classList.remove('is-open');
     document.body.classList.remove('navsheet-open');
     document.body.style.top = '';
     window.scrollTo(0, scrollY);
+    window.setTimeout(() => {
+      if (typeof afterClose === 'function') afterClose();
+    }, 130);
   };
 
   const open = () => {
@@ -110,21 +130,13 @@ function ensureNavSheet() {
     document.body.style.top = `-${scrollY}px`;
   };
 
-  let touchStartY = null;
-  sheet.addEventListener('touchstart', (event) => {
-    touchStartY = event.touches[0]?.clientY ?? null;
-  }, { passive: true });
-
-  sheet.addEventListener('touchend', (event) => {
-    if (touchStartY === null) return;
-    const touchEndY = event.changedTouches[0]?.clientY ?? touchStartY;
-    if (touchEndY - touchStartY > 70) close();
-    touchStartY = null;
-  }, { passive: true });
-
   sheet.addEventListener('click', (event) => {
     const target = event.target;
     if (target instanceof HTMLElement && target.dataset.navClose === '1') close();
+  });
+
+  sheet.querySelectorAll('[data-nav-link="1"]').forEach((link) => {
+    bindMenuLink(link, close, () => link.getAttribute('href') || '#main');
   });
 
   document.addEventListener('keydown', (event) => {
@@ -165,7 +177,7 @@ function attachLoadingHooks() {
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (...args) => {
     activeRequests += 1;
-    window.LoadingCubes?.show('Syncing data…');
+    window.LoadingCubes?.show('Синхронізація даних…');
     try {
       return await originalFetch(...args);
     } finally {

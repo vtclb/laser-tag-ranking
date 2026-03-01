@@ -9,7 +9,7 @@ function seasonCard(season = {}) {
 }
 
 export async function initSeasonsPage() {
-  const root = document.getElementById('seasonsRoot');
+  const root = document.getElementById('view');
   if (!root) return;
   root.innerHTML = '<section class="px-card"><p class="px-card__text">Завантаження сезонів…</p></section>';
   try {

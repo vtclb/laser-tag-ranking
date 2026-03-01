@@ -1,5 +1,4 @@
 import { getSeasonsList } from '../core/dataHub.js';
-import { leagueLabelUA } from '../core/naming.js';
 
 const V2_BASE_URL = new URL('../', import.meta.url);
 const lastSeasonCache = { kids: '', olds: '', loaded: false };
@@ -93,7 +92,7 @@ async function ensureNavSheet() {
   const nav = [
     { href: hashHref('main'), label: 'Головна' },
     { href: hashHref('seasons'), label: 'Сезони' },
-    { href: hashHref('league-stats', { league: 'kids' }), label: 'Статистика ліги' },
+    { href: '#', label: 'Статистика', statsChooser: true },
     { href: hashHref('rules'), label: 'Правила' }
   ];
 
@@ -107,8 +106,10 @@ async function ensureNavSheet() {
         <strong>MENU</strong>
         <button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> Закрити</button>
       </div>
-      <section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid">${nav.map((item) => `<a class="btn" href="${item.href}" data-nav-link="1">${item.label}</a>`).join('')}</div></section>
-      <section class="navsheet__section"><h3>ЛІГИ</h3><div class="navsheet__grid"><a class="btn" href="${hashHref('season', { league: 'kids', season: seasonMap.kids })}" data-nav-link="1">${leagueLabelUA('kids')}</a><a class="btn" href="${hashHref('season', { league: 'olds', season: seasonMap.olds })}" data-nav-link="1">${leagueLabelUA('olds')}</a></div></section>
+      <section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid">${nav.map((item) => item.statsChooser
+        ? `<button class="btn" type="button" data-open-stats="1">${item.label}</button>`
+        : `<a class="btn" href="${item.href}" data-nav-link="1">${item.label}</a>`).join('')}</div><div class="navsheet__grid" id="statsLeagueChooser" hidden><a class="btn" href="${hashHref('league-stats', { league: 'kids' })}" data-nav-link="1">Дитяча</a><a class="btn" href="${hashHref('league-stats', { league: 'olds' })}" data-nav-link="1">Доросла</a></div></section>
+      <section class="navsheet__section"><h3>ЛІГИ</h3><div class="navsheet__grid"><a class="btn" href="${hashHref('season', { league: 'kids', season: seasonMap.kids })}" data-nav-link="1">Дитяча</a><a class="btn" href="${hashHref('season', { league: 'olds', season: seasonMap.olds })}" data-nav-link="1">Доросла</a></div></section>
     </div>`;
 
   let scrollY = 0;
@@ -134,6 +135,14 @@ async function ensureNavSheet() {
     const target = event.target;
     if (target instanceof HTMLElement && target.dataset.navClose === '1') close();
   });
+
+  const statsToggle = sheet.querySelector('[data-open-stats="1"]');
+  const statsChooser = sheet.querySelector('#statsLeagueChooser');
+  if (statsToggle instanceof HTMLElement && statsChooser instanceof HTMLElement) {
+    statsToggle.addEventListener('click', () => {
+      statsChooser.hidden = !statsChooser.hidden;
+    });
+  }
 
   sheet.querySelectorAll('[data-nav-link="1"]').forEach((link) => {
     bindMenuLink(link, close, () => link.getAttribute('href') || '#main');

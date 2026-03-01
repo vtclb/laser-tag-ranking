@@ -39,40 +39,52 @@ function rankDistributionCard(kidsDist, adultsDist) {
   return `<article class="px-card home-block rank-merged section"><span class="px-badge">Баланс рангів</span><h3 class="px-card__title">Ранги ліг</h3>${buildBarSegments(kidsDist, 'kids')}${buildBarSegments(adultsDist, 'olds')}</article>`;
 }
 
+function renderHomeStructure(root) {
+  root.innerHTML = `<section class="hero"><div class="hero__kicker">LaserTag</div><h1 class="hero__title">Головна</h1><p class="hero__subtitle" id="currentSeason">—</p><p class="px-card__text" id="stateBox" aria-live="polite"></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Герої сезону</h2><div class="hero-grid section" id="topHeroes"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Прогрес сезону</h2><div class="kpi kpi-2 section" id="overviewStats"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Маніфест рангів</h2><div class="kpi kpi-2 section" id="charts"></div></section>`;
+}
+
 function renderBlockSkeleton() {
   return '<article class="px-card skeleton-block home-block"><div class="skeleton-overlay"><div class="laser-scan"></div></div><div class="skeleton skeleton-line lg"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></article>';
 }
 
-function renderHomeStructure(root) {
-  root.innerHTML = `<main><div class="container section"><section class="hero"><div class="hero__kicker">LaserTag</div><h1 class="hero__title">Головна</h1><p class="hero__subtitle" id="currentSeason">—</p><p class="px-card__text" id="stateBox" aria-live="polite"></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Герої сезону</h2><div class="hero-grid section" id="topHeroes"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Прогрес сезону</h2><div class="kpi kpi-2 section" id="overviewStats"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Маніфест рангів</h2><div class="kpi kpi-2 section" id="charts"></div></section></div></main>`;
-}
-
-function renderSkeleton() {
-  document.getElementById('topHeroes').innerHTML = renderBlockSkeleton() + renderBlockSkeleton();
-  document.getElementById('overviewStats').innerHTML = renderBlockSkeleton() + renderBlockSkeleton();
-  document.getElementById('charts').innerHTML = renderBlockSkeleton();
+function renderSkeleton(topHeroes, overviewStats, charts) {
+  topHeroes.innerHTML = renderBlockSkeleton() + renderBlockSkeleton();
+  overviewStats.innerHTML = renderBlockSkeleton() + renderBlockSkeleton();
+  charts.innerHTML = renderBlockSkeleton();
 }
 
 export async function initHomePage() {
-  const homeRoot = document.getElementById('homeRoot');
+  const homeRoot = document.getElementById('view');
   if (!homeRoot) return;
+
   renderHomeStructure(homeRoot);
+
   const stateBox = document.getElementById('stateBox');
-  renderSkeleton();
+  const topHeroes = document.getElementById('topHeroes');
+  const overviewStats = document.getElementById('overviewStats');
+  const charts = document.getElementById('charts');
+  const currentSeason = document.getElementById('currentSeason');
+
+  if (!stateBox || !topHeroes || !overviewStats || !charts || !currentSeason) {
+    homeRoot.innerHTML = '<section class="px-card px-card--accent"><h2 class="px-card__title">Помилка</h2><p class="px-card__text">Не вдалося ініціалізувати головну сторінку.</p></section>';
+    return;
+  }
+
+  renderSkeleton(topHeroes, overviewStats, charts);
 
   try {
     const data = await getHomeFast();
     window.__v2LastSeason = { kids: data.seasonId, olds: data.seasonId };
-    document.getElementById('currentSeason').textContent = `${data.seasonTitle} · ${data.seasonDateStart} — ${data.seasonDateEnd}`;
-    document.getElementById('topHeroes').innerHTML = top5Card(data.top5Kids, 'kids', 'Перейти до статистики') + top5Card(data.top5Adults, 'olds', 'Перейти до статистики');
-    document.getElementById('overviewStats').innerHTML = seasonProgressCard(data.kidsMetrics, data.seasonSchedule, 'kids') + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'olds');
-    document.getElementById('charts').innerHTML = rankDistributionCard(data.rankDistKids, data.rankDistAdults);
+    currentSeason.textContent = `${data.seasonTitle} · ${data.seasonDateStart} — ${data.seasonDateEnd}`;
+    topHeroes.innerHTML = top5Card(data.top5Kids, 'kids', 'Перейти до статистики') + top5Card(data.top5Adults, 'olds', 'Перейти до статистики');
+    overviewStats.innerHTML = seasonProgressCard(data.kidsMetrics, data.seasonSchedule, 'kids') + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'olds');
+    charts.innerHTML = rankDistributionCard(data.rankDistKids, data.rankDistAdults);
     stateBox.textContent = 'Головна показує сезонні метрики та прогрес ігрових днів.';
   } catch (error) {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');
     stateBox.textContent = msg;
-    document.getElementById('topHeroes').innerHTML = `<article class="px-card"><p class="px-card__text">${msg}</p></article>`;
-    document.getElementById('overviewStats').innerHTML = '';
-    document.getElementById('charts').innerHTML = '';
+    topHeroes.innerHTML = `<article class="px-card"><p class="px-card__text">${msg}</p></article>`;
+    overviewStats.innerHTML = '';
+    charts.innerHTML = '';
   }
 }

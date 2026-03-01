@@ -14,7 +14,7 @@ export async function loadPlayers(league) {
 
   const url = `${PROXY_ORIGIN}/fetchLeagueCsv?league=${key}&cb=${Date.now()}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Load failed (${res.status})`);
+  if (!res.ok) throw new Error(`Не вдалося завантажити (${res.status})`);
   const csv = await res.text();
   const rows = csv.split(/\r?\n/).filter(Boolean);
   const headers = rows.shift().split(',').map((h) => h.trim().toLowerCase());
@@ -43,9 +43,9 @@ export async function saveMatch(payload, timeoutMs = 14000) {
       signal: ctrl.signal,
     });
     const data = await res.json();
-    return { ok: res.ok && String(data.status || '').toUpperCase() === 'OK', data, message: data.message || data.error || 'Unknown' };
+    return { ok: res.ok && String(data.status || '').toUpperCase() === 'OK', data, message: data.message || data.error || 'Невідома помилка' };
   } catch (e) {
-    return { ok: false, message: e?.name === 'AbortError' ? 'Timeout' : (e?.message || 'Network error') };
+    return { ok: false, message: e?.name === 'AbortError' ? 'Час очікування вичерпано' : (e?.message || 'Помилка мережі') };
   } finally {
     clearTimeout(timer);
   }

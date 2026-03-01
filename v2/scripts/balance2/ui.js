@@ -39,12 +39,6 @@ export function render() {
   renderMatchFields();
 }
 
-export function setActiveTab(tab) {
-  document.getElementById('teamsCard').style.display = tab === 'teams' ? '' : 'none';
-  document.getElementById('matchCard').style.display = tab === 'match' ? '' : 'none';
-  if (tab === 'match') renderMatchTeams();
-}
-
 function renderTeamCountControl() {
   document.querySelectorAll('[data-team-count]').forEach((btn) => {
     btn.classList.toggle('active', Number(btn.dataset.teamCount) === state.teamCount);
@@ -138,7 +132,7 @@ function renderMatchTeams() {
   const keys = TEAM_KEYS.slice(0, state.teamCount);
   const hasTeams = keys.some((k) => state.teams[k].length > 0);
   if (!hasTeams) {
-    root.innerHTML = '<div class="tag">Спочатку збалансуй або розклади команди</div><button class="chip" type="button" data-back-tab="teams">Назад до команд</button>';
+    root.innerHTML = '<div class="tag">Спочатку збалансуй або розклади команди</div>';
     return;
   }
   root.innerHTML = keys.map((key) => {
@@ -221,7 +215,6 @@ export function bindUiEvents(handlers) {
     const clearSeries = e.target.closest('[data-series-reset]');
     const pen = e.target.closest('[data-pen]')?.dataset.pen;
     const renameTeam = e.target.closest('[data-rename-team]')?.dataset.renameTeam;
-    const backTab = e.target.closest('[data-back-tab]')?.dataset.backTab;
     if (toggle) handlers.onTogglePlayer(toggle);
     if (remove) handlers.onRemove(remove);
     if (move) {
@@ -241,7 +234,6 @@ export function bindUiEvents(handlers) {
       handlers.onPenalty(nick, Number(delta));
     }
     if (renameTeam) handlers.onRenameStart(renameTeam);
-    if (backTab) handlers.onBackTab(backTab);
   });
 
   document.addEventListener('keydown', (e) => {

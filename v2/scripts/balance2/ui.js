@@ -42,6 +42,7 @@ export function render() {
 export function setActiveTab(tab) {
   document.getElementById('teamsCard').style.display = tab === 'teams' ? '' : 'none';
   document.getElementById('matchCard').style.display = tab === 'match' ? '' : 'none';
+  if (tab === 'match') renderMatchTeams();
 }
 
 function renderTeamCountControl() {
@@ -61,7 +62,7 @@ function renderPlayers() {
   const q = state.query.toLowerCase().trim();
   const filtered = q ? state.players.filter((p) => p.nick.toLowerCase().includes(q)) : state.players;
   const players = sortPlayers(filtered);
-  count.textContent = `Players: ${players.length}`;
+  count.textContent = `Гравців: ${players.length}`;
   selectedCount.textContent = `Обрано: ${state.selected.length} / 15`;
 
   const frag = document.createDocumentFragment();
@@ -83,7 +84,7 @@ function renderLobby() {
   for (const nick of state.selected) {
     const row = document.createElement('div');
     row.className = 'lobby-row';
-    row.innerHTML = `<span>${nick}</span><button class="chip" data-remove="${nick}">Remove</button>`;
+    row.innerHTML = `<span>${nick}</span><button class="chip" data-remove="${nick}">Прибрати</button>`;
     frag.appendChild(row);
   }
   wrap.replaceChildren(frag);
@@ -91,7 +92,7 @@ function renderLobby() {
 
 function teamNameControl(key) {
   const name = getTeamLabel(key);
-  return `<div class="team-name-wrap" data-team-name-wrap="${key}"><strong class="team-name-label">${name}</strong><button class="chip" type="button" data-rename-team="${key}">✏️ Rename</button></div>`;
+  return `<div class="team-name-wrap" data-team-name-wrap="${key}"><strong class="team-name-label">${name}</strong><button class="chip" type="button" data-rename-team="${key}">✏️ Перейменувати</button></div>`;
 }
 
 function renderTeams() {
@@ -107,8 +108,8 @@ function renderTeams() {
     sums.push(total);
     const card = document.createElement('div');
     card.className = 'team-card';
-    const players = nicks.map((nick) => `<div class="team-player"><span>${nick}</span><div class="team-actions"><button class="chip" data-move="${nick}:bench">Bench</button></div></div>`).join('');
-    card.innerHTML = `<h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${players || '<div class="tag">empty</div>'}`;
+    const players = nicks.map((nick) => `<div class="team-player"><span>${nick}</span><div class="team-actions"><button class="chip" data-move="${nick}:bench">Лавка</button></div></div>`).join('');
+    card.innerHTML = `<h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${players || '<div class="tag">порожньо</div>'}`;
     frag.appendChild(card);
   }
 
@@ -116,7 +117,7 @@ function renderTeams() {
     const delta = Math.max(...sums) - Math.min(...sums);
     const info = document.createElement('div');
     info.className = 'tag';
-    info.textContent = `Balance Δ(max-min): ${delta}`;
+    info.textContent = `Баланс Δ(макс-мін): ${delta}`;
     frag.appendChild(info);
   }
 
@@ -124,7 +125,7 @@ function renderTeams() {
     const bench = state.selected.filter((nick) => !keys.some((k) => state.teams[k].includes(nick)));
     const benchCard = document.createElement('div');
     benchCard.className = 'team-card';
-    benchCard.innerHTML = `<h4>Bench</h4>${bench.map((nick) => `<div class="team-player"><span>${nick}</span><div class="team-actions">${keys.map((k) => `<button class="chip" data-move="${nick}:${k}">→ ${getTeamLabel(k)}</button>`).join('')}</div></div>`).join('') || '<div class="tag">empty</div>'}`;
+    benchCard.innerHTML = `<h4>Лавка</h4>${bench.map((nick) => `<div class="team-player"><span>${nick}</span><div class="team-actions">${keys.map((k) => `<button class="chip" data-move="${nick}:${k}">→ ${getTeamLabel(k)}</button>`).join('')}</div></div>`).join('') || '<div class="tag">порожньо</div>'}`;
     frag.appendChild(benchCard);
   }
 
@@ -137,12 +138,12 @@ function renderMatchTeams() {
   const keys = TEAM_KEYS.slice(0, state.teamCount);
   const hasTeams = keys.some((k) => state.teams[k].length > 0);
   if (!hasTeams) {
-    root.innerHTML = '<div class="tag">Спочатку збалансуй/розклади команди</div><button class="chip" type="button" data-back-tab="teams">Назад</button>';
+    root.innerHTML = '<div class="tag">Спочатку збалансуй або розклади команди</div><button class="chip" type="button" data-back-tab="teams">Назад до команд</button>';
     return;
   }
   root.innerHTML = keys.map((key) => {
     const nicks = state.teams[key];
-    const list = nicks.length ? nicks.map((nick) => `<li>${nick}</li>`).join('') : '<li class="tag">empty</li>';
+    const list = nicks.length ? nicks.map((nick) => `<li>${nick}</li>`).join('') : '<li class="tag">порожньо</li>';
     return `<div class="team-card"><h4>${getTeamLabel(key)} <span class="tag">Σ ${sumByNicks(nicks)}</span></h4><ul class="team-list-preview">${list}</ul></div>`;
   }).join('');
 }
@@ -153,7 +154,7 @@ function renderSeriesEditor() {
   if (!root) return;
   const rounds = Array.isArray(state.series) ? state.series.slice(0, 7) : ['-', '-', '-', '-', '-', '-', '-'];
   const count = Math.min(7, Math.max(3, Number(state.seriesCount) || 3));
-  const teamOptions = TEAM_KEYS.slice(0, state.teamCount).map((_, idx) => ({ val: String(idx + 1), label: `T${idx + 1}` }));
+  const teamOptions = TEAM_KEYS.slice(0, state.teamCount).map((_, idx) => ({ val: String(idx + 1), label: `К${idx + 1}` }));
 
   if (countRoot) {
     countRoot.querySelectorAll('[data-series-count]').forEach((btn) => {
@@ -173,13 +174,13 @@ function renderMatchSummary() {
   if (!root) return;
   const summary = computeSeriesSummary();
   const keys = TEAM_KEYS.slice(0, state.teamCount);
-  const winsText = keys.map((key, idx) => `T${idx + 1}: <strong>${summary.wins[key]}</strong>`).join(' ');
+  const winsText = keys.map((key, idx) => `К${idx + 1}: <strong>${summary.wins[key]}</strong>`).join(' ');
   const winnerLabel = summary.winner === 'tie' ? 'Нічия' : getTeamLabel(summary.winner);
   root.innerHTML = [
     `<div class="summary-pill">${winsText} Нічиї: <strong>${summary.draws}</strong></div>`,
     `<div class="summary-pill">Зіграно: <strong>${summary.played}</strong> / <strong>${state.seriesCount}</strong></div>`,
     `<div class="summary-pill">Підсумок: <strong>${winnerLabel}</strong></div>`,
-    `<div class="summary-pill">series: <strong>${summary.series || '—'}</strong></div>`,
+    `<div class="summary-pill">Серія: <strong>${summary.series || '—'}</strong></div>`,
   ].join('');
 }
 

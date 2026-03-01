@@ -10,16 +10,16 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">⚖️ LaserTag v2 Balance</div>
+    <div class="brand">⚖️ LaserTag v2 Балансер</div>
     <div class="header-actions">
       <select id="leagueSelect" class="chip">
         <option value="kids">Дитяча ліга</option>
         <option value="sundaygames">Доросла ліга</option>
       </select>
       <div id="teamCountControl" class="series-count-choices">
-        <button type="button" class="chip" data-team-count="2">2 teams</button>
-        <button type="button" class="chip" data-team-count="3">3 teams</button>
-        <button type="button" class="chip" data-team-count="4">4 teams</button>
+        <button type="button" class="chip" data-team-count="2">2 команди</button>
+        <button type="button" class="chip" data-team-count="3">3 команди</button>
+        <button type="button" class="chip" data-team-count="4">4 команди</button>
       </div>
       <button id="loadPlayersBtn" class="chip">Завантажити</button>
     </div>
@@ -27,9 +27,9 @@
 
   <main class="balance2-root">
     <section class="card status-card" id="statusBox" data-state="idle">
-      <strong>Status:</strong>
-      <span id="statusText">IDLE</span>
-      <button id="retrySaveBtn" class="chip hidden" type="button">Retry</button>
+      <strong>Статус:</strong>
+      <span id="statusText">Готово</span>
+      <button id="retrySaveBtn" class="chip hidden" type="button">Повторити</button>
     </section>
 
     <section class="card hidden" id="restoreCard">
@@ -43,14 +43,14 @@
       <div class="search-row">
         <input id="searchInput" class="search-input" type="search" placeholder="Швидкий пошук...">
         <select id="sortMode" class="chip">
-          <option value="name_asc">A→Z (Nickname)</option>
-          <option value="name_desc">Z→A (Nickname)</option>
-          <option value="points_desc">Points ↓</option>
-          <option value="points_asc">Points ↑</option>
+          <option value="name_asc">А→Я (Нік)</option>
+          <option value="name_desc">Я→А (Нік)</option>
+          <option value="points_desc">Очки ↓</option>
+          <option value="points_asc">Очки ↑</option>
         </select>
       </div>
       <div class="counts-row">
-        <div id="playersCount" class="tag">Players: 0</div>
+        <div id="playersCount" class="tag">Гравців: 0</div>
         <div id="selectedCount" class="tag">Обрано: 0 / 15</div>
       </div>
       <div id="playerList" class="player-list"></div>
@@ -58,9 +58,9 @@
 
     <section class="card">
       <div class="section-head">
-        <h3>Lobby (max 15)</h3>
+        <h3>Лобі (макс 15)</h3>
         <div class="row-btns">
-          <button id="clearLobbyBtn" class="chip">Clear</button>
+          <button id="clearLobbyBtn" class="chip">Очистити</button>
         </div>
       </div>
       <div id="lobbyList" class="lobby-list"></div>
@@ -68,17 +68,19 @@
 
     <section class="card" id="teamsCard">
       <div class="section-head">
-        <h3>Teams</h3>
+        <h3>Команди</h3>
         <div class="row-btns">
-          <button id="balanceBtn" class="chip">Balance</button>
-          <button id="manualBtn" class="chip">Manual</button>
+          <button id="balanceBtn" class="chip">Балансувати</button>
+          <button id="manualBtn" class="chip">Ручний</button>
         </div>
       </div>
+      <p class="section-hint">Баланс — авто, Ручний — розкладай сам</p>
       <div id="teamsGrid" class="teams-grid"></div>
     </section>
 
     <section class="card" id="matchCard">
-      <h3>Match</h3>
+      <h3>Матч / Зберегти</h3>
+      <p class="section-hint">Вкажи результати серії, MVP і штрафи — потім збережи</p>
       <div id="matchTeamsPreview" class="teams-grid"></div>
       <h4>Серія (3–7 боїв)</h4>
       <div class="series-count" id="seriesCountOptions">
@@ -101,17 +103,17 @@
       </div>
       <datalist id="participantsDatalist"></datalist>
       <div>
-        <h4>Penalties</h4>
+        <h4>Штрафи</h4>
         <div id="penaltiesList" class="penalties-list"></div>
       </div>
-      <div class="save-sticky"><button id="saveBtn" class="chip save-btn">Save Match</button></div>
+      <div class="save-sticky"><button id="saveBtn" class="chip save-btn">Зберегти матч</button></div>
     </section>
   </main>
 
   <nav class="bottom-nav">
-    <button data-tab="teams" class="chip">Balance</button>
-    <button data-tab="teams" class="chip">Manual</button>
-    <button data-tab="match" class="chip">Match / Save</button>
+    <button data-tab="teams" class="chip">Команди</button>
+    <button data-tab="teams" data-mode="manual" class="chip">Ручний</button>
+    <button data-tab="match" class="chip">Матч / Зберегти</button>
   </nav>
 
   <script type="module" src="./scripts/balance2/app.js"></script>

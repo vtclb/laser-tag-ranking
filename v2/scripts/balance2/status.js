@@ -1,4 +1,4 @@
-export function setStatus({ state = 'idle', text = 'IDLE', retryVisible = false } = {}) {
+export function setStatus({ state = 'idle', text = 'Готово', retryVisible = false } = {}) {
   const box = document.getElementById('statusBox');
   const txt = document.getElementById('statusText');
   const retry = document.getElementById('retrySaveBtn');

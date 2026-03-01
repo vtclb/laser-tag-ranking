@@ -48,8 +48,6 @@ function ensureStyleOrder() {
 }
 
 function pageCta() {
-  const route = location.hash.replace(/^#\/?/, '').split('?')[0] || 'home';
-  if (route === 'season') return { href: hashHref('seasons'), label: 'SEASONS' };
   return null;
 }
 

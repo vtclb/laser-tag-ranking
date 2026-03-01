@@ -50,6 +50,7 @@ const RANK_META = {
 };
 const RANK_THRESHOLDS = [['S', 1200], ['A', 1000], ['B', 800], ['C', 600], ['D', 400], ['E', 200], ['F', 0]];
 const MAX_BATTLES_PER_GAME = 7;
+const ARCHIVE_LIMIT_ROWS = 1000;
 
 function normalizeHeader(value = '') { return String(value || '').trim().toLowerCase(); }
 function normalizeLeague(league = '') {
@@ -314,12 +315,27 @@ async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.shee
   try { return await promise; } finally { inFlight.delete(key); }
 }
 
-async function tryReadSheetVariant(sheetName) {
+async function tryReadSheetVariant(sheetName, options = {}) {
   const canonical = normalizeHeader(sheetName).replace(/\s+/g, '');
   const range = SHEET_RANGES[canonical] || SHEET_RANGES[normalizeHeader(sheetName)] || '';
+  const requestedLimitRows = Number(options.limitRows);
+  const isArchiveSheet = ['archive', 'архів'].includes(normalizeHeader(sheetName));
+  const safeLimitRows = isArchiveSheet
+    ? Math.min(ARCHIVE_LIMIT_ROWS, Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? requestedLimitRows : ARCHIVE_LIMIT_ROWS)
+    : requestedLimitRows;
   let payload = null;
   try {
     payload = range ? await readSheetRange(sheetName, range) : await readSheetAll(sheetName);
+
+    if (isArchiveSheet && Number.isFinite(safeLimitRows) && safeLimitRows > 0 && payload && typeof payload === 'object') {
+      if (Array.isArray(payload.values)) payload.values = payload.values.slice(0, safeLimitRows + 1);
+      if (Array.isArray(payload.rows)) payload.rows = payload.rows.slice(0, safeLimitRows);
+    }
+
+    if (normalizeHeader(payload?.status) === 'err') {
+      return { status: 'ERR', sheet: sheetName, header: [], rows: [] };
+    }
+
     return normalizeGetSheetRawResponse(payload, sheetName);
   } catch (error) {
     console.debug('[dataHub] readSheet error', {
@@ -335,7 +351,7 @@ async function tryReadSheetVariant(sheetName) {
   }
 }
 
-async function readSheet(sheetName) {
+async function readSheet(sheetName, options = {}) {
   const normalized = normalizeHeader(sheetName).replace(/\s+/g, '');
   const aliases = SHEET_ALIASES[normalized] || SHEET_ALIASES[normalizeHeader(sheetName)] || [];
   const variants = [sheetName, ...aliases].slice(0, 3);
@@ -350,7 +366,7 @@ async function readSheet(sheetName) {
     for (const variant of variants) {
       tried.push(variant);
       try {
-        const payload = await tryReadSheetVariant(variant);
+        const payload = await tryReadSheetVariant(variant, options);
         return writeCache(key, payload);
       } catch (error) {
         lastError = error;
@@ -823,7 +839,6 @@ function normalizeLeagueSnapshotResponse(payload, season, league) {
   const snap = extractSnapshotPayload(payload);
   if (!snap || typeof snap !== 'object') return null;
   const table = Array.isArray(snap.table) ? snap.table : Array.isArray(snap.leaderboard) ? snap.leaderboard : [];
-  if (!table.length) return null;
   const seasonStats = snap.seasonStats || snap.stats || {};
   return {
     seasonId: snap.seasonId || season.id,

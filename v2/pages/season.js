@@ -140,8 +140,11 @@ function renderDashboard(data) {
   heroStats.innerHTML = `<div class="px-badge">${leagueLabel}</div><h2 class="px-card__title">${data.seasonTitle}</h2><div class="stat-grid"><article class="stat-tile"><small>Rounds</small><strong data-countup="${Number(data.totals.rounds) || 0}">0</strong></article><article class="stat-tile"><small>Players</small><strong data-countup="${Number(data.totals.players) || 0}">0</strong></article><article class="stat-tile"><small>AVG Δ</small><strong>${safeValue(data.totals.avgPointsDeltaPerGame)}</strong></article><article class="stat-tile"><small>WLD</small><strong>${safeValue(data.totals.wldLabel)}</strong></article></div>`;
   rankDistribution.innerHTML = `<h2 class="px-card__title">RANK DISTRIBUTION</h2><div class="rank-bars">${rankRows(data.rankDistribution)}</div>`;
 
-  viewState.players = data.tablePlayers;
+  viewState.players = Array.isArray(data.tablePlayers) ? data.tablePlayers : [];
   renderPlayers();
+  if (!viewState.players.length) {
+    state.textContent = 'Data unavailable for this season/league snapshot.';
+  }
   animateInfographics(document);
 }
 

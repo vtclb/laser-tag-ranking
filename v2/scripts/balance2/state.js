@@ -1,5 +1,5 @@
 export const state = {
-  league: 'sundaygames',
+  league: 'kids',
   teamCount: 2,
   mode: 'auto',
   query: '',

@@ -9,22 +9,6 @@
   <link rel="stylesheet" href="./styles/balance2.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">⚖️ LaserTag v2 Балансер</div>
-    <div class="header-actions">
-      <select id="leagueSelect" class="chip">
-        <option value="kids">Дитяча ліга</option>
-        <option value="sundaygames">Доросла ліга</option>
-      </select>
-      <div id="teamCountControl" class="series-count-choices">
-        <button type="button" class="chip" data-team-count="2">2 команди</button>
-        <button type="button" class="chip" data-team-count="3">3 команди</button>
-        <button type="button" class="chip" data-team-count="4">4 команди</button>
-      </div>
-      <button id="loadPlayersBtn" class="chip">Завантажити</button>
-    </div>
-  </header>
-
   <main class="balance2-root">
     <section class="card status-card" id="statusBox" data-state="idle">
       <strong>Статус:</strong>
@@ -69,18 +53,32 @@
     <section class="card" id="teamsCard">
       <div class="section-head">
         <h3>Команди</h3>
+        <div class="league-controls">
+          <label class="league-label" for="leagueSelect">Ліга</label>
+          <select id="leagueSelect" class="chip">
+            <option value="kids">Дитяча ліга</option>
+            <option value="sundaygames">Доросла ліга</option>
+          </select>
+          <button id="loadPlayersBtn" class="chip">Завантажити гравців</button>
+        </div>
+        <small class="section-hint section-hint-tight">Оберіть лігу і натисніть «Завантажити», щоб підтягнути список гравців</small>
+        <div id="teamCountControl" class="series-count-choices">
+          <button type="button" class="chip" data-team-count="2">2 команди</button>
+          <button type="button" class="chip" data-team-count="3">3 команди</button>
+          <button type="button" class="chip" data-team-count="4">4 команди</button>
+        </div>
         <div class="row-btns">
           <button id="balanceBtn" class="chip">Балансувати</button>
           <button id="manualBtn" class="chip">Ручний</button>
         </div>
       </div>
-      <p class="section-hint">Баланс — авто, Ручний — розкладай сам</p>
+      <p class="section-hint">Баланс — автоматично, ручний — розкладай сам</p>
       <div id="teamsGrid" class="teams-grid"></div>
     </section>
 
     <section class="card" id="matchCard">
       <h3>Матч / Зберегти</h3>
-      <p class="section-hint">Вкажи результати серії, MVP і штрафи — потім збережи</p>
+      <p class="section-hint">Вкажи результати серії, MVP та штрафи, потім збережи</p>
       <div id="matchTeamsPreview" class="teams-grid"></div>
       <h4>Серія (3–7 боїв)</h4>
       <div class="series-count" id="seriesCountOptions">
@@ -109,12 +107,6 @@
       <div class="save-sticky"><button id="saveBtn" class="chip save-btn">Зберегти матч</button></div>
     </section>
   </main>
-
-  <nav class="bottom-nav">
-    <button data-tab="teams" class="chip">Команди</button>
-    <button data-tab="teams" data-mode="manual" class="chip">Ручний</button>
-    <button data-tab="match" class="chip">Матч / Зберегти</button>
-  </nav>
 
   <script type="module" src="./scripts/balance2/app.js"></script>
 </body>

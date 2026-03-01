@@ -37,10 +37,10 @@ export function restoreLobby() {
     team4: Array.isArray(data?.teams?.team4) ? data.teams.team4 : [],
   };
   state.teamNames = {
-    team1: String(data?.teamNames?.team1 || 'Team 1').trim() || 'Team 1',
-    team2: String(data?.teamNames?.team2 || 'Team 2').trim() || 'Team 2',
-    team3: String(data?.teamNames?.team3 || 'Team 3').trim() || 'Team 3',
-    team4: String(data?.teamNames?.team4 || 'Team 4').trim() || 'Team 4',
+    team1: String(data?.teamNames?.team1 || 'Команда 1').trim() || 'Команда 1',
+    team2: String(data?.teamNames?.team2 || 'Команда 2').trim() || 'Команда 2',
+    team3: String(data?.teamNames?.team3 || 'Команда 3').trim() || 'Команда 3',
+    team4: String(data?.teamNames?.team4 || 'Команда 4').trim() || 'Команда 4',
   };
   ['team1', 'team2', 'team3', 'team4'].slice(state.teamCount).forEach((key) => { state.teams[key] = []; });
   state.mode = data.mode === 'manual' ? 'manual' : 'auto';

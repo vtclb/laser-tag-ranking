@@ -1,11 +1,10 @@
 .balance2-root {
   max-width: 980px;
-  margin: 0 auto 88px;
+  margin: 0 auto 24px;
   padding: 0.8rem;
   display: grid;
   gap: 0.75rem;
 }
-.header-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
 .status-card { display:flex; align-items:center; gap:.5rem; }
 .status-card[data-state="saving"] { border-color: rgba(49,208,255,.6); }
 .status-card[data-state="saved"] { border-color: rgba(124,255,114,.6); }
@@ -23,9 +22,12 @@
 .player-row { cursor:pointer; }
 .player-row.selected { border-color: rgba(124,255,114,.8); background: rgba(124,255,114,.12); }
 .player-row button, .lobby-row button, .team-actions button, .series-options button, .penalty-controls button, .save-btn { min-height:44px; }
-.section-head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+.section-head { display:flex; flex-direction:column; align-items:flex-start; gap:.45rem; }
 .section-hint { margin: .15rem 0 .6rem; font-size: .9rem; opacity: .85; }
+.section-hint-tight { margin: 0; }
 .row-btns { display:flex; gap:.5rem; }
+.league-controls { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
+.league-label { font-size: .9rem; opacity: .9; }
 .lobby-list { display:grid; gap:.35rem; }
 .teams-grid { display:grid; gap:.6rem; }
 .team-card {
@@ -52,22 +54,17 @@
 .penalties-list { display:grid; gap:.35rem; }
 .penalty-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
 .penalty-controls { display:flex; align-items:center; gap:.35rem; }
-.save-sticky { position: sticky; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); padding-top: .45rem; background: linear-gradient(180deg, rgba(9,13,22,0) 0%, rgba(9,13,22,.95) 30%); }
+.save-sticky { position: sticky; bottom: env(safe-area-inset-bottom, 0px); padding-top: .45rem; background: linear-gradient(180deg, rgba(9,13,22,0) 0%, rgba(9,13,22,.95) 30%); }
 .save-btn { width:100%; font-size:1rem; margin-top:.7rem; }
-.bottom-nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 50;
-  background: rgba(9,13,22,.92);
-  border-top: 1px solid rgba(255,255,255,.12);
-  padding: .55rem;
-  display:grid;
-  grid-template-columns: repeat(3,1fr);
-  gap:.45rem;
+
+nav,
+.header,
+.menu,
+.burger,
+.hamburger {
+  display: none !important;
 }
-.bottom-nav .chip.active { border-color: rgba(124,255,114,.8); background: rgba(124,255,114,.15); }
+
 @media (min-width: 900px) {
   .teams-grid { grid-template-columns: repeat(3,1fr); }
   .match-summary { grid-template-columns: repeat(5, minmax(0, 1fr)); }

@@ -1,13 +1,14 @@
 import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap } from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
-import { render, bindUiEvents, setActiveTab } from './ui.js';
+import { render, bindUiEvents } from './ui.js';
 import { loadPlayers, saveMatch } from './api.js';
 import { saveLobby, restoreLobby, peekLobbyRestore } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 
 const $ = (id) => document.getElementById(id);
 const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
+const LEAGUE_KEY = 'balance2:league';
 let saveLocked = false;
 
 function setTeamCount(rawValue) {
@@ -87,7 +88,7 @@ function validateSave() {
 
 async function doSave(retry = false) {
   const error = validateSave();
-  if (error) return setStatus({ state: 'error', text: `Помилка ❌ ${error}`, retryVisible: false });
+  if (error) return setStatus({ state: 'error', text: `❌ Помилка: ${error}`, retryVisible: false });
   const payload = retry ? state.lastPayload : buildPayload();
   state.lastPayload = payload;
   saveLocked = true;
@@ -96,9 +97,9 @@ async function doSave(retry = false) {
   setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
   const res = await saveMatch(payload, 14000);
   if (res.ok) {
-    setStatus({ state: 'saved', text: `Збережено ✅ ${new Date().toLocaleTimeString('uk-UA')}`, retryVisible: false });
+    setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
   } else {
-    setStatus({ state: 'error', text: `Помилка ❌ ${res.message || 'Не вдалося зберегти'}`, retryVisible: true });
+    setStatus({ state: 'error', text: `❌ Помилка: ${res.message || 'Не вдалося зберегти'}`, retryVisible: true });
   }
   saveLocked = false;
   lockSaveButton(false);
@@ -149,7 +150,13 @@ async function init() {
 
   $('leagueSelect').addEventListener('change', (e) => {
     state.league = normalizeLeague(e.target.value);
+    localStorage.setItem(LEAGUE_KEY, state.league);
+    state.players = [];
+    state.selected = [];
+    syncSelectedMap();
+    clearTeams();
     saveLobby();
+    renderAndSync();
   });
 
   $('sortMode').addEventListener('change', (e) => {
@@ -178,16 +185,6 @@ async function init() {
 
   $('saveBtn').addEventListener('click', () => doSave(false));
   $('retrySaveBtn').addEventListener('click', () => doSave(true));
-
-  document.querySelectorAll('.bottom-nav [data-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const { mode, tab } = btn.dataset;
-      if (mode === 'manual') state.mode = 'manual';
-      if (mode === 'auto') state.mode = 'auto';
-      setActiveTab(tab);
-      renderAndSync();
-    });
-  });
 
   bindUiEvents({
     onTogglePlayer(nick) {
@@ -242,16 +239,14 @@ async function init() {
     },
     onRenameStart(teamKey) { startRenameTeam(teamKey); },
     onRenameSave(teamKey, value) { saveTeamName(teamKey, value); },
-    onBackTab(tab) { setActiveTab(tab); renderAndSync(); },
     onChanged() { saveLobby(); renderAndSync(); },
   });
 
+  state.league = normalizeLeague(localStorage.getItem(LEAGUE_KEY) || state.league);
   $('leagueSelect').value = state.league;
   $('sortMode').value = state.sortMode;
   syncSelectedMap();
-  await ensurePlayersLoaded();
   renderAndSync();
-  setActiveTab('teams');
 }
 
 async function ensurePlayersLoaded() {
@@ -263,10 +258,11 @@ async function ensurePlayersLoaded() {
   try {
     const league = normalizeLeague($('leagueSelect')?.value || state.league);
     state.league = league;
+    localStorage.setItem(LEAGUE_KEY, state.league);
     state.players = await loadPlayers(league);
-    setStatus({ state: 'saved', text: `Готово: ${state.players.length} гравців`, retryVisible: false });
+    setStatus({ state: 'saved', text: `✅ Завантажено: ${state.players.length} гравців`, retryVisible: false });
   } catch (e) {
-    setStatus({ state: 'error', text: `Помилка ❌ ${e.message}`, retryVisible: false });
+    setStatus({ state: 'error', text: `❌ Помилка: ${e.message}`, retryVisible: false });
   } finally {
     btn.disabled = false;
     btn.textContent = original;

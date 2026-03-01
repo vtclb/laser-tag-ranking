@@ -8,7 +8,15 @@ function parseHashRoute() {
   const raw = location.hash.replace(/^#/, '').trim();
   if (!raw) return { route: 'home', params: new URLSearchParams() };
 
-  const [route = 'home', ...parts] = raw.split('&');
+  const normalized = raw.startsWith('/') ? raw.slice(1) : raw;
+  const queryStart = normalized.indexOf('?');
+
+  if (queryStart >= 0) {
+    const route = (normalized.slice(0, queryStart) || 'home').toLowerCase();
+    return { route, params: new URLSearchParams(normalized.slice(queryStart + 1)) };
+  }
+
+  const [route = 'home', ...parts] = normalized.split('&');
   const params = new URLSearchParams();
   for (const part of parts) {
     if (!part) continue;
@@ -16,7 +24,13 @@ function parseHashRoute() {
     params.set(decodeURIComponent(key), decodeURIComponent(value));
   }
 
-  return { route, params };
+  return { route: route.toLowerCase(), params };
+}
+
+function buildHash(route, params = {}) {
+  const q = new URLSearchParams(params);
+  const query = q.toString();
+  return `#/${route}${query ? `?${query}` : ''}`;
 }
 
 function normalizeHashHref(href) {
@@ -27,14 +41,14 @@ function normalizeHashHref(href) {
   const cleanPath = path.replace(/^\.\//, '').replace(/^\/v2\//, '').toLowerCase();
   const query = new URLSearchParams(queryString);
 
-  if (cleanPath.endsWith('index.html') || cleanPath === '') return '#home';
-  if (cleanPath.endsWith('seasons.html')) return '#seasons';
-  if (cleanPath.endsWith('rules.html')) return '#rules';
-  if (cleanPath.endsWith('balance2.html')) return '#balance';
+  if (cleanPath.endsWith('index.html') || cleanPath === '') return '#/home';
+  if (cleanPath.endsWith('seasons.html')) return '#/seasons';
+  if (cleanPath.endsWith('rules.html')) return '#/rules';
   if (cleanPath.endsWith('league.html') || cleanPath.endsWith('season.html')) {
     const rawLeague = query.get('league') || 'kids';
     const league = rawLeague === 'sundaygames' ? 'olds' : rawLeague;
-    return `#season&league=${encodeURIComponent(league)}`;
+    const season = query.get('season') || '';
+    return buildHash('season', { league, season });
   }
   return href;
 }
@@ -42,7 +56,10 @@ function normalizeHashHref(href) {
 function rewriteLinks(scope = document) {
   scope.querySelectorAll('a[href]').forEach((anchor) => {
     const current = anchor.getAttribute('href');
-    const normalized = normalizeHashHref(current);
+    let normalized = normalizeHashHref(current);
+    if (normalized?.startsWith('#') && !normalized.startsWith('#/')) {
+      normalized = normalized.replace(/^#/, '#/');
+    }
     if (normalized && normalized !== current) {
       anchor.setAttribute('href', normalized);
     }
@@ -93,17 +110,13 @@ function syncSeasonControls(params) {
   }
 }
 
-function mountBalanceIframe() {
-  app.innerHTML = `<main><div class="container section"><section class="px-card px-card--accent"><h1 class="px-card__title">Balance</h1><iframe title="Balance v2" src="./balance2.html" style="width:100%;min-height:80vh;border:0;"></iframe></section></div></main>`;
-}
-
 async function renderRoute() {
   mountTick += 1;
   const currentTick = mountTick;
   const { route, params } = parseHashRoute();
 
   if (!location.hash) {
-    location.replace('#home');
+    location.replace('#/home');
     return;
   }
 
@@ -122,10 +135,8 @@ async function renderRoute() {
     await import(`./pages/season.js?route=${currentTick}`);
   } else if (route === 'rules') {
     await mountTemplate('./pages/rules.html', 'main');
-  } else if (route === 'balance') {
-    mountBalanceIframe();
   } else {
-    location.replace('#home');
+    location.replace('#/home');
     return;
   }
 
@@ -135,12 +146,12 @@ async function renderRoute() {
 
 window.addEventListener('hashchange', () => {
   renderRoute().catch((error) => {
-    app.innerHTML = `<main><div class="container section"><section class="px-card"><h1 class="px-card__title">Routing error</h1><p class="px-card__text">${error.message}</p></section></div></main>`;
+    app.innerHTML = `<main class="page"><div class="container section"><section class="px-card"><h1 class="px-card__title">Routing error</h1><p class="px-card__text">${error.message}</p></section></div></main>`;
   });
 });
 
 renderRoute().catch((error) => {
-  app.innerHTML = `<main><div class="container section"><section class="px-card"><h1 class="px-card__title">Routing error</h1><p class="px-card__text">${error.message}</p></section></div></main>`;
+  app.innerHTML = `<main class="page"><div class="container section"><section class="px-card"><h1 class="px-card__title">Routing error</h1><p class="px-card__text">${error.message}</p></section></div></main>`;
 });
 
 const observer = new MutationObserver((entries) => {

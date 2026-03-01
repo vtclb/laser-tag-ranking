@@ -11,8 +11,7 @@ function top5Card(players, leagueLabel, leagueSlug, ctaLabel) {
       <span class="top5-pos">#${idx + 1}</span>
       <span class="rank-badge ${meta.cssClass}">${meta.label}</span>
       <span class="top5-nick" title="${player.nick || '—'}">${player.nick || '—'}</span>
-      <span class="top5-points">${player.points ?? 0}</span>
-      <span class="top5-wr">${wr}</span>
+      <span class="top5-main"><span class="top5-points">${player.points ?? 0} pts</span><span class="top5-wr">WR ${wr}</span></span>
       <span class="top5-games">${gamesPlayed} ігор</span>
     </li>`;
   }).join('');
@@ -20,11 +19,9 @@ function top5Card(players, leagueLabel, leagueSlug, ctaLabel) {
   return `<article class="px-card px-card--accent top5-card home-block section">
     <span class="px-badge">Маніфест ліги</span>
     <h3 class="px-card__title">${leagueLabel}</h3>
-    <div class="top5-head">
-      <span>Позиція</span><span>Ранг</span><span>Нік</span><span>Points</span><span>WR%</span>
-    </div>
+    
     <ol class="top5-list">${rows || '<li class="top5-empty">Немає даних</li>'}</ol>
-    <div class="px-card__actions"><a class="btn btn--secondary" href="#season&league=${leagueSlug === 'sundaygames' ? 'olds' : leagueSlug}">${ctaLabel}</a></div>
+    <div class="px-card__actions"><a class="btn btn--secondary" href="#/season?league=${leagueSlug === 'sundaygames' ? 'olds' : leagueSlug}">${ctaLabel}</a></div>
   </article>`;
 }
 
@@ -76,9 +73,9 @@ function buildBarSegments(dist, leagueLabel) {
 function rankDistributionCard(kidsDist, adultsDist) {
   return `<article class="px-card home-block rank-merged section">
     <span class="px-badge">Баланс рангів</span>
-    <h3 class="px-card__title">Ранги (Kids vs Sundaygames)</h3>
+    <h3 class="px-card__title">Ранги (Kids vs Olds)</h3>
     ${buildBarSegments(kidsDist, 'Kids')}
-    ${buildBarSegments(adultsDist, 'Adults')}
+    ${buildBarSegments(adultsDist, 'Olds')}
   </article>`;
 }
 
@@ -104,8 +101,8 @@ function renderHomeStructure() {
         <p class="hero__subtitle" id="currentSeason">—</p>
         <p class="px-card__text" id="stateBox" aria-live="polite"></p>
         <div class="hero__actions">
-          <a class="btn btn--primary" href="#home">▶ Game Day</a>
-          <a class="btn btn--secondary" href="#seasons">🏆 Season</a>
+          <a class="btn btn--primary" href="#/home">▶ Game Day</a>
+          <a class="btn btn--secondary" href="#/seasons">🏆 Season</a>
         </div>
       </section>
 
@@ -132,7 +129,7 @@ function renderHomeStructure() {
       <section class="section">
         <span class="px-badge">rank</span>
         <h2 class="px-card__title">Маніфест рангів</h2>
-        <p class="px-card__text">Розподіл рангів між Kids та Sundaygames.</p>
+        <p class="px-card__text">Розподіл рангів між Kids та Olds.</p>
         <div class="kpi kpi-2 section" id="charts"></div>
       </section>
 
@@ -143,8 +140,8 @@ function renderHomeStructure() {
         <h2 class="px-card__title">Швидкі переходи</h2>
         <p class="px-card__text">Усі ключові розділи Home збережено.</p>
         <div class="px-card__actions">
-          <a class="btn btn--secondary" href="#season&league=kids">👥 Leagues</a>
-          <a class="btn btn--secondary" href="#rules">📜 Rules</a>
+          <a class="btn btn--secondary" href="#/season?league=kids">👥 Leagues</a>
+          <a class="btn btn--secondary" href="#/rules">📜 Rules</a>
         </div>
       </section>
     </div>
@@ -172,9 +169,9 @@ async function init() {
     const data = await getHomeFast();
     document.getElementById('currentSeason').textContent = `${data.seasonTitle} · ${data.seasonDateStart} — ${data.seasonDateEnd}`;
     document.getElementById('topHeroes').innerHTML = top5Card(data.top5Kids, 'ТОП-5 Kids', 'kids', 'Перейти до статистики Kids')
-      + top5Card(data.top5Adults, 'ТОП-5 Sundaygames', 'sundaygames', 'Перейти до статистики Sundaygames');
+      + top5Card(data.top5Adults, 'ТОП-5 Olds', 'sundaygames', 'Перейти до статистики Olds');
     document.getElementById('overviewStats').innerHTML = seasonProgressCard(data.kidsMetrics, data.seasonSchedule, 'Kids')
-      + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'Adults');
+      + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'Olds');
     document.getElementById('charts').innerHTML = rankDistributionCard(data.rankDistKids, data.rankDistAdults);
     stateBox.textContent = 'Home показує сезонні метрики та прогрес ігрових днів (Wed/Fri/Sun).';
   } catch (error) {

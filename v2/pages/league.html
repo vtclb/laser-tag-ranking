@@ -10,7 +10,7 @@
 <body>
   <header class="topbar">
     <div class="brand">League</div>
-    <a class="nav-link" href="./index.html">Menu</a>
+    <a class="nav-link" href="#home">Menu</a>
   </header>
   <main>
     <section class="card">
@@ -94,7 +94,7 @@
         <tr class="${player.inactive ? 'inactive' : ''}">
           <td>${player.place}</td>
           <td>
-            <a class="chip player-trigger" href="./profile.html?nick=${encodeURIComponent(player.nick)}&league=${encodeURIComponent(data.league)}">
+            <a class="chip player-trigger" href="#season&league=${encodeURIComponent(data.league === 'sundaygames' ? 'olds' : data.league)}">
               <img class="avatar" src="${player.avatarUrl || placeholder}" alt="" onerror="this.src='${placeholder}'"> ${rowNick(player)}
             </a>
           </td>

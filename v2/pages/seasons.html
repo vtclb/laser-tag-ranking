@@ -5,46 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seasons | v2</title>
   <script type="module" src="./global-styles.js"></script>
-  <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">Сезони</div>
-    <a class="nav-link" href="#/home">MENU</a>
-  </header>
+  <header class="topbar"></header>
   <main class="page">
-    <div class="container section">
-    <section class="card">
-      <div class="search-row">
-        <select id="seasonSelect" class="search-input"></select>
-        <select id="leagueSelect" class="search-input">
-          <option value="kids">kids</option>
-          <option value="sundaygames">olds</option>
-        </select>
-      </div>
-      <h1 class="section-title" id="seasonTitle">—</h1>
-      <div class="kpi kpi-2" id="totals"></div>
-      <div class="kpi kpi-2" id="charts"></div>
-      <div class="top3" id="top3"></div>
-      <div class="kpi kpi-2" id="leaders"></div>
-      <p class="tag" id="state"></p>
-    </section>
-
-    <section class="card">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th>Games</th><th>Winrate</th><th>Top1</th><th>Top2</th><th>Top3</th></tr></thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </section>
-    </div>
+    <div class="container section" id="seasonsRoot"></div>
   </main>
-
-  <dialog id="playerModal" class="player-modal">
-    <article class="card modal-card" id="modalBody"></article>
-  </dialog>
-
-  <script type="module" src="./seasons.js"></script>
 </body>
 </html>

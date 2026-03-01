@@ -87,18 +87,18 @@ function validateSave() {
 
 async function doSave(retry = false) {
   const error = validateSave();
-  if (error) return setStatus({ state: 'error', text: `ERROR ✗ ${error}`, retryVisible: false });
+  if (error) return setStatus({ state: 'error', text: `Помилка ❌ ${error}`, retryVisible: false });
   const payload = retry ? state.lastPayload : buildPayload();
   state.lastPayload = payload;
   saveLocked = true;
   lockSaveButton(true);
   syncSaveButtonState();
-  setStatus({ state: 'saving', text: 'SAVING…', retryVisible: false });
+  setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
   const res = await saveMatch(payload, 14000);
   if (res.ok) {
-    setStatus({ state: 'saved', text: `SAVED ✓ ${new Date().toLocaleTimeString('uk-UA')}`, retryVisible: false });
+    setStatus({ state: 'saved', text: `Збережено ✅ ${new Date().toLocaleTimeString('uk-UA')}`, retryVisible: false });
   } else {
-    setStatus({ state: 'error', text: `ERROR ✗ ${res.message || 'Save failed'}`, retryVisible: true });
+    setStatus({ state: 'error', text: `Помилка ❌ ${res.message || 'Не вдалося зберегти'}`, retryVisible: true });
   }
   saveLocked = false;
   lockSaveButton(false);
@@ -128,7 +128,7 @@ function startRenameTeam(teamKey) {
 function saveTeamName(teamKey, rawValue) {
   if (!state.teamNames[teamKey]) return;
   const value = String(rawValue || '').trim();
-  state.teamNames[teamKey] = value || `Team ${teamKey.replace('team', '')}`;
+  state.teamNames[teamKey] = value || `Команда ${teamKey.replace('team', '')}`;
   saveLobby();
   renderAndSync();
 }
@@ -180,7 +180,13 @@ async function init() {
   $('retrySaveBtn').addEventListener('click', () => doSave(true));
 
   document.querySelectorAll('.bottom-nav [data-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+    btn.addEventListener('click', () => {
+      const { mode, tab } = btn.dataset;
+      if (mode === 'manual') state.mode = 'manual';
+      if (mode === 'auto') state.mode = 'auto';
+      setActiveTab(tab);
+      renderAndSync();
+    });
   });
 
   bindUiEvents({
@@ -236,7 +242,7 @@ async function init() {
     },
     onRenameStart(teamKey) { startRenameTeam(teamKey); },
     onRenameSave(teamKey, value) { saveTeamName(teamKey, value); },
-    onBackTab(tab) { setActiveTab(tab); },
+    onBackTab(tab) { setActiveTab(tab); renderAndSync(); },
     onChanged() { saveLobby(); renderAndSync(); },
   });
 
@@ -252,13 +258,15 @@ async function ensurePlayersLoaded() {
   const btn = $('loadPlayersBtn');
   const original = btn.textContent;
   btn.disabled = true;
-  btn.textContent = '⏳ Loading…';
-  setStatus({ state: 'saving', text: 'Loading…', retryVisible: false });
+  btn.textContent = '⏳ Завантаження…';
+  setStatus({ state: 'saving', text: 'Завантаження…', retryVisible: false });
   try {
-    state.players = await loadPlayers(state.league);
-    setStatus({ state: 'saved', text: `Loaded ${state.players.length} players`, retryVisible: false });
+    const league = normalizeLeague($('leagueSelect')?.value || state.league);
+    state.league = league;
+    state.players = await loadPlayers(league);
+    setStatus({ state: 'saved', text: `Готово: ${state.players.length} гравців`, retryVisible: false });
   } catch (e) {
-    setStatus({ state: 'error', text: `ERROR ✗ ${e.message}`, retryVisible: false });
+    setStatus({ state: 'error', text: `Помилка ❌ ${e.message}`, retryVisible: false });
   } finally {
     btn.disabled = false;
     btn.textContent = original;

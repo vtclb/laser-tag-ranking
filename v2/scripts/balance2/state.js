@@ -10,7 +10,7 @@ export const state = {
   selected: [],
   selectedMap: new Set(),
   teams: { team1: [], team2: [], team3: [], team4: [] },
-  teamNames: { team1: 'Team 1', team2: 'Team 2', team3: 'Team 3', team4: 'Team 4' },
+  teamNames: { team1: 'Команда 1', team2: 'Команда 2', team3: 'Команда 3', team4: 'Команда 4' },
   match: { winner: '', mvp1: '', mvp2: '', mvp3: '', series: '', penalties: {} },
   lastPayload: null,
   cache: {},
@@ -18,7 +18,6 @@ export const state = {
 
 export function normalizeLeague(league) {
   const key = String(league || '').trim().toLowerCase();
-  if (key === 'olds') return 'sundaygames';
   return key === 'kids' ? 'kids' : 'sundaygames';
 }
 

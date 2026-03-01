@@ -1,7 +1,7 @@
 export function normalizeLeague(input) {
   const value = String(input || '').trim().toLowerCase();
-  if (['kids', 'kid', 'child', 'діти'].includes(value)) return 'kids';
-  if (['olds', 'old', 'adults', 'sundaygames', 'sunday', 'дорослі'].includes(value)) return 'olds';
+  if (['kids', 'kid', 'child', 'діти', 'дитяча'].includes(value)) return 'kids';
+  if (['olds', 'old', 'adults', 'sundaygames', 'sunday', 'дорослі', 'доросла'].includes(value)) return 'olds';
   return '';
 }
 

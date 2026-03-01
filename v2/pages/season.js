@@ -22,6 +22,10 @@ async function renderDashboard({ seasonId, league }) {
   const seasonSelect = document.getElementById('seasonSelect');
   const leagueSelect = document.getElementById('leagueSelect');
 
+  if (!seasonPageTitle || !heroStats || !rankDistribution || !playersList || !state || !seasonSelect || !leagueSelect) {
+    throw new Error('Сторінка сезону не ініціалізована');
+  }
+
   const seasons = await getSeasonsList();
   seasonSelect.innerHTML = seasons.map((season) => `<option value="${season.id}">${season.title}</option>`).join('');
   seasonSelect.value = seasonId;
@@ -43,7 +47,7 @@ async function renderDashboard({ seasonId, league }) {
     const players = Array.isArray(data.tablePlayers) ? data.tablePlayers : [];
     if (!players.length) {
       playersList.innerHTML = '<p class="px-card__text">Немає даних за цей сезон</p><a class="btn" href="#seasons">Повернутись до сезонів</a>';
-      state.textContent = '';
+      state.textContent = 'Немає даних';
       return;
     }
     playersList.innerHTML = players.map(playerRow).join('');
@@ -51,12 +55,14 @@ async function renderDashboard({ seasonId, league }) {
   } catch (error) {
     playersList.innerHTML = `<p class="px-card__text">${safeErrorMessage(error, 'Дані тимчасово недоступні')}</p><a class="btn" href="#seasons">Повернутись до сезонів</a>`;
     rankDistribution.innerHTML = '';
-    state.textContent = '';
+    state.textContent = 'Немає даних';
   }
 }
 
 export async function initSeasonPage(params = {}) {
-  const root = document.getElementById('seasonRoot');
+  const root = document.getElementById('view');
+  if (!root) return;
+
   const league = normalizeLeague(params.league);
   const seasonId = String(params.season || '').trim();
 
@@ -69,7 +75,7 @@ export async function initSeasonPage(params = {}) {
     return;
   }
 
-  root.innerHTML = `<main class="page"><div class="container season-page section"><section class="px-card season-header"><h1 class="px-card__title" id="seasonPageTitle">Деталі сезону</h1></section><section class="px-card px-card--accent season-controls-card"><div class="season-controls-row"><select id="seasonSelect" class="search-input" aria-label="Обрати сезон"></select><select id="leagueSelect" class="search-input" aria-label="Обрати лігу"><option value="kids">${leagueLabelUA('kids')}</option><option value="olds">${leagueLabelUA('olds')}</option></select></div><div id="heroStats"></div></section><section class="px-card" id="rankDistribution"></section><section class="px-card"><h2 class="px-card__title">Гравці сезону</h2><div id="playersList"></div><p class="px-card__text" id="state"></p></section></div></main>`;
+  root.innerHTML = `<section class="px-card season-header"><h1 class="px-card__title" id="seasonPageTitle">Деталі сезону</h1></section><section class="px-card px-card--accent season-controls-card"><div class="season-controls-row"><select id="seasonSelect" class="search-input" aria-label="Обрати сезон"></select><select id="leagueSelect" class="search-input" aria-label="Обрати лігу"><option value="kids">${leagueLabelUA('kids')}</option><option value="olds">${leagueLabelUA('olds')}</option></select></div><div id="heroStats"></div></section><section class="px-card" id="rankDistribution"></section><section class="px-card"><h2 class="px-card__title">Гравці сезону</h2><div id="playersList"></div><p class="px-card__text" id="state"></p></section>`;
 
   await renderDashboard({ seasonId, league });
 }

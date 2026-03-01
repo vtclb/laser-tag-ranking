@@ -19,15 +19,19 @@ function syncSeriesMirror() {
 }
 
 function normalizeLoadedPlayers(players = []) {
-  return players.map((player) => {
-    const points = Number(player.points ?? player.pts) || 0;
-    return {
-      ...player,
-      points,
-      pts: points,
-      rank: String(player.rank || rankLetterForPoints(points)),
-    };
-  });
+  return players
+    .map((player) => {
+      const nick = String(player.nick || player.nickname || '').trim();
+      if (!nick) return null;
+      const points = Number(player.points ?? player.pts) || 0;
+      return {
+        nick,
+        points,
+        pts: points,
+        rank: String(player.rank || rankLetterForPoints(points)),
+      };
+    })
+    .filter(Boolean);
 }
 
 function setTeamCount(rawValue) {
@@ -260,8 +264,8 @@ async function init() {
       if (idx < 0 || idx >= state.seriesCount) return;
       const parsed = Number(val);
       const nextVal = parsed === 0 || (parsed >= 1 && parsed <= state.teamCount) ? parsed : null;
-      rounds[idx] = nextVal;
       state.seriesRounds = rounds;
+      state.seriesRounds[idx] = nextVal;
       syncSeriesMirror();
       const summary = computeSeriesSummary();
       state.match.winner = summary.winner;

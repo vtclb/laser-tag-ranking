@@ -78,9 +78,12 @@ function renderLobby() {
   if (!wrap) return;
   const frag = document.createDocumentFragment();
   for (const nick of state.selected) {
+    const player = state.players.find((p) => p.nick === nick);
+    const points = Number(player?.points ?? player?.pts) || 0;
+    const rank = player?.rank || '—';
     const row = document.createElement('div');
     row.className = 'lobby-row';
-    row.innerHTML = `<span>${nick}</span><button class="chip" data-remove="${nick}">Прибрати</button>`;
+    row.innerHTML = `<span>${nick} <small class="tag">${points} (${rank})</small></span><button class="chip" data-remove="${nick}">Прибрати</button>`;
     frag.appendChild(row);
   }
   wrap.replaceChildren(frag);
@@ -145,7 +148,7 @@ function renderMatchTeams() {
 }
 
 function renderSeriesEditor() {
-  const root = document.getElementById('seriesOptions');
+  const root = document.getElementById('seriesRounds');
   const countRoot = document.getElementById('seriesCountOptions');
   if (!root) return;
   const hasRoundValues = Array.isArray(state.seriesRounds) && state.seriesRounds.some((value) => value !== null && value !== undefined);
@@ -166,10 +169,17 @@ function renderSeriesEditor() {
 
   root.innerHTML = rounds.slice(0, count).map((round, idx) => {
     const options = [...teamOptions, { val: 0, label: 'Нічия' }];
-    const row = options.map((option) => `<button class="chip round-btn ${round === option.val ? 'active' : ''}" data-series="${idx}:${option.val}">${option.label}</button>`).join('');
+    const row = options.map((option) => `<button class="chip round-btn" type="button" data-round="${idx}" data-value="${option.val}">${option.label}</button>`).join('');
     const chip = round === null ? '—' : (round === 0 ? 'Ніч.' : `К${round}`);
-    return `<div class="series-row"><span>Бій ${idx + 1} <small class="round-chip">${chip}</small></span><div class="series-choices">${row}</div></div>`;
+    return `<div class="round-card"><div class="series-row"><span>Бій ${idx + 1} <small class="round-chip">${chip}</small></span><div class="round-row">${row}</div></div></div>`;
   }).join('');
+
+  root.querySelectorAll('.round-btn').forEach((btn) => {
+    const roundIndex = Number(btn.dataset.round);
+    const currentValue = Number(state.seriesRounds[roundIndex]);
+    const buttonValue = Number(btn.dataset.value);
+    btn.classList.toggle('active', buttonValue === currentValue);
+  });
 }
 
 function renderMatchSummary() {
@@ -214,11 +224,22 @@ function renderMatchFields() {
 }
 
 export function bindUiEvents(handlers) {
+  const roundsContainer = document.getElementById('seriesRounds');
+  if (roundsContainer) {
+    roundsContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.round-btn');
+      if (!btn || !roundsContainer.contains(btn)) return;
+      const roundIndex = Number(btn.dataset.round);
+      const value = Number(btn.dataset.value);
+      if (!Number.isInteger(roundIndex) || !Number.isFinite(value)) return;
+      handlers.onSeriesResult(roundIndex, value);
+    });
+  }
+
   document.addEventListener('click', (e) => {
     const toggle = e.target.closest('[data-toggle]')?.dataset.toggle;
     const remove = e.target.closest('[data-remove]')?.dataset.remove;
     const move = e.target.closest('[data-move]')?.dataset.move;
-    const series = e.target.closest('[data-series]')?.dataset.series;
     const seriesCount = e.target.closest('[data-series-count]')?.dataset.seriesCount;
     const teamCount = e.target.closest('[data-team-count]')?.dataset.teamCount;
     const clearSeries = e.target.closest('[data-series-reset]');
@@ -232,10 +253,6 @@ export function bindUiEvents(handlers) {
       handlers.onChanged();
     }
     if (teamCount) handlers.onTeamCount(Number(teamCount));
-    if (series) {
-      const [idx, val] = series.split(':');
-      handlers.onSeriesResult(Number(idx), val);
-    }
     if (seriesCount) handlers.onSeriesCount(Number(seriesCount));
     if (clearSeries) handlers.onSeriesReset();
     if (pen) {

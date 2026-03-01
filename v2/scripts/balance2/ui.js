@@ -5,7 +5,7 @@ const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
 
 function sumByNicks(nicks) {
   const map = new Map(state.players.map((p) => [p.nick, p]));
-  return nicks.reduce((acc, n) => acc + (map.get(n)?.pts || 0), 0);
+  return nicks.reduce((acc, n) => acc + (Number(map.get(n)?.points ?? map.get(n)?.pts) || 0), 0);
 }
 
 function sortPlayers(players) {
@@ -15,10 +15,10 @@ function sortPlayers(players) {
       copy.sort((a, b) => b.nick.localeCompare(a.nick, 'uk'));
       break;
     case 'points_desc':
-      copy.sort((a, b) => (b.pts - a.pts) || a.nick.localeCompare(b.nick, 'uk'));
+      copy.sort((a, b) => ((Number(b.points ?? b.pts) || 0) - (Number(a.points ?? a.pts) || 0)) || a.nick.localeCompare(b.nick, 'uk'));
       break;
     case 'points_asc':
-      copy.sort((a, b) => (a.pts - b.pts) || a.nick.localeCompare(b.nick, 'uk'));
+      copy.sort((a, b) => ((Number(a.points ?? a.pts) || 0) - (Number(b.points ?? b.pts) || 0)) || a.nick.localeCompare(b.nick, 'uk'));
       break;
     default:
       copy.sort((a, b) => a.nick.localeCompare(b.nick, 'uk'));
@@ -62,10 +62,12 @@ function renderPlayers() {
   const frag = document.createDocumentFragment();
   for (const p of players) {
     const selected = isSelected(p.nick);
+    const points = Number(p.points ?? p.pts) || 0;
+    const rank = p.rank || '—';
     const row = document.createElement('div');
     row.className = `player-row ${selected ? 'selected' : ''}`;
     row.dataset.toggle = p.nick;
-    row.innerHTML = `<span>${p.nick} <small class="tag">${p.pts}</small></span><span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span>`;
+    row.innerHTML = `<span>${p.nick} <small class="tag">${points} (${rank})</small></span><span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span>`;
     frag.appendChild(row);
   }
   list.replaceChildren(frag);
@@ -146,9 +148,15 @@ function renderSeriesEditor() {
   const root = document.getElementById('seriesOptions');
   const countRoot = document.getElementById('seriesCountOptions');
   if (!root) return;
-  const rounds = Array.isArray(state.series) ? state.series.slice(0, 7) : ['-', '-', '-', '-', '-', '-', '-'];
+  const hasRoundValues = Array.isArray(state.seriesRounds) && state.seriesRounds.some((value) => value !== null && value !== undefined);
+  const rounds = hasRoundValues
+    ? state.seriesRounds.slice(0, 7)
+    : (Array.isArray(state.series) ? state.series.slice(0, 7).map((value) => {
+      const numeric = Number(value);
+      return value === '-' || Number.isNaN(numeric) ? null : numeric;
+    }) : Array(7).fill(null));
   const count = Math.min(7, Math.max(3, Number(state.seriesCount) || 3));
-  const teamOptions = TEAM_KEYS.slice(0, state.teamCount).map((_, idx) => ({ val: String(idx + 1), label: `К${idx + 1}` }));
+  const teamOptions = TEAM_KEYS.slice(0, state.teamCount).map((_, idx) => ({ val: idx + 1, label: `К${idx + 1}` }));
 
   if (countRoot) {
     countRoot.querySelectorAll('[data-series-count]').forEach((btn) => {
@@ -157,9 +165,10 @@ function renderSeriesEditor() {
   }
 
   root.innerHTML = rounds.slice(0, count).map((round, idx) => {
-    const options = [...teamOptions, { val: '0', label: 'Нічия' }];
-    const row = options.map((option) => `<button class="chip ${round === option.val ? 'active' : ''}" data-series="${idx}:${option.val}">${option.label}</button>`).join('');
-    return `<div class="series-row"><span>Бій ${idx + 1}</span><div class="series-choices">${row}</div></div>`;
+    const options = [...teamOptions, { val: 0, label: 'Нічия' }];
+    const row = options.map((option) => `<button class="chip round-btn ${round === option.val ? 'active' : ''}" data-series="${idx}:${option.val}">${option.label}</button>`).join('');
+    const chip = round === null ? '—' : (round === 0 ? 'Ніч.' : `К${round}`);
+    return `<div class="series-row"><span>Бій ${idx + 1} <small class="round-chip">${chip}</small></span><div class="series-choices">${row}</div></div>`;
   }).join('');
 }
 
@@ -169,11 +178,11 @@ function renderMatchSummary() {
   const summary = computeSeriesSummary();
   const keys = TEAM_KEYS.slice(0, state.teamCount);
   const winsText = keys.map((key, idx) => `К${idx + 1}: <strong>${summary.wins[key]}</strong>`).join(' ');
-  const winnerLabel = summary.winner === 'tie' ? 'Нічия' : getTeamLabel(summary.winner);
+  const winnerLabel = summary.winner === 'tie' ? 'Нічия' : `Команда ${summary.winner.replace('team', '')}`;
   root.innerHTML = [
-    `<div class="summary-pill">${winsText} Нічиї: <strong>${summary.draws}</strong></div>`,
+    `<div class="summary-pill">Рахунок серії: ${winsText} Ніч.: <strong>${summary.draws}</strong></div>`,
     `<div class="summary-pill">Зіграно: <strong>${summary.played}</strong> / <strong>${state.seriesCount}</strong></div>`,
-    `<div class="summary-pill">Підсумок: <strong>${winnerLabel}</strong></div>`,
+    `<div class="summary-pill">Переможець: <strong>${winnerLabel}</strong></div>`,
     `<div class="summary-pill">Серія: <strong>${summary.series || '—'}</strong></div>`,
   ].join('');
 }

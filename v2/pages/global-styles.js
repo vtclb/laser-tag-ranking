@@ -1,6 +1,12 @@
 const V2_BASE_URL = new URL('../', import.meta.url);
 const PAGES_BASE_URL = new URL('./', import.meta.url);
 
+const IS_PAGES_ROUTE = location.pathname.includes('/v2/pages/');
+
+function pageHref(pageName) {
+  return IS_PAGES_ROUTE ? `./${pageName}` : `./pages/${pageName}`;
+}
+
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
   let link = document.getElementById(id);
   if (!link) {
@@ -33,9 +39,9 @@ function ensureStyleOrder() {
 
 function pageCta() {
   const path = location.pathname;
-  if (path.includes('/gameday')) return { href: './gameday.html', label: 'GAME DAY' };
-  if (path.includes('/balance2')) return { href: '../balance2.html', label: 'EXPORT' };
-  if (path.includes('/season')) return { href: './seasons.html', label: 'SEASONS' };
+  if (path.includes('/gameday')) return { href: pageHref('gameday.html'), label: 'GAME DAY' };
+  if (path.includes('/balance2')) return { href: IS_PAGES_ROUTE ? '../balance2.html' : './balance2.html', label: 'EXPORT' };
+  if (path.includes('/season')) return { href: pageHref('seasons.html'), label: 'SEASONS' };
   return null;
 }
 
@@ -50,7 +56,7 @@ function ensureTopNav() {
   header.className = 'topnav';
   header.innerHTML = `
     <div class="container topnav__row">
-      <a class="topnav__logo" href="./index.html">LaserTag v2</a>
+      <a class="topnav__logo" href="${pageHref('index.html')}">LaserTag v2</a>
       <div class="topnav__actions">
         ${cta ? `<a class="topnav__pill" href="${cta.href}">${cta.label}</a>` : ''}
         <button type="button" class="topnav__pill" id="globalMenuBtn"><span class="icon icon--menu" aria-hidden="true"></span> MENU</button>
@@ -64,11 +70,11 @@ function ensureNavSheet() {
   if (document.getElementById('v2-navsheet')) return;
 
   const nav = [
-    { href: './index.html', label: 'Home' },
-    { href: './seasons.html', label: 'Seasons' },
-    { href: './league.html', label: 'League stats' },
-    { href: '../balance2.html', label: 'Balancer' },
-    { href: './rules.html', label: 'Rules' }
+    { href: pageHref('index.html'), label: 'Home' },
+    { href: pageHref('seasons.html'), label: 'Seasons' },
+    { href: pageHref('league.html'), label: 'League stats' },
+    { href: IS_PAGES_ROUTE ? '../balance2.html' : './balance2.html', label: 'Balancer' },
+    { href: pageHref('rules.html'), label: 'Rules' }
   ];
 
   const sheet = document.createElement('aside');
@@ -82,7 +88,7 @@ function ensureNavSheet() {
         <button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> CLOSE</button>
       </div>
       <section class="px-card"><h3 class="px-card__title">NAV</h3><div class="hero__actions">${nav.map((item) => `<a class="btn" href="${item.href}">${item.label}</a>`).join('')}</div></section>
-      <section class="px-card"><h3 class="px-card__title">LEAGUES</h3><div class="hero__actions"><a class="btn" href="./league.html?league=kids">Kids</a><a class="btn" href="./league.html?league=sundaygames">Olds</a></div></section>
+      <section class="px-card"><h3 class="px-card__title">LEAGUES</h3><div class="hero__actions"><a class="btn" href="${pageHref('league.html')}?league=kids">Kids</a><a class="btn" href="${pageHref('league.html')}?league=sundaygames">Olds</a></div></section>
       <section class="px-card"><h3 class="px-card__title">SYSTEM</h3><div class="hero__actions"><button class="btn" type="button" data-nav-close="1">Theme: Game</button></div></section>
     </div>`;
 

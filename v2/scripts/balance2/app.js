@@ -1,4 +1,4 @@
-import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap, rankLetterForPoints } from './state.js';
+import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap, rankLetterForPoints, updatePlayersFromResponse, sortPlayersByPointsDesc } from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents } from './ui.js';
@@ -103,21 +103,6 @@ function buildPayload() {
   };
 }
 
-function applySavedPlayers(updatedPlayers = []) {
-  const byNick = new Map(updatedPlayers.map((p) => [String(p.nick || p.nickname || '').trim(), p]));
-  state.players = state.players.map((player) => {
-    const next = byNick.get(player.nick);
-    if (!next) return player;
-    const points = Number(next.points ?? player.points ?? player.pts) || 0;
-    return {
-      ...player,
-      points,
-      pts: points,
-      rank: String(next.rank || rankLetterForPoints(points)),
-    };
-  });
-}
-
 function resetMatchOnlyState() {
   state.seriesRounds = Array(7).fill(null);
   syncSeriesMirror();
@@ -147,13 +132,14 @@ async function doSave(retry = false) {
   setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
   const res = await saveMatch(payload, 14000);
   if (res.ok) {
-    applySavedPlayers(res.data?.players || []);
+    updatePlayersFromResponse(res.data?.players || []);
     try {
       state.cache[state.league] = [];
-      state.players = normalizeLoadedPlayers(await loadPlayers(state.league));
+      state.players = sortPlayersByPointsDesc(normalizeLoadedPlayers(await loadPlayers(state.league)));
     } catch (_) {
-      // fallback: list is already updated from save response
+      state.players = sortPlayersByPointsDesc(state.players);
     }
+    renderAndSync();
     resetMatchOnlyState();
     saveLobby();
     setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
@@ -338,7 +324,7 @@ async function ensurePlayersLoaded() {
     const league = normalizeLeague($('leagueSelect')?.value || state.league);
     state.league = league;
     localStorage.setItem(LEAGUE_KEY, state.league);
-    state.players = normalizeLoadedPlayers(await loadPlayers(league));
+    state.players = sortPlayersByPointsDesc(normalizeLoadedPlayers(await loadPlayers(league)));
     setStatus({ state: 'saved', text: `✅ Завантажено: ${state.players.length} гравців`, retryVisible: false });
   } catch (e) {
     setStatus({ state: 'error', text: `❌ Помилка: ${e.message}`, retryVisible: false });

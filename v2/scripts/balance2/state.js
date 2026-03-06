@@ -84,7 +84,7 @@ export function computeSeriesSummary() {
   const leaders = activeTeamKeys.filter((key) => wins[key] === maxWins);
   const winner = maxWins > 0 && leaders.length === 1 ? leaders[0] : 'tie';
 
-  const series = active.map((r) => (r === null ? '-' : String(r))).join('').replace(/-+$/, '');
+  const series = active.filter((r) => r !== null).map((r) => String(r)).join('');
 
   return {
     wins,

@@ -460,12 +460,36 @@ function getSeasonBoundsByDate(todayYMD = getKyivTodayYMD()) {
 
 function safeRoundCount(rawSeries, maxRounds = 12) {
   const normalized = String(rawSeries ?? '').trim();
-  if (!normalized) return 1;
-  if (!/^\d+$/.test(normalized)) return 1;
+  if (!normalized) return 0;
+  const tokens = normalized.match(/[0-4]/g);
+  if (tokens?.length) return Math.min(tokens.length, maxRounds);
+  if (!/^\d+$/.test(normalized)) return 0;
   const parsed = Number(normalized);
-  if (!Number.isInteger(parsed)) return 1;
-  if (parsed < 1 || parsed > maxRounds) return 1;
+  if (!Number.isInteger(parsed)) return 0;
+  if (parsed < 0 || parsed > maxRounds) return 0;
   return parsed;
+}
+
+function parseSeriesWins(rawSeries = '') {
+  const wins = { team1: 0, team2: 0, team3: 0, team4: 0, draws: 0 };
+  const tokens = String(rawSeries || '').match(/[0-4]/g) || [];
+  tokens.forEach((token) => {
+    if (token === '0') wins.draws += 1;
+    else if (token === '1') wins.team1 += 1;
+    else if (token === '2') wins.team2 += 1;
+    else if (token === '3') wins.team3 += 1;
+    else if (token === '4') wins.team4 += 1;
+  });
+  return wins;
+}
+
+function formatSeriesSummaryCompact(wins = {}, teams = {}) {
+  const parts = [];
+  ['team1', 'team2', 'team3', 'team4'].forEach((key, idx) => {
+    if (Array.isArray(teams[key]) && teams[key].length) parts.push(`К${idx + 1}:${Number(wins[key] || 0)}`);
+  });
+  parts.push(`Н:${Number(wins.draws || 0)}`);
+  return parts.join(' | ');
 }
 
 function normalizeTeamKey(team = []) {
@@ -521,6 +545,8 @@ function parseMatches(sheet) {
     league: find(['league', 'division']),
     team1: find(['team1', 'team a', 'teama']),
     team2: find(['team2', 'team b', 'teamb']),
+    team3: find(['team3', 'team c', 'teamc']),
+    team4: find(['team4', 'team d', 'teamd']),
     winner: find(['winner', 'winnerteam']),
     mvp1: find(['mvp', 'mvp1', 'top1']),
     mvp2: find(['mvp2', 'top2']),
@@ -538,7 +564,9 @@ function parseMatches(sheet) {
       league: normalizeLeague(row[i.league] || 'kids') || 'kids',
       team1: parseNickList(row[i.team1]),
       team2: parseNickList(row[i.team2]),
-      winner: normalizeHeader(row[i.winner]),
+      team3: parseNickList(row[i.team3]),
+      team4: parseNickList(row[i.team4]),
+      winner: normalizeWinnerToken(row[i.winner]),
       mvp1: String(row[i.mvp1] || '').trim(),
       mvp2: String(row[i.mvp2] || '').trim(),
       mvp3: String(row[i.mvp3] || '').trim(),
@@ -547,7 +575,7 @@ function parseMatches(sheet) {
       roundsCount,
       rounds: roundsCount
     };
-  }).filter((m) => m.team1.length || m.team2.length);
+  }).filter((m) => m.team1.length || m.team2.length || m.team3.length || m.team4.length);
 }
 
 function normalizeWinnerToken(value = '') {
@@ -731,20 +759,24 @@ function buildStatsFromMatches(matches, league, pointsByNick = new Map()) {
 
   for (const match of matches) {
     if (normalizeLeague(match.league) !== normalizeLeague(league)) continue;
-    for (const nick of match.team1) {
-      const row = touch(nick); row.games += 1;
-      if (['team1', '1'].includes(match.winner)) row.wins += 1; else if (['team2', '2'].includes(match.winner)) row.losses += 1; else row.draws += 1;
-      if (normalizeHeader(match.mvp1) === normalizeHeader(nick)) row.mvp += 1;
-      if (normalizeHeader(match.mvp2) === normalizeHeader(nick)) row.mvp2 += 1;
-      if (normalizeHeader(match.mvp3) === normalizeHeader(nick)) row.mvp3 += 1;
-    }
-    for (const nick of match.team2) {
-      const row = touch(nick); row.games += 1;
-      if (['team2', '2'].includes(match.winner)) row.wins += 1; else if (['team1', '1'].includes(match.winner)) row.losses += 1; else row.draws += 1;
-      if (normalizeHeader(match.mvp1) === normalizeHeader(nick)) row.mvp += 1;
-      if (normalizeHeader(match.mvp2) === normalizeHeader(nick)) row.mvp2 += 1;
-      if (normalizeHeader(match.mvp3) === normalizeHeader(nick)) row.mvp3 += 1;
-    }
+    const teams = {
+      team1: Array.isArray(match.team1) ? match.team1 : [],
+      team2: Array.isArray(match.team2) ? match.team2 : [],
+      team3: Array.isArray(match.team3) ? match.team3 : [],
+      team4: Array.isArray(match.team4) ? match.team4 : []
+    };
+    const winner = normalizeWinnerToken(match.winner);
+    Object.values(teams).forEach((list) => {
+      for (const nick of list) {
+        const row = touch(nick); row.games += 1;
+        if (winner === 'tie') row.draws += 1;
+        else if (Array.isArray(teams[winner]) && teams[winner].map(normalizeHeader).includes(normalizeHeader(nick))) row.wins += 1;
+        else row.losses += 1;
+        if (normalizeHeader(match.mvp1) === normalizeHeader(nick)) row.mvp += 1;
+        if (normalizeHeader(match.mvp2) === normalizeHeader(nick)) row.mvp2 += 1;
+        if (normalizeHeader(match.mvp3) === normalizeHeader(nick)) row.mvp3 += 1;
+      }
+    });
   }
 
   map.forEach((row) => { row.winRate = row.games ? Math.round((row.wins / row.games) * 100) : null; });
@@ -1203,24 +1235,60 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dateYMD = typeof dateOrOptions === 'object' ? (dateOrOptions.date || dateOrOptions.dateYMD) : dateOrOptions;
   const league = typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg;
   const view = await getGameDayView({ dateYMD, league });
+  const playerStats = new Map();
+  const touch = (nick) => {
+    const key = normalizeHeader(nick);
+    if (!playerStats.has(key)) playerStats.set(key, { nick, winsToday: 0, drawsToday: 0, lossesToday: 0 });
+    return playerStats.get(key);
+  };
+  const mappedMatches = view.matches.map((m, index) => {
+    const teams = {
+      team1: m.team1 || [],
+      team2: m.team2 || [],
+      team3: m.team3 || [],
+      team4: m.team4 || []
+    };
+    const winner = normalizeWinnerToken(m.winner);
+    Object.values(teams).forEach((list) => {
+      list.forEach((nick) => {
+        const row = touch(nick);
+        if (winner === 'tie') row.drawsToday += 1;
+        else if (Array.isArray(teams[winner]) && teams[winner].map(normalizeHeader).includes(normalizeHeader(nick))) row.winsToday += 1;
+        else row.lossesToday += 1;
+      });
+    });
+
+    return {
+      timestamp: m.timestamp,
+      date: m.date,
+      teams: { sideA: m.team1, sideB: m.team2, sideC: m.team3 || [], sideD: m.team4 || [] },
+      mvp: m.mvp1,
+      winner,
+      rounds: m.rounds,
+      series: m.rawSeries || '',
+      seriesSummary: formatSeriesSummaryCompact(parseSeriesWins(m.rawSeries || ''), {
+        team1: m.team1,
+        team2: m.team2,
+        team3: m.team3,
+        team4: m.team4
+      }),
+      pointsChanges: (view.logsByMatch[index] || []).map((entry) => ({ nick: entry.nick, delta: entry.delta, newPoints: entry.newPoints }))
+    };
+  });
+
   return {
     date: view.dateYMD,
     league: view.league,
     mode: { mobile: true, tv: true },
-    matches: view.matches.map((m, index) => ({
-      timestamp: m.timestamp,
-      date: m.date,
-      teams: { sideA: m.team1, sideB: m.team2 },
-      mvp: m.mvp1,
-      winner: m.winner,
-      rounds: m.rounds,
-      pointsChanges: (view.logsByMatch[index] || []).map((entry) => ({ nick: entry.nick, delta: entry.delta, newPoints: entry.newPoints }))
-    })),
+    matches: mappedMatches,
     gamesCount: view.gamesCount,
     battlesCount: view.battlesCount,
     roundsCount: view.roundsCount,
     metricsExact: view.exact,
-    activePlayers: view.playersToday.map((p) => ({ nick: p.nick, matchesToday: p.games, mvpToday: p.mvp, rankingPlace: null }))
+    activePlayers: view.playersToday.map((p) => {
+      const stats = playerStats.get(normalizeHeader(p.nick)) || { winsToday: 0, drawsToday: 0, lossesToday: 0 };
+      return { nick: p.nick, matchesToday: p.games, mvpToday: p.mvp, winsToday: stats.winsToday, drawsToday: stats.drawsToday, lossesToday: stats.lossesToday, rankingPlace: null };
+    })
   };
 }
 

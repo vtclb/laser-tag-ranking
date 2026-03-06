@@ -118,6 +118,17 @@ function applySavedPlayers(updatedPlayers = []) {
   });
 }
 
+function resetMatchOnlyState() {
+  state.seriesRounds = Array(7).fill(null);
+  syncSeriesMirror();
+  state.match.winner = 'tie';
+  state.match.series = '';
+  state.match.mvp1 = '';
+  state.match.mvp2 = '';
+  state.match.mvp3 = '';
+  state.match.penalties = {};
+}
+
 function validateSave() {
   const keys = TEAM_KEYS.slice(0, state.teamCount);
   if (!keys.every((key) => state.teams[key].length > 0)) return 'Команди не заповнені';
@@ -143,6 +154,8 @@ async function doSave(retry = false) {
     } catch (_) {
       // fallback: list is already updated from save response
     }
+    resetMatchOnlyState();
+    saveLobby();
     setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
     renderAndSync();
   } else {
@@ -275,7 +288,14 @@ async function init() {
     },
     onSeriesCount(count) {
       state.seriesCount = Math.min(7, Math.max(3, Number(count) || 3));
+      const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
+      while (rounds.length < 7) rounds.push(null);
+      for (let i = state.seriesCount; i < 7; i += 1) rounds[i] = null;
+      state.seriesRounds = rounds;
       syncSeriesMirror();
+      const summary = computeSeriesSummary();
+      state.match.winner = summary.winner;
+      state.match.series = summary.series;
       saveLobby();
       renderAndSync();
     },

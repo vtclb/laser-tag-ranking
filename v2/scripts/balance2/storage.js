@@ -44,7 +44,7 @@ export function restoreLobby() {
   };
   ['team1', 'team2', 'team3', 'team4'].slice(state.teamCount).forEach((key) => { state.teams[key] = []; });
   state.mode = data.mode === 'manual' ? 'manual' : 'auto';
-  state.sortMode = ['name_asc', 'name_desc', 'points_desc', 'points_asc'].includes(data?.sortMode) ? data.sortMode : 'name_asc';
+  state.sortMode = ['name_asc', 'name_desc', 'points_desc', 'points_asc'].includes(data?.sortMode) ? data.sortMode : 'points_desc';
   state.seriesCount = Math.min(7, Math.max(3, Number(data?.seriesCount) || 3));
   const restoredSeries = Array.isArray(data?.series) ? data.series.slice(0, 7) : [];
   state.series = restoredSeries.map((v) => (['0', '1', '2', '3', '4'].includes(v) ? v : '-'));

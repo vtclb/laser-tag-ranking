@@ -3,7 +3,7 @@ export const state = {
   teamCount: 2,
   mode: 'auto',
   query: '',
-  sortMode: 'name_asc',
+  sortMode: 'points_desc',
   seriesCount: 3,
   seriesRounds: Array(7).fill(null),
   series: ['-', '-', '-', '-', '-', '-', '-'],
@@ -16,6 +16,25 @@ export const state = {
   lastPayload: null,
   cache: {},
 };
+
+export function sortByPointsDesc(a, b) {
+  const pointsDelta = (Number(b.points ?? b.pts) || 0) - (Number(a.points ?? a.pts) || 0);
+  if (pointsDelta !== 0) return pointsDelta;
+  return String(a.nick || '').localeCompare(String(b.nick || ''), 'uk');
+}
+
+export function updatePlayersFromResponse(players = []) {
+  for (const p of players) {
+    const nick = String(p?.nick || p?.nickname || '').trim();
+    if (!nick) continue;
+    const player = state.players.find((x) => x.nick === nick);
+    if (!player) continue;
+    const points = Number(p.points ?? p.pts ?? player.points ?? player.pts) || 0;
+    player.points = points;
+    player.pts = points;
+    player.rank = String(p.rank || rankLetterForPoints(points));
+  }
+}
 
 export function rankLetterForPoints(points) {
   const pts = Number(points);

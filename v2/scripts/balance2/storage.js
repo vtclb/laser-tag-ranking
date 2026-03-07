@@ -83,3 +83,22 @@ export function loadPlayersCache() {
     state.cache = {};
   }
 }
+
+export function clearPlayersCache(league) {
+  const key = normalizeLeague(league);
+  let cache = {};
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PLAYERS_KEY) || '{}');
+    if (parsed && typeof parsed === 'object') cache = parsed;
+  } catch {
+    cache = {};
+  }
+  delete cache[key];
+  localStorage.setItem(PLAYERS_KEY, JSON.stringify(cache));
+  if (state.cache && typeof state.cache === 'object') delete state.cache[key];
+}
+
+export function clearAllPlayersCache() {
+  localStorage.setItem(PLAYERS_KEY, JSON.stringify({}));
+  state.cache = {};
+}

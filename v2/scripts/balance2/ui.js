@@ -26,6 +26,14 @@ function sortPlayers(players) {
   return copy;
 }
 
+function formatPlayerLine(playerOrNick) {
+  if (!playerOrNick) return '—';
+  const nick = typeof playerOrNick === 'string' ? playerOrNick : playerOrNick.nick;
+  const points = Number(playerOrNick?.points ?? playerOrNick?.pts) || 0;
+  const rank = playerOrNick?.rank || '—';
+  return `${nick} — ${points} (${rank})`;
+}
+
 export function render() {
   renderTeamCountControl();
   renderPlayers();
@@ -62,12 +70,10 @@ function renderPlayers() {
   const frag = document.createDocumentFragment();
   for (const p of players) {
     const selected = isSelected(p.nick);
-    const points = Number(p.points ?? p.pts) || 0;
-    const rank = p.rank || '—';
     const row = document.createElement('div');
     row.className = `player-row ${selected ? 'selected' : ''}`;
     row.dataset.toggle = p.nick;
-    row.innerHTML = `<span>${p.nick} <small class="tag">${points} (${rank})</small></span><span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span>`;
+    row.innerHTML = `<span>${formatPlayerLine(p)}</span><span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span>`;
     frag.appendChild(row);
   }
   list.replaceChildren(frag);
@@ -76,14 +82,13 @@ function renderPlayers() {
 function renderLobby() {
   const wrap = document.getElementById('lobbyList');
   if (!wrap) return;
+  const playersMap = new Map(state.players.map((player) => [player.nick, player]));
   const frag = document.createDocumentFragment();
   for (const nick of state.selected) {
-    const player = state.players.find((p) => p.nick === nick);
-    const points = Number(player?.points ?? player?.pts) || 0;
-    const rank = player?.rank || '—';
+    const player = playersMap.get(nick) || { nick, points: 0, rank: '—' };
     const row = document.createElement('div');
     row.className = 'lobby-row';
-    row.innerHTML = `<span>${nick} <small class="tag">${points} (${rank})</small></span><button class="chip" data-remove="${nick}">Прибрати</button>`;
+    row.innerHTML = `<span>${formatPlayerLine(player)}</span><button class="chip" data-remove="${nick}">Прибрати</button>`;
     frag.appendChild(row);
   }
   wrap.replaceChildren(frag);

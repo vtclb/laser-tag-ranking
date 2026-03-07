@@ -57,9 +57,12 @@
   font-weight: 600;
 }
 .round-btn.active {
-  border-color: rgba(255,255,255,.75);
-  background: rgba(255,255,255,.22);
-  box-shadow: 0 0 0 2px rgba(255,255,255,.15) inset;
+  border-color: rgba(124,255,114,.95);
+  background: linear-gradient(145deg, rgba(124,255,114,.42), rgba(49,208,255,.38));
+  box-shadow:
+    0 0 0 2px rgba(9,13,22,.45) inset,
+    0 0 0 3px rgba(124,255,114,.28),
+    0 0 14px rgba(124,255,114,.48);
 }
 .round-row {
   display: flex;

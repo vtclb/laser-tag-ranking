@@ -3,7 +3,7 @@ import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents } from './ui.js';
 import { loadPlayers, saveMatch } from './api.js';
-import { saveLobby, restoreLobby, peekLobbyRestore } from './storage.js';
+import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 
 const $ = (id) => document.getElementById(id);
@@ -105,7 +105,7 @@ function buildPayload() {
 
 function resetMatchOnlyState() {
   state.seriesRounds = Array(7).fill(null);
-  syncSeriesMirror();
+  state.series = ['-', '-', '-', '-', '-', '-', '-'];
   state.match.winner = 'tie';
   state.match.series = '';
   state.match.mvp1 = '';
@@ -134,14 +134,14 @@ async function doSave(retry = false) {
   if (res.ok) {
     updatePlayersFromResponse(res.data?.players || []);
     try {
-      state.cache[state.league] = [];
+      clearPlayersCache(state.league);
       state.players = normalizeLoadedPlayers(await loadPlayers(state.league));
       state.players.sort(sortByPointsDesc);
     } catch (_) {
       state.players.sort(sortByPointsDesc);
     }
-    renderAndSync();
     resetMatchOnlyState();
+    syncSeriesMirror();
     saveLobby();
     setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
     renderAndSync();

@@ -4,7 +4,7 @@ const DEFAULT_SEASON_ID = 'winter_2025_2026';
 const SEASON_LABELS = {
   summer_2025: 'Літо 2025',
   autumn_2025: 'Осінь 2025',
-  winter_2025_2026: 'Зима 2025–2026'
+  winter_2025_2026: 'Зима 2025–2026',
 };
 
 function escapeHtml(value) {
@@ -33,6 +33,10 @@ function seasonTitle(seasonId) {
   return SEASON_LABELS[seasonId] || String(seasonId || '').replaceAll('_', ' ');
 }
 
+function leagueLabel(league) {
+  return league === 'kids' ? 'Kids' : 'Sunday Games';
+}
+
 function normalizeLeagueSummary(summary = {}) {
   const source = (summary && typeof summary === 'object') ? summary : {};
   const normalized = {};
@@ -46,23 +50,26 @@ function normalizeLeagueSummary(summary = {}) {
 
 function leagueCardsHtml(leagueSummary = {}) {
   const normalized = normalizeLeagueSummary(leagueSummary);
-  const leagues = ['kids', 'sundaygames'];
-  return leagues.map((league) => {
+  return ['kids', 'sundaygames'].map((league) => {
     const row = normalized[league] || {};
-    return `<article class="season-stat-card"><h3>${league === 'kids' ? 'Kids' : 'Sunday Games'}</h3><dl><div><dt>Матчі</dt><dd>${numberOrDash(row.matches ?? row.games)}</dd></div><div><dt>Гравці</dt><dd>${numberOrDash(row.players)}</dd></div><div><dt>Сер. рейтинг</dt><dd>${numberOrDash(row.avg_rating ?? row.average_rating ?? row.rating_avg)}</dd></div></dl></article>`;
+    return `<article class="season-stat-card"><h3>${leagueLabel(league)}</h3><dl><div><dt>Матчі</dt><dd>${numberOrDash(row.matches ?? row.games)}</dd></div><div><dt>Гравці</dt><dd>${numberOrDash(row.players)}</dd></div><div><dt>Сер. рейтинг</dt><dd>${numberOrDash(row.avg_rating ?? row.average_rating ?? row.rating_avg)}</dd></div></dl></article>`;
   }).join('');
 }
 
+function awardValue(value) {
+  if (value && typeof value === 'object') return value.player || value.nick || value.title || value.value || '—';
+  return value;
+}
+
 function awardsHtml(awards = {}) {
-  const source = (awards && typeof awards === 'object') ? awards : {};
-  const entries = Object.entries(source);
+  const entries = Object.entries((awards && typeof awards === 'object') ? awards : {}).sort(([a], [b]) => a.localeCompare(b, 'uk'));
   if (!entries.length) return '<p class="px-card__text">Немає awards для цього сезону.</p>';
-  return `<div class="season-awards-grid">${entries.map(([key, value]) => `<article class="season-award"><small>${dash(key)}</small><strong>${dash(typeof value === 'object' ? value?.player || value?.nick || value?.title || JSON.stringify(value) : value)}</strong></article>`).join('')}</div>`;
+  return `<div class="season-awards-grid">${entries.map(([key, value]) => `<article class="season-award"><small>${dash(key)}</small><strong>${dash(awardValue(value))}</strong></article>`).join('')}</div>`;
 }
 
 function seriesHtml(seriesSummary = {}) {
-  const source = (seriesSummary && typeof seriesSummary === 'object') ? seriesSummary : {};
-  const rows = Object.entries(source);
+  const rows = Object.entries((seriesSummary && typeof seriesSummary === 'object') ? seriesSummary : {})
+    .sort((a, b) => a[0].localeCompare(b[0], 'uk'));
   if (!rows.length) return '<p class="px-card__text">Немає даних серій.</p>';
   return `<div class="season-series-list">${rows.map(([key, value]) => {
     const qty = (value && typeof value === 'object') ? (value.count ?? value.total ?? value.qty) : value;
@@ -72,11 +79,13 @@ function seriesHtml(seriesSummary = {}) {
 }
 
 function playersTableHtml(players = []) {
-  const rows = Array.isArray(players) ? players : [];
+  const rows = Array.isArray(players) ? [...players] : [];
   if (!rows.length) return '<p class="px-card__text">Немає гравців у цьому сезоні.</p>';
-  return `<div class="season-table-wrap"><table class="season-table"><thead><tr><th>League</th><th>Nickname</th><th>Matches</th><th>Wins</th><th>Draws</th><th>Losses</th><th>MVP_total</th><th>Rating_end</th><th>Rating_delta</th><th>Rank_final</th></tr></thead><tbody>${rows.map((player) => {
+
+  rows.sort((a, b) => (Number(b.Rating_end ?? b.rating_end) || 0) - (Number(a.Rating_end ?? a.rating_end) || 0));
+  return `<div class="season-table-wrap"><table class="season-table"><thead><tr><th>Ліга</th><th>Nickname</th><th>Matches</th><th>Wins</th><th>Draws</th><th>Losses</th><th>MVP</th><th>Rating</th><th>Δ Rating</th><th>Rank</th></tr></thead><tbody>${rows.map((player) => {
     const league = normalizeLeague(player.league || player.League || player.league_id || player.lg);
-    return `<tr><td>${dash(league || player.league || player.League)}</td><td>${dash(player.nickname ?? player.nick ?? player.player)}</td><td>${numberOrDash(player.matches)}</td><td>${numberOrDash(player.wins)}</td><td>${numberOrDash(player.draws)}</td><td>${numberOrDash(player.losses)}</td><td>${numberOrDash(player.MVP_total ?? player.mvp_total)}</td><td>${numberOrDash(player.Rating_end ?? player.rating_end)}</td><td>${numberOrDash(player.Rating_delta ?? player.rating_delta)}</td><td>${numberOrDash(player.Rank_final ?? player.rank_final)}</td></tr>`;
+    return `<tr><td>${dash(leagueLabel(league))}</td><td>${dash(player.nickname ?? player.nick ?? player.player)}</td><td>${numberOrDash(player.matches)}</td><td>${numberOrDash(player.wins)}</td><td>${numberOrDash(player.draws)}</td><td>${numberOrDash(player.losses)}</td><td>${numberOrDash(player.MVP_total ?? player.mvp_total)}</td><td>${numberOrDash(player.Rating_end ?? player.rating_end)}</td><td>${numberOrDash(player.Rating_delta ?? player.rating_delta)}</td><td>${numberOrDash(player.Rank_final ?? player.rank_final)}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -92,9 +101,7 @@ function renderSeason(seasonId, master) {
   const seriesEl = document.getElementById('seasonSeries');
 
   if (titleEl) titleEl.textContent = seasonTitle(seasonId);
-  if (heroEl) {
-    heroEl.innerHTML = `<h2 class="px-card__title">${dash(meta.title || seasonTitle(seasonId))}</h2><p class="px-card__text">Період: ${dash(meta.period || meta.date_range)}</p><p class="px-card__text">Оновлено: ${dash(meta.generated || meta.updated || meta.updated_at)}</p>`;
-  }
+  if (heroEl) heroEl.innerHTML = `<h2 class="px-card__title">${dash(meta.title || seasonTitle(seasonId))}</h2><p class="px-card__text">Період: ${dash(meta.period || meta.date_range)}</p><p class="px-card__text">Оновлено: ${dash(meta.generated || meta.updated || meta.updated_at)}</p>`;
   if (summaryEl) summaryEl.innerHTML = leagueCardsHtml(sections.league_summary);
   if (awardsEl) awardsEl.innerHTML = awardsHtml(sections.awards);
   if (playersEl) playersEl.innerHTML = playersTableHtml(sections.players);
@@ -128,20 +135,12 @@ export async function initSeasonPage(params = {}) {
   } catch {
     seasons = [];
   }
-
-  if (!seasons.length) {
-    seasons = ['summer_2025', 'autumn_2025', 'winter_2025_2026'];
-  }
+  if (!seasons.length) seasons = ['summer_2025', 'autumn_2025', 'winter_2025_2026'];
 
   const selected = seasons.includes(params.season) ? params.season : (seasons.includes(DEFAULT_SEASON_ID) ? DEFAULT_SEASON_ID : seasons[0]);
-
   select.innerHTML = seasons.map((seasonId) => `<option value="${escapeHtml(seasonId)}">${escapeHtml(seasonTitle(seasonId))}</option>`).join('');
   select.value = selected;
-
-  select.onchange = () => {
-    const nextSeason = select.value;
-    location.hash = `#season?season=${encodeURIComponent(nextSeason)}`;
-  };
+  select.onchange = () => { location.hash = `#season?season=${encodeURIComponent(select.value)}`; };
 
   await loadAndRenderSeason(selected);
 }

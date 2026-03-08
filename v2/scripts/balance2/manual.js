@@ -1,29 +1,31 @@
 import { state, syncSelectedMap } from './state.js';
 
 export function clearTeams() {
-  state.teams.team1 = [];
-  state.teams.team2 = [];
-  state.teams.team3 = [];
-  state.teams.team4 = [];
+  state.teamsState.teams.team1 = [];
+  state.teamsState.teams.team2 = [];
+  state.teamsState.teams.team3 = [];
+  state.teamsState.teams.team4 = [];
 }
 
 export function syncSelectedFromTeamsAndBench() {
-  const inTeams = new Set(Object.values(state.teams).flat());
+  const inTeams = new Set(Object.values(state.teamsState.teams).flat());
   const withBench = [...inTeams];
-  for (const nick of state.selected) {
+  for (const nick of state.playersState.selected) {
     if (!inTeams.has(nick)) withBench.push(nick);
   }
-  state.selected = [...new Set(withBench)].slice(0, 15);
+  state.playersState.selected = [...new Set(withBench)].slice(0, 15);
   syncSelectedMap();
 }
 
 export function movePlayerToTeam(nick, teamKey) {
-  Object.keys(state.teams).forEach((k) => {
-    state.teams[k] = state.teams[k].filter((n) => n !== nick);
+  Object.keys(state.teamsState.teams).forEach((key) => {
+    state.teamsState.teams[key] = state.teamsState.teams[key].filter((playerNick) => playerNick !== nick);
   });
-  if (teamKey && state.teams[teamKey]) {
-    state.teams[teamKey].push(nick);
-    state.mode = 'manual';
+
+  if (teamKey && state.teamsState.teams[teamKey]) {
+    state.teamsState.teams[teamKey].push(nick);
+    state.app.mode = 'manual';
   }
+
   syncSelectedFromTeamsAndBench();
 }

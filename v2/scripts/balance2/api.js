@@ -11,7 +11,7 @@ export async function loadPlayers(league, { force = false } = {}) {
   const key = normalizeLeague(league);
   if (!force) {
     loadPlayersCache();
-    if (Array.isArray(state.cache[key]) && state.cache[key].length) return state.cache[key];
+    if (Array.isArray(state.playersState.cache[key]) && state.playersState.cache[key].length) return state.playersState.cache[key];
   }
 
   const url = `${PROXY_ORIGIN}/fetchLeagueCsv?league=${key}&cb=${Date.now()}`;
@@ -28,7 +28,7 @@ export async function loadPlayers(league, { force = false } = {}) {
     return { nick, pts: Number(cols[idx('pts')] || cols[idx('points')] || 0) || 0, rank: (cols[idx('rank')] || '').trim() };
   }).filter(Boolean);
 
-  state.cache[key] = players;
+  state.playersState.cache[key] = players;
   savePlayersCache();
   return players;
 }

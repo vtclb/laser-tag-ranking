@@ -5,16 +5,12 @@ const PLAYERS_KEY = 'balance2:playersCache';
 
 export function saveLobby() {
   const data = {
-    league: state.league,
-    teamCount: state.teamCount,
-    selected: state.selected,
-    teams: state.teams,
-    teamNames: state.teamNames,
-    mode: state.mode,
-    sortMode: state.sortMode,
-    seriesCount: state.seriesCount,
-    series: state.series,
-    match: state.match,
+    app: state.app,
+    playersState: {
+      selected: state.playersState.selected,
+    },
+    teamsState: state.teamsState,
+    matchState: state.matchState,
   };
   localStorage.setItem(KEY, JSON.stringify(data));
 }
@@ -26,61 +22,69 @@ export function peekLobbyRestore() {
 export function restoreLobby() {
   const data = peekLobbyRestore();
   if (!data) return false;
-  state.league = normalizeLeague(data.league);
-  state.teamCount = Math.min(4, Math.max(2, Number(data.teamCount || data.teamsCount) || 2));
-  state.selected = Array.isArray(data.selected) ? data.selected.slice(0, 15) : [];
+
+  state.app.league = normalizeLeague(data?.app?.league || data?.league);
+  state.app.mode = (data?.app?.mode || data?.mode) === 'manual' ? 'manual' : 'auto';
+  state.app.sortMode = ['name_asc', 'name_desc', 'points_desc', 'points_asc'].includes(data?.app?.sortMode || data?.sortMode)
+    ? (data?.app?.sortMode || data?.sortMode)
+    : 'points_desc';
+  state.app.query = '';
+
+  state.playersState.selected = Array.isArray(data?.playersState?.selected || data?.selected)
+    ? (data.playersState?.selected || data.selected).slice(0, 15)
+    : [];
   syncSelectedMap();
-  state.teams = {
-    team1: Array.isArray(data?.teams?.team1) ? data.teams.team1 : [],
-    team2: Array.isArray(data?.teams?.team2) ? data.teams.team2 : [],
-    team3: Array.isArray(data?.teams?.team3) ? data.teams.team3 : [],
-    team4: Array.isArray(data?.teams?.team4) ? data.teams.team4 : [],
-  };
-  state.teamNames = {
-    team1: String(data?.teamNames?.team1 || 'Команда 1').trim() || 'Команда 1',
-    team2: String(data?.teamNames?.team2 || 'Команда 2').trim() || 'Команда 2',
-    team3: String(data?.teamNames?.team3 || 'Команда 3').trim() || 'Команда 3',
-    team4: String(data?.teamNames?.team4 || 'Команда 4').trim() || 'Команда 4',
-  };
-  ['team1', 'team2', 'team3', 'team4'].slice(state.teamCount).forEach((key) => { state.teams[key] = []; });
-  state.mode = data.mode === 'manual' ? 'manual' : 'auto';
-  state.sortMode = ['name_asc', 'name_desc', 'points_desc', 'points_asc'].includes(data?.sortMode) ? data.sortMode : 'points_desc';
-  state.seriesCount = Math.min(7, Math.max(3, Number(data?.seriesCount) || 3));
-  const restoredSeries = Array.isArray(data?.series) ? data.series.slice(0, 7) : [];
-  state.series = restoredSeries.map((v) => (['0', '1', '2', '3', '4'].includes(v) ? v : '-'));
-  while (state.series.length < 7) state.series.push('-');
-  state.match = {
-    winner: data?.match?.winner || '',
-    mvp1: data?.match?.mvp1 || '',
-    mvp2: data?.match?.mvp2 || '',
-    mvp3: data?.match?.mvp3 || '',
-    series: data?.match?.series || '',
-    penalties: data?.match?.penalties && typeof data.match.penalties === 'object' ? data.match.penalties : {},
+
+  state.teamsState.teamCount = Math.min(4, Math.max(2, Number(data?.teamsState?.teamCount || data?.teamCount || data?.teamsCount) || 2));
+  const restoredTeams = data?.teamsState?.teams || data?.teams || {};
+  state.teamsState.teams = {
+    team1: Array.isArray(restoredTeams.team1) ? restoredTeams.team1 : [],
+    team2: Array.isArray(restoredTeams.team2) ? restoredTeams.team2 : [],
+    team3: Array.isArray(restoredTeams.team3) ? restoredTeams.team3 : [],
+    team4: Array.isArray(restoredTeams.team4) ? restoredTeams.team4 : [],
   };
 
-  if (!Array.isArray(data?.series) && Array.isArray(data?.match?.seriesRounds)) {
-    const legacy = data.match.seriesRounds.slice(0, 7).map((v) => (['0', '1', '2', '3', '4'].includes(v) ? v : '-'));
-    while (legacy.length < 7) legacy.push('-');
-    state.series = legacy;
-    state.seriesCount = Math.min(7, Math.max(3, Number(legacy.filter((v) => v !== '-').length) || 3));
-  }
+  const names = data?.teamsState?.teamNames || data?.teamNames || {};
+  state.teamsState.teamNames = {
+    team1: String(names.team1 || 'Команда 1').trim() || 'Команда 1',
+    team2: String(names.team2 || 'Команда 2').trim() || 'Команда 2',
+    team3: String(names.team3 || 'Команда 3').trim() || 'Команда 3',
+    team4: String(names.team4 || 'Команда 4').trim() || 'Команда 4',
+  };
+
+  const matchState = data?.matchState || {};
+  state.matchState.seriesCount = Math.min(7, Math.max(3, Number(matchState.seriesCount || data?.seriesCount) || 3));
+  const restoredSeries = Array.isArray(matchState.series || data?.series) ? (matchState.series || data.series).slice(0, 7) : [];
+  state.matchState.series = restoredSeries.map((v) => (['0', '1', '2', '3', '4'].includes(String(v)) ? String(v) : '-'));
+  while (state.matchState.series.length < 7) state.matchState.series.push('-');
+  state.matchState.seriesRounds = state.matchState.series.map((v) => (v === '-' ? null : Number(v)));
+
+  const oldMatch = matchState.match || data?.match || {};
+  state.matchState.match = {
+    winner: oldMatch.winner || '',
+    series: oldMatch.series || '',
+    mvp1: oldMatch.mvp1 || '',
+    mvp2: oldMatch.mvp2 || '',
+    mvp3: oldMatch.mvp3 || '',
+    penalties: oldMatch.penalties && typeof oldMatch.penalties === 'object' ? oldMatch.penalties : {},
+  };
 
   const summary = computeSeriesSummary();
-  state.match.winner = summary.winner;
-  state.match.series = summary.series;
+  state.matchState.match.winner = summary.winner;
+  state.matchState.match.series = summary.series;
   return true;
 }
 
 export function savePlayersCache() {
-  localStorage.setItem(PLAYERS_KEY, JSON.stringify(state.cache));
+  localStorage.setItem(PLAYERS_KEY, JSON.stringify(state.playersState.cache));
 }
 
 export function loadPlayersCache() {
   try {
     const data = JSON.parse(localStorage.getItem(PLAYERS_KEY) || '{}');
-    if (data && typeof data === 'object') state.cache = data;
+    state.playersState.cache = data && typeof data === 'object' ? data : {};
   } catch {
-    state.cache = {};
+    state.playersState.cache = {};
   }
 }
 
@@ -95,10 +99,5 @@ export function clearPlayersCache(league) {
   }
   delete cache[key];
   localStorage.setItem(PLAYERS_KEY, JSON.stringify(cache));
-  if (state.cache && typeof state.cache === 'object') delete state.cache[key];
-}
-
-export function clearAllPlayersCache() {
-  localStorage.setItem(PLAYERS_KEY, JSON.stringify({}));
-  state.cache = {};
+  if (state.playersState.cache && typeof state.playersState.cache === 'object') delete state.playersState.cache[key];
 }

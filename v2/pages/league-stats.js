@@ -42,7 +42,8 @@ export async function initLeagueStatsPage(params = {}) {
     }
 
     const snapshot = await getLeagueSnapshot(toDataHubLeague(league), seasonId);
-    const tableRows = Array.isArray(snapshot?.table) ? snapshot.table : [];
+    const tableRows = Array.isArray(snapshot?.table) ? [...snapshot.table] : [];
+    tableRows.sort((a, b) => (Number(a.place) || 9999) - (Number(b.place) || 9999) || String(a.nick || '').localeCompare(String(b.nick || ''), 'uk'));
 
     state.textContent = `${snapshot?.seasonTitle || seasonId} · ${leagueLabelUA(league)}`;
     rows.innerHTML = tableRows.length

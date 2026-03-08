@@ -1,61 +1,115 @@
-import { getSeasonsList, getSeasonDashboard, safeErrorMessage } from '../core/dataHub.js';
-import { normalizeLeague, leagueLabelUA, toDataHubLeague } from '../core/naming.js';
+import { listSeasonMasters, getSeasonMaster, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
 
-function errorCard(message) {
-  return `<section class="px-card px-card--accent"><h2 class="px-card__title">Помилка</h2><p class="px-card__text">${message}</p><div class="px-card__actions"><a class="btn" href="#seasons">Повернутись до сезонів</a></div></section>`;
+const DEFAULT_SEASON_ID = 'winter_2025_2026';
+const SEASON_LABELS = {
+  summer_2025: 'Літо 2025',
+  autumn_2025: 'Осінь 2025',
+  winter_2025_2026: 'Зима 2025–2026'
+};
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
-function playerRow(player) {
-  return `<article class="player-row"><div class="player-pos">#${player.place ?? '—'}</div><div class="player-meta"><strong>${player.nick || '—'}</strong><span>${player.games ?? 0} ігор</span></div><div class="player-score"><strong>${player.points ?? 0} pts</strong><span>WR ${player.winRate ?? 0}%</span></div><div class="player-rankbadge rank-badge rank--${String(player.rank?.label || 'F').toUpperCase()}">${player.rank?.label || 'F'}</div></article>`;
+function dash(value) {
+  if (value === null || value === undefined) return '—';
+  const text = String(value).trim();
+  return text ? escapeHtml(text) : '—';
 }
 
-function rankRows(dist = {}) {
-  return ['S', 'A', 'B', 'C', 'D', 'E', 'F'].map((rank) => `<div class="rank-row"><span class="rank-badge rank--${rank}">${rank}</span><b>${Number(dist[rank]) || 0}</b></div>`).join('');
+function numberOrDash(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return dash(value);
+  return String(Number.isInteger(n) ? n : Number(n.toFixed(2)));
 }
 
-async function renderDashboard({ seasonId, league }) {
-  const seasonPageTitle = document.getElementById('seasonPageTitle');
-  const heroStats = document.getElementById('heroStats');
-  const rankDistribution = document.getElementById('rankDistribution');
-  const playersList = document.getElementById('playersList');
-  const state = document.getElementById('state');
-  const seasonSelect = document.getElementById('seasonSelect');
-  const leagueSelect = document.getElementById('leagueSelect');
+function seasonTitle(seasonId) {
+  return SEASON_LABELS[seasonId] || String(seasonId || '').replaceAll('_', ' ');
+}
 
-  if (!seasonPageTitle || !heroStats || !rankDistribution || !playersList || !state || !seasonSelect || !leagueSelect) {
-    throw new Error('Сторінка сезону не ініціалізована');
+function normalizeLeagueSummary(summary = {}) {
+  const source = (summary && typeof summary === 'object') ? summary : {};
+  const normalized = {};
+  Object.entries(source).forEach(([key, value]) => {
+    const league = normalizeLeague(key);
+    if (!league) return;
+    normalized[league] = (value && typeof value === 'object') ? value : {};
+  });
+  return normalized;
+}
+
+function leagueCardsHtml(leagueSummary = {}) {
+  const normalized = normalizeLeagueSummary(leagueSummary);
+  const leagues = ['kids', 'sundaygames'];
+  return leagues.map((league) => {
+    const row = normalized[league] || {};
+    return `<article class="season-stat-card"><h3>${league === 'kids' ? 'Kids' : 'Sunday Games'}</h3><dl><div><dt>Матчі</dt><dd>${numberOrDash(row.matches ?? row.games)}</dd></div><div><dt>Гравці</dt><dd>${numberOrDash(row.players)}</dd></div><div><dt>Сер. рейтинг</dt><dd>${numberOrDash(row.avg_rating ?? row.average_rating ?? row.rating_avg)}</dd></div></dl></article>`;
+  }).join('');
+}
+
+function awardsHtml(awards = {}) {
+  const source = (awards && typeof awards === 'object') ? awards : {};
+  const entries = Object.entries(source);
+  if (!entries.length) return '<p class="px-card__text">Немає awards для цього сезону.</p>';
+  return `<div class="season-awards-grid">${entries.map(([key, value]) => `<article class="season-award"><small>${dash(key)}</small><strong>${dash(typeof value === 'object' ? value?.player || value?.nick || value?.title || JSON.stringify(value) : value)}</strong></article>`).join('')}</div>`;
+}
+
+function seriesHtml(seriesSummary = {}) {
+  const source = (seriesSummary && typeof seriesSummary === 'object') ? seriesSummary : {};
+  const rows = Object.entries(source);
+  if (!rows.length) return '<p class="px-card__text">Немає даних серій.</p>';
+  return `<div class="season-series-list">${rows.map(([key, value]) => {
+    const qty = (value && typeof value === 'object') ? (value.count ?? value.total ?? value.qty) : value;
+    const share = (value && typeof value === 'object') ? (value.share ?? value.percent ?? value.ratio) : null;
+    return `<article class="season-series-item"><strong>${dash(key)}</strong><span>${numberOrDash(qty)}${share !== null && share !== undefined && share !== '' ? ` • ${numberOrDash(share)}%` : ''}</span></article>`;
+  }).join('')}</div>`;
+}
+
+function playersTableHtml(players = []) {
+  const rows = Array.isArray(players) ? players : [];
+  if (!rows.length) return '<p class="px-card__text">Немає гравців у цьому сезоні.</p>';
+  return `<div class="season-table-wrap"><table class="season-table"><thead><tr><th>League</th><th>Nickname</th><th>Matches</th><th>Wins</th><th>Draws</th><th>Losses</th><th>MVP_total</th><th>Rating_end</th><th>Rating_delta</th><th>Rank_final</th></tr></thead><tbody>${rows.map((player) => {
+    const league = normalizeLeague(player.league || player.League || player.league_id || player.lg);
+    return `<tr><td>${dash(league || player.league || player.League)}</td><td>${dash(player.nickname ?? player.nick ?? player.player)}</td><td>${numberOrDash(player.matches)}</td><td>${numberOrDash(player.wins)}</td><td>${numberOrDash(player.draws)}</td><td>${numberOrDash(player.losses)}</td><td>${numberOrDash(player.MVP_total ?? player.mvp_total)}</td><td>${numberOrDash(player.Rating_end ?? player.rating_end)}</td><td>${numberOrDash(player.Rating_delta ?? player.rating_delta)}</td><td>${numberOrDash(player.Rank_final ?? player.rank_final)}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+function renderSeason(seasonId, master) {
+  const sections = master?.sections || {};
+  const meta = sections.season_meta || {};
+
+  const titleEl = document.getElementById('seasonPageTitle');
+  const heroEl = document.getElementById('seasonHero');
+  const summaryEl = document.getElementById('seasonLeagueSummary');
+  const awardsEl = document.getElementById('seasonAwards');
+  const playersEl = document.getElementById('seasonPlayers');
+  const seriesEl = document.getElementById('seasonSeries');
+
+  if (titleEl) titleEl.textContent = seasonTitle(seasonId);
+  if (heroEl) {
+    heroEl.innerHTML = `<h2 class="px-card__title">${dash(meta.title || seasonTitle(seasonId))}</h2><p class="px-card__text">Період: ${dash(meta.period || meta.date_range)}</p><p class="px-card__text">Оновлено: ${dash(meta.generated || meta.updated || meta.updated_at)}</p>`;
   }
+  if (summaryEl) summaryEl.innerHTML = leagueCardsHtml(sections.league_summary);
+  if (awardsEl) awardsEl.innerHTML = awardsHtml(sections.awards);
+  if (playersEl) playersEl.innerHTML = playersTableHtml(sections.players);
+  if (seriesEl) seriesEl.innerHTML = seriesHtml(sections.series_summary);
+}
 
-  const seasons = await getSeasonsList();
-  seasonSelect.innerHTML = seasons.map((season) => `<option value="${season.id}">${season.title}</option>`).join('');
-  seasonSelect.value = seasonId;
-  leagueSelect.value = league;
-
-  const pushRoute = () => {
-    location.hash = `#season?league=${leagueSelect.value}&season=${encodeURIComponent(seasonSelect.value)}`;
-  };
-  seasonSelect.onchange = pushRoute;
-  leagueSelect.onchange = pushRoute;
-
-  heroStats.innerHTML = '<p class="px-card__text">Завантаження…</p>';
-
+async function loadAndRenderSeason(seasonId) {
+  const stateEl = document.getElementById('seasonState');
+  if (stateEl) stateEl.textContent = 'Завантаження...';
   try {
-    const data = await getSeasonDashboard(seasonId, toDataHubLeague(league));
-    seasonPageTitle.textContent = `Деталі сезону · ${leagueLabelUA(league)}`;
-    heroStats.innerHTML = `<div class="px-badge">${leagueLabelUA(league)}</div><h2 class="px-card__title">${data.seasonTitle}</h2><div class="stat-grid"><article class="stat-tile"><small>Раундів</small><strong>${data.totals.rounds ?? 0}</strong></article><article class="stat-tile"><small>Гравців</small><strong>${data.totals.players ?? 0}</strong></article><article class="stat-tile"><small>Ігор</small><strong>${data.totals.games ?? 0}</strong></article></div>`;
-    rankDistribution.innerHTML = `<h2 class="px-card__title">Розподіл рангів</h2><div class="rank-bars">${rankRows(data.rankDistribution)}</div>`;
-    const players = Array.isArray(data.tablePlayers) ? data.tablePlayers : [];
-    if (!players.length) {
-      playersList.innerHTML = '<p class="px-card__text">Немає даних за цей сезон</p><a class="btn" href="#seasons">Повернутись до сезонів</a>';
-      state.textContent = 'Немає даних';
-      return;
-    }
-    playersList.innerHTML = players.map(playerRow).join('');
-    state.textContent = '';
+    const master = await getSeasonMaster(seasonId);
+    renderSeason(seasonId, master);
+    if (stateEl) stateEl.textContent = '';
   } catch (error) {
-    playersList.innerHTML = `<p class="px-card__text">${safeErrorMessage(error, 'Дані тимчасово недоступні')}</p><a class="btn" href="#seasons">Повернутись до сезонів</a>`;
-    rankDistribution.innerHTML = '';
-    state.textContent = 'Немає даних';
+    if (stateEl) stateEl.textContent = safeErrorMessage(error, 'Не вдалося завантажити сезонні дані');
   }
 }
 
@@ -63,19 +117,31 @@ export async function initSeasonPage(params = {}) {
   const root = document.getElementById('view');
   if (!root) return;
 
-  const league = normalizeLeague(params.league);
-  const seasonId = String(params.season || '').trim();
+  root.innerHTML = `<section class="px-card season-header"><h1 class="px-card__title" id="seasonPageTitle">Сезон</h1></section><section class="px-card px-card--accent"><div class="season-controls-row"><select id="seasonSelect" class="search-input" aria-label="Обрати сезон"></select></div><div id="seasonHero"></div></section><section class="px-card"><h2 class="px-card__title">League summary</h2><div class="season-league-cards" id="seasonLeagueSummary"></div></section><section class="px-card"><h2 class="px-card__title">Awards</h2><div id="seasonAwards"></div></section><section class="px-card"><h2 class="px-card__title">Players</h2><div id="seasonPlayers"></div></section><section class="px-card"><h2 class="px-card__title">Series summary</h2><div id="seasonSeries"></div><p class="px-card__text" id="seasonState"></p></section>`;
 
-  if (!seasonId) {
-    root.innerHTML = errorCard('Не вказано сезон');
-    return;
+  const select = document.getElementById('seasonSelect');
+  if (!select) return;
+
+  let seasons = [];
+  try {
+    seasons = await listSeasonMasters();
+  } catch {
+    seasons = [];
   }
-  if (!league) {
-    root.innerHTML = errorCard('Не вказано лігу');
-    return;
+
+  if (!seasons.length) {
+    seasons = ['summer_2025', 'autumn_2025', 'winter_2025_2026'];
   }
 
-  root.innerHTML = `<section class="px-card season-header"><h1 class="px-card__title" id="seasonPageTitle">Деталі сезону</h1></section><section class="px-card px-card--accent season-controls-card"><div class="season-controls-row"><select id="seasonSelect" class="search-input" aria-label="Обрати сезон"></select><select id="leagueSelect" class="search-input" aria-label="Обрати лігу"><option value="kids">${leagueLabelUA('kids')}</option><option value="olds">${leagueLabelUA('olds')}</option></select></div><div id="heroStats"></div></section><section class="px-card" id="rankDistribution"></section><section class="px-card"><h2 class="px-card__title">Гравці сезону</h2><div id="playersList"></div><p class="px-card__text" id="state"></p></section>`;
+  const selected = seasons.includes(params.season) ? params.season : (seasons.includes(DEFAULT_SEASON_ID) ? DEFAULT_SEASON_ID : seasons[0]);
 
-  await renderDashboard({ seasonId, league });
+  select.innerHTML = seasons.map((seasonId) => `<option value="${escapeHtml(seasonId)}">${escapeHtml(seasonTitle(seasonId))}</option>`).join('');
+  select.value = selected;
+
+  select.onchange = () => {
+    const nextSeason = select.value;
+    location.hash = `#season?season=${encodeURIComponent(nextSeason)}`;
+  };
+
+  await loadAndRenderSeason(selected);
 }

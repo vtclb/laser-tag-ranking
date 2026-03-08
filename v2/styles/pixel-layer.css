@@ -421,3 +421,63 @@ body::before, body::after { z-index: 0; }
 .rank-D { color: var(--rank-d); }
 .rank-E { color: var(--rank-e); }
 .rank-F { color: var(--rank-f); }
+
+.season-league-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.season-stat-card {
+  border: 1px solid rgba(173, 232, 255, 0.22);
+  background: rgba(8, 13, 24, 0.78);
+  padding: 10px;
+  border-radius: 10px;
+}
+.season-stat-card h3 { margin: 0 0 8px; }
+.season-stat-card dl { margin: 0; display: grid; gap: 8px; }
+.season-stat-card dt { font-size: .72rem; opacity: .85; }
+.season-stat-card dd { margin: 0; font-family: var(--font-mono); }
+
+.season-awards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.season-award {
+  border: 1px solid rgba(255, 209, 102, 0.45);
+  background: rgba(21, 17, 6, 0.55);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.season-series-list { display: grid; gap: 8px; }
+.season-series-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid rgba(173, 232, 255, 0.16);
+  padding-bottom: 8px;
+}
+.season-series-item:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.season-table-wrap { overflow-x: auto; }
+.season-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+.season-table th,
+.season-table td {
+  border: 1px solid rgba(173, 232, 255, 0.2);
+  padding: 8px;
+  text-align: left;
+}
+.season-table th { background: rgba(8, 13, 24, 0.9); }
+
+@media (max-width: 560px) {
+  .season-league-cards,
+  .season-awards-grid { grid-template-columns: 1fr; }
+}

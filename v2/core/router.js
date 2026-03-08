@@ -135,7 +135,7 @@ async function renderRoute() {
   if (route === 'season') {
     await mountTemplate('./pages/season.html');
     const { initSeasonPage } = await import('../pages/season.js');
-    await initSeasonPage({ season: queryParams.season, league: normalizeLeague(queryParams.league) });
+    await initSeasonPage({ season: queryParams.season });
     return;
   }
 

@@ -1,11 +1,15 @@
-import { getSeasonsList, safeErrorMessage } from '../core/dataHub.js';
-import { leagueLabelUA } from '../core/naming.js';
+import { listSeasonMasters, safeErrorMessage } from '../core/dataHub.js';
 
-function seasonCard(season = {}) {
-  const dateFrom = season.dateFrom || '—';
-  const dateTo = season.dateTo || '—';
-  const seasonId = encodeURIComponent(season.id || '');
-  return `<article class="px-card px-card--accent season-list-card"><h2 class="px-card__title">${season.title || season.id || 'Сезон'}</h2><p class="px-card__text">${dateFrom} — ${dateTo}</p><div class="hero__actions"><a class="btn btn--primary" href="#season?season=${seasonId}&league=kids">${leagueLabelUA('kids')}</a><a class="btn btn--secondary" href="#season?season=${seasonId}&league=olds">${leagueLabelUA('olds')}</a></div></article>`;
+const SEASON_LABELS = {
+  summer_2025: 'Літо 2025',
+  autumn_2025: 'Осінь 2025',
+  winter_2025_2026: 'Зима 2025–2026'
+};
+
+function seasonCard(seasonId = '') {
+  const seasonKey = encodeURIComponent(seasonId);
+  const label = SEASON_LABELS[seasonId] || seasonId;
+  return `<article class="px-card px-card--accent season-list-card"><h2 class="px-card__title">${label}</h2><div class="hero__actions"><a class="btn btn--primary" href="#season?season=${seasonKey}">Відкрити сезон</a></div></article>`;
 }
 
 export async function initSeasonsPage() {
@@ -13,7 +17,7 @@ export async function initSeasonsPage() {
   if (!root) return;
   root.innerHTML = '<section class="px-card"><p class="px-card__text">Завантаження сезонів…</p></section>';
   try {
-    const seasons = await getSeasonsList();
+    const seasons = await listSeasonMasters();
     if (!Array.isArray(seasons) || seasons.length === 0) {
       root.innerHTML = '<section class="px-card"><h2 class="px-card__title">Сезони</h2><p class="px-card__text">Немає доступних сезонів.</p></section>';
       return;

@@ -51,9 +51,12 @@ const RANK_META = {
 const RANK_THRESHOLDS = [['S', 1200], ['A', 1000], ['B', 800], ['C', 600], ['D', 400], ['E', 200], ['F', 0]];
 const MAX_BATTLES_PER_GAME = 7;
 const ARCHIVE_LIMIT_ROWS = 1000;
+const SEASON_MASTER_API_URL = 'https://script.google.com/macros/s/AKfycbyDdfnyXW_RPX3TWN-WLK5whqS366ZhacX1nYJ4tVkfx898_CHhAZDB13eTYKgn5n7Q/exec';
+const seasonCache = {};
+
 
 function normalizeHeader(value = '') { return String(value || '').trim().toLowerCase(); }
-function normalizeLeague(league = '') {
+export function normalizeLeague(league = '') {
   const lg = normalizeHeader(league);
   if (lg === 'kids') return 'kids';
   if (['olds', 'sundaygames', 'sunday', 'adults'].includes(lg)) return 'sundaygames';
@@ -75,6 +78,44 @@ function safeErrorMessage(error, fallback = 'Не вдалося заванта�
   if (!error) return fallback;
   return error.message || String(error) || fallback;
 }
+
+async function fetchSeasonMasterApi(params = {}, timeoutMs = 12_000) {
+  const action = String(params.action || '').trim();
+  if (!action) throw new Error('Season API action is required');
+  const query = new URLSearchParams({ ...params, action });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${SEASON_MASTER_API_URL}?${query.toString()}`, {
+      method: 'GET',
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    if ((error?.name || '').includes('Abort')) throw new Error('Season API недоступний / timeout');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function normalizeSeasonMasterPayload(payload, seasonId = '') {
+  if (payload && typeof payload === 'object') {
+    if (payload.data) return normalizeSeasonMasterPayload(payload.data, seasonId);
+    if (payload.result) return normalizeSeasonMasterPayload(payload.result, seasonId);
+  }
+
+  if (!payload || typeof payload !== 'object') return { seasonId, sections: {} };
+  const sections = payload.sections && typeof payload.sections === 'object' ? payload.sections : {};
+  return {
+    ...payload,
+    seasonId: payload.season || payload.seasonId || seasonId,
+    sections
+  };
+}
+
 
 export function rankFromPoints(points = 0) {
   for (const [rank, min] of RANK_THRESHOLDS) if ((points || 0) >= min) return rank;
@@ -1060,6 +1101,55 @@ export async function getGameDayView({ dateYMD, league } = {}) {
   return writeCache(key, view);
 }
 
+export async function listSeasonMasters() {
+  const key = 'season-masters:list';
+  const cached = readCache(key, TTL.seasonDashboard);
+  if (cached) return cached;
+
+  const payload = await fetchSeasonMasterApi({ action: 'listSeasonMasters' });
+  const raw = payload?.seasons || payload?.items || payload?.list || payload?.data || payload?.result || [];
+  const list = Array.isArray(raw)
+    ? raw
+      .map((item) => {
+        if (typeof item === 'string') return item.trim();
+        return String(item?.id || item?.season || item?.seasonId || '').trim();
+      })
+      .filter(Boolean)
+    : [];
+  return writeCache(key, list);
+}
+
+export async function getSeasonMaster(seasonId) {
+  const season = String(seasonId || '').trim();
+  if (!season) throw new Error('seasonId is required');
+  if (seasonCache[season]) return seasonCache[season];
+
+  const payload = await fetchSeasonMasterApi({ action: 'getSeasonMaster', season });
+  const normalized = normalizeSeasonMasterPayload(payload, season);
+  seasonCache[season] = normalized;
+  return normalized;
+}
+
+export async function getSeasonSection(seasonId, sectionName) {
+  const season = String(seasonId || '').trim();
+  const section = String(sectionName || '').trim();
+  if (!season) throw new Error('seasonId is required');
+  if (!section) throw new Error('sectionName is required');
+
+  const cachedMaster = seasonCache[season];
+  if (cachedMaster?.sections && Object.prototype.hasOwnProperty.call(cachedMaster.sections, section)) {
+    return cachedMaster.sections[section];
+  }
+
+  const payload = await fetchSeasonMasterApi({ action: 'getSeasonSection', season, section });
+  const sectionData = payload?.sectionData || payload?.section || payload?.data || payload?.result || {};
+
+  if (!seasonCache[season]) seasonCache[season] = { seasonId: season, sections: {} };
+  if (!seasonCache[season].sections || typeof seasonCache[season].sections !== 'object') seasonCache[season].sections = {};
+  seasonCache[season].sections[section] = sectionData;
+  return sectionData;
+}
+
 export async function getSeasonsList() {
   const cfg = await loadSeasonsConfig();
   return cfg.seasons.filter((s) => s.enabled !== false).map((s) => ({ id: s.id, title: s.uiLabel, dateFrom: s.dateStart, dateTo: s.dateEnd, source: s.sources }));
@@ -1295,4 +1385,4 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
 export async function getSeasons() { return loadSeasonsConfig(); }
 export async function ping() { return gasCall('ping', {}, 8_000, 5_000); }
 
-export { normalizeLeague, safeErrorMessage };
+export { safeErrorMessage };

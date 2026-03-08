@@ -17,20 +17,34 @@
     </section>
 
     <section class="card hidden" id="restoreCard">
-      <div class="restore-row">
-        <span>Є збережене лобі. Відновити?</span>
-        <button id="restoreBtn" class="chip">Відновити лобі</button>
+      <h3>Відновлення</h3>
+      <p class="section-hint">Знайдено збережений стан лобі.</p>
+      <button id="restoreBtn" class="chip" type="button">Відновити лобі</button>
+    </section>
+
+    <section class="card">
+      <h3>Ліга</h3>
+      <p class="section-hint">Оберіть лігу і завантажте актуальний список гравців.</p>
+      <div class="league-controls">
+        <label class="league-label" for="leagueSelect">Ліга</label>
+        <select id="leagueSelect" class="chip">
+          <option value="kids">Дитяча ліга</option>
+          <option value="sundaygames">Доросла ліга</option>
+        </select>
+        <button id="loadPlayersBtn" class="chip" type="button">Завантажити гравців</button>
       </div>
     </section>
 
     <section class="card">
+      <h3>Гравці</h3>
+      <p class="section-hint">Пошук лише по ніку. Відсортуй і додай у лобі.</p>
       <div class="search-row">
-        <input id="searchInput" class="search-input" type="search" placeholder="Швидкий пошук...">
+        <input id="searchInput" class="search-input" type="search" placeholder="Пошук по ніку...">
         <select id="sortMode" class="chip">
           <option value="points_desc">Очки ↓</option>
           <option value="points_asc">Очки ↑</option>
-          <option value="name_asc">А→Я (Нік)</option>
-          <option value="name_desc">Я→А (Нік)</option>
+          <option value="name_asc">А→Я</option>
+          <option value="name_desc">Я→А</option>
         </select>
       </div>
       <div class="counts-row">
@@ -42,45 +56,33 @@
 
     <section class="card">
       <div class="section-head">
-        <h3>Лобі (макс 15)</h3>
-        <div class="row-btns">
-          <button id="clearLobbyBtn" class="chip">Очистити</button>
-        </div>
+        <h3>Лобі</h3>
+        <button id="clearLobbyBtn" class="chip" type="button">Очистити</button>
       </div>
+      <p class="section-hint">До 15 гравців для балансування та матчу.</p>
       <div id="lobbyList" class="lobby-list"></div>
     </section>
 
     <section class="card" id="teamsCard">
-      <div class="section-head">
-        <h3>Команди</h3>
-        <div class="league-controls">
-          <label class="league-label" for="leagueSelect">Ліга</label>
-          <select id="leagueSelect" class="chip">
-            <option value="kids">Дитяча ліга</option>
-            <option value="sundaygames">Доросла ліга</option>
-          </select>
-          <button id="loadPlayersBtn" class="chip">Завантажити гравців</button>
-        </div>
-        <small class="section-hint section-hint-tight">Оберіть лігу і натисніть «Завантажити», щоб підтягнути список гравців</small>
-        <div id="teamCountControl" class="series-count-choices">
-          <button type="button" class="chip" data-team-count="2">2 команди</button>
-          <button type="button" class="chip" data-team-count="3">3 команди</button>
-          <button type="button" class="chip" data-team-count="4">4 команди</button>
-        </div>
-        <div class="row-btns">
-          <button id="balanceBtn" class="chip">Балансувати</button>
-          <button id="manualBtn" class="chip">Ручний</button>
-        </div>
+      <h3>Команди</h3>
+      <p class="section-hint">Автобаланс або ручний розподіл із лавкою.</p>
+      <div id="teamCountControl" class="series-count-choices">
+        <button type="button" class="chip" data-team-count="2">2 команди</button>
+        <button type="button" class="chip" data-team-count="3">3 команди</button>
+        <button type="button" class="chip" data-team-count="4">4 команди</button>
       </div>
-      <p class="section-hint">Баланс — автоматично, ручний — розкладай сам</p>
+      <div class="row-btns">
+        <button id="balanceBtn" class="chip" type="button">Балансувати</button>
+        <button id="manualBtn" class="chip" type="button">Ручний</button>
+      </div>
       <div id="teamsGrid" class="teams-grid"></div>
     </section>
 
     <section class="card" id="matchCard">
-      <h3>Матч / Зберегти</h3>
-      <p class="section-hint">Вкажи результати серії, MVP та штрафи, потім збережи</p>
+      <h3>Матч</h3>
+      <p class="section-hint">Відміть серію, MVP і штрафи, потім збережи.</p>
       <div id="matchTeamsPreview" class="teams-grid"></div>
-      <h4>Серія (3–7 боїв)</h4>
+
       <div class="series-count" id="seriesCountOptions">
         <span>К-сть боїв:</span>
         <div class="series-count-choices">
@@ -89,22 +91,26 @@
           <button class="chip" type="button" data-series-count="5">5</button>
           <button class="chip" type="button" data-series-count="6">6</button>
           <button class="chip" type="button" data-series-count="7">7</button>
-          <button class="chip" type="button" data-series-reset="1">Очистити серію</button>
+          <button class="chip" type="button" data-series-reset="1">Очистити</button>
         </div>
       </div>
+
       <div id="seriesRounds" class="series-options"></div>
       <div id="matchSummary" class="match-summary"></div>
+
       <div class="kpi kpi-2">
         <label>MVP1 <input id="mvp1" list="participantsDatalist"></label>
         <label>MVP2 <input id="mvp2" list="participantsDatalist"></label>
         <label>MVP3 <input id="mvp3" list="participantsDatalist"></label>
       </div>
       <datalist id="participantsDatalist"></datalist>
+
       <div>
         <h4>Штрафи</h4>
         <div id="penaltiesList" class="penalties-list"></div>
       </div>
-      <div class="save-sticky"><button id="saveBtn" class="chip save-btn">Зберегти матч</button></div>
+
+      <div class="save-sticky"><button id="saveBtn" class="chip save-btn" type="button">Зберегти матч</button></div>
     </section>
   </main>
 

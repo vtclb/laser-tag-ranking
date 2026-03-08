@@ -1,4 +1,12 @@
-import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap, rankLetterForPoints, sortByPointsDesc } from './state.js';
+import {
+  state,
+  normalizeLeague,
+  getSelectedPlayers,
+  computeSeriesSummary,
+  syncSelectedMap,
+  rankLetterForPoints,
+  sortByPointsDesc,
+} from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents } from './ui.js';
@@ -11,36 +19,32 @@ const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
 const LEAGUE_KEY = 'balance2:league';
 let saveLocked = false;
 
-function syncSeriesMirror() {
-  const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
-  while (rounds.length < 7) rounds.push(null);
-  state.seriesRounds = rounds;
-  state.series = rounds.map((value) => (value === null ? '-' : String(value)));
-}
-
 function normalizeLoadedPlayers(players = []) {
   return players
     .map((player) => {
       const nick = String(player.nick || player.nickname || '').trim();
       if (!nick) return null;
       const points = Number(player.points ?? player.pts) || 0;
-      return {
-        nick,
-        points,
-        pts: points,
-        rank: String(player.rank || rankLetterForPoints(points)),
-      };
+      return { nick, points, pts: points, rank: String(player.rank || rankLetterForPoints(points)) };
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort(sortByPointsDesc);
+}
+
+function syncSeriesMirror() {
+  const rounds = Array.isArray(state.matchState.seriesRounds) ? state.matchState.seriesRounds.slice(0, 7) : Array(7).fill(null);
+  while (rounds.length < 7) rounds.push(null);
+  state.matchState.seriesRounds = rounds;
+  state.matchState.series = rounds.map((value) => (value === null ? '-' : String(value)));
 }
 
 function setTeamCount(rawValue) {
-  state.teamCount = Math.min(4, Math.max(2, Number(rawValue) || 2));
-  TEAM_KEYS.slice(state.teamCount).forEach((key) => { state.teams[key] = []; });
-  state.seriesRounds = state.seriesRounds.map((value) => {
+  state.teamsState.teamCount = Math.min(4, Math.max(2, Number(rawValue) || 2));
+  TEAM_KEYS.slice(state.teamsState.teamCount).forEach((key) => { state.teamsState.teams[key] = []; });
+  state.matchState.seriesRounds = state.matchState.seriesRounds.map((value) => {
     const numeric = Number(value);
     if (value === null) return null;
-    if (numeric === 0 || (numeric >= 1 && numeric <= state.teamCount)) return numeric;
+    if (numeric === 0 || (numeric >= 1 && numeric <= state.teamsState.teamCount)) return numeric;
     return null;
   });
   syncSeriesMirror();
@@ -49,32 +53,32 @@ function setTeamCount(rawValue) {
 function runBalance() {
   const selected = getSelectedPlayers();
   clearTeams();
-  if (state.teamCount === 2) {
-    const t = autoBalance2(selected);
-    state.teams.team1 = t.team1.map((p) => p.nick);
-    state.teams.team2 = t.team2.map((p) => p.nick);
+  if (state.teamsState.teamCount === 2) {
+    const teams = autoBalance2(selected);
+    state.teamsState.teams.team1 = teams.team1.map((p) => p.nick);
+    state.teamsState.teams.team2 = teams.team2.map((p) => p.nick);
   } else {
-    const t = balanceIntoNTeams(selected, state.teamCount);
+    const teams = balanceIntoNTeams(selected, state.teamsState.teamCount);
     TEAM_KEYS.forEach((key) => {
-      state.teams[key] = (t[key] || []).map((p) => p.nick);
+      state.teamsState.teams[key] = (teams[key] || []).map((p) => p.nick);
     });
   }
-  state.mode = 'auto';
+  state.app.mode = 'auto';
   saveLobby();
 }
 
 function toPenaltiesString() {
-  return Object.entries(state.match.penalties)
-    .filter(([, v]) => Number(v))
-    .map(([n, v]) => `${n}:${v}`)
+  return Object.entries(state.matchState.match.penalties)
+    .filter(([, value]) => Number(value))
+    .map(([nick, value]) => `${nick}:${value}`)
     .join(',');
 }
 
 function syncSaveButtonState() {
   const btn = $('saveBtn');
   if (!btn) return;
-  const keys = TEAM_KEYS.slice(0, state.teamCount);
-  const hasTeams = keys.every((key) => state.teams[key].length > 0);
+  const keys = TEAM_KEYS.slice(0, state.teamsState.teamCount);
+  const hasTeams = keys.every((key) => state.teamsState.teams[key].length > 0);
   const canSave = hasTeams && computeSeriesSummary().played >= 3;
   btn.disabled = saveLocked || !canSave;
 }
@@ -86,79 +90,89 @@ function renderAndSync() {
 
 function buildPayload() {
   const summary = computeSeriesSummary();
-  state.match.series = summary.series;
-  state.match.winner = summary.winner;
+  state.matchState.match.series = summary.series;
+  state.matchState.match.winner = summary.winner;
+
   return {
-    league: state.league,
-    team1: state.teams.team1.join(', '),
-    team2: state.teams.team2.join(', '),
-    team3: state.teamCount >= 3 ? state.teams.team3.join(', ') : '',
-    team4: state.teamCount >= 4 ? state.teams.team4.join(', ') : '',
+    league: state.app.league,
+    team1: state.teamsState.teams.team1.join(', '),
+    team2: state.teamsState.teams.team2.join(', '),
+    team3: state.teamsState.teamCount >= 3 ? state.teamsState.teams.team3.join(', ') : '',
+    team4: state.teamsState.teamCount >= 4 ? state.teamsState.teams.team4.join(', ') : '',
     winner: summary.winner,
-    mvp1: state.match.mvp1,
-    mvp2: state.match.mvp2,
-    mvp3: state.match.mvp3,
+    mvp1: state.matchState.match.mvp1,
+    mvp2: state.matchState.match.mvp2,
+    mvp3: state.matchState.match.mvp3,
     penalties: toPenaltiesString(),
     series: summary.series,
   };
 }
 
 function resetMatchOnlyState() {
-  state.seriesRounds = Array(7).fill(null);
-  state.series = ['-', '-', '-', '-', '-', '-', '-'];
-  state.match.winner = 'tie';
-  state.match.series = '';
-  state.match.mvp1 = '';
-  state.match.mvp2 = '';
-  state.match.mvp3 = '';
-  state.match.penalties = {};
+  state.matchState.seriesRounds = Array(7).fill(null);
+  state.matchState.series = ['-', '-', '-', '-', '-', '-', '-'];
+  state.matchState.match.winner = '';
+  state.matchState.match.series = '';
+  state.matchState.match.mvp1 = '';
+  state.matchState.match.mvp2 = '';
+  state.matchState.match.mvp3 = '';
+  state.matchState.match.penalties = {};
 }
 
 function validateSave() {
-  const keys = TEAM_KEYS.slice(0, state.teamCount);
-  if (!keys.every((key) => state.teams[key].length > 0)) return 'Команди не заповнені';
+  const keys = TEAM_KEYS.slice(0, state.teamsState.teamCount);
+  if (!keys.every((key) => state.teamsState.teams[key].length > 0)) return 'Команди не заповнені';
   if (computeSeriesSummary().played < 3) return 'Потрібно мінімум 3 зіграні бої';
   return '';
 }
 
 async function doSave(retry = false) {
   const error = validateSave();
-  if (error) return setStatus({ state: 'error', text: `❌ Помилка: ${error}`, retryVisible: false });
-  const payload = retry ? state.lastPayload : buildPayload();
-  state.lastPayload = payload;
+  if (error) {
+    setStatus({ state: 'error', text: `❌ Помилка: ${error}`, retryVisible: false });
+    return;
+  }
+
+  const payload = retry ? state.meta.lastPayload : buildPayload();
+  state.meta.lastPayload = payload;
+
   saveLocked = true;
   lockSaveButton(true);
   syncSaveButtonState();
   setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
+
   const res = await saveMatch(payload, 14000);
   if (res.ok) {
     try {
-      clearPlayersCache(state.league);
-      const freshPlayers = await loadPlayers(state.league, { force: true });
-      state.players = normalizeLoadedPlayers(freshPlayers);
-      state.players.sort((a, b) => (b.points || 0) - (a.points || 0));
-    } catch (_) {
-      state.players.sort((a, b) => (b.points || 0) - (a.points || 0));
+      clearPlayersCache(state.app.league);
+      const freshPlayers = await loadPlayers(state.app.league, { force: true });
+      state.playersState.players = normalizeLoadedPlayers(freshPlayers);
+
+      resetMatchOnlyState();
+      syncSeriesMirror();
+      saveLobby();
+      setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
+      renderAndSync();
+    } catch (loadError) {
+      setStatus({ state: 'error', text: `❌ Помилка оновлення: ${loadError.message}`, retryVisible: true });
     }
-    resetMatchOnlyState();
-    syncSeriesMirror();
-    saveLobby();
-    setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
-    renderAndSync();
   } else {
     setStatus({ state: 'error', text: `❌ Помилка: ${res.message || 'Не вдалося зберегти'}`, retryVisible: true });
   }
+
   saveLocked = false;
   lockSaveButton(false);
   syncSaveButtonState();
 }
 
 function toggleSelectedPlayer(nick) {
-  if (state.selectedMap.has(nick)) {
-    state.selected = state.selected.filter((n) => n !== nick);
-    Object.keys(state.teams).forEach((k) => { state.teams[k] = state.teams[k].filter((n) => n !== nick); });
-  } else if (state.selected.length < 15) {
-    state.selected = [...state.selected, nick];
+  if (state.playersState.selectedMap.has(nick)) {
+    state.playersState.selected = state.playersState.selected.filter((n) => n !== nick);
+    Object.keys(state.teamsState.teams).forEach((key) => {
+      state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== nick);
+    });
+  } else if (state.playersState.selected.length < 15) {
+    state.playersState.selected = [...state.playersState.selected, nick];
   }
   syncSelectedMap();
 }
@@ -166,79 +180,102 @@ function toggleSelectedPlayer(nick) {
 function startRenameTeam(teamKey) {
   const wrap = document.querySelector(`[data-team-name-wrap="${teamKey}"]`);
   if (!wrap) return;
-  const current = state.teamNames[teamKey] || '';
+  const current = state.teamsState.teamNames[teamKey] || '';
   wrap.innerHTML = `<input class="search-input" data-team-name-input="${teamKey}" value="${current}" maxlength="32" />`;
   const input = wrap.querySelector('input');
-  input.focus();
-  input.select();
+  input?.focus();
+  input?.select();
 }
 
 function saveTeamName(teamKey, rawValue) {
-  if (!state.teamNames[teamKey]) return;
+  if (!state.teamsState.teamNames[teamKey]) return;
   const value = String(rawValue || '').trim();
-  state.teamNames[teamKey] = value || `Команда ${teamKey.replace('team', '')}`;
+  state.teamsState.teamNames[teamKey] = value || `Команда ${teamKey.replace('team', '')}`;
   saveLobby();
   renderAndSync();
 }
 
-async function init() {
-  if (peekLobbyRestore()) $('restoreCard').classList.remove('hidden');
-  else $('restoreCard').classList.add('hidden');
+async function ensurePlayersLoaded({ force = false } = {}) {
+  const btn = $('loadPlayersBtn');
+  const original = btn?.textContent || 'Завантажити гравців';
+  const league = normalizeLeague($('leagueSelect')?.value || state.app.league);
 
-  $('restoreBtn').addEventListener('click', async () => {
-    if (restoreLobby()) {
-      const restored = Array.isArray(state.series) ? state.series.slice(0, 7) : [];
-      while (restored.length < 7) restored.push('-');
-      state.seriesRounds = restored.map((value) => {
-        const numeric = Number(value);
-        return value === '-' || Number.isNaN(numeric) ? null : numeric;
-      });
-      syncSeriesMirror();
-      $('leagueSelect').value = state.league;
-      $('sortMode').value = state.sortMode;
-      await ensurePlayersLoaded();
-      renderAndSync();
-      $('restoreCard').classList.add('hidden');
+  state.app.league = league;
+  localStorage.setItem(LEAGUE_KEY, league);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Завантаження…';
+  }
+  setStatus({ state: 'saving', text: 'Завантаження…', retryVisible: false });
+
+  try {
+    const loaded = await loadPlayers(league, { force });
+    state.playersState.players = normalizeLoadedPlayers(loaded);
+    setStatus({ state: 'saved', text: `✅ Завантажено: ${state.playersState.players.length} гравців`, retryVisible: false });
+    renderAndSync();
+  } catch (error) {
+    setStatus({ state: 'error', text: `❌ Помилка: ${error.message}`, retryVisible: false });
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = original;
     }
+  }
+}
+
+async function init() {
+  if (peekLobbyRestore()) $('restoreCard')?.classList.remove('hidden');
+  else $('restoreCard')?.classList.add('hidden');
+
+  $('restoreBtn')?.addEventListener('click', async () => {
+    if (!restoreLobby()) return;
+    $('leagueSelect').value = state.app.league;
+    $('sortMode').value = state.app.sortMode;
+    await ensurePlayersLoaded();
+    renderAndSync();
+    $('restoreCard')?.classList.add('hidden');
   });
 
-  $('leagueSelect').addEventListener('change', (e) => {
-    state.league = normalizeLeague(e.target.value);
-    localStorage.setItem(LEAGUE_KEY, state.league);
-    state.players = [];
-    state.selected = [];
+  $('leagueSelect')?.addEventListener('change', (e) => {
+    state.app.league = normalizeLeague(e.target.value);
+    localStorage.setItem(LEAGUE_KEY, state.app.league);
+    state.playersState.players = [];
+    state.playersState.selected = [];
     syncSelectedMap();
     clearTeams();
     saveLobby();
     renderAndSync();
   });
 
-  $('sortMode').addEventListener('change', (e) => {
-    state.sortMode = e.target.value;
+  $('sortMode')?.addEventListener('change', (e) => {
+    state.app.sortMode = e.target.value;
     saveLobby();
     renderAndSync();
   });
 
-  $('loadPlayersBtn').addEventListener('click', ensurePlayersLoaded);
-  $('balanceBtn').addEventListener('click', () => { runBalance(); renderAndSync(); });
-  $('manualBtn').addEventListener('click', () => { state.mode = 'manual'; syncSelectedFromTeamsAndBench(); saveLobby(); renderAndSync(); });
-  $('clearLobbyBtn').addEventListener('click', () => { state.selected = []; syncSelectedMap(); clearTeams(); saveLobby(); renderAndSync(); });
+  $('loadPlayersBtn')?.addEventListener('click', () => ensurePlayersLoaded({ force: true }));
+  $('balanceBtn')?.addEventListener('click', () => { runBalance(); renderAndSync(); });
+  $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; syncSelectedFromTeamsAndBench(); saveLobby(); renderAndSync(); });
+  $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearTeams(); saveLobby(); renderAndSync(); });
 
   const debouncedSearch = (() => {
-    let t;
+    let timer;
     return (value) => {
-      clearTimeout(t);
-      t = setTimeout(() => { state.query = value; renderAndSync(); }, 180);
+      clearTimeout(timer);
+      timer = setTimeout(() => { state.app.query = value; renderAndSync(); }, 180);
     };
   })();
-  $('searchInput').addEventListener('input', (e) => debouncedSearch(e.target.value));
+  $('searchInput')?.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
   ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
-    $(id).addEventListener('input', (e) => { state.match[id] = e.target.value.trim(); saveLobby(); });
+    $(id)?.addEventListener('input', (e) => {
+      state.matchState.match[id] = e.target.value.trim();
+      saveLobby();
+    });
   });
 
-  $('saveBtn').addEventListener('click', () => doSave(false));
-  $('retrySaveBtn').addEventListener('click', () => doSave(true));
+  $('saveBtn')?.addEventListener('click', () => doSave(false));
+  $('retrySaveBtn')?.addEventListener('click', () => doSave(true));
 
   bindUiEvents({
     onTogglePlayer(nick) {
@@ -247,9 +284,11 @@ async function init() {
       renderAndSync();
     },
     onRemove(nick) {
-      state.selected = state.selected.filter((n) => n !== nick);
+      state.playersState.selected = state.playersState.selected.filter((n) => n !== nick);
       syncSelectedMap();
-      Object.keys(state.teams).forEach((k) => { state.teams[k] = state.teams[k].filter((n) => n !== nick); });
+      Object.keys(state.teamsState.teams).forEach((key) => {
+        state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== nick);
+      });
       saveLobby();
       renderAndSync();
     },
@@ -258,83 +297,47 @@ async function init() {
       saveLobby();
       renderAndSync();
     },
-    onSeriesResult(idx, val) {
-      const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
-      while (rounds.length < 7) rounds.push(null);
-      if (idx < 0 || idx >= state.seriesCount) return;
-      const parsed = Number(val);
-      const nextVal = parsed === 0 || (parsed >= 1 && parsed <= state.teamCount) ? parsed : null;
-      state.seriesRounds = rounds;
-      state.seriesRounds[idx] = nextVal;
+    onSeriesResult(idx, value) {
+      if (idx < 0 || idx >= state.matchState.seriesCount) return;
+      const parsed = Number(value);
+      const next = parsed === 0 || (parsed >= 1 && parsed <= state.teamsState.teamCount) ? parsed : null;
+      state.matchState.seriesRounds[idx] = next;
       syncSeriesMirror();
       const summary = computeSeriesSummary();
-      state.match.winner = summary.winner;
-      state.match.series = summary.series;
+      state.matchState.match.winner = summary.winner;
+      state.matchState.match.series = summary.series;
       saveLobby();
       renderAndSync();
     },
     onSeriesCount(count) {
-      state.seriesCount = Math.min(7, Math.max(3, Number(count) || 3));
-      const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
-      while (rounds.length < 7) rounds.push(null);
-      for (let i = state.seriesCount; i < 7; i += 1) rounds[i] = null;
-      state.seriesRounds = rounds;
+      state.matchState.seriesCount = Math.min(7, Math.max(3, Number(count) || 3));
+      for (let i = state.matchState.seriesCount; i < 7; i += 1) state.matchState.seriesRounds[i] = null;
       syncSeriesMirror();
-      const summary = computeSeriesSummary();
-      state.match.winner = summary.winner;
-      state.match.series = summary.series;
       saveLobby();
       renderAndSync();
     },
     onSeriesReset() {
-      const rounds = Array.isArray(state.seriesRounds) ? state.seriesRounds.slice(0, 7) : Array(7).fill(null);
-      for (let i = 0; i < state.seriesCount; i += 1) rounds[i] = null;
-      state.seriesRounds = rounds;
+      for (let i = 0; i < state.matchState.seriesCount; i += 1) state.matchState.seriesRounds[i] = null;
       syncSeriesMirror();
-      const summary = computeSeriesSummary();
-      state.match.winner = summary.winner;
-      state.match.series = summary.series;
       saveLobby();
       renderAndSync();
     },
     onPenalty(nick, delta) {
-      state.match.penalties[nick] = Number(state.match.penalties[nick] || 0) + delta;
+      state.matchState.match.penalties[nick] = Number(state.matchState.match.penalties[nick] || 0) + delta;
       saveLobby();
       renderAndSync();
     },
     onRenameStart(teamKey) { startRenameTeam(teamKey); },
     onRenameSave(teamKey, value) { saveTeamName(teamKey, value); },
-    onChanged() { saveLobby(); renderAndSync(); },
+    onChanged() { syncSelectedFromTeamsAndBench(); saveLobby(); renderAndSync(); },
   });
 
-  state.league = normalizeLeague(localStorage.getItem(LEAGUE_KEY) || state.league);
-  $('leagueSelect').value = state.league;
-  $('sortMode').value = state.sortMode;
+  state.app.league = normalizeLeague(localStorage.getItem(LEAGUE_KEY) || state.app.league);
+  $('leagueSelect').value = state.app.league;
+  $('sortMode').value = state.app.sortMode;
   syncSelectedMap();
   syncSeriesMirror();
   renderAndSync();
-}
-
-async function ensurePlayersLoaded() {
-  const btn = $('loadPlayersBtn');
-  const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '⏳ Завантаження…';
-  setStatus({ state: 'saving', text: 'Завантаження…', retryVisible: false });
-  try {
-    const league = normalizeLeague($('leagueSelect')?.value || state.league);
-    state.league = league;
-    localStorage.setItem(LEAGUE_KEY, state.league);
-    state.players = normalizeLoadedPlayers(await loadPlayers(league));
-    state.players.sort(sortByPointsDesc);
-    setStatus({ state: 'saved', text: `✅ Завантажено: ${state.players.length} гравців`, retryVisible: false });
-  } catch (e) {
-    setStatus({ state: 'error', text: `❌ Помилка: ${e.message}`, retryVisible: false });
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
-    renderAndSync();
-  }
 }
 
 init();

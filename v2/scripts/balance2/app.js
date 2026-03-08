@@ -1,4 +1,4 @@
-import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap, rankLetterForPoints, sortByPointsDesc, updatePlayersFromResponse } from './state.js';
+import { state, normalizeLeague, getSelectedPlayers, computeSeriesSummary, syncSelectedMap, rankLetterForPoints, sortByPointsDesc } from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents } from './ui.js';
@@ -132,13 +132,13 @@ async function doSave(retry = false) {
   setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
   const res = await saveMatch(payload, 14000);
   if (res.ok) {
-    updatePlayersFromResponse(res.data?.players || []);
     try {
       clearPlayersCache(state.league);
-      state.players = normalizeLoadedPlayers(await loadPlayers(state.league));
-      state.players.sort(sortByPointsDesc);
+      const freshPlayers = await loadPlayers(state.league, { force: true });
+      state.players = normalizeLoadedPlayers(freshPlayers);
+      state.players.sort((a, b) => (b.points || 0) - (a.points || 0));
     } catch (_) {
-      state.players.sort(sortByPointsDesc);
+      state.players.sort((a, b) => (b.points || 0) - (a.points || 0));
     }
     resetMatchOnlyState();
     syncSeriesMirror();

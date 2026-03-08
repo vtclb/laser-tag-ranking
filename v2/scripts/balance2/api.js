@@ -7,10 +7,12 @@ function toFormUrlEncoded(obj = {}) {
   return Object.entries(obj).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`).join('&');
 }
 
-export async function loadPlayers(league) {
+export async function loadPlayers(league, { force = false } = {}) {
   const key = normalizeLeague(league);
-  loadPlayersCache();
-  if (Array.isArray(state.cache[key]) && state.cache[key].length) return state.cache[key];
+  if (!force) {
+    loadPlayersCache();
+    if (Array.isArray(state.cache[key]) && state.cache[key].length) return state.cache[key];
+  }
 
   const url = `${PROXY_ORIGIN}/fetchLeagueCsv?league=${key}&cb=${Date.now()}`;
   const res = await fetch(url);

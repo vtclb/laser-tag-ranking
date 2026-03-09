@@ -794,3 +794,42 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
     grid-template-columns: 1fr;
   }
 }
+
+.topnav {
+  display: flex;
+  justify-content: center;
+}
+
+.topnav__pill {
+  border-radius: 0 !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.home-v2 .home-hero-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* HOME V2 — force square UI */
+
+.home-v2 *,
+.home-v2 .px-card,
+.home-v2 .chip,
+.home-v2 .badge,
+.home-v2 .btn,
+.home-v2 button,
+.home-v2 .stat,
+.home-v2 .pill,
+.home-v2 .home-progress-card,
+.home-v2 .home-leaders-frame,
+.home-v2 .home-progress-grid,
+.home-v2 .home-section,
+.home-v2 .home-section-panel,
+.home-v2 .home-league-card,
+.home-v2 .home-ranking-card,
+.home-v2 .home-player-row {
+  border-radius: 0 !important;
+}

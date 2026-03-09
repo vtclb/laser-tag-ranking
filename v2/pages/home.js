@@ -1,8 +1,12 @@
 import { getHomeLiveData, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
-import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
+import { leagueLabelUA } from '../core/naming.js';
 
-const HOME_CURRENT_SEASON = { id: 'spring_2026', label: 'Весна 2026' };
+const HOME_CURRENT_SEASON = { id: 'spring_2026', label: 'Весна 2026', endDate: '2026-05-31' };
 const HOME_LEAGUES = ['sundaygames', 'kids'];
+const STATS_LINKS = {
+  sundaygames: `#season?season=${encodeURIComponent(HOME_CURRENT_SEASON.id)}&league=olds`,
+  kids: `#season?season=${encodeURIComponent(HOME_CURRENT_SEASON.id)}&league=kids`
+};
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 rx=%220%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
 
 function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
@@ -15,13 +19,16 @@ function avatarImage(player) {
   const src = player?.avatarUrl || FALLBACK_AVATAR;
   return `<img class="home-avatar" src="${esc(src)}" alt="${esc(player?.nickname || 'Player')}" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
 }
+
 function playerRow(player) {
-  const rankText = player.rankText || rankFromPoints(player.points);
+  const rankText = String(player.rankText || rankFromPoints(player.points) || 'F').toUpperCase();
   const rankClass = getRankClass(rankText);
-  return `<div class="home-current-row home-player-row">
+  const topClass = Number(player.place) <= 3 ? 'is-top3' : '';
+  return `<div class="home-current-row home-player-row ${topClass}">
     <span class="home-place">#${player.place}</span>
-    <span class="home-avatar-wrap">${avatarImage(player)}</span>
-    <span class="home-player-info"><strong class="home-player-name">${esc(player.nickname)}</strong><span class="home-player-rank">Ранг</span><span class="home-rank-badge ${rankClass}">${esc(rankText)}</span></span>
+    <span class="home-rank-letter ${rankClass}">${esc(rankText)}</span>
+    <span class="home-avatar-wrap ${rankClass}">${avatarImage(player)}</span>
+    <span class="home-player-name">${esc(player.nickname)}</span>
     <span class="home-points-box">${esc(player.points)}</span>
   </div>`;
 }
@@ -31,62 +38,77 @@ function currentRankingCard(players = []) {
   return `<div class="home-current-table">${players.slice(0, 10).map(playerRow).join('')}</div>`;
 }
 
-function fullRankingCard(players = []) {
-  if (!players.length) return '';
-  return `<div class="home-full-list">${players.map(playerRow).join('')}</div>`;
-}
-
 function heroCard(player, league, isPrimary = false) {
   if (!player) return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}"><h3>${esc(leagueLabelUA(league))}</h3><p class="px-card__text">Немає даних</p></article>`;
   const rankText = player.rankText || rankFromPoints(player.points);
   const rankClass = getRankClass(rankText);
   return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}">
     <div class="home-hero-card__head"><span class="px-badge">${esc(leagueLabelUA(league))}</span><strong class="home-hero-card__place">#1</strong></div>
-    <div class="home-hero-card__player">${avatarImage(player)}<h3 class="home-hero-card__name">${esc(player.nickname)}</h3></div>
-    <p class="home-hero-card__rating">Ранг: <strong class="home-rank-badge ${rankClass}">${esc(rankText)}</strong> · Очки: <strong>${esc(player.points)}</strong></p>
+    <div class="home-hero-card__player"><span class="home-avatar-wrap ${rankClass}">${avatarImage(player)}</span><h3 class="home-hero-card__name">${esc(player.nickname)}</h3></div>
+    <p class="home-hero-card__rating">Ранг: <strong class="home-rank-letter ${rankClass}">${esc(rankText)}</strong> · Очки: <strong>${esc(player.points)}</strong></p>
   </article>`;
 }
 
-function leagueProgressCard(logs = []) {
+function getLeagueProgress(logs = [], games = [], league) {
   const aggregate = new Map();
   logs.forEach((entry) => {
-    const key = entry.nickname.toLowerCase().trim();
+    const key = String(entry.nickname || '').trim().toLowerCase();
+    if (!key) return;
     const prev = aggregate.get(key) || { nickname: entry.nickname, delta: 0 };
     prev.delta += Number(entry.delta) || 0;
     aggregate.set(key, prev);
   });
-  const rows = [...aggregate.values()];
-  const topPositive = rows.filter((x) => x.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
-  const topNegative = rows.filter((x) => x.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
+  const bestGrowth = [...aggregate.values()].sort((a, b) => b.delta - a.delta)[0] || null;
 
-  const list = (title, items) => `<div><h5>${title}</h5>${items.length ? `<ul>${items.map((p) => `<li>${esc(p.nickname)} <strong>${fmtSigned(p.delta)}</strong></li>`).join('')}</ul>` : '<p class="px-card__text">Немає даних</p>'}</div>`;
-  return `<div class="home-progress-grid">${list('Топ приросту', topPositive)}${list('Топ падіння', topNegative)}</div>`;
+  const leagueGames = games.filter((game) => game.league === league);
+  const mvpCount = new Map();
+  leagueGames.forEach((game) => {
+    const mvp = String(game.mvp || '').trim();
+    if (!mvp) return;
+    mvpCount.set(mvp, (mvpCount.get(mvp) || 0) + 1);
+  });
+  const mostMvp = [...mvpCount.entries()].sort((a, b) => b[1] - a[1])[0] || null;
+
+  const lastTs = leagueGames.reduce((max, game) => Math.max(max, Number(game.tsMs) || 0), 0);
+  const lastDate = lastTs ? new Date(lastTs).toISOString().slice(0, 10) : null;
+
+  return { bestGrowth, mostMvp, leagueGames: leagueGames.length, lastDate };
 }
 
-function lastGameDayCard(games = [], league) {
-  if (!games.length) return '<p class="px-card__text">Немає даних</p>';
-  const latestTs = Math.max(...games.map((g) => g.tsMs));
-  const latestDate = new Date(latestTs).toISOString().slice(0, 10);
-  const sameDay = games.filter((game) => String(game.timestamp).slice(0, 10) === latestDate && game.league === league);
-  if (!sameDay.length) return '<p class="px-card__text">Немає матчів у останній день для ліги</p>';
-  const players = [...new Set(sameDay.flatMap((game) => game.teams))];
-  const mvps = [...new Set(sameDay.map((game) => game.mvp).filter(Boolean))];
-  return `<div class="home-summary-strip">
-    <p><strong>Дата:</strong> ${esc(latestDate)}</p>
-    <p><strong>Матчів:</strong> ${sameDay.length}</p>
-    <p><strong>Грали:</strong> ${esc(players.join(', '))}</p>
-    ${mvps.length ? `<p><strong>MVP:</strong> ${esc(mvps.join(', '))}</p>` : ''}
+function leagueProgressInfographic(logs = [], games = [], league) {
+  const progress = getLeagueProgress(logs, games, league);
+  return `<div class="home-progress-grid">
+    <article class="home-progress-card"><span>Найкращий приріст</span><strong>${progress.bestGrowth ? `${esc(progress.bestGrowth.nickname)} ${fmtSigned(progress.bestGrowth.delta)}` : 'Немає даних'}</strong></article>
+    <article class="home-progress-card"><span>Найбільше MVP</span><strong>${progress.mostMvp ? `${esc(progress.mostMvp[0])} · ${progress.mostMvp[1]}` : 'Немає даних'}</strong></article>
+    <article class="home-progress-card"><span>Остання активність</span><strong>${progress.lastDate ? `${esc(progress.lastDate)} · матчів ${progress.leagueGames}` : 'Немає даних'}</strong></article>
   </div>`;
 }
 
-function renderLeagueSection({ league, players, logs, games, expanded }) {
+function renderLeagueSection({ league, players, logs, games }) {
+  const statsLink = STATS_LINKS[league] || '#seasons';
   return `<section class="px-card home-card home-league" data-league="${league}">
-    <div class="home-league__head"><h3>${esc(leagueLabelUA(league))}</h3><button type="button" class="btn btn--secondary home-expand-btn ${expanded ? 'is-active' : ''}" data-toggle-league="${league}">Розгорнути статистику</button></div>
+    <div class="home-league__head"><h3>${esc(leagueLabelUA(league))} — top 10</h3></div>
     <article class="home-panel"><h4>Поточний топ-10</h4>${currentRankingCard(players)}</article>
-    <div class="home-expanded ${expanded ? 'is-open' : ''}" id="expanded-${league}">
-      <article class="home-panel"><h4>Повний рейтинг</h4>${fullRankingCard(players)}</article>
-      <article class="home-panel"><h4>Прогрес ліги</h4>${leagueProgressCard(logs)}</article>
-      <article class="home-panel"><h4>Останній ігровий день</h4>${lastGameDayCard(games, league)}</article>
+    <div class="home-cta-row"><a class="btn btn--secondary" href="${statsLink}">Детальна статистика</a></div>
+    <article class="home-panel"><h4>Прогрес ліги</h4>${leagueProgressInfographic(logs, games, league)}</article>
+  </section>`;
+}
+
+function daysToSeasonEnd(endDate) {
+  const target = new Date(`${endDate}T23:59:59`);
+  const now = new Date();
+  const ms = target.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(ms / 86_400_000));
+}
+
+function footerBlock() {
+  const daysLeft = daysToSeasonEnd(HOME_CURRENT_SEASON.endDate);
+  return `<section class="px-card home-card home-footer-block" id="homeFooterBlock">
+    <p class="home-footer-days">До завершення сезону: <strong>${daysLeft}</strong> днів</p>
+    <div class="home-footer-actions">
+      <button type="button" class="btn btn--secondary" id="homeScrollTopBtn">Вгору</button>
+      <a class="btn btn--secondary" href="${STATS_LINKS.sundaygames}">Статистика дорослої ліги</a>
+      <a class="btn btn--secondary" href="${STATS_LINKS.kids}">Статистика дитячої ліги</a>
     </div>
   </section>`;
 }
@@ -98,17 +120,14 @@ export async function initHomePage() {
   root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
   <section class="section"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
-  <section class="section" id="leagueSections"></section>`;
+  <section class="section" id="leagueSections"></section>
+  <section class="section" id="homeFooter"></section>`;
 
   const stateBox = document.getElementById('stateBox');
   const topHeroes = document.getElementById('topHeroes');
   const leagueSections = document.getElementById('leagueSections');
-  if (!stateBox || !topHeroes || !leagueSections) return;
-
-  const homeState = {
-    activeLeague: 'sundaygames',
-    expandedLeague: 'sundaygames'
-  };
+  const homeFooter = document.getElementById('homeFooter');
+  if (!stateBox || !topHeroes || !leagueSections || !homeFooter) return;
 
   const renderHome = (data) => {
     const adultsPlayers = data.adults.players;
@@ -118,18 +137,16 @@ export async function initHomePage() {
       league,
       players: league === 'sundaygames' ? adultsPlayers : kidsPlayers,
       logs: data.logs.filter((x) => x.league === league),
-      games: data.games,
-      expanded: homeState.expandedLeague === league
+      games: data.games
     })).join('');
 
-    leagueSections.querySelectorAll('[data-toggle-league]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const clickedLeague = normalizeLeague(btn.getAttribute('data-toggle-league')) || 'sundaygames';
-        homeState.expandedLeague = homeState.expandedLeague === clickedLeague ? '' : clickedLeague;
-        homeState.activeLeague = clickedLeague;
-        renderHome(data);
+    homeFooter.innerHTML = footerBlock();
+    const scrollTopBtn = document.getElementById('homeScrollTopBtn');
+    if (scrollTopBtn) {
+      scrollTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
-    });
+    }
   };
 
   try {
@@ -145,5 +162,6 @@ export async function initHomePage() {
     stateBox.textContent = msg;
     topHeroes.innerHTML = `<article class="px-card home-card"><p class="px-card__text">${esc(msg)}</p></article>`;
     leagueSections.innerHTML = '';
+    homeFooter.innerHTML = footerBlock();
   }
 }

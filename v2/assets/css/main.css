@@ -1036,7 +1036,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .league-page .league-table-header,
 .league-page .league-table-row {
   display: grid;
-  grid-template-columns: 56px 62px 52px minmax(0, 1.5fr) repeat(4, minmax(56px, .65fr));
+  grid-template-columns: 56px 52px 62px minmax(0, 1.5fr) repeat(5, minmax(56px, .62fr));
   gap: .4rem;
   align-items: center;
 }
@@ -1064,6 +1064,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .league-page .league-col-delta,
 .league-page .league-col-points,
 .league-page .league-col-games,
+.league-page .league-col-winrate,
 .league-page .league-col-mvp { justify-content: flex-end; display: flex; }
 
 .league-page .league-rank-grid,
@@ -1219,6 +1220,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   .league-page .league-col-place,
   .league-page .league-col-points,
   .league-page .league-col-games,
+   .league-page .league-col-winrate,
   .league-page .league-col-mvp,
   .league-page .league-col-delta,
   .league-page .league-col-nickname {
@@ -1233,4 +1235,21 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
     width: 100%;
     flex-direction: column;
   }
+}
+
+
+.league-page .px-card,
+.league-page .league-hero,
+.league-page .league-table,
+.league-page .league-table-row,
+.league-page .league-progress-card,
+.league-page .league-award-card,
+.league-page .league-avatar-wrap,
+.league-page .league-rank-frame,
+.league-page .btn,
+.league-page button,
+.league-page .search-input,
+.league-page .league-summary-strip span,
+.league-page .league-rank-card {
+  border-radius: 0 !important;
 }

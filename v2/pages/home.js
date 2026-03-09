@@ -27,7 +27,7 @@ function playerRow(player) {
   return `<div class="home-current-row home-player-row ${topClass}">
     <span class="home-place">#${player.place}</span>
     <span class="home-rank-letter ${rankClass}">${esc(rankText)}</span>
-    <span class="home-avatar-wrap ${rankClass}">${avatarImage(player)}</span>
+    <span class="home-avatar-wrap home-rank-frame ${rankClass}">${avatarImage(player)}</span>
     <span class="home-player-name">${esc(player.nickname)}</span>
     <span class="home-points-box">${esc(player.points)}</span>
   </div>`;
@@ -44,7 +44,7 @@ function heroCard(player, league, isPrimary = false) {
   const rankClass = getRankClass(rankText);
   return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}">
     <div class="home-hero-card__head"><span class="px-badge">${esc(leagueLabelUA(league))}</span><strong class="home-hero-card__place">#1</strong></div>
-    <div class="home-hero-card__player"><span class="home-avatar-wrap ${rankClass}">${avatarImage(player)}</span><h3 class="home-hero-card__name">${esc(player.nickname)}</h3></div>
+    <div class="home-hero-card__player"><span class="home-avatar-wrap home-rank-frame ${rankClass}">${avatarImage(player)}</span><h3 class="home-hero-card__name">${esc(player.nickname)}</h3></div>
     <p class="home-hero-card__rating">Ранг: <strong class="home-rank-letter ${rankClass}">${esc(rankText)}</strong> · Очки: <strong>${esc(player.points)}</strong></p>
   </article>`;
 }
@@ -59,6 +59,7 @@ function getLeagueProgress(logs = [], games = [], league) {
     aggregate.set(key, prev);
   });
   const bestGrowth = [...aggregate.values()].sort((a, b) => b.delta - a.delta)[0] || null;
+  const biggestMinus = [...aggregate.values()].sort((a, b) => a.delta - b.delta)[0] || null;
 
   const leagueGames = games.filter((game) => game.league === league);
   const mvpCount = new Map();
@@ -69,28 +70,63 @@ function getLeagueProgress(logs = [], games = [], league) {
   });
   const mostMvp = [...mvpCount.entries()].sort((a, b) => b[1] - a[1])[0] || null;
 
-  const lastTs = leagueGames.reduce((max, game) => Math.max(max, Number(game.tsMs) || 0), 0);
-  const lastDate = lastTs ? new Date(lastTs).toISOString().slice(0, 10) : null;
-
-  return { bestGrowth, mostMvp, leagueGames: leagueGames.length, lastDate };
+  return { bestGrowth, biggestMinus, mostMvp };
 }
 
-function leagueProgressInfographic(logs = [], games = [], league) {
+function findPlayerByNickname(players = [], nickname = '') {
+  const key = String(nickname).trim().toLowerCase();
+  if (!key) return null;
+  return players.find((player) => String(player.nickname || '').trim().toLowerCase() === key) || null;
+}
+
+function progressCard({ label, value, player = null, rankText = null }) {
+  if (!value) {
+    return `<article class="home-progress-card"><p class="home-progress-card__label">${esc(label)}</p><strong class="home-progress-card__value">Немає даних</strong></article>`;
+  }
+  const rankClass = getRankClass(rankText || player?.rankText || rankFromPoints(player?.points));
+  const name = player?.nickname || '—';
+  return `<article class="home-progress-card">
+    <div class="home-progress-card__media">
+      <span class="home-avatar-wrap home-rank-frame ${rankClass}">${avatarImage(player)}</span>
+      <span class="home-progress-card__name">${esc(name)}</span>
+    </div>
+    <strong class="home-progress-card__value">${esc(value)}</strong>
+    <p class="home-progress-card__label">${esc(label)}</p>
+  </article>`;
+}
+
+function leagueProgressInfographic(logs = [], games = [], league, players = []) {
   const progress = getLeagueProgress(logs, games, league);
+  const growthPlayer = findPlayerByNickname(players, progress.bestGrowth?.nickname);
+  const mvpPlayer = findPlayerByNickname(players, progress.mostMvp?.[0]);
+  const minusPlayer = findPlayerByNickname(players, progress.biggestMinus?.nickname);
+
   return `<div class="home-progress-grid">
-    <article class="home-progress-card"><span>Найкращий приріст</span><strong>${progress.bestGrowth ? `${esc(progress.bestGrowth.nickname)} ${fmtSigned(progress.bestGrowth.delta)}` : 'Немає даних'}</strong></article>
-    <article class="home-progress-card"><span>Найбільше MVP</span><strong>${progress.mostMvp ? `${esc(progress.mostMvp[0])} · ${progress.mostMvp[1]}` : 'Немає даних'}</strong></article>
-    <article class="home-progress-card"><span>Остання активність</span><strong>${progress.lastDate ? `${esc(progress.lastDate)} · матчів ${progress.leagueGames}` : 'Немає даних'}</strong></article>
+    ${progressCard({
+      label: 'Найкращий приріст',
+      value: progress.bestGrowth ? fmtSigned(progress.bestGrowth.delta) : null,
+      player: growthPlayer
+    })}
+    ${progressCard({
+      label: 'Найбільше MVP',
+      value: progress.mostMvp ? `${progress.mostMvp[1]} MVP` : null,
+      player: mvpPlayer
+    })}
+    ${progressCard({
+      label: 'Найбільший мінус',
+      value: progress.biggestMinus ? fmtSigned(progress.biggestMinus.delta) : null,
+      player: minusPlayer
+    })}
   </div>`;
 }
 
 function renderLeagueSection({ league, players, logs, games }) {
   const statsLink = STATS_LINKS[league] || '#seasons';
-  return `<section class="px-card home-card home-league" data-league="${league}">
+  return `<section class="px-card home-card home-league home-leaders home-leaders-frame" data-league="${league}">
     <div class="home-league__head"><h3>${esc(leagueLabelUA(league))} — top 10</h3></div>
-    <article class="home-panel"><h4>Поточний топ-10</h4>${currentRankingCard(players)}</article>
+    <article class="home-panel home-section-panel"><h4 class="home-section-title">Поточний топ-10</h4>${currentRankingCard(players)}</article>
     <div class="home-cta-row"><a class="btn btn--secondary" href="${statsLink}">Детальна статистика</a></div>
-    <article class="home-panel"><h4>Прогрес ліги</h4>${leagueProgressInfographic(logs, games, league)}</article>
+    <article class="home-panel home-section-panel"><h4 class="home-section-title">Прогрес ліги</h4>${leagueProgressInfographic(logs, games, league, players)}</article>
   </section>`;
 }
 

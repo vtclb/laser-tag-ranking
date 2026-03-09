@@ -881,6 +881,111 @@ function parseLogs(sheet) {
   }).filter((entry) => entry.nick && (entry.delta !== null || entry.newPoints !== null));
 }
 
+
+
+function findHeaderIndex(header = [], variants = []) {
+  const normalized = (Array.isArray(header) ? header : []).map(normalizeHeader);
+  return normalized.findIndex((name) => variants.includes(name));
+}
+
+function normalizeLeagueTable(rows = [], header = [], leagueId = 'kids') {
+  const idxNick = findHeaderIndex(header, ['nickname', 'nick', 'player']);
+  const idxPoints = findHeaderIndex(header, ['points', 'pts', 'score', 'mmr']);
+  const idxRank = findHeaderIndex(header, ['rank', 'rang', 'ранг']);
+  const dedupe = new Map();
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const nickname = String(row?.[idxNick] || '').trim();
+    if (!nickname) return;
+    const points = Number(row?.[idxPoints]);
+    const normalizedPoints = Number.isFinite(points) ? points : 0;
+    const rankRaw = String(row?.[idxRank] || '').trim();
+    const rankText = rankRaw || rankFromPoints(normalizedPoints);
+    const key = nickname.toLowerCase().trim();
+    const current = dedupe.get(key);
+    const candidate = { nickname, points: normalizedPoints, rankText };
+    if (!current || candidate.points > current.points) dedupe.set(key, candidate);
+  });
+
+  const players = [...dedupe.values()]
+    .sort((a, b) => b.points - a.points)
+    .map((player, index) => ({ ...player, place: index + 1 }));
+
+  return { league: normalizeLeague(leagueId) || 'kids', players };
+}
+
+function normalizeLogs(rows = [], header = []) {
+  const idxTimestamp = findHeaderIndex(header, ['timestamp', 'time', 'datetime', 'date']);
+  const idxLeague = findHeaderIndex(header, ['league', 'division']);
+  const idxNick = findHeaderIndex(header, ['nickname', 'nick', 'player']);
+  const idxDelta = findHeaderIndex(header, ['delta', 'pointsdelta', 'pointdelta']);
+  const idxNewPoints = findHeaderIndex(header, ['newpoints', 'points', 'pts']);
+
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const timestamp = String(row?.[idxTimestamp] || '').trim();
+    const league = normalizeLeague(row?.[idxLeague] || '');
+    const nickname = String(row?.[idxNick] || '').trim();
+    const delta = toNumber(row?.[idxDelta], null);
+    const newPoints = toNumber(row?.[idxNewPoints], null);
+    const tsMs = Date.parse(timestamp);
+    return {
+      timestamp,
+      tsMs: Number.isFinite(tsMs) ? tsMs : null,
+      league: league || '',
+      nickname,
+      delta: Number.isFinite(delta) ? delta : 0,
+      newPoints: Number.isFinite(newPoints) ? newPoints : null
+    };
+  }).filter((entry) => entry.timestamp && entry.league && entry.nickname);
+}
+
+function normalizeGames(rows = [], header = []) {
+  const idxTimestamp = findHeaderIndex(header, ['timestamp', 'datetime', 'date', 'createdat']);
+  const idxLeague = findHeaderIndex(header, ['league', 'division']);
+  const idxWinner = findHeaderIndex(header, ['winner', 'winnerteam', 'result']);
+  const idxSeries = findHeaderIndex(header, ['series', 'rounds']);
+  const idxMvp = findHeaderIndex(header, ['mvp', 'mvp1', 'top1']);
+  const idxTeam1 = findHeaderIndex(header, ['team1', 'team a', 'teama']);
+  const idxTeam2 = findHeaderIndex(header, ['team2', 'team b', 'teamb']);
+  const idxTeam3 = findHeaderIndex(header, ['team3', 'team c', 'teamc']);
+  const idxTeam4 = findHeaderIndex(header, ['team4', 'team d', 'teamd']);
+
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const timestamp = String(row?.[idxTimestamp] || '').trim();
+    const league = normalizeLeague(row?.[idxLeague] || '');
+    const teams = [
+      ...parseNickList(row?.[idxTeam1]),
+      ...parseNickList(row?.[idxTeam2]),
+      ...parseNickList(row?.[idxTeam3]),
+      ...parseNickList(row?.[idxTeam4])
+    ];
+    return {
+      timestamp,
+      tsMs: Date.parse(timestamp),
+      league: league || '',
+      teams: [...new Set(teams.map((nick) => String(nick || '').trim()).filter(Boolean))],
+      winner: String(row?.[idxWinner] || '').trim(),
+      series: String(row?.[idxSeries] || '').trim(),
+      mvp: String(row?.[idxMvp] || '').trim()
+    };
+  }).filter((entry) => entry.timestamp && Number.isFinite(entry.tsMs) && entry.league && entry.teams.length);
+}
+
+export async function getHomeLiveData() {
+  const [adultsSheet, kidsSheet, logsSheet, gamesSheet] = await Promise.all([
+    readSheet('sundaygames', { limitRows: 2000, limitCols: 30 }),
+    readSheet('kids', { limitRows: 2000, limitCols: 30 }),
+    readSheet('logs', { limitRows: 5000, limitCols: 30 }),
+    readSheet('games', { limitRows: 5000, limitCols: 30 })
+  ]);
+
+  return {
+    adults: normalizeLeagueTable(adultsSheet.rows, adultsSheet.header, 'sundaygames'),
+    kids: normalizeLeagueTable(kidsSheet.rows, kidsSheet.header, 'kids'),
+    logs: normalizeLogs(logsSheet.rows, logsSheet.header),
+    games: normalizeGames(gamesSheet.rows, gamesSheet.header)
+  };
+}
 function buildStatsFromMatches(matches, league, pointsByNick = new Map()) {
   const map = new Map();
   const touch = (nick) => {

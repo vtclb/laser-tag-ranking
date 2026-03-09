@@ -112,9 +112,11 @@ function pickFirst(...values) {
 
 function normalizeSeasonPlayerRow(row = {}) {
   const source = (row && typeof row === 'object') ? row : {};
+  const league = normalizeLeague(pickFirst(source.league, source.League, source.league_id, source.lg));
+  const nickname = String(pickFirst(source.nickname, source.Nickname, source.nick, source.Player, source.player) || '').trim();
   return {
-    league: normalizeLeague(pickFirst(source.league, source.League, source.league_id, source.lg)) || 'kids',
-    nickname: String(pickFirst(source.nickname, source.Nickname, source.nick, source.Player, source.player) || '').trim(),
+    league,
+    nickname,
     matches: toNumber(pickFirst(source.matches, source.Matches), 0) || 0,
     wins: toNumber(pickFirst(source.wins, source.Wins), 0) || 0,
     draws: toNumber(pickFirst(source.draws, source.Draws), 0) || 0,
@@ -122,8 +124,30 @@ function normalizeSeasonPlayerRow(row = {}) {
     mvp_total: toNumber(pickFirst(source.mvp_total, source.MVP_total, source.MVP, source.mvp), 0) || 0,
     rating_end: toNumber(pickFirst(source.rating_end, source.Rating_end, source.rating, source.Rating), null),
     rating_delta: toNumber(pickFirst(source.rating_delta, source.Rating_delta), 0) || 0,
-    rank_final: pickFirst(source.rank_final, source.Rank_final, source.rank, source.Rank, source.place)
+    rank_final: toNumber(pickFirst(source.rank_final, source.Rank_final, source.rank, source.Rank, source.place), null)
   };
+}
+
+function dedupeSeasonPlayers(players = []) {
+  const rows = Array.isArray(players) ? players : [];
+  const map = new Map();
+  const pickBetter = (a, b) => {
+    const aRank = Number.isFinite(a.rank_final);
+    const bRank = Number.isFinite(b.rank_final);
+    if (aRank !== bRank) return aRank ? a : b;
+    const ratingDiff = (a.rating_end ?? -1e9) - (b.rating_end ?? -1e9);
+    if (ratingDiff !== 0) return ratingDiff > 0 ? a : b;
+    const matchesDiff = (a.matches || 0) - (b.matches || 0);
+    if (matchesDiff !== 0) return matchesDiff > 0 ? a : b;
+    return a;
+  };
+
+  rows.forEach((player) => {
+    if (!player?.league || !player?.nickname) return;
+    const key = `${player.league}::${normalizeHeader(player.nickname)}`;
+    map.set(key, map.has(key) ? pickBetter(map.get(key), player) : player);
+  });
+  return [...map.values()];
 }
 
 function mapRowsByLeague(rows = [], mapper = (value) => value) {
@@ -175,7 +199,7 @@ function normalizeSeasonMasterPayload(payload, seasonId = '') {
 
   const awards = mapRowsByLeague(Array.isArray(sourceSections.awards) ? sourceSections.awards : [], (row) => ({ ...(row || {}) }));
   const series_summary = mapRowsByLeague(Array.isArray(sourceSections.series_summary) ? sourceSections.series_summary : (Array.isArray(sourceSections.series) ? sourceSections.series : []), (row) => ({ ...(row || {}) }));
-  const players = (Array.isArray(sourceSections.players) ? sourceSections.players : []).map(normalizeSeasonPlayerRow);
+  const players = dedupeSeasonPlayers((Array.isArray(sourceSections.players) ? sourceSections.players : []).map(normalizeSeasonPlayerRow));
 
   return {
     seasonId: payload.season || payload.seasonId || seasonId,

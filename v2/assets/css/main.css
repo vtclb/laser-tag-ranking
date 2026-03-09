@@ -613,3 +613,125 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   .home-v2 .home-points-box { min-width: 46px; }
   .home-v2 .home-progress-grid { grid-template-columns: 1fr; }
 }
+
+/* Home V2 polish: rectangular nav, rank glyphs, league progress cards */
+.topnav__pill,
+.menu-btn {
+  border-radius: 0 !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+  background: linear-gradient(180deg, rgba(17, 25, 42, .95), rgba(8, 12, 22, .96)) !important;
+  padding: .5rem .8rem !important;
+}
+
+.topnav__pill:hover,
+.menu-btn:hover {
+  border-color: rgba(124, 255, 114, .45) !important;
+  box-shadow: 0 0 0 1px rgba(124, 255, 114, .2), 0 0 14px rgba(124, 255, 114, .16) !important;
+}
+
+.topnav__pill:active,
+.menu-btn:active {
+  transform: translateY(1px);
+}
+
+.home-v2 .home-leaders,
+.home-v2 .home-leaders-frame,
+.home-v2 .home-section-title,
+.home-v2 .home-section-panel {
+  border-radius: 0 !important;
+}
+
+.home-v2 .home-rank-letter {
+  width: auto;
+  height: auto;
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-shadow: 0 0 10px rgba(255,255,255,.18);
+}
+
+.home-v2 .home-rank-frame {
+  border-radius: 0 !important;
+  position: relative;
+  overflow: hidden;
+  animation: homeRankPulse 3.8s ease-in-out infinite;
+}
+
+.home-v2 .home-rank-frame::after {
+  content: '';
+  position: absolute;
+  inset: -45% auto -45% -70%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent);
+  transform: skewX(-18deg);
+  animation: homeRankSweep 7.8s linear infinite;
+  pointer-events: none;
+}
+
+.home-v2 .home-rank-frame.rank-s { border-color: #f6cf7d; box-shadow: 0 0 10px rgba(246, 207, 125, .3); }
+.home-v2 .home-rank-frame.rank-a { border-color: #ff9e80; box-shadow: 0 0 10px rgba(255, 158, 128, .24); }
+.home-v2 .home-rank-frame.rank-b { border-color: #6ec3ff; box-shadow: 0 0 10px rgba(110, 195, 255, .22); }
+.home-v2 .home-rank-frame.rank-c { border-color: #90df79; box-shadow: 0 0 10px rgba(144, 223, 121, .22); }
+.home-v2 .home-rank-frame.rank-d { border-color: #c5cfdf; box-shadow: 0 0 9px rgba(197, 207, 223, .2); }
+.home-v2 .home-rank-frame.rank-e { border-color: #a8b4c8; box-shadow: 0 0 8px rgba(168, 180, 200, .16); }
+.home-v2 .home-rank-frame.rank-f { border-color: #8d97ab; box-shadow: 0 0 8px rgba(141, 151, 171, .14); }
+
+.home-v2 .home-player-row.is-top3 .home-rank-frame {
+  box-shadow: 0 0 0 1px rgba(124,255,114,.24), 0 0 14px rgba(124,255,114,.22);
+  animation-duration: 3.1s;
+}
+
+.home-v2 .home-progress-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+}
+
+.home-v2 .home-progress-card {
+  min-height: 114px;
+  border-radius: 0 !important;
+  border: 1px solid rgba(255, 255, 255, .15);
+  background: linear-gradient(180deg, rgba(11, 18, 31, .88), rgba(5, 10, 18, .9));
+  padding: .6rem;
+  display: grid;
+  gap: .35rem;
+  align-content: space-between;
+}
+
+.home-v2 .home-progress-card__media {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.home-v2 .home-progress-card__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.home-v2 .home-progress-card__value {
+  font-size: 1rem;
+  letter-spacing: .02em;
+}
+
+.home-v2 .home-progress-card__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+@keyframes homeRankPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(120, 170, 240, .12); }
+  50% { box-shadow: 0 0 14px rgba(120, 170, 240, .24); }
+}
+
+@keyframes homeRankSweep {
+  0% { left: -70%; }
+  100% { left: 140%; }
+}

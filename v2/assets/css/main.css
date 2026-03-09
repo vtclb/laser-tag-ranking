@@ -83,3 +83,53 @@ body.rank-C { background: radial-gradient(circle at top, rgba(137,207,78,.22), #
 body.rank-B { background: radial-gradient(circle at top, rgba(255,209,102,.24), #090d16 52%); }
 body.rank-A { background: radial-gradient(circle at top, rgba(255,159,110,.24), #090d16 52%); }
 body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #090d16 52%); }
+
+/* Home V2: unified square UI */
+.home-v2 .hero,
+.home-v2 .px-card,
+.home-v2 .home-card,
+.home-v2 .home-panel,
+.home-v2 .home-league,
+.home-v2 .home-rank-card,
+.home-v2 .home-current-row,
+.home-v2 .home-stats-strip span,
+.home-v2 .btn,
+.home-v2 .home-expand-btn,
+.home-v2 .px-badge {
+  border-radius: 0 !important;
+}
+
+.home-v2 .px-card,
+.home-v2 .home-card,
+.home-v2 .home-panel,
+.home-v2 .home-league,
+.home-v2 .home-current-row,
+.home-v2 .home-rank-card {
+  border: 1px solid rgba(255,255,255,.16);
+}
+
+.home-v2 .btn,
+.home-v2 .home-expand-btn {
+  min-height: 40px;
+  padding: .55rem .9rem;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.home-v2 .home-heroes,
+.home-v2 .home-expanded,
+.home-v2 .home-rank-grid,
+.home-v2 .home-progress-grid,
+.home-v2 .home-current-table {
+  display: grid;
+  gap: .6rem;
+}
+
+.home-v2 .home-heroes { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.home-v2 .home-rank-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.home-v2 .home-progress-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.home-v2 .home-current-row { grid-template-columns: 50px 1.3fr repeat(4, minmax(0, .7fr)); display: grid; gap: .45rem; align-items: center; padding: .5rem; }
+.home-v2 .home-expanded { margin-top: .7rem; }
+.home-v2 .home-expanded:not(.is-open) { display: none; }
+.home-v2 .home-league__head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }

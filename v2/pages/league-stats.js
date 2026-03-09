@@ -1,56 +1,100 @@
-import { getLeagueSnapshot, getSeasonsList, safeErrorMessage } from '../core/dataHub.js';
-import { normalizeLeague, leagueLabelUA, toDataHubLeague } from '../core/naming.js';
+import { getLeagueLiveData, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 
-function rankBadge(rank) {
-  const label = String(rank || 'F').toUpperCase();
-  return `<span class="rank-badge rank--${label}">${label}</span>`;
+const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
+const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 rx=%220%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
+
+function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
+function fmtSigned(v) { const n = Number(v) || 0; return `${n > 0 ? '+' : ''}${n}`; }
+function rankClass(rank) { return `rank-${String(rank || 'F').trim().toLowerCase()}`; }
+function avatar(player) { return `<img class="home-avatar" src="${esc(player?.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player?.nickname || 'player')}">`; }
+
+function row(player, i, top = false) {
+  const r = String(player.rankText || rankFromPoints(player.points) || 'F').toUpperCase();
+  return `<div class="home-current-row home-player-row ${top && i < 3 ? 'is-top3' : ''}">
+    <span class="home-place">#${i + 1}</span>
+    <span class="home-rank-letter ${rankClass(r)}">${esc(r)}</span>
+    <span class="home-avatar-wrap home-rank-frame ${rankClass(r)}">${avatar(player)}</span>
+    <span class="home-player-name">${esc(player.nickname)}</span>
+    <span class="home-points-box">${esc(player.points)}</span>
+    <span>${esc(player.games || 0)}</span>
+    <span>${esc(player.mvp || 0)}</span>
+    <span>${esc(fmtSigned(player.delta || 0))}</span>
+  </div>`;
 }
 
-function renderError(root, message) {
-  root.innerHTML = `<section class="px-card px-card--accent"><h1 class="px-card__title">Статистика ліги</h1><p class="px-card__text">${message}</p></section>`;
+function sortPlayers(players, sortBy) {
+  const arr = [...players];
+  const by = (k) => (v) => Number(v?.[k]) || 0;
+  if (sortBy === 'games') arr.sort((a, b) => by('games')(b) - by('games')(a));
+  else if (sortBy === 'mvp') arr.sort((a, b) => by('mvp')(b) - by('mvp')(a));
+  else if (sortBy === 'delta') arr.sort((a, b) => by('delta')(b) - by('delta')(a));
+  else arr.sort((a, b) => by('points')(b) - by('points')(a));
+  return arr.map((p, idx) => ({ ...p, place: idx + 1 }));
 }
 
-function sortRows(rows, sortBy = 'points') {
-  const copy = [...rows];
-  const val = (item, key) => Number(item?.[key]) || 0;
-  if (sortBy === 'games') copy.sort((a, b) => val(b, 'games') - val(a, 'games'));
-  else if (sortBy === 'wr') copy.sort((a, b) => val(b, 'winRate') - val(a, 'winRate'));
-  else copy.sort((a, b) => val(b, 'points') - val(a, 'points'));
-  return copy;
+function renderPage(root, league, data) {
+  const summary = data.summary || {};
+  const dist = summary.rankDistribution || {};
+  const lastDay = data.recentGames[0]?.timestamp || '—';
+  const mvpDay = data.recentGames[0]?.mvp || '—';
+
+  root.innerHTML = `<section class="px-card home-card">
+      <h1 class="px-card__title">${esc(leagueLabelUA(league))}</h1>
+      <p class="px-card__text">Live статистика поточної ліги з таблицею, прогресом та логами.</p>
+      <div class="home-stats-strip"><span>Сезон: Поточний</span><span>Гравців: ${summary.playersCount || 0}</span><span>Матчів: ${summary.matchesCount || 0}</span></div>
+      <div class="px-card__actions"><a class="btn" href="./gameday.html?league=${encodeURIComponent(league)}">Ігровий день / Логи</a></div>
+    </section>
+
+    <section class="px-card home-card"><h2 class="px-card__title">Топ-10</h2><div class="home-current-table">${(data.top10 || []).map((p, i) => row(p, i, true)).join('') || '<p class="px-card__text">Немає даних</p>'}</div></section>
+
+    <section class="px-card home-card">
+      <div class="home-league__head"><h2 class="px-card__title">Повний рейтинг</h2><div class="season-controls-row"><input id="leagueSearch" class="search-input" placeholder="Пошук по ніку"><select id="leagueSort" class="search-input"><option value="points">Очки</option><option value="games">Ігри</option><option value="mvp">MVP</option><option value="delta">Прогрес</option></select></div></div>
+      <div id="fullTable" class="home-full-list"></div>
+    </section>
+
+    <section class="px-card home-card"><h2 class="px-card__title">Інфографіка ліги</h2><div class="home-stats-strip"><span>Сер. рейтинг: ${summary.avgRating || 0}</span><span>Всього MVP: ${summary.totalMvp || 0}</span><span>Сер. активність: ${summary.avgActivity || 0}</span></div><div class="home-rank-grid">${RANKS.map((r) => `<div class="home-rank-card"><strong>${r}</strong><span>${dist[r] || 0}</span></div>`).join('')}</div></section>
+
+    <section class="px-card home-card"><h2 class="px-card__title">Прогрес ліги</h2><div class="home-progress-grid">
+      <article class="home-card"><h3>Найкращий приріст</h3><p>${esc(data.progress?.bestGrowth?.nickname || '—')} · ${fmtSigned(data.progress?.bestGrowth?.delta || 0)}</p></article>
+      <article class="home-card"><h3>Найбільше MVP</h3><p>${esc(data.progress?.mostMvp?.nickname || '—')} · ${esc(data.progress?.mostMvp?.mvp || 0)} MVP</p></article>
+      <article class="home-card"><h3>Найбільший мінус</h3><p>${esc(data.progress?.biggestMinus?.nickname || '—')} · ${fmtSigned(data.progress?.biggestMinus?.delta || 0)}</p></article>
+    </div></section>
+
+    <section class="px-card home-card"><h2 class="px-card__title">Нагороди / бейджі</h2><div class="home-progress-grid">${(data.awards || []).slice(0, 6).map((a) => `<article class="home-card"><span class="px-badge">${esc(a.title)}</span><p><strong>${esc(a.nickname)}</strong></p><p class="px-card__text">${esc(a.note)}</p></article>`).join('')}</div></section>
+
+    <section class="px-card home-card"><h2 class="px-card__title">Останній ігровий день</h2><div class="home-stats-strip"><span>Дата: ${esc(lastDay)}</span><span>Матчів: ${(data.recentGames || []).slice(0, 1).length}</span><span>MVP дня: ${esc(mvpDay)}</span></div><div class="px-card__actions"><a class="btn" href="./gameday.html?league=${encodeURIComponent(league)}">Відкрити ігровий день</a></div></section>`;
+
+  const fullTable = root.querySelector('#fullTable');
+  const searchEl = root.querySelector('#leagueSearch');
+  const sortEl = root.querySelector('#leagueSort');
+  const paint = () => {
+    const needle = String(searchEl?.value || '').trim().toLowerCase();
+    const sorted = sortPlayers(data.players || [], sortEl?.value || 'points');
+    const filtered = needle ? sorted.filter((p) => String(p.nickname || '').toLowerCase().includes(needle)) : sorted;
+    fullTable.innerHTML = filtered.map((p, i) => row(p, i, false)).join('') || '<p class="px-card__text">Немає даних</p>';
+  };
+  searchEl?.addEventListener('input', paint);
+  sortEl?.addEventListener('change', paint);
+  paint();
 }
 
-function renderTable(rows, sortBy) {
-  const sorted = sortRows(rows, sortBy);
-  return sorted.map((player, idx) => `<tr><td>${idx + 1}</td><td>${player.nick || '—'}</td><td>${player.points ?? 0}</td><td>${player.games ?? 0}</td><td>${player.winRate ?? 0}%</td><td>${rankBadge(player.rankLetter)}</td></tr>`).join('');
+function resolveLeague(params = {}) {
+  const qp = new URLSearchParams(location.search);
+  return normalizeLeague(params.league || qp.get('league') || document.body.dataset.league || 'kids') || 'kids';
 }
 
 export async function initLeagueStatsPage(params = {}) {
   const root = document.getElementById('view');
   if (!root) return;
-
-  const league = normalizeLeague(params.league) || 'kids';
-  root.innerHTML = `<section class="px-card px-card--accent"><h1 class="px-card__title">Статистика · ${leagueLabelUA(league)}</h1><p class="px-card__text" id="leagueStatsState">Завантаження…</p></section><section class="px-card"><div class="season-controls-row"><select id="leagueSort" class="search-input"><option value="points">Сортувати: Очки</option><option value="games">Сортувати: Ігри</option><option value="wr">Сортувати: WR</option></select></div><div class="season-table-wrap"><table class="season-table league-table"><thead><tr><th>#</th><th>Гравець</th><th>Очки</th><th>Ігор</th><th>WR</th><th>Ранг</th></tr></thead><tbody id="leagueStatsRows"><tr><td colspan="6">Завантаження…</td></tr></tbody></table></div></section>`;
-
-  const state = document.getElementById('leagueStatsState');
-  const rowsEl = document.getElementById('leagueStatsRows');
-  const sortEl = document.getElementById('leagueSort');
-  if (!state || !rowsEl || !sortEl) return renderError(root, 'Не вдалося підготувати інтерфейс');
-
+  root.innerHTML = '<section class="px-card home-card"><h1 class="px-card__title">Статистика ліги</h1><p class="px-card__text">Завантаження…</p></section>';
   try {
-    const seasons = await getSeasonsList();
-    const latestSeasonId = seasons?.[0]?.id;
-    if (!latestSeasonId) throw new Error('Немає доступних сезонів');
-
-    const snapshot = await getLeagueSnapshot(toDataHubLeague(league), latestSeasonId);
-    const tableRows = Array.isArray(snapshot?.table) ? snapshot.table : [];
-    state.textContent = `${snapshot?.seasonTitle || latestSeasonId}`;
-
-    const paint = () => {
-      rowsEl.innerHTML = tableRows.length ? renderTable(tableRows, sortEl.value) : '<tr><td colspan="6">Немає даних</td></tr>';
-    };
-    sortEl.addEventListener('change', paint);
-    paint();
+    const league = resolveLeague(params);
+    const data = await getLeagueLiveData(league);
+    renderPage(root, league, data);
   } catch (error) {
-    renderError(root, safeErrorMessage(error, 'Помилка завантаження статистики'));
+    root.innerHTML = `<section class="px-card home-card"><h1 class="px-card__title">Статистика ліги</h1><p class="px-card__text">${esc(safeErrorMessage(error, 'Помилка завантаження'))}</p></section>`;
   }
 }
+
+if (document.body?.dataset?.league) initLeagueStatsPage({ league: document.body.dataset.league });

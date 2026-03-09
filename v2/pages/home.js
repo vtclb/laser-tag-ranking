@@ -4,8 +4,8 @@ import { leagueLabelUA } from '../core/naming.js';
 const HOME_CURRENT_SEASON = { id: 'spring_2026', label: 'Весна 2026', endDate: '2026-05-31' };
 const HOME_LEAGUES = ['sundaygames', 'kids'];
 const STATS_LINKS = {
-  sundaygames: `#season?season=${encodeURIComponent(HOME_CURRENT_SEASON.id)}&league=olds`,
-  kids: `#season?season=${encodeURIComponent(HOME_CURRENT_SEASON.id)}&league=kids`
+  sundaygames: './sunday.html',
+  kids: './kids.html'
 };
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 rx=%220%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
 
@@ -143,8 +143,8 @@ function footerBlock() {
     <p class="home-footer-days">До завершення сезону: <strong>${daysLeft}</strong> днів</p>
     <div class="home-footer-actions">
       <button type="button" class="btn btn--secondary" id="homeScrollTopBtn">Вгору</button>
-      <a class="btn btn--secondary" href="${STATS_LINKS.sundaygames}">Статистика дорослої ліги</a>
-      <a class="btn btn--secondary" href="${STATS_LINKS.kids}">Статистика дитячої ліги</a>
+      <a class="btn btn--secondary" href="${STATS_LINKS.sundaygames}">Детальна статистика дорослої ліги</a>
+      <a class="btn btn--secondary" href="${STATS_LINKS.kids}">Детальна статистика дитячої ліги</a>
     </div>
   </section>`;
 }

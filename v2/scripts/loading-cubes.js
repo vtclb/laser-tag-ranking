@@ -2,17 +2,14 @@ const GRID_SIZE = 24;
 let timer = null;
 let cells = [];
 let tick = 0;
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function ensureOverlay() {
   let overlay = document.getElementById('loadingOverlay');
   if (overlay) return overlay;
-
   overlay = document.createElement('div');
   overlay.id = 'loadingOverlay';
   overlay.className = 'loadingCubes';
-  overlay.setAttribute('aria-hidden', 'true');
-  overlay.innerHTML = `<div class="loadingCubes__panel px-card px-card--accent"><div class="loadingCubes__grid" id="loadingGrid" aria-label="Loading"></div><div class="loadingCubes__meta"><span class="px-badge">SYSTEM</span><div class="loadingCubes__title">LOADING</div><div class="loadingCubes__sub" id="loadingSub">Syncing…</div></div></div>`;
+  overlay.innerHTML = '<div class="loadingCubes__panel px-card px-card--accent"><div class="loadingCubes__grid" id="loadingGrid"></div><div class="loadingCubes__meta"><span class="px-badge">SYSTEM</span><div class="loadingCubes__title">LOADING</div><div class="loadingCubes__sub" id="loadingSub">Syncing…</div></div></div>';
   document.body.appendChild(overlay);
   return overlay;
 }
@@ -30,46 +27,27 @@ function ensureGrid() {
   grid.appendChild(fragment);
 }
 
-function paintCells() {
-  if (!cells.length) return;
+function paint() {
   tick += 1;
-  const total = cells.length;
-  const sweep = tick % (GRID_SIZE + 12);
-
   cells.forEach((cell, idx) => {
-    if (reduceMotion) {
-      cell.style.background = idx % 7 === 0 ? 'rgba(242,245,255,.18)' : 'rgba(242,245,255,.08)';
-      return;
-    }
-
-    const row = Math.floor(idx / GRID_SIZE);
-    if (row <= sweep) {
-      cell.style.background = (idx + tick) % 5 === 0 ? 'var(--accent-2)' : 'var(--accent)';
-      return;
-    }
-
-    const shimmer = Math.random();
-    if (shimmer > 0.985) cell.style.background = 'rgba(242,245,255,.45)';
-    else if (shimmer > 0.95) cell.style.background = 'rgba(242,245,255,.18)';
+    const wave = (idx + tick) % 19;
+    if (wave < 8) cell.style.background = 'var(--accent)';
+    else if (wave < 12) cell.style.background = 'var(--accent-2)';
     else cell.style.background = 'rgba(242,245,255,.08)';
+    cell.style.opacity = wave < 12 ? '1' : '.5';
   });
 }
 
-function startLoop() {
-  stopLoop();
-  paintCells();
-  timer = window.setInterval(paintCells, reduceMotion ? 500 : 70);
+function start() {
+  if (timer) clearInterval(timer);
+  paint();
+  timer = setInterval(paint, 70);
 }
 
-function stopLoop() {
-  if (timer) {
-    window.clearInterval(timer);
-    timer = null;
-  }
-}
-
-function lockScroll(locked) {
-  document.body.style.overflow = locked ? 'hidden' : '';
+function stop() {
+  if (!timer) return;
+  clearInterval(timer);
+  timer = null;
 }
 
 function show(message = 'Syncing…') {
@@ -78,20 +56,14 @@ function show(message = 'Syncing…') {
   const sub = document.getElementById('loadingSub');
   if (sub) sub.textContent = message;
   overlay.classList.add('is-visible');
-  overlay.setAttribute('aria-hidden', 'false');
-  lockScroll(true);
-  startLoop();
+  start();
 }
 
 function hide() {
-  const overlay = ensureOverlay();
-  overlay.classList.remove('is-visible');
-  overlay.setAttribute('aria-hidden', 'true');
-  lockScroll(false);
-  stopLoop();
+  ensureOverlay().classList.remove('is-visible');
+  stop();
 }
 
 window.LoadingCubes = { show, hide };
-
 if (document.readyState !== 'loading') ensureOverlay();
 else document.addEventListener('DOMContentLoaded', ensureOverlay, { once: true });

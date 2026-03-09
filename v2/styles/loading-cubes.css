@@ -1,9 +1,10 @@
-.loadingCubes{position:fixed;inset:0;display:grid;place-items:center;background:rgba(5,8,16,.72);z-index:120;opacity:0;pointer-events:none;transition:opacity .2s ease}
+.loadingCubes{position:fixed;inset:0;display:grid;place-items:center;background:rgba(4,8,16,.58);backdrop-filter:blur(2px);z-index:120;opacity:0;pointer-events:none;transition:opacity .2s ease}
 .loadingCubes.is-visible{opacity:1;pointer-events:auto}
-.loadingCubes__panel{width:min(94vw,520px);display:grid;gap:.75rem}
-.loadingCubes__grid{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;aspect-ratio:1/1;padding:.45rem;border:1px solid var(--line);background:rgba(3,7,14,.9)}
-.loadingCubes__cell{background:rgba(242,245,255,.08);min-height:8px;transition:background .12s linear,opacity .2s linear}
-.loadingCubes__meta{display:grid;gap:.3rem}
-.loadingCubes__title{font-family:var(--font-head);letter-spacing:.08em}
-.loadingCubes__sub{font-family:var(--font-mono);color:var(--fg-1);font-size:.86rem}
-@media (prefers-reduced-motion: reduce){.loadingCubes__cell{transition:background .8s linear}}
+.loadingCubes__panel{width:min(92vw,460px);display:grid;gap:.7rem;padding:1rem 1rem .9rem;border:1px solid rgba(143,217,255,.45);background:linear-gradient(180deg,rgba(9,14,25,.92),rgba(5,10,19,.94));box-shadow:inset 0 0 0 1px rgba(183,255,42,.16)}
+.loadingCubes__title{font-family:var(--font-head);font-size:1.05rem;letter-spacing:.04em;margin:0}
+.loadingCubes__sub{font-family:var(--font-mono);color:var(--fg-1);font-size:.82rem;margin:0}
+.loadingCubes__line{position:relative;height:4px;border:1px solid rgba(143,217,255,.35);background:rgba(8,14,22,.75);overflow:hidden}
+.loadingCubes__line::before{content:'';position:absolute;inset:0 auto 0 -35%;width:35%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:loading-sweep 1.15s linear infinite}
+@keyframes loading-sweep{to{transform:translateX(390%)} }
+@media (max-width:540px){.loadingCubes__panel{padding:.9rem}.loadingCubes__title{font-size:.96rem}}
+@media (prefers-reduced-motion: reduce){.loadingCubes__line::before{animation:none;left:0;width:100%;opacity:.65}}

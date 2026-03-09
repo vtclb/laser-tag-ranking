@@ -1,63 +1,64 @@
-import { getGameDay, safeErrorMessage } from '../core/dataHub.js';
+import { getLeagueLiveData, safeErrorMessage } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 
-const dateInput = document.getElementById('dateInput');
-const leagueSelect = document.getElementById('leagueSelect');
-const storageKey = 'v2:lastLeague';
+function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
+function fmt(v) { const n = Number(v) || 0; return `${n > 0 ? '+' : ''}${n}`; }
 
-function renderMatch(match) {
-  const changes = (match.pointsChanges || []).map((entry) => `${entry.nick}: ${entry.delta >= 0 ? '+' : ''}${entry.delta ?? 0}`).join(' · ');
-  const teams = [match.teams.sideA, match.teams.sideB, match.teams.sideC, match.teams.sideD].filter((list) => Array.isArray(list) && list.length);
-  const title = teams.map((list) => list.join(', ')).join(' vs ');
-  return `<li style="padding:.55rem 0;border-bottom:1px solid rgba(255,255,255,.14);"><strong>${title || '—'}</strong><br>Winner: ${match.winner || '—'} · MVP: ${match.mvp || '—'} · Серія: ${match.seriesSummary || '—'}<br><span class="tag">Δpoints: ${changes || '—'}</span></li>`;
+function resolveLeague() {
+  const qp = new URLSearchParams(location.search);
+  return normalizeLeague(qp.get('league') || 'sundaygames') || 'sundaygames';
 }
 
-function renderSkeleton() {
-  document.getElementById('players').innerHTML = '<li><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></li>';
-  document.getElementById('matches').innerHTML = '<li><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></li>';
-  document.getElementById('results').innerHTML = '<div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div>';
+function summaryFromGames(games = []) {
+  const date = games[0]?.timestamp || '—';
+  const players = new Set(games.flatMap((g) => g.teams || []).map((n) => String(n || '').trim().toLowerCase()).filter(Boolean));
+  const mvp = games[0]?.mvp || '—';
+  return { date, matches: games.length, players: players.size, mvp };
 }
 
-function renderResults(data) {
-  const metricValue = (value) => (Number.isFinite(value) ? value : 'N/A');
-  const wins = data.activePlayers.reduce((sum, player) => sum + (player.winsToday || 0), 0);
-  const draws = data.activePlayers.reduce((sum, player) => sum + (player.drawsToday || 0), 0);
-  const losses = data.activePlayers.reduce((sum, player) => sum + (player.lossesToday || 0), 0);
-  const topChanges = [...data.matches.flatMap((match) => match.pointsChanges || [])]
-    .sort((a, b) => Math.abs(b.delta || 0) - Math.abs(a.delta || 0))
-    .slice(0, 8)
-    .map((entry) => `<span class="result-chip">${entry.nick}: ${entry.delta >= 0 ? '+' : ''}${entry.delta ?? 0}</span>`)
-    .join('');
+function render(root, league, data) {
+  const games = (data.recentGames || []).slice(0, 12);
+  const logs = (data.recentLogs || []).slice(0, 20);
+  const summary = summaryFromGames(games);
+  const grow = [...(data.players || [])].sort((a, b) => (b.delta || 0) - (a.delta || 0))[0];
+  const minus = [...(data.players || [])].sort((a, b) => (a.delta || 0) - (b.delta || 0))[0];
+  const mvp = [...(data.players || [])].sort((a, b) => (b.mvp || 0) - (a.mvp || 0))[0];
 
-  return `<p>Games: ${metricValue(data.gamesCount)}</p><p>Battles: ${metricValue(data.battlesCount)}</p><p>Rounds: ${metricValue(data.roundsCount)}</p><p>Гравці: ${data.activePlayers.length}</p><p>Перемоги / Нічиї / Поразки: ${wins} / ${draws} / ${losses}</p><div>${topChanges || '<span class="tag">Немає змін поінтів</span>'}</div>`;
+  root.innerHTML = `<section class="px-card home-card"><h1 class="px-card__title">Ігровий день / Логи</h1>
+    <div class="season-controls-row"><label>Ліга <select id="leagueFilter" class="search-input"><option value="sundaygames" ${league === 'sundaygames' ? 'selected' : ''}>Доросла</option><option value="kids" ${league === 'kids' ? 'selected' : ''}>Дитяча</option></select></label></div>
+    <p class="px-card__text">${esc(leagueLabelUA(league))} · Останній день: ${esc(summary.date)}</p>
+    <div class="px-card__actions"><a class="btn" href="./${league === 'kids' ? 'kids' : 'sunday'}.html">Назад до ліги</a></div>
+  </section>
+
+  <section class="px-card home-card"><h2 class="px-card__title">Summary дня</h2><div class="home-stats-strip"><span>Матчів: ${summary.matches}</span><span>Гравців: ${summary.players}</span><span>MVP: ${esc(summary.mvp)}</span><span>Активність: ${data.summary?.avgActivity || 0}</span></div></section>
+
+  <section class="px-card home-card"><h2 class="px-card__title">Список матчів</h2><div class="home-full-list">${games.map((g) => `<div class="home-player-row"><strong>${esc(g.winner || '—')}</strong><span>${esc((g.teams || []).join(', '))}</span><span>MVP: ${esc(g.mvp || '—')}</span><span>Серія: ${esc(g.series || '—')}</span><span>${esc(g.timestamp || '—')}</span></div>`).join('') || '<p class="px-card__text">Немає матчів</p>'}</div></section>
+
+  <section class="px-card home-card"><h2 class="px-card__title">Логи рейтингу</h2><div class="home-full-list">${logs.map((l) => `<div class="home-player-row"><strong>${esc(l.nickname)}</strong><span>${fmt(l.delta)}</span><span>${l.newPoints ?? '—'}</span><span>${esc(l.timestamp || '—')}</span></div>`).join('') || '<p class="px-card__text">Немає логів</p>'}</div></section>
+
+  <section class="px-card home-card"><h2 class="px-card__title">Лідери дня</h2><div class="home-progress-grid">
+    <article class="home-card"><h3>Найбільший приріст</h3><p>${esc(grow?.nickname || '—')} · ${fmt(grow?.delta)}</p></article>
+    <article class="home-card"><h3>Найбільша втрата</h3><p>${esc(minus?.nickname || '—')} · ${fmt(minus?.delta)}</p></article>
+    <article class="home-card"><h3>MVP дня</h3><p>${esc(mvp?.nickname || '—')} · ${mvp?.mvp || 0} MVP</p></article>
+  </div></section>`;
+
+  root.querySelector('#leagueFilter')?.addEventListener('change', (event) => {
+    const lg = normalizeLeague(event.target.value) || 'sundaygames';
+    location.search = `?league=${encodeURIComponent(lg)}`;
+  });
 }
 
-async function load() {
-  const stateEl = document.getElementById('state');
-  const ymd = dateInput.value;
-  const league = normalizeLeague(leagueSelect.value) || 'sundaygames';
-  localStorage.setItem(storageKey, league);
-  renderSkeleton();
-
+export async function initGameDayPage() {
+  const root = document.getElementById('view');
+  if (!root) return;
+  root.innerHTML = '<section class="px-card home-card"><h1 class="px-card__title">Ігровий день</h1><p class="px-card__text">Завантаження…</p></section>';
   try {
-    const data = await getGameDay({ date: ymd, league });
-    const normalizedLeague = normalizeLeague(data.league) || league;
-    const players = [...data.activePlayers].sort((a, b) => ((b.matchesToday || 0) - (a.matchesToday || 0)) || String(a.nick || '').localeCompare(String(b.nick || ''), 'uk'));
-
-    document.getElementById('header').textContent = `${data.date} · ${leagueLabelUA(normalizedLeague)}`;
-    document.getElementById('totals').textContent = `Ігор: ${Number.isFinite(data.gamesCount) ? data.gamesCount : 'N/A'} · Боїв: ${Number.isFinite(data.battlesCount) ? data.battlesCount : 'N/A'} · Активних: ${players.length}`;
-    document.getElementById('players').innerHTML = players.map((p) => `<li>${p.nick} · ігор: ${p.matchesToday} · перемоги: ${p.winsToday || 0} · нічиї: ${p.drawsToday || 0} · поразки: ${p.lossesToday || 0} · MVP: ${p.mvpToday}</li>`).join('') || '<li class="placeholder">Нема ігор за цю дату.</li>';
-    document.getElementById('matches').innerHTML = data.matches.map(renderMatch).join('') || '<li class="placeholder">Нема ігор за цю дату.</li>';
-    document.getElementById('results').innerHTML = renderResults({ ...data, activePlayers: players });
-    stateEl.textContent = '';
+    const league = resolveLeague();
+    const data = await getLeagueLiveData(league);
+    render(root, league, data);
   } catch (error) {
-    stateEl.textContent = safeErrorMessage(error, 'Дані тимчасово недоступні');
+    root.innerHTML = `<section class="px-card home-card"><h1 class="px-card__title">Ігровий день</h1><p class="px-card__text">${esc(safeErrorMessage(error, 'Помилка завантаження'))}</p></section>`;
   }
 }
 
-dateInput.value = new Date().toISOString().slice(0, 10);
-leagueSelect.value = normalizeLeague(localStorage.getItem(storageKey)) || 'sundaygames';
-document.getElementById('showBtn').addEventListener('click', load);
-dateInput.addEventListener('change', load);
-leagueSelect.addEventListener('change', load);
-load();
+if (document.getElementById('view') && !window.location.hash) initGameDayPage();

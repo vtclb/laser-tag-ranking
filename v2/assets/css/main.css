@@ -833,3 +833,39 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .home-v2 .home-player-row {
   border-radius: 0 !important;
 }
+/* League live pages + gameday */
+.home-v2 .home-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: .45rem;
+  margin-top: .6rem;
+}
+.home-v2 .home-stats-strip span {
+  border: 1px solid rgba(255,255,255,.16);
+  padding: .42rem .5rem;
+  background: rgba(10,17,30,.6);
+}
+.home-v2 .home-rank-frame { border: 1px solid rgba(255,255,255,.24); box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); }
+.home-v2 .home-rank-frame.rank-s,
+.home-v2 .home-rank-frame.rank-a,
+.home-v2 .home-rank-frame.rank-b,
+.home-v2 .home-rank-frame.rank-c { box-shadow: 0 0 12px rgba(122,216,255,.2), inset 0 0 0 1px rgba(0,0,0,.35); }
+.home-v2 .home-current-row.is-top3 { background: linear-gradient(90deg, rgba(49,208,255,.16), rgba(124,255,114,.06)); }
+.home-v2 .home-full-list .home-player-row,
+.home-v2 .home-current-table .home-player-row {
+  display: grid;
+  grid-template-columns: 50px 36px 42px 1.5fr .7fr .6fr .6fr .7fr;
+  gap: .45rem;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.14);
+  padding: .42rem;
+  background: rgba(8,14,24,.6);
+}
+@media (max-width: 860px) {
+  .home-v2 .home-full-list .home-player-row,
+  .home-v2 .home-current-table .home-player-row {
+    grid-template-columns: 42px 30px 34px 1fr .8fr;
+  }
+  .home-v2 .home-full-list .home-player-row > :nth-child(n+6),
+  .home-v2 .home-current-table .home-player-row > :nth-child(n+6) { display: none; }
+}

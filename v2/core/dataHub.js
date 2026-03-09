@@ -976,6 +976,126 @@ function normalizeGames(rows = [], header = []) {
   }).filter((entry) => entry.timestamp && Number.isFinite(entry.tsMs) && entry.league && entry.teams.length);
 }
 
+function parseLeagueTableForLive(rows = [], header = [], avatarsMap = new Map()) {
+  const idxNick = findHeaderIndex(header, ['nickname', 'nick', 'player']);
+  const idxPoints = findHeaderIndex(header, ['points', 'pts', 'score', 'mmr']);
+  const idxRank = findHeaderIndex(header, ['rank', 'rang', 'ранг']);
+  const idxGames = findHeaderIndex(header, ['games', 'matches', 'played', 'зіграно']);
+  const idxMvp = findHeaderIndex(header, ['mvp', 'mvps', 'mvp_total']);
+  const idxDelta = findHeaderIndex(header, ['delta', 'change', 'progress']);
+  const dedupe = new Map();
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const nickname = String(row?.[idxNick] || '').trim();
+    if (!nickname) return;
+    const key = nickname.toLowerCase().trim();
+    const points = toNumber(row?.[idxPoints], 0) || 0;
+    const rankRaw = String(row?.[idxRank] || '').trim().toUpperCase();
+    const rankText = rankRaw || rankFromPoints(points);
+    const candidate = {
+      nickname,
+      points,
+      rankText,
+      games: toNumber(row?.[idxGames], 0) || 0,
+      mvp: toNumber(row?.[idxMvp], 0) || 0,
+      delta: toNumber(row?.[idxDelta], 0) || 0,
+      avatarUrl: avatarsMap.get(key) || ''
+    };
+    const prev = dedupe.get(key);
+    if (!prev || candidate.points >= prev.points) dedupe.set(key, candidate);
+  });
+
+  return [...dedupe.values()].sort((a, b) => b.points - a.points).map((player, idx) => ({ ...player, place: idx + 1 }));
+}
+
+function buildAwards(players = [], recentGames = [], progress = {}) {
+  const top1 = players[0] || null;
+  const mostMvp = [...players].sort((a, b) => (b.mvp || 0) - (a.mvp || 0))[0] || null;
+  const active = [...players].sort((a, b) => (b.games || 0) - (a.games || 0))[0] || null;
+  const stable = [...players].filter((p) => (p.games || 0) >= 4).sort((a, b) => Math.abs(a.delta || 0) - Math.abs(b.delta || 0))[0] || null;
+  const recentMvp = recentGames[0]?.mvp || null;
+  return [
+    top1 && { key: 'top1', title: 'Топ-1 ліги', nickname: top1.nickname, note: `Лідер рейтингу: ${top1.points}` },
+    mostMvp && { key: 'mvp-machine', title: 'MVP машина', nickname: mostMvp.nickname, note: `${mostMvp.mvp || 0} MVP` },
+    progress?.bestGrowth && { key: 'best-growth', title: 'Найкращий приріст', nickname: progress.bestGrowth.nickname, note: `+${progress.bestGrowth.delta}` },
+    active && { key: 'most-active', title: 'Найактивніший', nickname: active.nickname, note: `${active.games} ігор` },
+    recentMvp && { key: 'comeback-day', title: 'Камбек дня', nickname: recentMvp, note: 'MVP останнього матчу' },
+    stable && { key: 'iron-player', title: 'Стабільний гравець', nickname: stable.nickname, note: `Δ ${stable.delta >= 0 ? '+' : ''}${stable.delta}` }
+  ].filter(Boolean);
+}
+
+export async function getLeagueLiveData(leagueId = 'kids') {
+  const league = normalizeLeague(leagueId) || 'kids';
+  const cacheKey = `league-live:${league}`;
+  const cached = readCache(cacheKey, TTL.leagueSnapshot);
+  if (cached) return cached;
+
+  const [leagueSheet, logsSheet, gamesSheet, avatarsMap] = await Promise.all([
+    readSheet(league, { limitRows: 3000, limitCols: 40 }),
+    readSheet('logs', { limitRows: 6000, limitCols: 30 }),
+    readSheet('games', { limitRows: 6000, limitCols: 40 }),
+    getAvatarsMap()
+  ]);
+
+  const players = parseLeagueTableForLive(leagueSheet?.rows || [], leagueSheet?.header || [], avatarsMap);
+  const recentLogs = normalizeLogs(logsSheet?.rows || [], logsSheet?.header || [])
+    .filter((entry) => entry.league === league)
+    .sort((a, b) => (b.tsMs || 0) - (a.tsMs || 0));
+  const recentGames = normalizeGames(gamesSheet?.rows || [], gamesSheet?.header || [])
+    .filter((entry) => entry.league === league)
+    .sort((a, b) => (b.tsMs || 0) - (a.tsMs || 0));
+
+  const logsDeltaByNick = new Map();
+  recentLogs.forEach((entry) => {
+    const key = String(entry.nickname || '').trim().toLowerCase();
+    if (!key) return;
+    logsDeltaByNick.set(key, (logsDeltaByNick.get(key) || 0) + (Number(entry.delta) || 0));
+  });
+  const mvpByNick = new Map();
+  recentGames.forEach((game) => {
+    const key = String(game.mvp || '').trim().toLowerCase();
+    if (!key) return;
+    mvpByNick.set(key, (mvpByNick.get(key) || 0) + 1);
+  });
+
+  const enrichedPlayers = players.map((player) => {
+    const key = player.nickname.toLowerCase().trim();
+    return {
+      ...player,
+      delta: player.delta || logsDeltaByNick.get(key) || 0,
+      mvp: player.mvp || mvpByNick.get(key) || 0
+    };
+  });
+
+  const matchesCount = recentGames.length;
+  const avgRating = enrichedPlayers.length ? Math.round(enrichedPlayers.reduce((sum, p) => sum + (p.points || 0), 0) / enrichedPlayers.length) : 0;
+  const totalMvp = enrichedPlayers.reduce((sum, p) => sum + (p.mvp || 0), 0);
+  const avgActivity = enrichedPlayers.length ? (enrichedPlayers.reduce((sum, p) => sum + (p.games || 0), 0) / enrichedPlayers.length) : 0;
+  const rankDistribution = getRankDistribution(enrichedPlayers);
+  const bestGrowth = [...enrichedPlayers].sort((a, b) => (b.delta || 0) - (a.delta || 0))[0] || null;
+  const biggestMinus = [...enrichedPlayers].sort((a, b) => (a.delta || 0) - (b.delta || 0))[0] || null;
+  const mostMvp = [...enrichedPlayers].sort((a, b) => (b.mvp || 0) - (a.mvp || 0))[0] || null;
+  const progress = { bestGrowth, biggestMinus, mostMvp };
+
+  return writeCache(cacheKey, {
+    league,
+    players: enrichedPlayers,
+    top10: enrichedPlayers.slice(0, 10),
+    summary: {
+      playersCount: enrichedPlayers.length,
+      matchesCount,
+      avgRating,
+      totalMvp,
+      avgActivity: Number(avgActivity.toFixed(1)),
+      rankDistribution
+    },
+    progress,
+    awards: buildAwards(enrichedPlayers, recentGames, progress),
+    recentGames,
+    recentLogs
+  });
+}
+
 export async function getHomeLiveData() {
   const [adultsSheet, kidsSheet, logsSheet, gamesSheet, avatarsMap] = await Promise.all([
     readSheet('sundaygames', { limitRows: 2000, limitCols: 30 }),

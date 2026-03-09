@@ -379,3 +379,88 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
     font-size: .92rem;
   }
 }
+
+/* Home V2 hard overrides (load-last expectations) */
+.home-v2 .home-current-row,
+.home-v2 .home-player-row {
+  display: grid;
+  grid-template-columns: 44px 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-v2 .home-avatar-wrap {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+  flex: 0 0 40px;
+  overflow: hidden;
+  border-radius: 0 !important;
+}
+
+.home-v2 .home-avatar,
+.home-v2 img.home-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+  object-fit: cover !important;
+  display: block;
+  flex: 0 0 40px;
+  border-radius: 0 !important;
+}
+
+@media (max-width: 640px) {
+  .home-v2 .home-avatar-wrap {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    max-width: 32px;
+    max-height: 32px;
+    flex-basis: 32px;
+  }
+
+  .home-v2 .home-avatar,
+  .home-v2 img.home-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    max-width: 32px !important;
+    max-height: 32px !important;
+  }
+}
+
+.topnav__pill,
+.topnav__logo,
+.navsheet__panel,
+.navsheet__section .btn {
+  border-radius: 0 !important;
+}
+
+.home-v2 .hero,
+.home-v2 .px-card,
+.home-v2 .home-card,
+.home-v2 .home-panel,
+.home-v2 .home-league,
+.home-v2 .home-current-row,
+.home-v2 .home-player-row,
+.home-v2 .home-avatar-wrap,
+.home-v2 .home-rank-badge,
+.home-v2 .btn,
+.home-v2 button,
+.home-v2 .px-badge,
+.home-v2 .home-expand-btn,
+.home-v2 .home-points-box,
+.home-v2 .home-summary-strip,
+.home-v2 .home-hero-card,
+.home-v2 .home-full-list,
+.home-v2 .home-current-table {
+  border-radius: 0 !important;
+}

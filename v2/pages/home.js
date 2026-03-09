@@ -6,9 +6,10 @@ const ranks = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 function top5Card(players, leagueKey, ctaLabel) {
   const rows = (players || []).slice(0, 5).map((player, idx) => {
     const meta = rankMeta(player.rankLetter);
+    const rankClass = `rank--${meta.label}`;
     const gamesPlayed = Number.isFinite(player.playedGames) ? player.playedGames : 0;
     const wr = Number.isFinite(player.winRate) ? `${Math.round(player.winRate)}%` : (gamesPlayed ? '0%' : '—');
-    return `<li class="top5-row"><span class="top5-pos">#${idx + 1}</span><span class="rank-badge ${meta.cssClass}">${meta.label}</span><span class="top5-nick" title="${player.nick || '—'}">${player.nick || '—'}</span><span class="top5-main"><span class="top5-points">${player.points ?? 0} pts</span><span class="top5-wr">WR ${wr}</span></span><span class="top5-games">${gamesPlayed} ігор</span></li>`;
+    return `<li class="top5-row"><span class="top5-pos">#${idx + 1}</span><span class="rank-badge ${rankClass}">${meta.label}</span><span class="top5-nick" title="${player.nick || '—'}">${player.nick || '—'}</span><span class="top5-main"><span class="top5-points">${player.points ?? 0} pts</span><span class="top5-wr">WR ${wr}</span></span><span class="top5-games">${gamesPlayed} ігор</span></li>`;
   }).join('');
 
   return `<article class="px-card px-card--accent top5-card home-block section"><span class="px-badge">Маніфест ліги</span><h3 class="px-card__title">${leagueLabelUA(leagueKey)}</h3><ol class="top5-list">${rows || '<li class="top5-empty">Немає даних</li>'}</ol><div class="px-card__actions"><a class="btn btn--secondary" href="#league-stats?league=${leagueKey}">${ctaLabel}</a></div></article>`;
@@ -29,7 +30,7 @@ function buildBarSegments(dist, leagueKey) {
     const value = dist?.[rank] || 0;
     const percent = total ? Math.round((value / total) * 100) : 0;
     const meta = rankMeta(rank);
-    return `<button type="button" class="rank-segment ${meta.cssClass}" style="width:${Math.max(percent, value ? 3 : 0)}%" title="${rank}: ${value} (${percent}%)"><span>${rank}</span></button>`;
+    return `<button type="button" class="rank-segment ${meta.cssClass}" style="width:0%" data-target-width="${Math.max(percent, value ? 3 : 0)}" title="${rank}: ${value} (${percent}%)"><span>${rank}</span></button>`;
   }).join('');
 
   return `<div class="rank-compare-row"><span class="px-badge rank-label">${leagueLabelUA(leagueKey)}</span><div class="rank-stack" role="img" aria-label="${leagueLabelUA(leagueKey)} rank distribution">${segments || '<span class="tag">Немає даних</span>'}</div><p class="tag rank-total">${total} гравців</p></div>`;
@@ -79,6 +80,12 @@ export async function initHomePage() {
     topHeroes.innerHTML = top5Card(data.top5Kids, 'kids', 'Перейти до статистики') + top5Card(data.top5Adults, 'olds', 'Перейти до статистики');
     overviewStats.innerHTML = seasonProgressCard(data.kidsMetrics, data.seasonSchedule, 'kids') + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'olds');
     charts.innerHTML = rankDistributionCard(data.rankDistKids, data.rankDistAdults);
+    requestAnimationFrame(() => {
+      charts.querySelectorAll('.rank-segment[data-target-width]').forEach((segment) => {
+        segment.style.transition = 'width .7s ease';
+        segment.style.width = `${segment.dataset.targetWidth || 0}%`;
+      });
+    });
     stateBox.textContent = 'Головна показує сезонні метрики та прогрес ігрових днів.';
   } catch (error) {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');

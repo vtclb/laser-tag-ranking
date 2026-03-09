@@ -19,7 +19,7 @@ export async function initSeasonsPage() {
   try {
     const seasons = await listSeasonMasters();
     if (!Array.isArray(seasons) || seasons.length === 0) {
-      root.innerHTML = '<section class="px-card"><h2 class="px-card__title">Сезони</h2><p class="px-card__text">Немає доступних сезонів.</p></section>';
+      root.innerHTML = '<section class="px-card"><h2 class="px-card__title">Сезони</h2><p class="px-card__text">Немає доступних сезонів</p></section>';
       return;
     }
     const sorted = [...seasons].sort((a, b) => String(b).localeCompare(String(a), 'uk'));

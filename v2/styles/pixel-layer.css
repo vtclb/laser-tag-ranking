@@ -371,14 +371,14 @@ main.page { width: 100%; padding-top: var(--topnav-h); }
 .navsheet__label { opacity: .9; justify-content: flex-start; }
 body.navsheet-open { position: fixed; left: 0; right: 0; overflow: hidden; }
 
-.rank-badge { display: inline-flex; align-items: center; justify-content: center; padding: .14rem .45rem; border: 1px solid currentColor; border-radius: 999px; font-family: var(--font-mono); font-weight: 700; min-width: 34px; }
-.rank--S { color: var(--rank-s); }
-.rank--A { color: var(--rank-a); }
-.rank--B { color: var(--rank-b); }
-.rank--C { color: var(--rank-c); }
-.rank--D { color: var(--rank-d); }
-.rank--E { color: var(--rank-e); }
-.rank--F { color: var(--rank-f); }
+.rank-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; font-family:var(--font-mono); font-weight:700; color:#fff; border:1px solid rgba(255,255,255,.25); }
+.rank--S { background:#8c35ff; }
+.rank--A { background:#f44336; }
+.rank--B { background:#ffc107; color:#201701; }
+.rank--C { background:#00bcd4; }
+.rank--D { background:#b7ff2a; color:#1e2a00; }
+.rank--E { background:#4caf50; }
+.rank--F { background:#7a7f8f; }
 
 .top5-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 .top5-row { display: grid; grid-template-columns: 36px auto 1fr auto; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid rgba(173, 232, 255, 0.16); }
@@ -481,3 +481,12 @@ body::before, body::after { z-index: 0; }
   .season-league-cards,
   .season-awards-grid { grid-template-columns: 1fr; }
 }
+
+
+.progress-shell{height:12px;border:1px solid var(--line);border-radius:999px;background:rgba(6,10,18,.9);overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .7s ease}
+.delta-bar{display:inline-flex;width:84px;height:8px;border:1px solid var(--line);border-radius:999px;overflow:hidden;vertical-align:middle;margin-right:6px}
+.delta-bar > span{display:block;background:linear-gradient(90deg,var(--accent-2),var(--accent));height:100%}
+.season-radar{width:100%;max-width:260px}
+.league-table tbody tr:hover,.season-table tbody tr:hover{background:rgba(83,182,255,.12)}
+.season-table-wrap,.table-wrap{overflow-x:auto}

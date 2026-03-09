@@ -807,10 +807,18 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   align-items: center;
 }
 
+.topnav__pill--square {
+  border-radius: 0 !important;
+}
+
 .home-v2 .home-hero-buttons {
   display: flex;
   justify-content: center;
   gap: 10px;
+}
+
+.home-v2 .home-hero-buttons .btn {
+  border-radius: 0 !important;
 }
 
 /* HOME V2 — force square UI */
@@ -868,4 +876,16 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   }
   .home-v2 .home-full-list .home-player-row > :nth-child(n+6),
   .home-v2 .home-current-table .home-player-row > :nth-child(n+6) { display: none; }
+}
+
+.home-v2 .home-leaders-frame,
+.home-v2 .home-progress-card,
+.home-v2 .home-progress-card__media,
+.home-v2 .home-progress-card__value,
+.home-v2 .home-progress-card__label,
+.home-v2 .home-progress-card *,
+.home-v2 .home-leaders-frame *,
+.home-v2 .home-hero-buttons .btn,
+.topnav__pill--square {
+  border-radius: 0 !important;
 }

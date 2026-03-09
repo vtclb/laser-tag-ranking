@@ -81,17 +81,17 @@ function findPlayerByNickname(players = [], nickname = '') {
 
 function progressCard({ label, value, player = null, rankText = null }) {
   if (!value) {
-    return `<article class="home-progress-card"><p class="home-progress-card__label">${esc(label)}</p><strong class="home-progress-card__value">Немає даних</strong></article>`;
+    return `<article class="home-card home-progress-card"><div class="home-progress-card__media"></div><div class="home-progress-card__value">Немає даних</div><div class="home-progress-card__label">${esc(label)}</div></article>`;
   }
   const rankClass = getRankClass(rankText || player?.rankText || rankFromPoints(player?.points));
   const name = player?.nickname || '—';
-  return `<article class="home-progress-card">
+  return `<article class="home-card home-progress-card">
     <div class="home-progress-card__media">
       <span class="home-avatar-wrap home-rank-frame ${rankClass}">${avatarImage(player)}</span>
       <span class="home-progress-card__name">${esc(name)}</span>
     </div>
-    <strong class="home-progress-card__value">${esc(value)}</strong>
-    <p class="home-progress-card__label">${esc(label)}</p>
+    <div class="home-progress-card__value">${esc(value)}</div>
+    <div class="home-progress-card__label">${esc(label)}</div>
   </article>`;
 }
 
@@ -153,7 +153,7 @@ export async function initHomePage() {
   const root = document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
   <section class="section home-leaders-frame"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
   <section class="section" id="leagueSections"></section>

@@ -42,7 +42,7 @@ function ensureTopNav() {
   const header = document.querySelector('header.topbar, header.topnav');
   if (!header || header.dataset.v2Topnav === '1') return;
   header.className = 'topnav';
-  header.innerHTML = `<div class="container topnav__row"><div class="topnav__actions"><button type="button" class="topnav__pill menu-btn" id="globalMenuBtn"><span class="icon icon--menu" aria-hidden="true"></span> MENU</button></div></div>`;
+  header.innerHTML = `<div class="container topnav__row"><div class="topnav__actions"><button type="button" class="topnav__pill menu-btn topnav__pill--square" id="globalMenuBtn"><span class="icon icon--menu" aria-hidden="true"></span> MENU</button></div></div>`;
   header.dataset.v2Topnav = '1';
 }
 

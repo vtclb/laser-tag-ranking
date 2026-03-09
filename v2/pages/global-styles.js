@@ -148,3 +148,5 @@ export function ensureGlobalStyles() {
   ensureLoadingScript();
   attachLoadingHooks();
 }
+
+ensureGlobalStyles();

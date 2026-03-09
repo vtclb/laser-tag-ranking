@@ -10,26 +10,30 @@ function rankClass(rank) { return `rank-${String(rank || 'F').trim().toLowerCase
 function rankValue(player) { return String(player.rankText || rankFromPoints(player.points) || 'F').toUpperCase(); }
 function avatar(player) { return `<img class="league-avatar" src="${esc(player?.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player?.nickname || 'player')}">`; }
 
-function topRow(player, i) {
-  const r = rankValue(player);
-  return `<div class="league-top-row ${i < 3 ? 'is-top3' : ''}">
-    <span class="league-place">#${i + 1}</span>
-    <span class="league-rank-letter ${rankClass(r)}">${esc(r)}</span>
-    <span class="league-avatar-wrap league-rank-frame ${rankClass(r)}">${avatar(player)}</span>
-    <span class="league-nickname">${esc(player.nickname)}</span>
-    <span class="league-points">${esc(player.points)}</span>
-  </div>`;
+function toWinrate(player) {
+  const wins = Number(player?.wins);
+  const draws = Number(player?.draws);
+  const losses = Number(player?.losses);
+  if (Number.isFinite(wins) && Number.isFinite(draws) && Number.isFinite(losses)) {
+    const total = wins + draws + losses;
+    if (total <= 0) return '—';
+    return `${Math.round((wins / total) * 100)}%`;
+  }
+  const games = Number(player?.games);
+  if (Number.isFinite(wins) && Number.isFinite(games) && games > 0) return `${Math.round((wins / games) * 100)}%`;
+  return '—';
 }
 
 function fullRow(player, i) {
   const r = rankValue(player);
   return `<div class="league-table-row">
     <span class="league-table-cell league-col-place" data-label="Місце">#${i + 1}</span>
-    <span class="league-table-cell league-col-avatar" data-label="Аватар"><span class="league-avatar-wrap league-rank-frame ${rankClass(r)}">${avatar(player)}</span></span>
     <span class="league-table-cell league-col-rank" data-label="Ранг"><span class="league-rank-letter ${rankClass(r)}">${esc(r)}</span></span>
+    <span class="league-table-cell league-col-avatar" data-label="Аватар"><span class="league-avatar-wrap league-rank-frame ${rankClass(r)}">${avatar(player)}</span></span>
     <span class="league-table-cell league-col-nickname" data-label="Нік">${esc(player.nickname)}</span>
-    <span class="league-table-cell league-col-points" data-label="Points">${esc(player.points)}</span>
+    <span class="league-table-cell league-col-points" data-label="Очки">${esc(player.points)}</span>
     <span class="league-table-cell league-col-games" data-label="Ігри">${esc(player.games || 0)}</span>
+    <span class="league-table-cell league-col-winrate" data-label="Winrate">${esc(toWinrate(player))}</span>
     <span class="league-table-cell league-col-mvp" data-label="MVP">${esc(player.mvp || 0)}</span>
     <span class="league-table-cell league-col-delta" data-label="Δ">${esc(fmtSigned(player.delta || 0))}</span>
   </div>`;
@@ -61,25 +65,25 @@ function sortPlayers(players, sortBy) {
 function renderPage(root, league, data) {
   const summary = data.summary || {};
   const dist = summary.rankDistribution || {};
-  const lastDay = data.recentGames[0]?.timestamp || '—';
-  const mvpDay = data.recentGames[0]?.mvp || '—';
+  const lastGame = data.recentGames[0] || {};
+  const lastDay = lastGame.timestamp || '—';
+  const mvpDay = lastGame.mvp || '—';
+  const activePlayers = (data.players || []).filter((p) => !p.inactive);
 
   root.innerHTML = `<section class="px-card league-hero">
       <h1 class="px-card__title">${esc(leagueLabelUA(league))}</h1>
-      <p class="px-card__text">Live статистика поточної ліги з таблицею, прогресом та логами.</p>
-      <div class="league-summary-strip"><span>Сезон: Поточний</span><span>Гравців: ${summary.playersCount || 0}</span><span>Матчів: ${summary.matchesCount || 0}</span></div>
+      <p class="px-card__text">Детальна статистика поточного сезону: повний рейтинг, інфографіка, прогрес і підсумки останнього дня.</p>
+      <div class="league-summary-strip"><span>Сезон: Поточний</span><span>Активних гравців: ${activePlayers.length || summary.playersCount || 0}</span><span>Матчів: ${summary.matchesCount || 0}</span></div>
       <div class="px-card__actions"><a class="btn" href="./gameday.html?league=${encodeURIComponent(league)}">Ігровий день / Логи</a></div>
     </section>
 
-    <section class="px-card league-top10"><h2 class="px-card__title">Топ-10</h2><div class="league-top-table">${(data.top10 || []).map((p, i) => topRow(p, i)).join('') || '<p class="px-card__text">Немає даних</p>'}</div></section>
-
     <section class="px-card league-table">
-      <div class="league-table-head"><h2 class="px-card__title">Повний рейтинг</h2><div class="league-controls-row"><input id="leagueSearch" class="search-input" placeholder="Пошук по ніку"><select id="leagueSort" class="search-input"><option value="points">Очки</option><option value="games">Ігри</option><option value="mvp">MVP</option><option value="delta">Прогрес</option></select></div></div>
-      <div class="league-table-header" aria-hidden="true"><span>Місце</span><span>Аватар</span><span>Ранг</span><span>Нік</span><span>Points</span><span>Ігри</span><span>MVP</span><span>Δ</span></div>
+      <div class="league-table-head"><h2 class="px-card__title">Повний рейтинг ліги</h2><div class="league-controls-row"><input id="leagueSearch" class="search-input" placeholder="Пошук по ніку"><select id="leagueSort" class="search-input"><option value="points">Очки</option><option value="games">Ігри</option><option value="mvp">MVP</option><option value="delta">Прогрес</option></select></div></div>
+      <div class="league-table-header" aria-hidden="true"><span>Місце</span><span>Ранг</span><span>Аватар</span><span>Нік</span><span>Очки</span><span>Ігри</span><span>Winrate</span><span>MVP</span><span>Δ</span></div>
       <div id="fullTable" class="league-table-list"></div>
     </section>
 
-    <section class="px-card league-distribution"><h2 class="px-card__title">Інфографіка ліги</h2><div class="league-summary-strip"><span>Сер. рейтинг: ${summary.avgRating || 0}</span><span>Всього MVP: ${summary.totalMvp || 0}</span><span>Сер. активність: ${summary.avgActivity || 0}</span></div><div class="league-rank-grid">${RANKS.map((r) => `<div class="league-rank-card"><strong>${r}</strong><span>${dist[r] || 0}</span></div>`).join('')}</div></section>
+    <section class="px-card league-distribution"><h2 class="px-card__title">Інфографіка ліги</h2><div class="league-summary-strip"><span>Сер. рейтинг: ${summary.avgRating || 0}</span><span>Матчів всього: ${summary.matchesCount || 0}</span><span>Активних гравців: ${activePlayers.length || summary.playersCount || 0}</span><span>Всього MVP: ${summary.totalMvp || 0}</span></div><div class="league-rank-grid">${RANKS.map((r) => `<div class="league-rank-card"><strong>${r}</strong><span>${dist[r] || 0}</span></div>`).join('')}</div></section>
 
     <section class="px-card league-progress"><h2 class="px-card__title">Прогрес ліги</h2><div class="league-progress-grid">
       ${progressCard(data.progress?.bestGrowth, data.progress?.bestGrowth?.delta, 'Найкращий приріст', true)}
@@ -89,14 +93,14 @@ function renderPage(root, league, data) {
 
     <section class="px-card league-awards"><h2 class="px-card__title">Нагороди / бейджі</h2><div class="league-awards-grid">${(data.awards || []).slice(0, 6).map((a) => `<article class="league-award-card"><span class="px-badge">${esc(a.title)}</span><p><strong>${esc(a.nickname)}</strong></p><p class="px-card__text">${esc(a.note)}</p></article>`).join('') || '<p class="px-card__text">Немає нагород</p>'}</div></section>
 
-    <section class="px-card league-last-day"><h2 class="px-card__title">Останній ігровий день</h2><div class="league-summary-strip"><span>Дата: ${esc(lastDay)}</span><span>Матчів: ${(data.recentGames || []).slice(0, 1).length}</span><span>MVP дня: ${esc(mvpDay)}</span></div><div class="px-card__actions"><a class="btn" href="./gameday.html?league=${encodeURIComponent(league)}">Відкрити ігровий день</a></div></section>`;
+    <section class="px-card league-last-day"><h2 class="px-card__title">Останній ігровий день</h2><div class="league-summary-strip"><span>Дата: ${esc(lastDay)}</span><span>Матчів: ${esc(lastGame.matchesCount || lastGame.battlesCount || 1)}</span><span>MVP дня: ${esc(mvpDay)}</span></div><div class="px-card__actions"><a class="btn" href="./gameday.html?league=${encodeURIComponent(league)}">Відкрити ігровий день</a></div></section>`;
 
   const fullTable = root.querySelector('#fullTable');
   const searchEl = root.querySelector('#leagueSearch');
   const sortEl = root.querySelector('#leagueSort');
   const paint = () => {
     const needle = String(searchEl?.value || '').trim().toLowerCase();
-    const sorted = sortPlayers(data.players || [], sortEl?.value || 'points');
+    const sorted = sortPlayers(activePlayers, sortEl?.value || 'points');
     const filtered = needle ? sorted.filter((p) => String(p.nickname || '').toLowerCase().includes(needle)) : sorted;
     fullTable.innerHTML = filtered.map((p, i) => fullRow(p, i)).join('') || '<p class="px-card__text">Немає даних</p>';
   };
@@ -113,7 +117,7 @@ function resolveLeague(params = {}) {
 function renderLoading(root) {
   root.innerHTML = `<section class="px-card league-hero league-loading-block">
     <h1 class="px-card__title">Статистика ліги</h1>
-    <p class="px-card__text">Підтягуємо live-дані, будуємо таблицю та прогрес…</p>
+    <p class="px-card__text">Підтягуємо live-дані, будуємо повний рейтинг і метрики ліги…</p>
     <div class="league-loading-skeleton"><span></span><span></span><span></span></div>
   </section>`;
 }

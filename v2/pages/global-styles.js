@@ -44,6 +44,8 @@ function ensureStyleOrder() {
   ensureLink({ id: 'v2-pixel-layer', href: new URL('styles/pixel-layer.css', V2_BASE_URL).href });
   ensureLink({ id: 'v2-icons', href: new URL('styles/icons.css', V2_BASE_URL).href });
   ensureLink({ id: 'v2-loading-cubes', href: new URL('styles/loading-cubes.css', V2_BASE_URL).href });
+  ensureLink({ id: 'v2-assets-styles', href: new URL('assets/styles.css', V2_BASE_URL).href });
+  ensureLink({ id: 'v2-assets-main', href: new URL('assets/css/main.css', V2_BASE_URL).href });
 }
 
 function ensureTopNav() {

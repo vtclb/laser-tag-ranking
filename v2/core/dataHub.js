@@ -1094,6 +1094,21 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   return writeCache(cacheKey, { seasonId: season.id, seasonTitle: season.uiLabel, league: selectedLeague, top3: leaderboard.slice(0, 3), table: leaderboard, leaderboard, seasonStats, rankDistribution: getRankDistribution(leaderboard), matches: leagueMatches });
 }
 
+
+export async function getLiveLeagueSnapshot(league = 'kids') {
+  const config = await loadSeasonsConfig();
+  const currentSeason = getSeasonById(config, config.currentSeasonId);
+  const selectedLeague = normalizeLeague(league) || 'kids';
+  const cacheKey = `liveleague:${selectedLeague}`;
+  const cached = readCache(cacheKey, TTL.leagueSnapshot);
+  if (cached) return cached;
+
+  const payload = await gasCall('getSnapshot', { scope: 'league', league: selectedLeague }, 12_000, TTL.leagueSnapshot);
+  const normalized = normalizeLeagueSnapshotResponse(payload, currentSeason, selectedLeague);
+  if (!normalized) throw new Error('Live snapshot недоступний');
+  return writeCache(cacheKey, { ...normalized, updatedAt: pickFirst(normalized?.seasonStats?.updated_at, payload?.updated_at, payload?.timestamp, '') || '' });
+}
+
 export async function getHomeOverview() {
   return getHomeFast();
 }

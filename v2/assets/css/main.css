@@ -235,3 +235,147 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
     font-size: .9rem;
   }
 }
+
+
+/* Home V2 final layout overrides */
+.home-v2 .home-current-row,
+.home-v2 .home-player-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .5rem;
+}
+
+.home-v2 .home-place {
+  width: 48px;
+  min-width: 48px;
+  font-weight: 700;
+}
+
+.home-v2 .home-avatar-wrap {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+  flex: 0 0 40px;
+  overflow: hidden;
+}
+
+.home-v2 .home-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+  object-fit: cover;
+  display: block;
+  border-radius: 0 !important;
+  flex: 0 0 40px;
+}
+
+.home-v2 img.home-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  max-width: 40px !important;
+}
+
+.home-v2 .home-player-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+
+.home-v2 .home-player-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-v2 .home-player-rank {
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+.home-v2 .home-rank-badge {
+  border-radius: 0 !important;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  padding: 0;
+}
+
+.home-v2 .home-points-box {
+  margin-left: auto;
+  min-width: 62px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.home-v2 .home-league-card,
+.home-v2 .home-ranking-card,
+.home-v2 .home-player-row,
+.home-v2 .home-top-row,
+.home-v2 .home-expand-row,
+.home-v2 .home-expanded-panel,
+.home-v2 .home-stat-box,
+.home-v2 .home-hero-card,
+.home-v2 .home-mini-card,
+.home-v2 .home-avatar-wrap,
+.home-v2 .home-rank-badge,
+.home-v2 .home-points-box,
+.home-v2 .home-cta-row,
+.home-v2 .home-current-row,
+.home-v2 .home-table-row {
+  border-radius: 0 !important;
+}
+
+@media (max-width: 640px) {
+  .home-v2 .home-place {
+    width: 42px;
+    min-width: 42px;
+  }
+
+  .home-v2 .home-avatar-wrap {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    max-width: 32px;
+    max-height: 32px;
+    flex-basis: 32px;
+  }
+
+  .home-v2 .home-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    max-width: 32px;
+    max-height: 32px;
+    flex-basis: 32px;
+  }
+
+  .home-v2 img.home-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    max-width: 32px !important;
+  }
+
+  .home-v2 .home-player-rank {
+    display: none;
+  }
+
+  .home-v2 .home-points-box {
+    min-width: 54px;
+    font-size: .92rem;
+  }
+}

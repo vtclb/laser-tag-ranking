@@ -490,3 +490,32 @@ body::before, body::after { z-index: 0; }
 .season-radar{width:100%;max-width:260px}
 .league-table tbody tr:hover,.season-table tbody tr:hover{background:rgba(83,182,255,.12)}
 .season-table-wrap,.table-wrap{overflow-x:auto}
+
+.rank--S { background:#da70d6; color:#fff; }
+.rank--A { background:#e74c3c; color:#fff; }
+.rank--B { background:#f1c40f; color:#000; }
+.rank--C { background:#1abc9c; color:#000; }
+.rank--D { background:#2ecc71; color:#000; }
+.rank--E { background:#95a5a6; color:#000; }
+.rank--F { background:#7f8c8d; color:#fff; }
+
+.btn, .topnav__pill { transition: background .2s ease, border-color .2s ease, transform .15s ease; }
+.btn:hover, .topnav__pill:hover { background: linear-gradient(135deg, rgba(183,255,42,.25), rgba(83,182,255,.3)) !important; border-color: var(--accent) !important; }
+.btn:active, .topnav__pill:active { transform: translateY(1px) scale(.99); background: linear-gradient(135deg, rgba(183,255,42,.45), rgba(83,182,255,.45)) !important; }
+
+.season-league-card { text-decoration: none; min-height: 120px; }
+.season-league-card--kids { border-color: #f1c40f; }
+.season-league-card--olds { border-color: #1abc9c; }
+.season-league-card.card--active { box-shadow: 0 0 0 1px rgba(183,255,42,.55), 0 0 20px rgba(183,255,42,.22); background: rgba(20, 30, 10, 0.7); }
+
+.progress-line { display: grid; gap: 6px; margin: 0; }
+.rank-segment { transition: width .7s ease; }
+
+.rules-shell h1, .rules-shell h2 { margin: 0 0 8px; }
+.rules-shell ul, .rules-shell ol { margin: 0 0 12px 18px; }
+.rules-shell table { width: 100%; border-collapse: collapse; }
+.rules-shell th, .rules-shell td { border: 1px solid rgba(173,232,255,.2); padding: 8px; }
+.rules-shell .btn { margin-top: 8px; }
+
+.league-toggle { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.league-toggle label { min-height:44px; display:inline-flex; align-items:center; gap:6px; }

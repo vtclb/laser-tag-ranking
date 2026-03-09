@@ -1,15 +1,20 @@
-import { listSeasonMasters, safeErrorMessage } from '../core/dataHub.js';
+import { listSeasonMasters, getHomeFast, safeErrorMessage } from '../core/dataHub.js';
 
 const SEASON_LABELS = {
   summer_2025: 'Літо 2025',
   autumn_2025: 'Осінь 2025',
-  winter_2025_2026: 'Зима 2025–2026',
+  winter_2025_2026: 'Зима 2025–2026'
 };
 
-function seasonCard(seasonId = '') {
-  const seasonKey = encodeURIComponent(seasonId);
-  const label = SEASON_LABELS[seasonId] || seasonId;
-  return `<article class="px-card px-card--accent season-list-card"><h2 class="px-card__title">${label}</h2><div class="hero__actions"><a class="btn btn--primary" href="#season?season=${seasonKey}">Відкрити сезон</a></div></article>`;
+function seasonLabel(seasonId = '') {
+  return SEASON_LABELS[seasonId] || String(seasonId || '').replaceAll('_', ' ');
+}
+
+function seasonLeagueCard(seasonId, league, activeSeasonId) {
+  const isKids = league === 'kids';
+  const leagueLabel = isKids ? 'Дитяча' : 'Доросла';
+  const className = `px-card px-card--accent season-list-card season-league-card season-league-card--${league} ${seasonId === activeSeasonId ? 'card--active' : ''}`;
+  return `<a class="${className}" href="#season?season=${encodeURIComponent(seasonId)}&league=${league}"><h2 class="px-card__title">${seasonLabel(seasonId)} (${leagueLabel})</h2><p class="px-card__text">Відкрити сезон</p></a>`;
 }
 
 export async function initSeasonsPage() {
@@ -17,13 +22,17 @@ export async function initSeasonsPage() {
   if (!root) return;
   root.innerHTML = '<section class="px-card"><p class="px-card__text">Завантаження сезонів…</p></section>';
   try {
-    const seasons = await listSeasonMasters();
+    const [seasons, home] = await Promise.all([listSeasonMasters(), getHomeFast().catch(() => null)]);
     if (!Array.isArray(seasons) || seasons.length === 0) {
       root.innerHTML = '<section class="px-card"><h2 class="px-card__title">Сезони</h2><p class="px-card__text">Немає доступних сезонів</p></section>';
       return;
     }
     const sorted = [...seasons].sort((a, b) => String(b).localeCompare(String(a), 'uk'));
-    root.innerHTML = `<section class="section">${sorted.map(seasonCard).join('')}</section>`;
+    const activeSeasonId = home?.seasonId || '';
+    root.innerHTML = `<section class="section">${sorted.flatMap((seasonId) => [
+      seasonLeagueCard(seasonId, 'kids', activeSeasonId),
+      seasonLeagueCard(seasonId, 'olds', activeSeasonId)
+    ]).join('')}</section>`;
   } catch (error) {
     root.innerHTML = `<section class="px-card px-card--accent"><h2 class="px-card__title">Не вдалося завантажити</h2><p class="px-card__text">${safeErrorMessage(error, 'Не вдалося завантажити список сезонів')}</p></section>`;
   }

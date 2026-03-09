@@ -17,8 +17,8 @@ async function ensureLastSeasons() {
   if (lastSeasonCache.loaded) return lastSeasonCache;
   const seasons = await getSeasonsList();
   const fallback = seasons[0]?.id || 'winter_2025_2026';
-  lastSeasonCache.kids = fallback;
-  lastSeasonCache.olds = fallback;
+  lastSeasonCache.kids = window.__v2LastSeason?.kids || fallback;
+  lastSeasonCache.olds = window.__v2LastSeason?.olds || fallback;
   lastSeasonCache.loaded = true;
   return lastSeasonCache;
 }
@@ -61,7 +61,7 @@ async function ensureNavSheet() {
   const sheet = document.createElement('aside');
   sheet.id = 'v2-navsheet';
   sheet.className = 'navsheet';
-  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><div class="navsheet__head"><strong>MENU</strong><button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> Закрити</button></div><section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#seasons" data-nav-link="1">Сезони</a><button class="btn" type="button" data-open-stats="1">Статистика</button><a class="btn" href="#rules" data-nav-link="1">Правила</a></div><div class="navsheet__grid" id="statsLeagueChooser" hidden><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча</a><a class="btn" href="#league-stats?league=olds" data-nav-link="1">Доросла</a></div></section><section class="navsheet__section"><h3>ЛІГИ</h3><div class="navsheet__grid"><a class="btn" href="${hashHref('season', { season: seasonMap.kids, league: 'kids' })}" data-nav-link="1">Дитяча</a><a class="btn" href="${hashHref('season', { season: seasonMap.olds, league: 'olds' })}" data-nav-link="1">Доросла</a></div></section></div>`;
+  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><div class="navsheet__head"><strong>MENU</strong><button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> Закрити</button></div><section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#seasons" data-nav-link="1">Сезони</a><button class="btn" type="button" data-open-stats="1">Статистика</button><a class="btn" href="#rules" data-nav-link="1">Правила</a></div><div class="navsheet__grid" id="statsLeagueChooser" hidden><a class="btn" href="#season?season=${encodeURIComponent(seasonMap.kids)}&league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#season?season=${encodeURIComponent(seasonMap.olds)}&league=olds" data-nav-link="1">Доросла ліга</a></div></section><section class="navsheet__section"><h3>ЛІГИ</h3><div class="navsheet__grid"><a class="btn" href="${hashHref('season', { season: seasonMap.kids, league: 'kids' })}" data-nav-link="1">Дитяча ліга</a><a class="btn" href="${hashHref('season', { season: seasonMap.olds, league: 'olds' })}" data-nav-link="1">Доросла ліга</a></div></section></div>`;
 
   let scrollY = 0;
   let touchStartY = 0;

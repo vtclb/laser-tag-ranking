@@ -3,25 +3,37 @@ import { leagueLabelUA } from '../core/naming.js';
 
 const ranks = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 
-function top5Card(players, leagueKey, ctaLabel) {
+function top5Card(players, leagueKey) {
   const rows = (players || []).slice(0, 5).map((player, idx) => {
     const meta = rankMeta(player.rankLetter);
     const rankClass = `rank--${meta.label}`;
     const gamesPlayed = Number.isFinite(player.playedGames) ? player.playedGames : 0;
     const wr = Number.isFinite(player.winRate) ? `${Math.round(player.winRate)}%` : (gamesPlayed ? '0%' : '—');
-    return `<li class="top5-row"><span class="top5-pos">#${idx + 1}</span><span class="rank-badge ${rankClass}">${meta.label}</span><span class="top5-nick" title="${player.nick || '—'}">${player.nick || '—'}</span><span class="top5-main"><span class="top5-points">${player.points ?? 0} pts</span><span class="top5-wr">WR ${wr}</span></span><span class="top5-games">${gamesPlayed} ігор</span></li>`;
+    return `<li class="top5-row"><span class="top5-pos">#${idx + 1}</span><span class="rank-badge ${rankClass}">${meta.label}</span><span class="top5-nick" title="${player.nick || '—'}">${player.nick || '—'}</span><span class="top5-main"><span class="top5-points">${player.points ?? 0} очок</span><span class="top5-wr">WR ${wr}</span></span><span class="top5-games">${gamesPlayed} ігор</span></li>`;
   }).join('');
 
-  return `<article class="px-card px-card--accent top5-card home-block section"><span class="px-badge">Маніфест ліги</span><h3 class="px-card__title">${leagueLabelUA(leagueKey)}</h3><ol class="top5-list">${rows || '<li class="top5-empty">Немає даних</li>'}</ol><div class="px-card__actions"><a class="btn btn--secondary" href="#league-stats?league=${leagueKey}">${ctaLabel}</a></div></article>`;
+  return `<article class="px-card px-card--accent top5-card home-block section"><h3 class="px-card__title">${leagueLabelUA(leagueKey)}</h3><ol class="top5-list">${rows || '<li class="top5-empty">Немає даних</li>'}</ol></article>`;
 }
 
 function seasonProgressCard(metrics, schedule, leagueKey) {
   const completed = schedule?.completed || 0;
   const total = schedule?.total || 0;
   const progress = total ? Math.round((completed / total) * 100) : 0;
-  const metricValue = (value) => (Number.isFinite(value) ? value : 'N/A');
+  const metricValue = (value) => (Number.isFinite(value) ? value : 0);
+  const daysLeft = Math.max(0, schedule?.upcoming || 0);
+  const totalDays = Math.max(1, daysLeft + completed);
 
-  return `<article class="px-card home-block section"><span class="px-badge">Стан сезону</span><h3 class="px-card__title">Сезонний прогрес · ${leagueLabelUA(leagueKey)}</h3><p class="px-card__text"><strong>Зіграно ${completed} / всього ${total} ігрових днів</strong></p><div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div><div class="season-kpi-grid"><p><span>Раундів</span><strong>${metricValue(metrics.roundsCount)}</strong></p><p><span>Ігор</span><strong>${metricValue(metrics.gamesCount)}</strong></p><p><span>Активних гравців</span><strong>${metricValue(metrics.activePlayersCount)}</strong></p><p><span>Залишилось днів</span><strong>${schedule?.upcoming || 0}</strong></p></div></article>`;
+  const items = [
+    ['Раундів', metricValue(metrics.roundsCount), 220],
+    ['Ігор', metricValue(metrics.gamesCount), 120],
+    ['Активних гравців', metricValue(metrics.activePlayersCount), 80],
+    ['Днів залишилось', daysLeft, totalDays]
+  ];
+
+  return `<article class="px-card home-block section"><h3 class="px-card__title">${leagueLabelUA(leagueKey)}</h3><p class="px-card__text"><strong>Прогрес сезону: ${completed}/${total} днів</strong></p><div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div>${items.map(([label, value, max]) => {
+    const width = Math.min(100, Math.round((Number(value) / Math.max(1, Number(max))) * 100));
+    return `<p class="progress-line"><span>${label}: <strong>${value}</strong></span><div class="progress-shell"><div class="progress-bar" style="width:${width}%"></div></div></p>`;
+  }).join('')}</article>`;
 }
 
 function buildBarSegments(dist, leagueKey) {
@@ -30,18 +42,18 @@ function buildBarSegments(dist, leagueKey) {
     const value = dist?.[rank] || 0;
     const percent = total ? Math.round((value / total) * 100) : 0;
     const meta = rankMeta(rank);
-    return `<button type="button" class="rank-segment ${meta.cssClass}" style="width:0%" data-target-width="${Math.max(percent, value ? 3 : 0)}" title="${rank}: ${value} (${percent}%)"><span>${rank}</span></button>`;
+    return `<button type="button" class="rank-segment ${meta.cssClass}" style="width:0%" data-target-width="${Math.max(percent, value ? 3 : 0)}" title="Ранг ${rank}: ${value} (${percent}%)"><span>${rank}</span></button>`;
   }).join('');
 
-  return `<div class="rank-compare-row"><span class="px-badge rank-label">${leagueLabelUA(leagueKey)}</span><div class="rank-stack" role="img" aria-label="${leagueLabelUA(leagueKey)} rank distribution">${segments || '<span class="tag">Немає даних</span>'}</div><p class="tag rank-total">${total} гравців</p></div>`;
+  return `<div class="rank-compare-row"><span class="px-badge rank-label">${leagueLabelUA(leagueKey)}</span><div class="rank-stack" role="img" aria-label="${leagueLabelUA(leagueKey)} розподіл рангів">${segments || '<span class="tag">Немає даних</span>'}</div><p class="tag rank-total">${total} гравців</p></div>`;
 }
 
 function rankDistributionCard(kidsDist, adultsDist) {
-  return `<article class="px-card home-block rank-merged section"><span class="px-badge">Баланс рангів</span><h3 class="px-card__title">Ранги ліг</h3>${buildBarSegments(kidsDist, 'kids')}${buildBarSegments(adultsDist, 'olds')}</article>`;
+  return `<article class="px-card home-block rank-merged section"><h3 class="px-card__title">Баланс рангів</h3>${buildBarSegments(kidsDist, 'kids')}${buildBarSegments(adultsDist, 'olds')}</article>`;
 }
 
 function renderHomeStructure(root) {
-  root.innerHTML = `<section class="hero"><div class="hero__kicker">LaserTag</div><h1 class="hero__title">Головна</h1><p class="hero__subtitle" id="currentSeason">—</p><p class="px-card__text" id="stateBox" aria-live="polite"></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Герої сезону</h2><div class="hero-grid section" id="topHeroes"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Прогрес сезону</h2><div class="kpi kpi-2 section" id="overviewStats"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Маніфест рангів</h2><div class="kpi kpi-2 section" id="charts"></div></section>`;
+  root.innerHTML = `<section class="hero"><h1 class="hero__title">LaserTag Ranking</h1><p class="hero__subtitle">Весняний сезон розпочато! Запрошуємо всіх на ігри.</p><p class="px-card__text" id="stateBox" aria-live="polite"></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Герої сезону</h2><div class="hero-grid section" id="topHeroes"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Прогрес сезону</h2><div class="kpi kpi-2 section" id="overviewStats"></div></section><div class="px-divider"></div><section class="section"><h2 class="px-card__title">Баланс рангів</h2><div class="kpi kpi-2 section" id="charts"></div></section>`;
 }
 
 function renderBlockSkeleton() {
@@ -64,9 +76,8 @@ export async function initHomePage() {
   const topHeroes = document.getElementById('topHeroes');
   const overviewStats = document.getElementById('overviewStats');
   const charts = document.getElementById('charts');
-  const currentSeason = document.getElementById('currentSeason');
 
-  if (!stateBox || !topHeroes || !overviewStats || !charts || !currentSeason) {
+  if (!stateBox || !topHeroes || !overviewStats || !charts) {
     homeRoot.innerHTML = '<section class="px-card px-card--accent"><h2 class="px-card__title">Помилка</h2><p class="px-card__text">Не вдалося ініціалізувати головну сторінку.</p></section>';
     return;
   }
@@ -76,8 +87,7 @@ export async function initHomePage() {
   try {
     const data = await getHomeFast();
     window.__v2LastSeason = { kids: data.seasonId, olds: data.seasonId };
-    currentSeason.textContent = `${data.seasonTitle} · ${data.seasonDateStart} — ${data.seasonDateEnd}`;
-    topHeroes.innerHTML = top5Card(data.top5Kids, 'kids', 'Перейти до статистики') + top5Card(data.top5Adults, 'olds', 'Перейти до статистики');
+    topHeroes.innerHTML = top5Card(data.top5Kids, 'kids') + top5Card(data.top5Adults, 'olds');
     overviewStats.innerHTML = seasonProgressCard(data.kidsMetrics, data.seasonSchedule, 'kids') + seasonProgressCard(data.adultsMetrics, data.seasonSchedule, 'olds');
     charts.innerHTML = rankDistributionCard(data.rankDistKids, data.rankDistAdults);
     requestAnimationFrame(() => {
@@ -86,7 +96,7 @@ export async function initHomePage() {
         segment.style.width = `${segment.dataset.targetWidth || 0}%`;
       });
     });
-    stateBox.textContent = 'Головна показує сезонні метрики та прогрес ігрових днів.';
+    stateBox.textContent = `Актуальний сезон: ${data.seasonTitle}`;
   } catch (error) {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');
     stateBox.textContent = msg;

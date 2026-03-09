@@ -76,7 +76,9 @@ function parseNickList(raw = '') {
 }
 function safeErrorMessage(error, fallback = 'Не вдалося завантажити дані') {
   if (!error) return fallback;
-  return error.message || String(error) || fallback;
+  const message = error.message || String(error) || fallback;
+  if (/завеликий аргумент/i.test(message)) return 'Запит завеликий для API. Спробуйте менший діапазон або інший сезон.';
+  return message;
 }
 
 async function fetchSeasonMasterApi(params = {}, timeoutMs = 12_000) {
@@ -1106,17 +1108,24 @@ export async function listSeasonMasters() {
   const cached = readCache(key, TTL.seasonDashboard);
   if (cached) return cached;
 
-  const payload = await fetchSeasonMasterApi({ action: 'listSeasonMasters' });
-  const raw = payload?.seasons || payload?.items || payload?.list || payload?.data || payload?.result || [];
-  const list = Array.isArray(raw)
-    ? raw
-      .map((item) => {
-        if (typeof item === 'string') return item.trim();
-        return String(item?.id || item?.season || item?.seasonId || '').trim();
-      })
-      .filter(Boolean)
-    : [];
-  return writeCache(key, list);
+  try {
+    const payload = await fetchSeasonMasterApi({ action: 'listSeasonMasters' });
+    const raw = payload?.seasons || payload?.items || payload?.list || payload?.data || payload?.result || [];
+    const list = Array.isArray(raw)
+      ? raw
+        .map((item) => {
+          if (typeof item === 'string') return item.trim();
+          return String(item?.id || item?.season || item?.seasonId || '').trim();
+        })
+        .filter(Boolean)
+      : [];
+    if (list.length) return writeCache(key, list);
+  } catch (error) {
+    console.debug('[dataHub] listSeasonMasters fallback', String(error?.message || error));
+  }
+  const cfg = await loadSeasonsConfig();
+  const fallback = cfg.seasons.filter((s) => s.enabled !== false).map((s) => s.id);
+  return writeCache(key, fallback);
 }
 
 export async function getSeasonMaster(seasonId) {

@@ -81,6 +81,8 @@
     <section class="card" id="matchCard">
       <h3>Матч</h3>
       <p class="section-hint">Відміть серію, MVP і штрафи, потім збережи.</p>
+      <div id="activeMatchConfig" class="match-config"></div>
+      <h4 id="activeMatchLabel">Команда 1 vs Команда 2</h4>
       <div id="matchTeamsPreview" class="teams-grid"></div>
 
       <div class="series-count" id="seriesCountOptions">
@@ -105,9 +107,14 @@
       </div>
       <datalist id="participantsDatalist"></datalist>
 
-      <div>
-        <h4>Штрафи</h4>
+      <div id="penaltiesSection" class="penalties-section collapsed">
+        <button class="chip penalties-toggle" type="button" data-toggle-penalties="1">Штрафи <span id="penaltiesChevron">▸</span></button>
         <div id="penaltiesList" class="penalties-list"></div>
+      </div>
+
+      <div>
+        <h4>Остання збережена гра</h4>
+        <div id="lastSavedGame" class="match-summary"></div>
       </div>
 
       <div class="save-sticky"><button id="saveBtn" class="chip save-btn" type="button">Зберегти матч</button></div>

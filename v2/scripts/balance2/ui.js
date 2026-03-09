@@ -1,4 +1,12 @@
-import { state, getParticipants, computeSeriesSummary, isSelected, getTeamLabel } from './state.js';
+import {
+  state,
+  getParticipants,
+  computeSeriesSummary,
+  isSelected,
+  getTeamLabel,
+  getAvailableTeamKeys,
+  getActiveMatchTeams,
+} from './state.js';
 import { movePlayerToTeam } from './manual.js';
 
 const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
@@ -43,11 +51,13 @@ export function render() {
   renderPlayers();
   renderLobby();
   renderTeams();
+  renderMatchConfig();
   renderMatchTeams();
   renderSeriesEditor();
   renderMatchSummary();
   renderPenalties();
   renderMatchFields();
+  renderLastSavedGame();
 }
 
 export function renderLeagueControls() {
@@ -125,19 +135,55 @@ export function renderTeams() {
   grid.innerHTML = cards.join('');
 }
 
+export function renderMatchConfig() {
+  const root = document.getElementById('activeMatchConfig');
+  if (!root) return;
+  const keys = getAvailableTeamKeys();
+  if (keys.length <= 2) {
+    root.innerHTML = '';
+    return;
+  }
+
+  const [teamA, teamB] = getActiveMatchTeams();
+  const teamOptions = (current, other, side) => keys.map((key) => `<option value="${key}" ${key === current ? 'selected' : ''} ${key === other ? 'disabled' : ''}>${getTeamLabel(key)} (${side})</option>`).join('');
+
+  const scheduleItems = state.activeMatch.schedule.map((match) => {
+    const selected = match.id === state.activeMatch.selectedScheduleMatchId;
+    const status = match.played ? `<span class="tag">Зіграно ${match.resultSummary ? `· ${match.resultSummary}` : ''}</span>` : '<span class="tag">Ще не зіграно</span>';
+    return `<label class="schedule-item ${selected ? 'active' : ''}"><input type="radio" name="scheduleMatch" data-schedule-pick="${match.id}" ${selected ? 'checked' : ''}/><span>${match.label}</span>${status}</label>`;
+  }).join('');
+
+  root.innerHTML = `
+    <div class="series-count"><span>Режим бою:</span><div class="series-count-choices">
+      <button class="chip ${state.activeMatch.mode === 'manual' ? 'active' : ''}" type="button" data-match-mode="manual">Ручний вибір</button>
+      <button class="chip ${state.activeMatch.mode === 'schedule' ? 'active' : ''}" type="button" data-match-mode="schedule">Розклад ігор</button>
+    </div></div>
+    ${state.activeMatch.mode === 'manual' ? `
+      <div class="match-pick-grid">
+        <label>Команда A <select data-match-team="A">${teamOptions(teamA, teamB, 'A')}</select></label>
+        <label>Команда B <select data-match-team="B">${teamOptions(teamB, teamA, 'B')}</select></label>
+      </div>
+    ` : `<div class="schedule-list">${scheduleItems}</div>`}
+  `;
+}
+
 export function renderMatchTeams() {
   const root = document.getElementById('matchTeamsPreview');
   if (!root) return;
-  const keys = TEAM_KEYS.slice(0, state.teamsState.teamCount);
-  const hasTeams = keys.some((k) => state.teamsState.teams[k].length > 0);
+  const [teamA, teamB] = getActiveMatchTeams();
+  const matchTitle = document.getElementById('activeMatchLabel');
+  if (matchTitle) matchTitle.textContent = `${getTeamLabel(teamA)} vs ${getTeamLabel(teamB)}`;
+
+  const hasTeams = state.teamsState.teams[teamA].length > 0 || state.teamsState.teams[teamB].length > 0;
   if (!hasTeams) {
     root.innerHTML = '<div class="tag">Спочатку сформуй команди.</div>';
     return;
   }
 
-  root.innerHTML = keys.map((key, idx) => {
+  root.innerHTML = [teamA, teamB].map((key, idx) => {
     const items = state.teamsState.teams[key].map((nick) => `<li>${nick}</li>`).join('');
-    return `<div class="team-card"><h4>К${idx + 1} · ${getTeamLabel(key)}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
+    const label = idx === 0 ? 'A' : 'B';
+    return `<div class="team-card"><h4>${label} · ${getTeamLabel(key)}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
   }).join('');
 }
 
@@ -149,7 +195,6 @@ export function renderSeriesEditor() {
   const count = Math.min(7, Math.max(3, Number(state.matchState.seriesCount) || 3));
   const rounds = state.matchState.seriesRounds.slice(0, 7);
   while (rounds.length < 7) rounds.push(null);
-  const options = TEAM_KEYS.slice(0, state.teamsState.teamCount).map((_, idx) => ({ val: idx + 1, label: `К${idx + 1}` }));
 
   if (countRoot) {
     countRoot.querySelectorAll('[data-series-count]').forEach((btn) => {
@@ -158,8 +203,8 @@ export function renderSeriesEditor() {
   }
 
   root.innerHTML = rounds.slice(0, count).map((round, idx) => {
-    const chip = round === null ? '—' : (round === 0 ? 'Нічия' : `К${round}`);
-    return `<div class="round-card"><div class="series-row"><span>Бій ${idx + 1}<small class="round-chip">${chip}</small></span><div class="round-row">${[...options, { val: 0, label: 'Нічия' }].map((option) => `<button class="chip round-btn ${Number(round) === option.val ? 'active' : ''}" type="button" data-round="${idx}" data-value="${option.val}">${option.label}</button>`).join('')}</div></div></div>`;
+    const chip = round === null ? '—' : (round === 0 ? 'Нічия' : (round === 1 ? 'A' : 'B'));
+    return `<div class="round-card"><div class="series-row"><span>Бій ${idx + 1}<small class="round-chip">${chip}</small></span><div class="round-row">${[{ val: 1, label: 'Перемога A' }, { val: 0, label: 'Нічия' }, { val: 2, label: 'Перемога B' }].map((option) => `<button class="chip round-btn ${Number(round) === option.val ? 'active' : ''}" type="button" data-round="${idx}" data-value="${option.val}">${option.label}</button>`).join('')}</div></div></div>`;
   }).join('');
 }
 
@@ -167,16 +212,21 @@ export function renderMatchSummary() {
   const root = document.getElementById('matchSummary');
   if (!root) return;
   const summary = computeSeriesSummary();
-  const keys = TEAM_KEYS.slice(0, state.teamsState.teamCount);
-  const roundsByTeams = keys.map((key, idx) => `<div class="summary-pill">К${idx + 1}: <strong>${summary.wins[key]}</strong></div>`).join('');
-  const winnerLabel = summary.winner === 'tie' ? 'Нічия' : `К${summary.winner.replace('team', '')}`;
+  const winnerLabel = summary.winner === 'tie' ? 'Нічия' : (summary.winner === 'team1' ? 'A' : 'B');
 
-  root.innerHTML = `${roundsByTeams}<div class="summary-pill">Нічиї: <strong>${summary.draws}</strong></div><div class="summary-pill">Поточний переможець: <strong>${winnerLabel}</strong></div>`;
+  root.innerHTML = `<div class="summary-pill">A: <strong>${summary.wins.team1}</strong></div><div class="summary-pill">B: <strong>${summary.wins.team2}</strong></div><div class="summary-pill">Нічиї: <strong>${summary.draws}</strong></div><div class="summary-pill">Поточний переможець: <strong>${winnerLabel}</strong></div>`;
 }
 
 export function renderPenalties() {
   const root = document.getElementById('penaltiesList');
-  if (!root) return;
+  const section = document.getElementById('penaltiesSection');
+  const chevron = document.getElementById('penaltiesChevron');
+  if (!root || !section || !chevron) return;
+
+  const collapsed = state.uiState.penaltiesCollapsed !== false;
+  section.classList.toggle('collapsed', collapsed);
+  chevron.textContent = collapsed ? '▸' : '▾';
+
   root.innerHTML = getParticipants().map((nick) => {
     const val = Number(state.matchState.match.penalties[nick] || 0);
     return `<div class="penalty-row"><span>${nick}</span><div class="penalty-controls"><button class="chip" data-pen="${nick}:-1">-</button><strong>${val}</strong><button class="chip" data-pen="${nick}:1">+</button></div></div>`;
@@ -196,6 +246,23 @@ export function renderMatchFields() {
   });
 }
 
+function formatSavedTime(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+}
+
+export function renderLastSavedGame() {
+  const root = document.getElementById('lastSavedGame');
+  if (!root) return;
+  if (!state.lastSavedGame) {
+    root.innerHTML = '<div class="tag">Ще немає збережених ігор у цій сесії.</div>';
+    return;
+  }
+  const g = state.lastSavedGame;
+  root.innerHTML = `<div class="summary-pill">${formatSavedTime(g.savedAt)} — ${g.teamA} vs ${g.teamB}</div><div class="summary-pill">Серія: <strong>${g.summary}</strong></div><div class="summary-pill">MVP: <strong>${g.mvp}</strong></div><div class="summary-pill">Штрафи: <strong>${g.penalties}</strong></div>`;
+}
+
 export function bindUiEvents(handlers) {
   const roundsContainer = document.getElementById('seriesRounds');
   if (roundsContainer) {
@@ -206,6 +273,15 @@ export function bindUiEvents(handlers) {
     });
   }
 
+  document.addEventListener('change', (e) => {
+    const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
+    const teamPick = e.target.closest('select[data-match-team]');
+    const schedulePick = e.target.closest('[data-schedule-pick]')?.dataset.schedulePick;
+    if (matchMode) handlers.onMatchMode(matchMode);
+    if (teamPick) handlers.onMatchTeamPick(teamPick.dataset.matchTeam, teamPick.value);
+    if (schedulePick) handlers.onSchedulePick(schedulePick);
+  });
+
   document.addEventListener('click', (e) => {
     const toggle = e.target.closest('[data-toggle]')?.dataset.toggle;
     const remove = e.target.closest('[data-remove]')?.dataset.remove;
@@ -215,6 +291,8 @@ export function bindUiEvents(handlers) {
     const clearSeries = e.target.closest('[data-series-reset]');
     const pen = e.target.closest('[data-pen]')?.dataset.pen;
     const renameTeam = e.target.closest('[data-rename-team]')?.dataset.renameTeam;
+    const penaltiesToggle = e.target.closest('[data-toggle-penalties]');
+    const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
 
     if (toggle) handlers.onTogglePlayer(toggle);
     if (remove) handlers.onRemove(remove);
@@ -231,6 +309,8 @@ export function bindUiEvents(handlers) {
       handlers.onPenalty(nick, Number(delta));
     }
     if (renameTeam) handlers.onRenameStart(renameTeam);
+    if (penaltiesToggle) handlers.onTogglePenalties();
+    if (matchMode) handlers.onMatchMode(matchMode);
   });
 
   document.addEventListener('keydown', (e) => {

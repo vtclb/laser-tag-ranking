@@ -2,6 +2,7 @@ import { state, normalizeLeague, computeSeriesSummary, syncSelectedMap } from '.
 
 const KEY = 'balance2:lobby';
 const PLAYERS_KEY = 'balance2:playersCache';
+const LAST_GAME_KEY = 'balance2:lastSavedGame';
 
 export function saveLobby() {
   const data = {
@@ -11,6 +12,8 @@ export function saveLobby() {
     },
     teamsState: state.teamsState,
     matchState: state.matchState,
+    activeMatch: state.activeMatch,
+    uiState: state.uiState,
   };
   localStorage.setItem(KEY, JSON.stringify(data));
 }
@@ -55,7 +58,7 @@ export function restoreLobby() {
   const matchState = data?.matchState || {};
   state.matchState.seriesCount = Math.min(7, Math.max(3, Number(matchState.seriesCount || data?.seriesCount) || 3));
   const restoredSeries = Array.isArray(matchState.series || data?.series) ? (matchState.series || data.series).slice(0, 7) : [];
-  state.matchState.series = restoredSeries.map((v) => (['0', '1', '2', '3', '4'].includes(String(v)) ? String(v) : '-'));
+  state.matchState.series = restoredSeries.map((v) => (['0', '1', '2'].includes(String(v)) ? String(v) : '-'));
   while (state.matchState.series.length < 7) state.matchState.series.push('-');
   state.matchState.seriesRounds = state.matchState.series.map((v) => (v === '-' ? null : Number(v)));
 
@@ -69,9 +72,21 @@ export function restoreLobby() {
     penalties: oldMatch.penalties && typeof oldMatch.penalties === 'object' ? oldMatch.penalties : {},
   };
 
+  state.activeMatch = {
+    mode: (data?.activeMatch?.mode === 'schedule' ? 'schedule' : 'manual'),
+    teamA: data?.activeMatch?.teamA || 'team1',
+    teamB: data?.activeMatch?.teamB || 'team2',
+    schedule: Array.isArray(data?.activeMatch?.schedule) ? data.activeMatch.schedule : [],
+    selectedScheduleMatchId: data?.activeMatch?.selectedScheduleMatchId || '',
+  };
+
+  state.uiState.penaltiesCollapsed = data?.uiState?.penaltiesCollapsed !== false;
+
   const summary = computeSeriesSummary();
   state.matchState.match.winner = summary.winner;
   state.matchState.match.series = summary.series;
+
+  state.lastSavedGame = readLastSavedGame();
   return true;
 }
 
@@ -100,4 +115,17 @@ export function clearPlayersCache(league) {
   delete cache[key];
   localStorage.setItem(PLAYERS_KEY, JSON.stringify(cache));
   if (state.playersState.cache && typeof state.playersState.cache === 'object') delete state.playersState.cache[key];
+}
+
+export function saveLastSavedGame(snapshot) {
+  localStorage.setItem(LAST_GAME_KEY, JSON.stringify(snapshot || null));
+}
+
+export function readLastSavedGame() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LAST_GAME_KEY) || 'null');
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
 }

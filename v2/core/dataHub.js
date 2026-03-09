@@ -103,18 +103,83 @@ async function fetchSeasonMasterApi(params = {}, timeoutMs = 12_000) {
   }
 }
 
+function pickFirst(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+  }
+  return null;
+}
+
+function normalizeSeasonPlayerRow(row = {}) {
+  const source = (row && typeof row === 'object') ? row : {};
+  return {
+    league: normalizeLeague(pickFirst(source.league, source.League, source.league_id, source.lg)) || 'kids',
+    nickname: String(pickFirst(source.nickname, source.Nickname, source.nick, source.Player, source.player) || '').trim(),
+    matches: toNumber(pickFirst(source.matches, source.Matches), 0) || 0,
+    wins: toNumber(pickFirst(source.wins, source.Wins), 0) || 0,
+    draws: toNumber(pickFirst(source.draws, source.Draws), 0) || 0,
+    losses: toNumber(pickFirst(source.losses, source.Losses), 0) || 0,
+    mvp_total: toNumber(pickFirst(source.mvp_total, source.MVP_total, source.MVP, source.mvp), 0) || 0,
+    rating_end: toNumber(pickFirst(source.rating_end, source.Rating_end, source.rating, source.Rating), null),
+    rating_delta: toNumber(pickFirst(source.rating_delta, source.Rating_delta), 0) || 0,
+    rank_final: pickFirst(source.rank_final, source.Rank_final, source.rank, source.Rank, source.place)
+  };
+}
+
+function mapRowsByLeague(rows = [], mapper = (value) => value) {
+  const grouped = { kids: [], sundaygames: [] };
+  rows.forEach((row) => {
+    const league = normalizeLeague(pickFirst(row?.league, row?.League, row?.league_id, row?.lg)) || 'kids';
+    grouped[league].push(mapper(row));
+  });
+  return grouped;
+}
+
+function collapseMeta(metaSection) {
+  if (Array.isArray(metaSection)) {
+    if (metaSection[0] && typeof metaSection[0] === 'object' && !Array.isArray(metaSection[0])) return metaSection[0];
+    return metaSection.reduce((acc, row) => {
+      if (!row || typeof row !== 'object') return acc;
+      const key = pickFirst(row.key, row.Key, row.name, row.Name, row.field, row.Field);
+      const value = pickFirst(row.value, row.Value, row.val, row.Val, row.data, row.Data);
+      if (key) acc[String(key).trim()] = value;
+      return acc;
+    }, {});
+  }
+  return (metaSection && typeof metaSection === 'object') ? metaSection : {};
+}
+
 function normalizeSeasonMasterPayload(payload, seasonId = '') {
   if (payload && typeof payload === 'object') {
     if (payload.data) return normalizeSeasonMasterPayload(payload.data, seasonId);
     if (payload.result) return normalizeSeasonMasterPayload(payload.result, seasonId);
   }
 
-  if (!payload || typeof payload !== 'object') return { seasonId, sections: {} };
-  const sections = payload.sections && typeof payload.sections === 'object' ? payload.sections : {};
+  if (!payload || typeof payload !== 'object') {
+    return {
+      seasonId,
+      sections: { season_meta: {}, league_summary: { kids: {}, sundaygames: {} }, awards: { kids: [], sundaygames: [] }, series_summary: { kids: [], sundaygames: [] }, players: [] }
+    };
+  }
+
+  const sourceSections = payload.sections && typeof payload.sections === 'object' ? payload.sections : {};
+  const season_meta = collapseMeta(sourceSections.season_meta);
+
+  const league_summary = { kids: {}, sundaygames: {} };
+  const summaryRows = Array.isArray(sourceSections.league_summary) ? sourceSections.league_summary : [];
+  summaryRows.forEach((row) => {
+    const league = normalizeLeague(pickFirst(row?.league, row?.League, row?.league_id, row?.lg));
+    if (!league) return;
+    league_summary[league] = { ...(row || {}), league };
+  });
+
+  const awards = mapRowsByLeague(Array.isArray(sourceSections.awards) ? sourceSections.awards : [], (row) => ({ ...(row || {}) }));
+  const series_summary = mapRowsByLeague(Array.isArray(sourceSections.series_summary) ? sourceSections.series_summary : (Array.isArray(sourceSections.series) ? sourceSections.series : []), (row) => ({ ...(row || {}) }));
+  const players = (Array.isArray(sourceSections.players) ? sourceSections.players : []).map(normalizeSeasonPlayerRow);
+
   return {
-    ...payload,
     seasonId: payload.season || payload.seasonId || seasonId,
-    sections
+    sections: { season_meta, league_summary, awards, series_summary, players }
   };
 }
 
@@ -319,7 +384,7 @@ export async function loadSeasonsConfig() {
   if (cached) return cached;
   const mappedSeasons = (seasonsConfig.seasons || []).map((season) => ({
     ...season,
-    sources: seasonsConfig.seasonSourcesMap?.[season.id] || season.sources || {}
+    sources: season.sources || {}
   }));
   return writeCache('config', { ...seasonsConfig, seasons: mappedSeasons });
 }

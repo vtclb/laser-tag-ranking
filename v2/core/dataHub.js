@@ -888,7 +888,7 @@ function findHeaderIndex(header = [], variants = []) {
   return normalized.findIndex((name) => variants.includes(name));
 }
 
-function normalizeLeagueTable(rows = [], header = [], leagueId = 'kids') {
+function normalizeLeagueTable(rows = [], header = [], leagueId = 'kids', avatarsMap = new Map()) {
   const idxNick = findHeaderIndex(header, ['nickname', 'nick', 'player']);
   const idxPoints = findHeaderIndex(header, ['points', 'pts', 'score', 'mmr']);
   const idxRank = findHeaderIndex(header, ['rank', 'rang', 'ранг']);
@@ -903,7 +903,12 @@ function normalizeLeagueTable(rows = [], header = [], leagueId = 'kids') {
     const rankText = rankRaw || rankFromPoints(normalizedPoints);
     const key = nickname.toLowerCase().trim();
     const current = dedupe.get(key);
-    const candidate = { nickname, points: normalizedPoints, rankText };
+    const candidate = {
+      nickname,
+      points: normalizedPoints,
+      rankText,
+      avatarUrl: avatarsMap.get(key) || ''
+    };
     if (!current || candidate.points > current.points) dedupe.set(key, candidate);
   });
 
@@ -972,16 +977,17 @@ function normalizeGames(rows = [], header = []) {
 }
 
 export async function getHomeLiveData() {
-  const [adultsSheet, kidsSheet, logsSheet, gamesSheet] = await Promise.all([
+  const [adultsSheet, kidsSheet, logsSheet, gamesSheet, avatarsMap] = await Promise.all([
     readSheet('sundaygames', { limitRows: 2000, limitCols: 30 }),
     readSheet('kids', { limitRows: 2000, limitCols: 30 }),
     readSheet('logs', { limitRows: 5000, limitCols: 30 }),
-    readSheet('games', { limitRows: 5000, limitCols: 30 })
+    readSheet('games', { limitRows: 5000, limitCols: 30 }),
+    getAvatarsMap()
   ]);
 
   return {
-    adults: normalizeLeagueTable(adultsSheet.rows, adultsSheet.header, 'sundaygames'),
-    kids: normalizeLeagueTable(kidsSheet.rows, kidsSheet.header, 'kids'),
+    adults: normalizeLeagueTable(adultsSheet.rows, adultsSheet.header, 'sundaygames', avatarsMap),
+    kids: normalizeLeagueTable(kidsSheet.rows, kidsSheet.header, 'kids', avatarsMap),
     logs: normalizeLogs(logsSheet.rows, logsSheet.header),
     games: normalizeGames(gamesSheet.rows, gamesSheet.header)
   };

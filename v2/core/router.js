@@ -50,7 +50,7 @@ function toHashFromHref(href = '') {
   if (/rules\.html$|pages\/rules\.html$/.test(pathOnly)) return buildHash('rules');
 
   if (/season\.html$|pages\/season\.html$/.test(pathOnly)) {
-    return buildHash('season', { season: qp.get('season') || '' });
+    return buildHash('season', { season: qp.get('season') || '', league: qp.get('league') || '' });
   }
 
   if (/league\.html$|league-stats\.html$|balance2\.html$|pages\/league\.html$/.test(pathOnly)) {
@@ -132,9 +132,8 @@ async function renderRoute() {
   }
 
   if (route === 'season') {
-    await mountTemplate('./pages/season.html');
     const { initSeasonPage } = await import('../pages/season.js');
-    await initSeasonPage({ season: queryParams.season });
+    await initSeasonPage({ season: queryParams.season, league: queryParams.league });
     return;
   }
 
@@ -145,7 +144,8 @@ async function renderRoute() {
     return;
   }
 
-  await mountTemplate('./pages/rules.html');
+  const { initRulesPage } = await import('../pages/rules.js');
+  await initRulesPage();
 }
 
 window.addEventListener('hashchange', () => {

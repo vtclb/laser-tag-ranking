@@ -156,3 +156,82 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .home-v2 .home-expand-btn {
   border-radius: 0 !important;
 }
+
+.home-v2 .home-current-row,
+.home-v2 .home-player-row {
+  grid-template-columns: 54px 34px 1.5fr .7fr .7fr;
+}
+
+.home-v2 .home-avatar {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 0;
+  border: 1px solid rgba(255,255,255,.16);
+}
+
+.home-v2 .home-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  min-width: 34px;
+  padding: .2rem .4rem;
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.home-v2 .rank-s { background: rgba(255, 215, 0, .22); color: #ffe28a; }
+.home-v2 .rank-a { background: rgba(255, 90, 95, .24); color: #ffb4b7; }
+.home-v2 .rank-b { background: rgba(64, 166, 255, .24); color: #9fd2ff; }
+.home-v2 .rank-c { background: rgba(52, 208, 88, .22); color: #9df0b6; }
+.home-v2 .rank-d { background: rgba(170, 178, 190, .24); color: #d0d6dd; }
+.home-v2 .rank-e { background: rgba(128, 140, 160, .25); color: #bec8d6; }
+.home-v2 .rank-f { background: rgba(85, 95, 112, .25); color: #aeb8c8; }
+
+.home-v2 .home-hero-card__player {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.home-v2 .home-full-list {
+  display: grid;
+  gap: .4rem;
+  margin-top: .55rem;
+}
+
+.home-v2 .card,
+.home-v2 .top-card,
+.home-v2 .table-wrap,
+.home-v2 .nav-link,
+.home-v2 .menu-btn,
+.home-v2 .cta,
+.home-v2 .chip,
+.home-v2 button,
+.home-v2 .btn,
+.home-v2 .search-input,
+.home-v2 .placeholder,
+.home-v2 .progress-shell,
+.home-v2 .rank-badge,
+.home-v2 .home-card,
+.home-v2 .home-panel,
+.home-v2 .home-current-row,
+.home-v2 .home-rank-row,
+.home-v2 .home-summary-strip,
+.home-v2 .home-hero-card,
+.home-v2 .home-expand-btn,
+.home-v2 .home-league-card,
+.home-v2 .home-ranking-card,
+.home-v2 .home-stat-box,
+.home-v2 .home-player-row {
+  border-radius: 0 !important;
+}
+
+@media (max-width: 780px) {
+  .home-v2 .home-current-row,
+  .home-v2 .home-player-row {
+    grid-template-columns: 42px 28px 1fr .6fr .7fr;
+    gap: .35rem;
+    font-size: .9rem;
+  }
+}

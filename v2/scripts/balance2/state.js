@@ -22,10 +22,23 @@ export const state = {
     series: ['-', '-', '-', '-', '-', '-', '-'],
     match: { winner: '', series: '', mvp1: '', mvp2: '', mvp3: '', penalties: {} },
   },
+  activeMatch: {
+    mode: 'manual',
+    teamA: 'team1',
+    teamB: 'team2',
+    schedule: [],
+    selectedScheduleMatchId: '',
+  },
+  uiState: {
+    penaltiesCollapsed: true,
+  },
+  lastSavedGame: null,
   meta: {
     lastPayload: null,
   },
 };
+
+const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
 
 export function sortByPointsDesc(a, b) {
   const pointsDelta = (Number(b.points ?? b.pts) || 0) - (Number(a.points ?? a.pts) || 0);
@@ -68,8 +81,23 @@ export function getTeamLabel(teamKey) {
 }
 
 export function getParticipants() {
-  const keys = ['team1', 'team2', 'team3', 'team4'].slice(0, state.teamsState.teamCount);
+  const keys = getActiveMatchTeams();
   return keys.flatMap((k) => state.teamsState.teams[k]);
+}
+
+export function getAvailableTeamKeys() {
+  return TEAM_KEYS.slice(0, state.teamsState.teamCount);
+}
+
+export function getActiveMatchTeams() {
+  const available = getAvailableTeamKeys();
+  const fallbackA = available[0] || 'team1';
+  const fallbackB = available[1] || 'team2';
+  const { teamA, teamB } = state.activeMatch;
+  const validA = available.includes(teamA) ? teamA : fallbackA;
+  let validB = available.includes(teamB) ? teamB : fallbackB;
+  if (validB === validA) validB = available.find((key) => key !== validA) || fallbackB;
+  return [validA, validB];
 }
 
 export function computeSeriesSummary() {
@@ -89,15 +117,10 @@ export function computeSeriesSummary() {
   const wins = {
     team1: active.filter((r) => r === 1).length,
     team2: active.filter((r) => r === 2).length,
-    team3: active.filter((r) => r === 3).length,
-    team4: active.filter((r) => r === 4).length,
   };
   const draws = active.filter((r) => r === 0).length;
   const played = Object.values(wins).reduce((acc, value) => acc + value, 0) + draws;
-  const activeTeamKeys = ['team1', 'team2', 'team3', 'team4'].slice(0, state.teamsState.teamCount);
-  const maxWins = Math.max(...activeTeamKeys.map((key) => wins[key]), 0);
-  const leaders = activeTeamKeys.filter((key) => wins[key] === maxWins);
-  const winner = maxWins > 0 && leaders.length === 1 ? leaders[0] : 'tie';
+  const winner = wins.team1 === wins.team2 ? 'tie' : (wins.team1 > wins.team2 ? 'team1' : 'team2');
   const seriesCode = active.filter((r) => r !== null).map((r) => String(r)).join('');
 
   return { wins, draws, played, winner, series: seriesCode };

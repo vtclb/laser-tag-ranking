@@ -7,7 +7,17 @@ function toFormUrlEncoded(obj = {}) {
   return Object.entries(obj).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`).join('&');
 }
 
-export async function loadPlayers(league, { force = false } = {}) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function loadPlayers(league, { force = false, timeoutMs = 15000 } = {}) {
   const key = normalizeLeague(league);
   if (!force) {
     loadPlayersCache();
@@ -15,7 +25,14 @@ export async function loadPlayers(league, { force = false } = {}) {
   }
 
   const url = `${PROXY_ORIGIN}/fetchLeagueCsv?league=${key}&cb=${Date.now()}`;
-  const res = await fetch(url);
+  let res;
+  try {
+    res = await fetchWithTimeout(url, {}, timeoutMs);
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('Не вдалося отримати відповідь від сервера');
+    throw error;
+  }
+
   if (!res.ok) throw new Error(`Не вдалося завантажити (${res.status})`);
   const csv = await res.text();
   const rows = csv.split(/\r?\n/).filter(Boolean);
@@ -33,22 +50,17 @@ export async function loadPlayers(league, { force = false } = {}) {
   return players;
 }
 
-export async function saveMatch(payload, timeoutMs = 14000) {
+export async function saveMatch(payload, timeoutMs = 20000) {
   const body = toFormUrlEncoded({ ...payload, league: normalizeLeague(payload.league) });
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(PROXY_ORIGIN, {
+    const res = await fetchWithTimeout(PROXY_ORIGIN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
       body,
-      signal: ctrl.signal,
-    });
+    }, timeoutMs);
     const data = await res.json();
     return { ok: res.ok && String(data.status || '').toUpperCase() === 'OK', data, message: data.message || data.error || 'Невідома помилка' };
   } catch (e) {
-    return { ok: false, message: e?.name === 'AbortError' ? 'Час очікування вичерпано' : (e?.message || 'Помилка мережі') };
-  } finally {
-    clearTimeout(timer);
+    return { ok: false, message: e?.name === 'AbortError' ? 'Не вдалося отримати відповідь від сервера' : (e?.message || 'Помилка мережі') };
   }
 }

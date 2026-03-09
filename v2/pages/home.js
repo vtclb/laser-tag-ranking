@@ -1,4 +1,4 @@
-import { getLiveLeagueSnapshot, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { getLeagueSnapshot, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 
 const HOME_CURRENT_SEASON = { id: 'spring_2026', label: 'Весна 2026' };
@@ -10,48 +10,61 @@ function toNum(v, fb = null) { const n = Number(v); return Number.isFinite(n) ? 
 function fmtSigned(v) { const n = toNum(v, null); return n === null ? '—' : `${n > 0 ? '+' : ''}${n}`; }
 function hasValue(v) { return !(v === null || v === undefined || v === '' || Number.isNaN(v)); }
 
-function normalizeLiveLeaguePlayers(rows = [], leagueId = 'kids') {
-  const league = normalizeLeague(leagueId);
-  const normalized = (Array.isArray(rows) ? rows : []).map((row = {}) => {
-    const rowLeague = normalizeLeague(row.league || row.league_id || row.lg) || league;
-    if (rowLeague !== league) return null;
-    const nickname = String(row.nickname || row.nick || row.player || '').trim();
-    if (!nickname) return null;
-    const points = toNum(row.points ?? row.rating_end ?? row.rating ?? row.Points, null);
-    const rankTextRaw = row.rankLetter || row.rank_letter || row.rank || row.Rank || row.rank_text;
-    const rankText = String(rankTextRaw || (hasValue(points) ? rankFromPoints(points) : '')).trim().toUpperCase() || null;
-    const rankValue = toNum(row.Rank ?? row.place ?? row.position ?? row.rank_final, null);
-    return {
+function normalizeSnapshotPlayers(snapshot, league) {
+  const rows = Array.isArray(snapshot?.table) ? snapshot.table : [];
+  return rows
+    .map((row) => ({
+      league,
+      nickname: String(row.nick || row.nickname || '').trim(),
+      matches: Number(row.games || row.matches || 0) || 0,
+      wins: Number(row.wins || 0) || 0,
+      draws: Number(row.draws || 0) || 0,
+      losses: Number(row.losses || 0) || 0,
+      mvp_total: Number(row.mvp || row.mvp_total || 0) || 0,
+      rating_end: Number(row.points || row.rating_end || 0) || 0,
+      rating_delta: Number(row.pointsDelta || row.rating_delta || 0) || 0,
+      rank_final: null,
+      rank_text: row.rankLetter || rankFromPoints(Number(row.points || 0) || 0)
+    }))
+    .filter((p) => p.nickname);
+}
+
+function normalizeSnapshotSummary(snapshot) {
+  const stats = snapshot?.seasonStats || {};
+  return {
+    matches: Number(stats.games || 0) || 0,
+    players: Number(stats.players || 0) || 0,
+    avg_rating: null
+  };
+}
+
+function dedupeHomePlayers(players = []) {
+  const map = new Map();
+  (Array.isArray(players) ? players : []).forEach((player) => {
+    const league = normalizeLeague(player?.league || 'kids') || 'kids';
+    const nickname = String(player?.nickname || '').trim();
+    if (!nickname) return;
+    const key = `${league}::${nickname.toLowerCase()}`;
+    const normalized = {
+      ...player,
       league,
       nickname,
-      points,
-      rank_text: rankText,
-      rank_value: rankValue,
-      games: toNum(row.games ?? row.matches, null),
-      matches: toNum(row.matches ?? row.games, null),
-      winrate: toNum(row.winRate ?? row.winrate ?? row.wr, null),
-      mvp_total: toNum(row.mvp ?? row.mvp_total ?? row.MVP, null),
-      rating_delta: toNum(row.delta ?? row.rating_delta, null)
+      points: toNum(player?.points ?? player?.rating_end, null),
+      games: toNum(player?.games ?? player?.matches, null),
+      matches: toNum(player?.matches ?? player?.games, null),
+      winrate: toNum(player?.winrate, null),
+      mvp_total: toNum(player?.mvp_total, null),
+      rating_delta: toNum(player?.rating_delta, null)
     };
-  }).filter(Boolean);
-
-  const map = new Map();
-  normalized.forEach((player) => {
-    const key = player.nickname.toLowerCase().trim();
     const existing = map.get(key);
-    if (!existing) { map.set(key, player); return; }
-    const pointsDiff = toNum(player.points, -1e9) - toNum(existing.points, -1e9);
-    if (pointsDiff > 0) { map.set(key, player); return; }
+    if (!existing) { map.set(key, normalized); return; }
+    const pointsDiff = toNum(normalized.points, -1e9) - toNum(existing.points, -1e9);
+    if (pointsDiff > 0) { map.set(key, normalized); return; }
     if (pointsDiff < 0) return;
-    const matchesDiff = toNum(player.matches ?? player.games, 0) - toNum(existing.matches ?? existing.games, 0);
-    if (matchesDiff > 0) map.set(key, player);
+    const matchesDiff = toNum(normalized.matches ?? normalized.games, 0) - toNum(existing.matches ?? existing.games, 0);
+    if (matchesDiff > 0) map.set(key, normalized);
   });
-
-  return [...map.values()].sort((a, b) => {
-    const byPoints = toNum(b.points, -1e9) - toNum(a.points, -1e9);
-    if (byPoints !== 0) return byPoints;
-    return toNum(b.matches ?? b.games, 0) - toNum(a.matches ?? a.games, 0);
-  });
+  return [...map.values()];
 }
 
 function heroMetrics(player) {
@@ -124,19 +137,33 @@ function renderLeagueSection({ league, players, expanded }) {
 }
 
 async function loadHomeLiveData() {
-  const [adultSnap, kidsSnap] = await Promise.all([
-    getLiveLeagueSnapshot('sundaygames'),
-    getLiveLeagueSnapshot('kids')
+  const adultSnap = await getLeagueSnapshot('sundaygames', 'spring_2026');
+  const kidsSnap = await getLeagueSnapshot('kids', 'spring_2026');
+  const playersAll = dedupeHomePlayers([
+    ...normalizeSnapshotPlayers(adultSnap, 'sundaygames'),
+    ...normalizeSnapshotPlayers(kidsSnap, 'kids')
   ]);
-
   const playersByLeague = {
-    sundaygames: normalizeLiveLeaguePlayers(adultSnap?.table || [], 'sundaygames'),
-    kids: normalizeLiveLeaguePlayers(kidsSnap?.table || [], 'kids')
+    sundaygames: playersAll
+      .filter((player) => player.league === 'sundaygames')
+      .sort((a, b) => toNum(b.points, -1e9) - toNum(a.points, -1e9)),
+    kids: playersAll
+      .filter((player) => player.league === 'kids')
+      .sort((a, b) => toNum(b.points, -1e9) - toNum(a.points, -1e9))
   };
 
   return {
+    playersAll,
     playersByLeague,
-    updatedAt: adultSnap?.updatedAt || kidsSnap?.updatedAt || ''
+    leagueSummary: {
+      sundaygames: normalizeSnapshotSummary(adultSnap),
+      kids: normalizeSnapshotSummary(kidsSnap)
+    },
+    seriesSummary: {
+      sundaygames: adultSnap.matches || [],
+      kids: kidsSnap.matches || []
+    },
+    updatedAt: new Date().toISOString()
   };
 }
 
@@ -144,7 +171,7 @@ export async function initHomePage() {
   const root = document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="hero__subtitle">Актуальний live-рейтинг і лідери ліг прямо зараз.</p><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite"></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="hero__subtitle">Актуальний live-рейтинг і лідери ліг прямо зараз.</p><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
   <section class="section"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
   <section class="section"><article class="px-card home-card home-panel"><h3>Поточний рейтинг дорослої ліги</h3><div id="currentRankingAdults" class="home-skeleton"></div></article></section>
@@ -184,7 +211,8 @@ export async function initHomePage() {
 
   try {
     const data = await loadHomeLiveData();
-    stateBox.textContent = data.updatedAt ? `Оновлено: ${data.updatedAt}` : '';
+    stateBox.hidden = true;
+    stateBox.textContent = '';
 
     const adultTop = data.playersByLeague.sundaygames[0] || null;
     const kidsTop = data.playersByLeague.kids[0] || null;
@@ -193,6 +221,7 @@ export async function initHomePage() {
     renderHome(data);
   } catch (error) {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');
+    stateBox.hidden = false;
     stateBox.textContent = msg;
     topHeroes.innerHTML = `<article class="px-card home-card"><p class="px-card__text">${esc(msg)}</p></article>`;
     currentRankingAdults.classList.remove('home-skeleton');

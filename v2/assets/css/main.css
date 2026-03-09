@@ -133,3 +133,26 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .home-v2 .home-expanded { margin-top: .7rem; }
 .home-v2 .home-expanded:not(.is-open) { display: none; }
 .home-v2 .home-league__head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+
+.home-v2 .card,
+.home-v2 .top-card,
+.home-v2 .table-wrap,
+.home-v2 .nav-link,
+.home-v2 .menu-btn,
+.home-v2 .cta,
+.home-v2 .chip,
+.home-v2 button,
+.home-v2 .btn,
+.home-v2 .search-input,
+.home-v2 .placeholder,
+.home-v2 .progress-shell,
+.home-v2 .rank-badge,
+.home-v2 .home-card,
+.home-v2 .home-panel,
+.home-v2 .home-current-row,
+.home-v2 .home-rank-card,
+.home-v2 .home-summary-strip,
+.home-v2 .home-hero-card,
+.home-v2 .home-expand-btn {
+  border-radius: 0 !important;
+}

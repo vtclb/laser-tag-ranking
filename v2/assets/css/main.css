@@ -735,3 +735,62 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   0% { left: -70%; }
   100% { left: 140%; }
 }
+
+.home-v2 .home-leaders-frame,
+.home-v2 .home-leaders-frame .card,
+.home-v2 .home-leaders-frame .top-card,
+.home-v2 .home-leaders-frame .px-card,
+.home-v2 .home-leaders-frame .home-hero-card,
+.home-v2 .home-leaders-frame .home-leader-card,
+.home-v2 .home-leaders-frame .home-section-panel {
+  border-radius: 0 !important;
+}
+
+.home-v2 .home-progress-grid,
+.home-v2 .home-progress-card,
+.home-v2 .home-progress-card__media,
+.home-v2 .home-progress-card__value,
+.home-v2 .home-progress-card__label,
+.home-v2 .home-progress-card .card,
+.home-v2 .home-progress-card .px-card,
+.home-v2 .home-progress-card .chip,
+.home-v2 .home-progress-card .badge,
+.home-v2 .home-progress-card .home-avatar-wrap,
+.home-v2 .home-progress-card .home-rank-frame {
+  border-radius: 0 !important;
+}
+
+.home-v2 .home-leaders-frame .chip,
+.home-v2 .home-leaders-frame .badge,
+.home-v2 .home-leaders-frame .pill,
+.home-v2 .home-leaders-frame .stat,
+.home-v2 .home-progress-card .chip,
+.home-v2 .home-progress-card .badge,
+.home-v2 .home-progress-card .pill,
+.home-v2 .home-progress-card .stat {
+  border-radius: 0 !important;
+}
+
+.home-v2 .home-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-v2 .home-progress-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.home-v2 .home-progress-card__name,
+.home-v2 .home-progress-card__label,
+.home-v2 .home-progress-card__value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .home-v2 .home-progress-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,177 +1,81 @@
-import { getLeagueSnapshot, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { getHomeLiveData, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 
 const HOME_CURRENT_SEASON = { id: 'spring_2026', label: 'Весна 2026' };
 const HOME_LEAGUES = ['sundaygames', 'kids'];
-const RANK_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 
 function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
-function toNum(v, fb = null) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
-function fmtSigned(v) { const n = toNum(v, null); return n === null ? '—' : `${n > 0 ? '+' : ''}${n}`; }
-function hasValue(v) { return !(v === null || v === undefined || v === '' || Number.isNaN(v)); }
+function fmtSigned(v) { const n = Number(v); return Number.isFinite(n) ? `${n > 0 ? '+' : ''}${n}` : '—'; }
 
-function normalizeSnapshotPlayers(snapshot, league) {
-  const rows = Array.isArray(snapshot?.table) ? snapshot.table : [];
-  return rows
-    .map((row) => ({
-      league,
-      nickname: String(row.nick || row.nickname || '').trim(),
-      matches: Number(row.games || row.matches || 0) || 0,
-      wins: Number(row.wins || 0) || 0,
-      draws: Number(row.draws || 0) || 0,
-      losses: Number(row.losses || 0) || 0,
-      mvp_total: Number(row.mvp || row.mvp_total || 0) || 0,
-      rating_end: Number(row.points || row.rating_end || 0) || 0,
-      rating_delta: Number(row.pointsDelta || row.rating_delta || 0) || 0,
-      rank_final: null,
-      rank_text: row.rankLetter || rankFromPoints(Number(row.points || 0) || 0)
-    }))
-    .filter((p) => p.nickname);
-}
-
-function normalizeSnapshotSummary(snapshot) {
-  const stats = snapshot?.seasonStats || {};
-  return {
-    matches: Number(stats.games || 0) || 0,
-    players: Number(stats.players || 0) || 0,
-    avg_rating: null
-  };
-}
-
-function dedupeHomePlayers(players = []) {
-  const map = new Map();
-  (Array.isArray(players) ? players : []).forEach((player) => {
-    const league = normalizeLeague(player?.league || 'kids') || 'kids';
-    const nickname = String(player?.nickname || '').trim();
-    if (!nickname) return;
-    const key = `${league}::${nickname.toLowerCase()}`;
-    const normalized = {
-      ...player,
-      league,
-      nickname,
-      points: toNum(player?.points ?? player?.rating_end, null),
-      games: toNum(player?.games ?? player?.matches, null),
-      matches: toNum(player?.matches ?? player?.games, null),
-      winrate: toNum(player?.winrate, null),
-      mvp_total: toNum(player?.mvp_total, null),
-      rating_delta: toNum(player?.rating_delta, null)
-    };
-    const existing = map.get(key);
-    if (!existing) { map.set(key, normalized); return; }
-    const pointsDiff = toNum(normalized.points, -1e9) - toNum(existing.points, -1e9);
-    if (pointsDiff > 0) { map.set(key, normalized); return; }
-    if (pointsDiff < 0) return;
-    const matchesDiff = toNum(normalized.matches ?? normalized.games, 0) - toNum(existing.matches ?? existing.games, 0);
-    if (matchesDiff > 0) map.set(key, normalized);
-  });
-  return [...map.values()];
-}
-
-function heroMetrics(player) {
-  const metrics = [
-    hasValue(player.games ?? player.matches) ? ['Ігри', player.games ?? player.matches] : null,
-    hasValue(player.winrate) ? ['WR', `${player.winrate}%`] : null,
-    hasValue(player.mvp_total) ? ['MVP', player.mvp_total] : null
-  ].filter(Boolean);
-  return metrics.map(([label, value]) => `<span>${label} <strong>${esc(value)}</strong></span>`).join('');
+function currentRankingCard(players = []) {
+  if (!players.length) return '<p class="px-card__text">Немає даних</p>';
+  const rows = players.slice(0, 10).map((player) => `
+    <div class="home-current-row">
+      <span>#${player.place}</span>
+      <strong>${esc(player.nickname)}</strong>
+      <span>${esc(player.rankText || rankFromPoints(player.points))}</span>
+      <span>${esc(player.points)}</span>
+    </div>`).join('');
+  return `<div class="home-current-table">${rows}</div>`;
 }
 
 function heroCard(player, league, isPrimary = false) {
   if (!player) return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}"><h3>${esc(leagueLabelUA(league))}</h3><p class="px-card__text">Немає даних</p></article>`;
-  const rankDisplay = hasValue(player.rank_text) ? player.rank_text : (hasValue(player.points) ? rankFromPoints(player.points) : null);
-  const ratingLine = [
-    rankDisplay ? `Ранг: <strong>${esc(rankDisplay)}</strong>` : '',
-    hasValue(player.points) ? `Очки: <strong>${esc(player.points)}</strong>` : ''
-  ].filter(Boolean).join(' · ');
   return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}">
     <div class="home-hero-card__head"><span class="px-badge">${esc(leagueLabelUA(league))}</span><strong class="home-hero-card__place">#1</strong></div>
     <h3 class="home-hero-card__name">${esc(player.nickname)}</h3>
-    ${ratingLine ? `<p class="home-hero-card__rating">${ratingLine}</p>` : ''}
-    ${heroMetrics(player) ? `<div class="home-stats-strip">${heroMetrics(player)}</div>` : ''}
+    <p class="home-hero-card__rating">Ранг: <strong>${esc(player.rankText || rankFromPoints(player.points))}</strong> · Очки: <strong>${esc(player.points)}</strong></p>
   </article>`;
 }
 
-function rankDistributionCard(players = []) {
-  const dist = RANK_ORDER.reduce((acc, rank) => ({ ...acc, [rank]: 0 }), {});
-  players.forEach((player) => {
-    const rank = String(player.rank_text || '').trim().toUpperCase();
-    if (RANK_ORDER.includes(rank)) dist[rank] += 1;
+function leagueProgressCard(logs = []) {
+  const aggregate = new Map();
+  logs.forEach((entry) => {
+    const key = entry.nickname.toLowerCase().trim();
+    const prev = aggregate.get(key) || { nickname: entry.nickname, delta: 0 };
+    prev.delta += Number(entry.delta) || 0;
+    aggregate.set(key, prev);
   });
-  return `<div class="home-rank-grid">${RANK_ORDER.map((rank) => `<article class="home-rank-card"><span>${rank}</span><strong>${dist[rank]}</strong></article>`).join('')}</div>`;
+  const rows = [...aggregate.values()];
+  const topPositive = rows.filter((x) => x.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
+  const topNegative = rows.filter((x) => x.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
+
+  const list = (title, items) => `<div><h5>${title}</h5>${items.length ? `<ul>${items.map((p) => `<li>${esc(p.nickname)} <strong>${fmtSigned(p.delta)}</strong></li>`).join('')}</ul>` : '<p class="px-card__text">Немає даних</p>'}</div>`;
+  return `<div class="home-progress-grid">${list('Топ приросту', topPositive)}${list('Топ падіння', topNegative)}</div>`;
 }
 
-function progressCard(players = []) {
-  const withDelta = players.filter((p) => hasValue(p.rating_delta));
-  const up = [...withDelta].sort((a, b) => b.rating_delta - a.rating_delta).slice(0, 3);
-  const mvp = players.filter((p) => hasValue(p.mvp_total)).sort((a, b) => b.mvp_total - a.mvp_total).slice(0, 3);
-  const list = (rows, title, valueKey) => `<div><h5>${title}</h5>${rows.length ? `<ul>${rows.map((p) => `<li>${esc(p.nickname)} <strong>${valueKey === 'delta' ? fmtSigned(p.rating_delta) : esc(p.mvp_total)}</strong></li>`).join('')}</ul>` : '<p class="px-card__text">Немає даних</p>'}</div>`;
-  return `<div class="home-progress-grid">${list(up, 'Топ +3 по приросту', 'delta')}${list(mvp, 'Топ +3 по MVP', 'mvp')}</div>`;
+function lastGameDayCard(games = [], league) {
+  if (!games.length) return '<p class="px-card__text">Немає даних</p>';
+  const latestTs = Math.max(...games.map((g) => g.tsMs));
+  const latestDate = new Date(latestTs).toISOString().slice(0, 10);
+  const sameDay = games.filter((game) => String(game.timestamp).slice(0, 10) === latestDate && game.league === league);
+  if (!sameDay.length) return '<p class="px-card__text">Немає матчів у останній день для ліги</p>';
+  const players = [...new Set(sameDay.flatMap((game) => game.teams))];
+  const mvps = [...new Set(sameDay.map((game) => game.mvp).filter(Boolean))];
+  return `<div class="home-summary-strip">
+    <p><strong>Дата:</strong> ${esc(latestDate)}</p>
+    <p><strong>Матчів:</strong> ${sameDay.length}</p>
+    <p><strong>Грали:</strong> ${esc(players.join(', '))}</p>
+    ${mvps.length ? `<p><strong>MVP:</strong> ${esc(mvps.join(', '))}</p>` : ''}
+  </div>`;
 }
 
-function currentRankingCard(players = [], league) {
-  if (!players.length) return '<p class="px-card__text">Немає даних</p>';
-  const rows = players.slice(0, 10).map((p, idx) => {
-    const rank = hasValue(p.rank_text) ? p.rank_text : (hasValue(p.points) ? rankFromPoints(p.points) : null);
-    const cells = [
-      `<span>#${idx + 1}</span>`,
-      `<strong>${esc(p.nickname)}</strong>`,
-      rank ? `<span>${esc(rank)}</span>` : '',
-      hasValue(p.points) ? `<span>${esc(p.points)}</span>` : '',
-      hasValue(p.games ?? p.matches) ? `<span>${esc(p.games ?? p.matches)}</span>` : '',
-      hasValue(p.mvp_total) ? `<span>${esc(p.mvp_total)}</span>` : ''
-    ].filter(Boolean).join('');
-    return `<div class="home-current-row">${cells}</div>`;
-  }).join('');
-  return `<div class="home-current-table">${rows}</div><p class="px-card__text">Активна ліга: ${esc(leagueLabelUA(league))}</p>`;
-}
-
-function renderLeagueSection({ league, players, expanded }) {
+function renderLeagueSection({ league, players, logs, games, expanded }) {
   return `<section class="px-card home-card home-league" data-league="${league}">
     <div class="home-league__head"><h3>${esc(leagueLabelUA(league))}</h3><button type="button" class="btn btn--secondary home-expand-btn ${expanded ? 'is-active' : ''}" data-toggle-league="${league}">Розгорнути статистику</button></div>
     <div class="home-expanded ${expanded ? 'is-open' : ''}" id="expanded-${league}">
-      <article class="home-panel"><h4>Поточний топ-10</h4>${currentRankingCard(players, league)}</article>
-      <article class="home-panel"><h4>Розподіл по рангах</h4>${rankDistributionCard(players)}</article>
-      <article class="home-panel"><h4>Прогрес</h4>${progressCard(players)}</article>
+      <article class="home-panel"><h4>Поточний топ-10</h4>${currentRankingCard(players)}</article>
+      <article class="home-panel"><h4>Прогрес ліги</h4>${leagueProgressCard(logs)}</article>
+      <article class="home-panel"><h4>Останній ігровий день</h4>${lastGameDayCard(games, league)}</article>
     </div>
   </section>`;
-}
-
-async function loadHomeLiveData() {
-  const adultSnap = await getLeagueSnapshot('sundaygames', 'spring_2026');
-  const kidsSnap = await getLeagueSnapshot('kids', 'spring_2026');
-  const playersAll = dedupeHomePlayers([
-    ...normalizeSnapshotPlayers(adultSnap, 'sundaygames'),
-    ...normalizeSnapshotPlayers(kidsSnap, 'kids')
-  ]);
-  const playersByLeague = {
-    sundaygames: playersAll
-      .filter((player) => player.league === 'sundaygames')
-      .sort((a, b) => toNum(b.points, -1e9) - toNum(a.points, -1e9)),
-    kids: playersAll
-      .filter((player) => player.league === 'kids')
-      .sort((a, b) => toNum(b.points, -1e9) - toNum(a.points, -1e9))
-  };
-
-  return {
-    playersAll,
-    playersByLeague,
-    leagueSummary: {
-      sundaygames: normalizeSnapshotSummary(adultSnap),
-      kids: normalizeSnapshotSummary(kidsSnap)
-    },
-    seriesSummary: {
-      sundaygames: adultSnap.matches || [],
-      kids: kidsSnap.matches || []
-    },
-    updatedAt: new Date().toISOString()
-  };
 }
 
 export async function initHomePage() {
   const root = document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="hero__subtitle">Актуальний live-рейтинг і лідери ліг прямо зараз.</p><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
   <section class="section"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
   <section class="section"><article class="px-card home-card home-panel"><h3>Поточний рейтинг дорослої ліги</h3><div id="currentRankingAdults" class="home-skeleton"></div></article></section>
@@ -188,14 +92,19 @@ export async function initHomePage() {
   const homeState = { activeLeague: 'sundaygames', expandedLeague: 'sundaygames' };
 
   const renderHome = (data) => {
+    const adultsPlayers = data.adults.players;
+    const kidsPlayers = data.kids.players;
+
     currentRankingAdults.classList.remove('home-skeleton');
     currentRankingKids.classList.remove('home-skeleton');
-    currentRankingAdults.innerHTML = currentRankingCard(data.playersByLeague.sundaygames, 'sundaygames');
-    currentRankingKids.innerHTML = currentRankingCard(data.playersByLeague.kids, 'kids');
+    currentRankingAdults.innerHTML = currentRankingCard(adultsPlayers);
+    currentRankingKids.innerHTML = currentRankingCard(kidsPlayers);
 
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({
       league,
-      players: data.playersByLeague[league],
+      players: league === 'sundaygames' ? adultsPlayers : kidsPlayers,
+      logs: data.logs.filter((x) => x.league === league),
+      games: data.games,
       expanded: homeState.expandedLeague === league
     })).join('');
 
@@ -210,15 +119,11 @@ export async function initHomePage() {
   };
 
   try {
-    const data = await loadHomeLiveData();
+    const live = await getHomeLiveData();
     stateBox.hidden = true;
     stateBox.textContent = '';
-
-    const adultTop = data.playersByLeague.sundaygames[0] || null;
-    const kidsTop = data.playersByLeague.kids[0] || null;
-    topHeroes.innerHTML = heroCard(adultTop, 'sundaygames', true) + heroCard(kidsTop, 'kids');
-
-    renderHome(data);
+    topHeroes.innerHTML = heroCard(live.adults.players[0] || null, 'sundaygames', true) + heroCard(live.kids.players[0] || null, 'kids');
+    renderHome(live);
   } catch (error) {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');
     stateBox.hidden = false;

@@ -1,131 +1,26 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>League | v2</title>
-  <script type="module" src="./global-styles.js"></script>
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand">League</div>
-    <a class="nav-link" href="#home">Menu</a>
-  </header>
-  <main>
-    <section class="card">
-      <h1 class="section-title" id="leagueTitle"></h1>
-      <div class="top3" id="top3"></div>
-      <p class="tag" id="errorBox"></p>
-    </section>
+<section class="league-page" id="leaguePage">
+  <section class="px-card league-hero" id="leagueHero"></section>
 
-    <section class="kpi kpi-5">
-      <article class="card"><p class="tag"><span class="tooltip-term" title="Games = зіграні матчі">Games</span></p><h3 id="games"></h3></article>
-      <article class="card"><p class="tag"><span class="tooltip-term" title="Wins / Losses / Draws">WLD Wins</span></p><h3 id="wins"></h3></article>
-      <article class="card"><p class="tag"><span class="tooltip-term" title="Wins / Losses / Draws">WLD Losses</span></p><h3 id="losses"></h3></article>
-      <article class="card"><p class="tag"><span class="tooltip-term" title="Wins / Losses / Draws">WLD Draws</span></p><h3 id="draws"></h3></article>
-      <article class="card"><p class="tag">ΔPoints</p><h3 id="delta">—</h3></article>
-    </section>
+  <section class="px-card league-top10" id="leagueTop10Section">
+    <h2 class="px-card__title">ТОП-10 поточного сезону</h2>
+    <div class="league-table-shell">
+      <div class="league-table-header" aria-hidden="true"></div>
+      <div class="league-table-list" id="leagueTop10Table"></div>
+    </div>
+    <div class="px-card__actions">
+      <button class="btn btn--secondary" id="leagueExpandBtn" type="button">Показати всіх гравців</button>
+    </div>
+  </section>
 
-    <section class="card">
-      <div class="search-row">
-        <input id="searchInput" class="search-input" type="search" placeholder="Пошук по ніку..." autocomplete="off">
-        <button id="clearSearch" class="chip" type="button">Очистити</button>
-      </div>
-      <button id="toggleRows" class="chip" type="button">Показати всі</button>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>Nick</th><th>Pts</th><th><span class="tooltip-term" title="Games = зіграні матчі">Games</span></th><th>WinRate</th><th>MVP</th><th>Top2</th><th>Top3</th><th>Rank</th></tr></thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+  <section class="px-card league-full" id="leagueFullSection" hidden>
+    <h2 class="px-card__title">Повний список гравців</h2>
+    <div class="league-table-shell">
+      <div class="league-table-header" aria-hidden="true"></div>
+      <div class="league-table-list" id="leagueFullTable"></div>
+    </div>
+  </section>
 
-  
-
-  <script type="module">
-    import { getCurrentSeason, getLeagueSnapshot, normalizeLeague, safeErrorMessage } from '../core/dataHub.js';
-    import { getQueryParams, createTop3Markup, statOrDash, highlightMatch } from '../core/utils.js';
-
-    const { league = 'kids', seasonId } = getQueryParams();
-    let data = null;
-    let searchValue = '';
-    let expanded = false;
-
-    const placeholder = '../assets/default-avatar.svg';
-
-    function showSkeleton() {
-      document.getElementById('top3').innerHTML = '<article class="top-card skeleton"></article><article class="top-card skeleton"></article><article class="top-card skeleton"></article>';
-      document.getElementById('tableBody').innerHTML = '<tr><td colspan="9"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></td></tr>';
-    }
-
-    async function init() {
-      showSkeleton();
-      try {
-        const currentSeason = await getCurrentSeason();
-        const targetSeason = seasonId || currentSeason.id;
-        const targetLeague = normalizeLeague(league) || 'kids';
-        data = await getLeagueSnapshot(targetLeague, targetSeason);
-        document.getElementById('leagueTitle').textContent = `${data.seasonTitle} · ${targetLeague}`;
-        document.getElementById('top3').innerHTML = createTop3Markup(data.top3);
-        document.getElementById('games').textContent = statOrDash(data.seasonStats.games);
-        document.getElementById('wins').textContent = statOrDash(data.seasonStats.wins);
-        document.getElementById('losses').textContent = statOrDash(data.seasonStats.losses);
-        document.getElementById('draws').textContent = statOrDash(data.seasonStats.draws);
-        document.getElementById('delta').textContent = statOrDash(data.seasonStats.pointsDelta);
-        renderTable();
-      } catch (error) {
-        document.getElementById('leagueTitle').textContent = 'Дані тимчасово недоступні';
-        document.getElementById('errorBox').textContent = safeErrorMessage(error, 'Дані тимчасово недоступні');
-      }
-    }
-
-    function rowNick(player) {
-      return highlightMatch(player.nick, searchValue);
-    }
-
-    function renderTable() {
-      if (!data) return;
-      const q = searchValue.trim().toLowerCase();
-      let rows = data.table.filter((player) => !q || player.nick.toLowerCase().includes(q));
-      if (!expanded) rows = rows.slice(0, 10);
-      document.getElementById('tableBody').innerHTML = rows.map((player) => `
-        <tr class="${player.inactive ? 'inactive' : ''}">
-          <td>${player.place}</td>
-          <td>
-            <a class="chip player-trigger" href="#season?league=${encodeURIComponent(data.league === 'sundaygames' ? 'olds' : data.league)}">
-              <img class="avatar" src="${player.avatarUrl || placeholder}" alt="" onerror="this.src='${placeholder}'"> ${rowNick(player)}
-            </a>
-          </td>
-          <td>${statOrDash(player.points)}</td>
-          <td>${statOrDash(player.games)}</td>
-          <td>${player.winRate === null || player.winRate === 0 ? '—' : `${player.winRate}%`}</td>
-          <td>${statOrDash(player.mvp)}</td>
-          <td>${statOrDash(player.mvp2)}</td>
-          <td>${statOrDash(player.mvp3)}</td>
-          <td><span class="rank-badge rank-${player.rankLetter}">${player.rankLetter}</span></td>
-        </tr>
-      `).join('') || '<tr><td colspan="9">Нічого не знайдено</td></tr>';
-      document.getElementById('toggleRows').textContent = expanded ? 'Показати Top-10' : 'Показати всі';
-    }
-
-    document.getElementById('searchInput').addEventListener('input', (event) => {
-      searchValue = event.target.value || '';
-      renderTable();
-    });
-
-    document.getElementById('clearSearch').addEventListener('click', () => {
-      searchValue = '';
-      document.getElementById('searchInput').value = '';
-      renderTable();
-    });
-
-    document.getElementById('toggleRows').addEventListener('click', () => {
-      expanded = !expanded;
-      renderTable();
-    });
-
-    init();
-  </script>
-</body>
-</html>
+  <section class="px-card league-infographic" id="leagueInfographic"></section>
+  <section class="px-card league-awards" id="leagueAwards"></section>
+  <section class="px-card league-last-day" id="leagueLastGameDay"></section>
+</section>

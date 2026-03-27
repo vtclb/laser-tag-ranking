@@ -1253,3 +1253,17 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 .league-page .league-rank-card {
   border-radius: 0 !important;
 }
+
+/* League live tables: top10 + full roster */
+.league-page .league-table-shell { border: 1px solid rgba(255,255,255,.12); }
+.league-page .league-table-row.league-player-row { color: inherit; text-decoration: none; cursor: pointer; }
+.league-page .league-table-row.league-player-row:hover { background: rgba(255,255,255,.06); }
+.league-page .league-table-header,
+.league-page .league-table-row {
+  grid-template-columns: 74px 70px 78px minmax(140px, 1.3fr) 88px 80px 80px 96px 74px 74px 74px;
+}
+.league-page .league-col-nickname { min-width: 120px; }
+
+@media (max-width: 900px) {
+  .league-page .league-table-row.league-player-row { grid-template-columns: 1fr; }
+}

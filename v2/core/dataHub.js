@@ -976,6 +976,56 @@ function normalizeGames(rows = [], header = []) {
   }).filter((entry) => entry.timestamp && Number.isFinite(entry.tsMs) && entry.league && entry.teams.length);
 }
 
+
+function parseLeagueLiveRoster(rows = [], header = [], avatarsMap = new Map()) {
+  const idxNick = findHeaderIndex(header, ['nickname', 'nick', 'player']);
+  const idxPoints = findHeaderIndex(header, ['points', 'pts', 'score', 'mmr']);
+  const idxRank = findHeaderIndex(header, ['rank', 'rang', 'ранг']);
+  const idxInactive = findHeaderIndex(header, ['inactive', 'isinactive', 'active']);
+  const dedupe = new Map();
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const nickname = String(row?.[idxNick] || '').trim();
+    if (!nickname) return;
+    const key = normalizeHeader(nickname);
+    const points = toNumber(row?.[idxPoints], 0) || 0;
+    const explicitRank = String(row?.[idxRank] || '').trim().toUpperCase();
+    const rankLetter = explicitRank || rankFromPoints(points);
+    const inactiveRaw = String(row?.[idxInactive] || '').trim().toLowerCase();
+    const isInactive = inactiveRaw === 'true' || inactiveRaw === '1' || inactiveRaw === 'yes';
+    const candidate = {
+      nickname,
+      avatarUrl: avatarsMap.get(key) || '',
+      points,
+      rankLetter,
+      inactive: isInactive
+    };
+    const prev = dedupe.get(key);
+    if (!prev || candidate.points >= prev.points) dedupe.set(key, candidate);
+  });
+
+  return [...dedupe.values()]
+    .filter((player) => !player.inactive)
+    .sort((a, b) => b.points - a.points || a.nickname.localeCompare(b.nickname, 'uk'))
+    .map((player, index) => ({ ...player, place: index + 1 }));
+}
+
+function inDateRange(ymd = '', from = '', to = '') {
+  if (!ymd) return false;
+  if (from && ymd < from) return false;
+  if (to && ymd > to) return false;
+  return true;
+}
+
+function buildCurrentLeagueAwards(players = [], progress = {}, seasonLabel = '') {
+  const leader = players[0] || null;
+  return [
+    leader ? { title: 'Лідер сезону', nickname: leader.nickname, note: `Топ-1 за очками (${leader.points}) · ${seasonLabel}` } : null,
+    progress?.mostMvp ? { title: 'MVP машина', nickname: progress.mostMvp.nickname, note: `${progress.mostMvp.mvpTotal} нагород MVP` } : null,
+    progress?.bestGrowth ? { title: 'Найкращий приріст', nickname: progress.bestGrowth.nickname, note: `Сумарний Δ ${progress.bestGrowth.delta > 0 ? '+' : ''}${progress.bestGrowth.delta}` } : null
+  ].filter(Boolean);
+}
+
 function parseLeagueTableForLive(rows = [], header = [], avatarsMap = new Map()) {
   const idxNick = findHeaderIndex(header, ['nickname', 'nick', 'player']);
   const idxPoints = findHeaderIndex(header, ['points', 'pts', 'score', 'mmr']);
@@ -1022,6 +1072,149 @@ function buildAwards(players = [], recentGames = [], progress = {}) {
     recentMvp && { key: 'comeback-day', title: 'Камбек дня', nickname: recentMvp, note: 'MVP останнього матчу' },
     stable && { key: 'iron-player', title: 'Стабільний гравець', nickname: stable.nickname, note: `Δ ${stable.delta >= 0 ? '+' : ''}${stable.delta}` }
   ].filter(Boolean);
+}
+
+
+export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
+  const league = normalizeLeague(leagueId) || 'kids';
+  const cacheKey = `league-live-current:${league}`;
+  const cached = readCache(cacheKey, TTL.leagueSnapshot);
+  if (cached) return cached;
+
+  const [season, leagueSheet, gamesSheet, logsSheet, avatarsMap] = await Promise.all([
+    getCurrentSeason(),
+    readSheet(league, { limitRows: 4000, limitCols: 40 }),
+    readSheet('games', { limitRows: 8000, limitCols: 40 }),
+    readSheet('logs', { limitRows: 8000, limitCols: 30 }),
+    getAvatarsMap()
+  ]);
+
+  const seasonStart = String(season?.dateStart || '').slice(0, 10);
+  const seasonEnd = String(season?.dateEnd || '').slice(0, 10);
+  const seasonLabel = season?.uiLabel || season?.label || 'Поточний сезон';
+
+  const roster = parseLeagueLiveRoster(leagueSheet?.rows || [], leagueSheet?.header || [], avatarsMap);
+  const statsByNick = new Map(roster.map((player) => [normalizeHeader(player.nickname), {
+    ...player,
+    matches: 0,
+    battles: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    winRate: null,
+    mvp1: 0,
+    mvp2: 0,
+    mvp3: 0,
+    mvpTotal: 0,
+    delta: 0
+  }]));
+
+  const liveGames = parseMatches(gamesSheet || { header: [], rows: [] })
+    .filter((match) => match.league === league && inDateRange(match.date, seasonStart, seasonEnd));
+  const liveLogs = parseLogs(logsSheet || { header: [], rows: [] })
+    .filter((entry) => entry.league === league && inDateRange(entry.date, seasonStart, seasonEnd));
+
+  liveGames.forEach((game) => {
+    const teams = { team1: game.team1 || [], team2: game.team2 || [], team3: game.team3 || [], team4: game.team4 || [] };
+    const battlesPerMatch = safeRoundCount(game.rawSeries) || 1;
+    const participants = [];
+
+    Object.entries(teams).forEach(([teamKey, members]) => {
+      members.forEach((nick) => {
+        const key = normalizeHeader(nick);
+        const row = statsByNick.get(key);
+        if (!row) return;
+        participants.push({ key, teamKey });
+        row.matches += 1;
+        row.battles += battlesPerMatch;
+        if (game.winner === 'tie') row.draws += 1;
+        else if (game.winner === teamKey) row.wins += 1;
+        else row.losses += 1;
+      });
+    });
+
+    const mvp1 = normalizeHeader(game.mvp1);
+    const mvp2 = normalizeHeader(game.mvp2);
+    const mvp3 = normalizeHeader(game.mvp3);
+    participants.forEach(({ key }) => {
+      const row = statsByNick.get(key);
+      if (!row) return;
+      if (mvp1 && key === mvp1) row.mvp1 += 1;
+      if (mvp2 && key === mvp2) row.mvp2 += 1;
+      if (mvp3 && key === mvp3) row.mvp3 += 1;
+    });
+  });
+
+  liveLogs.forEach((entry) => {
+    const key = normalizeHeader(entry.nick);
+    const row = statsByNick.get(key);
+    if (!row) return;
+    row.delta += Number(entry.delta) || 0;
+  });
+
+  const players = [...statsByNick.values()]
+    .map((player) => {
+      const totalMatches = player.wins + player.draws + player.losses;
+      const mvpTotal = player.mvp1 + player.mvp2 + player.mvp3;
+      return {
+        ...player,
+        mvpTotal,
+        winRate: totalMatches > 0 ? Number(((player.wins / totalMatches) * 100).toFixed(1)) : null
+      };
+    })
+    .sort((a, b) => b.points - a.points || b.wins - a.wins || a.nickname.localeCompare(b.nickname, 'uk'))
+    .map((player, index) => ({ ...player, place: index + 1 }));
+
+  const top10 = players.slice(0, 10);
+  const rankDistribution = getRankDistribution(players.map((p) => ({ ...p, rankLetter: p.rankLetter || rankFromPoints(p.points || 0) })));
+  const summary = {
+    playersCount: players.length,
+    matchesCount: liveGames.length,
+    battlesCount: liveGames.reduce((sum, game) => sum + (safeRoundCount(game.rawSeries) || 1), 0),
+    avgRating: players.length ? Math.round(players.reduce((sum, p) => sum + (p.points || 0), 0) / players.length) : 0,
+    totalMvp: players.reduce((sum, p) => sum + (p.mvpTotal || 0), 0),
+    rankDistribution
+  };
+
+  const progress = {
+    bestGrowth: [...players].sort((a, b) => (b.delta || 0) - (a.delta || 0))[0] || null,
+    mostMvp: [...players].sort((a, b) => (b.mvpTotal || 0) - (a.mvpTotal || 0))[0] || null,
+    biggestMinus: [...players].sort((a, b) => (a.delta || 0) - (b.delta || 0))[0] || null
+  };
+
+  const gamesByDay = new Map();
+  liveGames.forEach((game) => {
+    if (!game.date) return;
+    const day = gamesByDay.get(game.date) || { date: game.date, matchesCount: 0, battlesCount: 0, mvpCounter: new Map() };
+    day.matchesCount += 1;
+    day.battlesCount += safeRoundCount(game.rawSeries) || 1;
+    const mvpKey = normalizeHeader(game.mvp1);
+    if (mvpKey) day.mvpCounter.set(mvpKey, (day.mvpCounter.get(mvpKey) || 0) + 1);
+    gamesByDay.set(game.date, day);
+  });
+
+  const latestDay = [...gamesByDay.values()].sort((a, b) => b.date.localeCompare(a.date))[0] || null;
+  const nicknameByKey = new Map(players.map((player) => [normalizeHeader(player.nickname), player.nickname]));
+  const topDayMvpKey = latestDay ? ([...latestDay.mvpCounter.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null) : null;
+  const lastGameDay = latestDay ? {
+    date: latestDay.date,
+    matchesCount: latestDay.matchesCount,
+    battlesCount: latestDay.battlesCount,
+    mvp: nicknameByKey.get(topDayMvpKey) || topDayMvpKey || null
+  } : { date: '', matchesCount: 0, battlesCount: 0, mvp: null };
+
+  const result = {
+    league,
+    seasonLabel,
+    players,
+    top10,
+    summary,
+    progress,
+    awards: buildCurrentLeagueAwards(players, progress, seasonLabel),
+    lastGameDay
+  };
+
+  return writeCache(cacheKey, result);
 }
 
 export async function getLeagueLiveData(leagueId = 'kids') {

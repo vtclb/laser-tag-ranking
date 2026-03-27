@@ -1,4 +1,4 @@
-import { getHomeLiveData, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { getCurrentLeagueLiveStats, getHomeLiveData, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
 
 const HOME_CURRENT_SEASON = { id: 'spring_2026', label: 'Весна 2026', endDate: '2026-05-31' };
@@ -165,9 +165,18 @@ export async function initHomePage() {
   const homeFooter = document.getElementById('homeFooter');
   if (!stateBox || !topHeroes || !leagueSections || !homeFooter) return;
 
-  const renderHome = (data) => {
-    const adultsPlayers = data.adults.players;
-    const kidsPlayers = data.kids.players;
+  const renderHome = async (data) => {
+    const [adultsLive, kidsLive] = await Promise.all([
+      getCurrentLeagueLiveStats('sundaygames'),
+      getCurrentLeagueLiveStats('kids')
+    ]);
+    const pickSeasonActive = (players = [], livePlayers = []) => {
+      const activeSet = new Set((livePlayers || []).filter((player) => player.isSeasonActive).map((player) => String(player.nickname || '').trim().toLowerCase()));
+      return (players || []).filter((player) => activeSet.has(String(player.nickname || '').trim().toLowerCase()));
+    };
+
+    const adultsPlayers = pickSeasonActive(data.adults.players, adultsLive.players);
+    const kidsPlayers = pickSeasonActive(data.kids.players, kidsLive.players);
 
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({
       league,
@@ -191,7 +200,7 @@ export async function initHomePage() {
     stateBox.textContent = '';
     topHeroes.innerHTML = heroCard(live.adults.players[0] || null, 'sundaygames', true) + heroCard(live.kids.players[0] || null, 'kids');
 
-    renderHome(live);
+    await renderHome(live);
   } catch (error) {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');
     stateBox.hidden = false;

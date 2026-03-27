@@ -1150,34 +1150,45 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     row.delta += Number(entry.delta) || 0;
   });
 
-  const players = [...statsByNick.values()]
+  const playersWithSeasonState = [...statsByNick.values()]
     .map((player) => {
       const totalMatches = player.wins + player.draws + player.losses;
       const mvpTotal = player.mvp1 + player.mvp2 + player.mvp3;
       return {
         ...player,
         mvpTotal,
-        winRate: totalMatches > 0 ? Number(((player.wins / totalMatches) * 100).toFixed(1)) : null
+        winRate: totalMatches > 0 ? Number(((player.wins / totalMatches) * 100).toFixed(1)) : null,
+        isSeasonActive: totalMatches > 0
       };
-    })
+    });
+
+  const activePlayers = playersWithSeasonState
+    .filter((player) => player.isSeasonActive)
     .sort((a, b) => b.points - a.points || b.wins - a.wins || a.nickname.localeCompare(b.nickname, 'uk'))
     .map((player, index) => ({ ...player, place: index + 1 }));
 
-  const top10 = players.slice(0, 10);
-  const rankDistribution = getRankDistribution(players.map((p) => ({ ...p, rankLetter: p.rankLetter || rankFromPoints(p.points || 0) })));
+  const inactivePlayers = playersWithSeasonState
+    .filter((player) => !player.isSeasonActive)
+    .sort((a, b) => b.points - a.points || b.wins - a.wins || a.nickname.localeCompare(b.nickname, 'uk'));
+
+  const players = [...activePlayers, ...inactivePlayers.map((player) => ({ ...player, place: null }))];
+
+  const top10 = activePlayers.slice(0, 10);
+  const rankDistribution = getRankDistribution(activePlayers.map((p) => ({ ...p, rankLetter: p.rankLetter || rankFromPoints(p.points || 0) })));
   const summary = {
+    activePlayersCount: activePlayers.length,
     playersCount: players.length,
     matchesCount: liveGames.length,
     battlesCount: liveGames.reduce((sum, game) => sum + (safeRoundCount(game.rawSeries) || 1), 0),
-    avgRating: players.length ? Math.round(players.reduce((sum, p) => sum + (p.points || 0), 0) / players.length) : 0,
-    totalMvp: players.reduce((sum, p) => sum + (p.mvpTotal || 0), 0),
+    avgRating: activePlayers.length ? Math.round(activePlayers.reduce((sum, p) => sum + (p.points || 0), 0) / activePlayers.length) : 0,
+    totalMvp: activePlayers.reduce((sum, p) => sum + (p.mvpTotal || 0), 0),
     rankDistribution
   };
 
   const progress = {
-    bestGrowth: [...players].sort((a, b) => (b.delta || 0) - (a.delta || 0))[0] || null,
-    mostMvp: [...players].sort((a, b) => (b.mvpTotal || 0) - (a.mvpTotal || 0))[0] || null,
-    biggestMinus: [...players].sort((a, b) => (a.delta || 0) - (b.delta || 0))[0] || null
+    bestGrowth: [...activePlayers].sort((a, b) => (b.delta || 0) - (a.delta || 0))[0] || null,
+    mostMvp: [...activePlayers].sort((a, b) => (b.mvpTotal || 0) - (a.mvpTotal || 0))[0] || null,
+    biggestMinus: [...activePlayers].sort((a, b) => (a.delta || 0) - (b.delta || 0))[0] || null
   };
 
   const gamesByDay = new Map();
@@ -1205,14 +1216,22 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     league,
     seasonLabel,
     players,
+    activePlayers,
     top10,
     summary,
     progress,
-    awards: buildCurrentLeagueAwards(players, progress, seasonLabel),
+    awards: buildCurrentLeagueAwards(activePlayers, progress, seasonLabel),
     lastGameDay
   };
 
   return writeCache(cacheKey, result);
+}
+
+export async function getLiveLeaguePlayerByNick({ league = 'kids', nick } = {}) {
+  const normalized = normalizeHeader(nick);
+  if (!normalized) return null;
+  const data = await getCurrentLeagueLiveStats(league);
+  return data.players.find((player) => normalizeHeader(player.nickname) === normalized) || null;
 }
 
 export async function getLeagueLiveData(leagueId = 'kids') {

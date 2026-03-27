@@ -1,12 +1,12 @@
 import { getGameDay, safeErrorMessage } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
-import { getHashQueryParams } from '../core/utils.js';
+import { getRouteState } from '../core/utils.js';
 
 function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
 function fmt(v) { const n = Number(v) || 0; return `${n > 0 ? '+' : ''}${n}`; }
 
 function resolveParams(params = {}) {
-  const qp = getHashQueryParams();
+  const { query: qp } = getRouteState();
   const league = normalizeLeague(params.league || qp.get('league') || 'sundaygames') || 'sundaygames';
   const date = String(params.date || qp.get('date') || '').trim();
   return { league, date };

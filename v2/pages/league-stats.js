@@ -1,6 +1,6 @@
 import { getCurrentLeagueLiveStats, safeErrorMessage } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
-import { getHashQueryParams } from '../core/utils.js';
+import { getRouteState } from '../core/utils.js';
 
 const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
@@ -11,28 +11,34 @@ function winRateText(value) { return value === null || value === undefined ? '�
 function fmtSigned(v) { const n = Number(v) || 0; return `${n > 0 ? '+' : ''}${n}`; }
 
 function tableHeader() {
-  return '<span>Місце</span><span>Ранг</span><span>Аватар</span><span>Нік</span><span>Бали</span><span>Ігри</span><span>Бої</span><span>WinRate</span><span>MVP1</span><span>MVP2</span><span>MVP3</span>';
+  return '<span>#</span><span>Ранг</span><span>Гравець</span><span>Очки</span><span>Сезонна статистика</span>';
 }
 
 function playerProfileHash(league, nickname) {
   return `#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(nickname)}`;
 }
 
-function rowMarkup(player, league) {
+function rowMarkup(player, league, { showDelta = false, showInactive = false } = {}) {
   const rank = String(player.rankLetter || 'F').toUpperCase();
   const href = playerProfileHash(league, player.nickname);
-  return `<a class="league-table-row league-player-row" href="${href}">
-    <span class="league-table-cell">#${player.place}</span>
-    <span class="league-table-cell"><span class="league-rank-letter ${rankClass(rank)}">${esc(rank)}</span></span>
-    <span class="league-table-cell"><span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span></span>
-    <span class="league-table-cell league-col-nickname">${esc(player.nickname)}</span>
-    <span class="league-table-cell">${esc(player.points)}</span>
-    <span class="league-table-cell">${esc(player.matches)}</span>
-    <span class="league-table-cell">${esc(player.battles)}</span>
-    <span class="league-table-cell">${esc(winRateText(player.winRate))}</span>
-    <span class="league-table-cell">${esc(player.mvp1)}</span>
-    <span class="league-table-cell">${esc(player.mvp2)}</span>
-    <span class="league-table-cell">${esc(player.mvp3)}</span>
+  const inactiveClass = player.isSeasonActive ? '' : ' is-inactive';
+  const inactiveLabel = showInactive && !player.isSeasonActive ? '<span class="league-status-tag">inactive</span>' : '';
+  const deltaText = showDelta ? `<span class="league-row-delta ${Number(player.delta || 0) >= 0 ? 'is-positive' : 'is-negative'}">Δ ${esc(fmtSigned(player.delta || 0))}</span>` : '';
+  return `<a class="league-table-row league-player-row${inactiveClass}" href="${href}">
+    <div class="league-row-top">
+      <span class="league-place">${player.place ? `#${player.place}` : '—'}</span>
+      <span class="league-rank-letter ${rankClass(rank)}">${esc(rank)}</span>
+      <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
+      <span class="league-col-nickname">${esc(player.nickname)} ${inactiveLabel}</span>
+      <span class="league-points">${esc(player.points)}</span>
+    </div>
+    <div class="league-row-meta">
+      <span>Ігри: ${esc(player.matches)}</span>
+      <span>Бої: ${esc(player.battles)}</span>
+      <span>WR: ${esc(winRateText(player.winRate))}</span>
+      <span>MVP: ${esc(player.mvp1)}/${esc(player.mvp2)}/${esc(player.mvp3)}</span>
+      ${deltaText}
+    </div>
   </a>`;
 }
 
@@ -49,14 +55,14 @@ function progressCard(player, value, label) {
 function renderHero(root, league, data) {
   root.innerHTML = `<h1 class="px-card__title">${esc(leagueLabelUA(league))}</h1>
   <p class="px-card__text">Сезон: <strong>${esc(data.seasonLabel)}</strong></p>
-  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.playersCount}</span><span>Матчів: ${data.summary.matchesCount}</span></div>
+  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Матчів: ${data.summary.matchesCount}</span></div>
   <div class="px-card__actions"><a class="btn" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;
 }
 
 function renderInfographic(root, data) {
   const dist = data.summary.rankDistribution || {};
   root.innerHTML = `<h2 class="px-card__title">Інфографіка ліги</h2>
-  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.playersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Боїв: ${data.summary.battlesCount}</span><span>Сер. рейтинг: ${data.summary.avgRating}</span><span>Total MVP: ${data.summary.totalMvp}</span></div>
+  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Усього в ростері: ${data.summary.playersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Боїв: ${data.summary.battlesCount}</span><span>Сер. рейтинг: ${data.summary.avgRating}</span><span>Total MVP: ${data.summary.totalMvp}</span></div>
   <div class="league-rank-grid">${RANKS.map((rank) => `<div class="league-rank-card"><strong>${rank}</strong><span>${dist[rank] || 0}</span></div>`).join('')}</div>
   <div class="league-progress-grid">
     ${progressCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст')}
@@ -78,7 +84,7 @@ function renderLastGameDay(root, lastGameDay, league) {
 }
 
 function resolveLeague(params = {}) {
-  const qp = getHashQueryParams();
+  const { query: qp } = getRouteState();
   return normalizeLeague(params.league || qp.get('league') || 'kids') || 'kids';
 }
 
@@ -112,8 +118,8 @@ export async function initLeagueStatsPage(params = {}) {
 
     topHeader.innerHTML = tableHeader();
     fullHeader.innerHTML = tableHeader();
-    top10Table.innerHTML = data.top10.map((player) => rowMarkup(player, league)).join('') || '<p class="px-card__text">Немає даних.</p>';
-    fullTable.innerHTML = data.players.map((player) => rowMarkup(player, league)).join('') || '<p class="px-card__text">Немає даних.</p>';
+    top10Table.innerHTML = data.top10.map((player) => rowMarkup(player, league)).join('') || '<p class="px-card__text">Немає активних гравців у цьому сезоні.</p>';
+    fullTable.innerHTML = data.players.map((player) => rowMarkup(player, league, { showDelta: true, showInactive: true })).join('') || '<p class="px-card__text">Немає даних.</p>';
 
     renderHero(hero, league, data);
     renderInfographic(infographic, data);

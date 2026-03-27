@@ -1267,3 +1267,99 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 @media (max-width: 900px) {
   .league-page .league-table-row.league-player-row { grid-template-columns: 1fr; }
 }
+
+/* V2 live league compact mobile table/list */
+.league-page .league-table-shell {
+  display: grid;
+  gap: .32rem;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(5, 10, 18, .45);
+  padding: .38rem;
+}
+
+.league-page .league-table-header {
+  display: grid;
+  grid-template-columns: 42px 32px minmax(0, 1fr) 66px 1.2fr;
+  font-size: .72rem;
+  margin: 0;
+  padding: .24rem .3rem;
+}
+
+.league-page .league-table-list {
+  gap: .3rem;
+}
+
+.league-page .league-table-row.league-player-row {
+  display: grid;
+  gap: .2rem;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(8,14,24,.64);
+  padding: .34rem .38rem;
+}
+
+.league-page .league-row-top {
+  display: grid;
+  grid-template-columns: 42px 24px 30px minmax(0, 1fr) auto;
+  gap: .34rem;
+  align-items: center;
+}
+
+.league-page .league-row-meta {
+  display: flex;
+  gap: .42rem;
+  flex-wrap: wrap;
+  font-size: .72rem;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.league-page .league-row-delta { margin-left: auto; }
+.league-page .league-row-delta.is-positive { color: #7fdc6c; }
+.league-page .league-row-delta.is-negative { color: #ff8d8d; }
+
+.league-page .league-col-nickname {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.league-page .league-points { text-align: right; font-weight: 700; }
+
+.league-page .league-status-tag {
+  margin-left: .35rem;
+  font-size: .64rem;
+  border: 1px solid rgba(255,255,255,.24);
+  padding: 0 .24rem;
+  text-transform: uppercase;
+}
+
+.league-page .league-table-row.league-player-row.is-inactive {
+  opacity: .52;
+  filter: saturate(.7);
+}
+
+.league-page .league-avatar-wrap,
+.league-page .league-avatar,
+.league-page img.league-avatar {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+}
+
+@media (max-width: 640px) {
+  .league-page .league-table-header {
+    grid-template-columns: 36px 24px minmax(0, 1fr) 56px;
+  }
+  .league-page .league-table-header span:last-child {
+    display: none;
+  }
+  .league-page .league-row-top {
+    grid-template-columns: 34px 20px 28px minmax(0, 1fr) auto;
+    gap: .28rem;
+  }
+}

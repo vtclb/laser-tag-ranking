@@ -12,7 +12,7 @@ function previewCard(seasonId, league, master) {
 }
 
 export async function initSeasonsPage() {
-  const root = document.getElementById('view');
+  const root = document.getElementById('seasonsRoot') || document.getElementById('view');
   if (!root) return;
   root.innerHTML = '<section class="px-card"><p class="px-card__text">Завантаження сезонів…</p></section>';
 

@@ -1,7 +1,7 @@
 import { safeErrorMessage } from '../core/dataHub.js';
 
 export async function initRulesPage() {
-  const root = document.getElementById('view');
+  const root = document.getElementById('rulesRoot') || document.getElementById('view');
   if (!root) return;
   root.innerHTML = '<section class="px-card"><p class="px-card__text">Завантаження правил…</p></section>';
   try {

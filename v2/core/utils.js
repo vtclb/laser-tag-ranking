@@ -4,6 +4,14 @@ export function getHashQueryParams() {
   return new URLSearchParams(query);
 }
 
+export function getRouteState() {
+  const rawHash = String(window.location.hash || '').replace(/^#/, '').trim();
+  const [routePart = 'main', queryPart = ''] = rawHash.split('?');
+  const route = String(routePart || 'main').replace(/^\/+/, '').toLowerCase() || 'main';
+  const query = new URLSearchParams(queryPart);
+  return { route, query };
+}
+
 export function getRouteParams() {
   const params = getHashQueryParams();
   return {
@@ -16,6 +24,20 @@ export function getRouteParams() {
 
 export function getQueryParams() {
   return getRouteParams();
+}
+
+export function decodeParam(value = '') {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw.replaceAll('+', ' ')).trim();
+  } catch {
+    return raw.trim();
+  }
+}
+
+export function normalizeNickname(value = '') {
+  return decodeParam(value).toLocaleLowerCase('uk').trim();
 }
 
 export function jsonp(url, params = {}, timeoutMs = 12_000) {

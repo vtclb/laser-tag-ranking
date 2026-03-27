@@ -1,6 +1,7 @@
 // Changelog (Codex): safe rounds parsing, home snapshot top5/stats normalization, and battles/rounds consistency for Home/GameDay summaries.
 import seasonsConfig from './seasons.config.js';
 import { jsonp } from './utils.js';
+import { normalizeLeague as normalizeLeagueName } from './naming.js';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -56,11 +57,8 @@ const seasonCache = {};
 
 
 function normalizeHeader(value = '') { return String(value || '').trim().toLowerCase(); }
-export function normalizeLeague(league = '') {
-  const lg = normalizeHeader(league);
-  if (lg === 'kids') return 'kids';
-  if (['olds', 'sundaygames', 'sunday', 'adults'].includes(lg)) return 'sundaygames';
-  return '';
+function normalizeLeague(league = '') {
+  return normalizeLeagueName(league);
 }
 function toNumber(value, fallback = null) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;

@@ -1,5 +1,6 @@
 import { getCurrentLeagueLiveStats, safeErrorMessage } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
+import { getHashQueryParams } from '../core/utils.js';
 
 const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
@@ -77,8 +78,7 @@ function renderLastGameDay(root, lastGameDay, league) {
 }
 
 function resolveLeague(params = {}) {
-  const hashQuery = String(location.hash || '').split('?')[1] || '';
-  const qp = new URLSearchParams(hashQuery);
+  const qp = getHashQueryParams();
   return normalizeLeague(params.league || qp.get('league') || 'kids') || 'kids';
 }
 

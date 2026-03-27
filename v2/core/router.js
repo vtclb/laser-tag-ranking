@@ -2,7 +2,7 @@ import { ensureGlobalStyles } from '../pages/global-styles.js';
 import { normalizeLeague } from './naming.js';
 
 const templateCache = new Map();
-const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'rules']);
+const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules']);
 
 function getView() {
   return document.getElementById('view');
@@ -51,6 +51,18 @@ function toHashFromHref(href = '') {
 
   if (/season\.html$|pages\/season\.html$/.test(pathOnly)) {
     return buildHash('season', { season: qp.get('season') || '', league: qp.get('league') || '' });
+  }
+
+  if (/gameday\.html$|pages\/gameday\.html$/.test(pathOnly)) {
+    const league = normalizeLeague(qp.get('league') || qp.get('lg')) || 'sundaygames';
+    const date = qp.get('date') || '';
+    return buildHash('gameday', { league, date });
+  }
+
+  if (/profile\.html$|player\.html$|pages\/profile\.html$/.test(pathOnly)) {
+    const league = normalizeLeague(qp.get('league') || qp.get('lg')) || 'kids';
+    const nick = qp.get('nick') || '';
+    return buildHash('player', { league, nick });
   }
 
   if (/league\.html$|league-stats\.html$|balance2\.html$|pages\/league\.html$/.test(pathOnly)) {
@@ -132,6 +144,7 @@ async function renderRoute() {
   }
 
   if (route === 'season') {
+    await mountTemplate('./pages/season.html');
     const { initSeasonPage } = await import('../pages/season.js');
     await initSeasonPage({ season: queryParams.season, league: queryParams.league });
     return;
@@ -144,16 +157,21 @@ async function renderRoute() {
     return;
   }
 
-  if (route === 'player') {
-    const league = normalizeLeague(queryParams.league) || 'kids';
-    const nick = String(queryParams.nick || '').trim();
-    const view = getView();
-    if (view) {
-      view.innerHTML = `<section class="px-card"><h1 class="px-card__title">Профіль гравця</h1><p class="px-card__text">Сторінка профілю гравця в розробці.</p><p class="px-card__text"><strong>Ліга:</strong> ${league}</p><p class="px-card__text"><strong>Нік:</strong> ${nick || '—'}</p><div class="px-card__actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Повернутися до ліги</a></div></section>`;
-    }
+  if (route === 'gameday') {
+    await mountTemplate('./pages/gameday.html');
+    const { initGameDayPage } = await import('../pages/gameday.js');
+    await initGameDayPage({ league: queryParams.league, date: queryParams.date });
     return;
   }
 
+  if (route === 'player') {
+    await mountTemplate('./pages/profile.html');
+    const { initProfilePage } = await import('../pages/profile.js');
+    await initProfilePage({ league: queryParams.league, nick: queryParams.nick });
+    return;
+  }
+
+  await mountTemplate('./pages/rules.html');
   const { initRulesPage } = await import('../pages/rules.js');
   await initRulesPage();
 }

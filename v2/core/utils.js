@@ -1,10 +1,21 @@
-export function getQueryParams() {
-  const params = new URLSearchParams(window.location.search);
+export function getHashQueryParams() {
+  const hash = String(window.location.hash || '').replace(/^#/, '');
+  const query = hash.includes('?') ? hash.split('?').slice(1).join('?') : '';
+  return new URLSearchParams(query);
+}
+
+export function getRouteParams() {
+  const params = getHashQueryParams();
   return {
     seasonId: params.get('season') || undefined,
     league: params.get('league') || undefined,
-    nick: params.get('nick') || undefined
+    nick: params.get('nick') || undefined,
+    date: params.get('date') || undefined
   };
+}
+
+export function getQueryParams() {
+  return getRouteParams();
 }
 
 export function jsonp(url, params = {}, timeoutMs = 12_000) {

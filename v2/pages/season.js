@@ -44,7 +44,7 @@ function updateHash(season, league) {
 }
 
 export async function initSeasonPage(params = {}) {
-  const root = document.getElementById('view');
+  const root = document.getElementById('seasonPageRoot') || document.getElementById('view');
   if (!root) return;
 
   root.innerHTML = `<section class="season-header px-card px-card--accent"><h1 id="seasonPageTitle">Сезон</h1><p id="seasonPeriod" class="px-card__text">Період: —</p><p id="seasonUpdated" class="px-card__text">Оновлення: —</p></section>

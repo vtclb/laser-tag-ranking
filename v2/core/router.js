@@ -2,7 +2,7 @@ import { ensureGlobalStyles } from '../pages/global-styles.js';
 import { normalizeLeague } from './naming.js';
 
 const templateCache = new Map();
-const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'rules']);
+const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'rules']);
 
 function getView() {
   return document.getElementById('view');
@@ -138,9 +138,19 @@ async function renderRoute() {
   }
 
   if (route === 'league-stats') {
-    await mountTemplate('./pages/season.html');
+    await mountTemplate('./pages/league.html');
     const { initLeagueStatsPage } = await import('../pages/league-stats.js');
     await initLeagueStatsPage({ league: queryParams.league });
+    return;
+  }
+
+  if (route === 'player') {
+    const league = normalizeLeague(queryParams.league) || 'kids';
+    const nick = String(queryParams.nick || '').trim();
+    const view = getView();
+    if (view) {
+      view.innerHTML = `<section class="px-card"><h1 class="px-card__title">Профіль гравця</h1><p class="px-card__text">Сторінка профілю гравця в розробці.</p><p class="px-card__text"><strong>Ліга:</strong> ${league}</p><p class="px-card__text"><strong>Нік:</strong> ${nick || '—'}</p><div class="px-card__actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Повернутися до ліги</a></div></section>`;
+    }
     return;
   }
 

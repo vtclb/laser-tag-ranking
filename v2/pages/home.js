@@ -170,13 +170,9 @@ export async function initHomePage() {
       getCurrentLeagueLiveStats('sundaygames'),
       getCurrentLeagueLiveStats('kids')
     ]);
-    const pickSeasonActive = (players = [], livePlayers = []) => {
-      const activeSet = new Set((livePlayers || []).filter((player) => player.isSeasonActive).map((player) => String(player.nickname || '').trim().toLowerCase()));
-      return (players || []).filter((player) => activeSet.has(String(player.nickname || '').trim().toLowerCase()));
-    };
-
-    const adultsPlayers = pickSeasonActive(data.adults.players, adultsLive.players);
-    const kidsPlayers = pickSeasonActive(data.kids.players, kidsLive.players);
+    const pickSeasonActive = (livePlayers = []) => (livePlayers || []).filter((player) => Number(player.matches || 0) > 0);
+    const adultsPlayers = pickSeasonActive(adultsLive.players);
+    const kidsPlayers = pickSeasonActive(kidsLive.players);
 
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({
       league,

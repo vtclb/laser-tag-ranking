@@ -1279,7 +1279,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 
 .league-page .league-table-header {
   display: grid;
-  grid-template-columns: 42px 32px minmax(0, 1fr) 66px 1.2fr;
+  grid-template-columns: 42px 32px minmax(0, 1fr) 66px;
   font-size: .72rem;
   margin: 0;
   padding: .24rem .3rem;
@@ -1311,6 +1311,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   font-size: .72rem;
   color: var(--muted);
   line-height: 1.2;
+  padding-left: calc(42px + 24px + 30px + (.34rem * 2));
 }
 
 .league-page .league-row-delta { margin-left: auto; }
@@ -1323,6 +1324,7 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 600;
+  display: inline-block;
 }
 
 .league-page .league-points { text-align: right; font-weight: 700; }
@@ -1355,12 +1357,13 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   .league-page .league-table-header {
     grid-template-columns: 36px 24px minmax(0, 1fr) 56px;
   }
-  .league-page .league-table-header span:last-child {
-    display: none;
-  }
   .league-page .league-row-top {
     grid-template-columns: 34px 20px 28px minmax(0, 1fr) auto;
     gap: .28rem;
+  }
+
+  .league-page .league-row-meta {
+    padding-left: calc(34px + 20px + 28px + (.28rem * 2));
   }
 }
 

@@ -13,9 +13,10 @@ function fmtSigned(v) {
   if (!Number.isFinite(n)) return '—';
   return `${n > 0 ? '+' : ''}${n}`;
 }
+function isSeasonActive(player = {}) { return Number(player.matches || 0) > 0; }
 
 function tableHeader() {
-  return '<span>#</span><span>Ранг</span><span>Гравець</span><span>Очки</span><span>Статистика</span>';
+  return '<span>#</span><span>Ранг</span><span>Гравець</span><span>Очки</span>';
 }
 
 function playerProfileHash(league, nickname) {
@@ -137,8 +138,18 @@ export async function initLeagueStatsPage(params = {}) {
 
     topHeader.innerHTML = tableHeader();
     fullHeader.innerHTML = tableHeader();
-    top10Table.innerHTML = data.top10.map((player) => rowMarkup(player, league)).join('') || '<p class="px-card__text">Немає активних гравців у цьому сезоні.</p>';
-    const fullRows = data.players.map((player) => rowMarkup(player, league, { showDelta: true, showInactive: true })).join('');
+    const top10Active = (data.top10 || []).filter(isSeasonActive).slice(0, 10);
+    top10Table.innerHTML = top10Active.map((player) => rowMarkup(player, league)).join('') || '<p class="px-card__text">Немає активних гравців у цьому сезоні.</p>';
+
+    const fullSorted = [...(data.players || [])].sort((a, b) => {
+      const aActive = isSeasonActive(a);
+      const bActive = isSeasonActive(b);
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      return (a.place || Number.MAX_SAFE_INTEGER) - (b.place || Number.MAX_SAFE_INTEGER)
+        || (b.points || 0) - (a.points || 0)
+        || String(a.nickname || '').localeCompare(String(b.nickname || ''), 'uk');
+    });
+    const fullRows = fullSorted.map((player) => rowMarkup(player, league, { showDelta: true, showInactive: true })).join('');
     fullTable.innerHTML = '';
     fullSection.setAttribute('hidden', 'hidden');
     expandBtn.textContent = 'Показати всіх гравців';

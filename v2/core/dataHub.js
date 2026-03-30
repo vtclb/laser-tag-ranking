@@ -682,7 +682,8 @@ function parseMatches(sheet) {
     mvp2: find(['mvp2', 'top2']),
     mvp3: find(['mvp3', 'top3']),
     rounds: find(['rounds', 'series']),
-    gameRef: find(['gameid', 'game', 'matchid', 'match', 'sessionid', 'session'])
+    gameRef: find(['gameid', 'game', 'matchid', 'match', 'sessionid', 'session']),
+    link: find(['pdf', 'log', 'link', 'url'])
   };
   return (sheet.rows || []).map((row) => {
     const ts = row[i.timestamp] || '';
@@ -701,6 +702,7 @@ function parseMatches(sheet) {
       mvp2: String(row[i.mvp2] || '').trim(),
       mvp3: String(row[i.mvp3] || '').trim(),
       gameRef: String(row[i.gameRef] || '').trim(),
+      link: String(row[i.link] || '').trim(),
       rawSeries,
       roundsCount,
       rounds: roundsCount
@@ -1877,62 +1879,135 @@ export async function getPlayerProfile(nickOrOptions = {}, leagueArg = 'kids') {
 
 export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dateYMD = typeof dateOrOptions === 'object' ? (dateOrOptions.date || dateOrOptions.dateYMD) : dateOrOptions;
-  const league = typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg;
-  const view = await getGameDayView({ dateYMD, league });
-  const playerStats = new Map();
+  const league = normalizeLeague(typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg) || 'kids';
+  const [leagueSheet, gamesSheet, logsSheet, avatarsMap] = await Promise.all([
+    readSheet(league, { limitRows: 3000, limitCols: 40 }),
+    readSheet('games', { limitRows: 8000, limitCols: 40 }),
+    readSheet('logs', { limitRows: 8000, limitCols: 30 }),
+    getAvatarsMap()
+  ]);
+
+  const allLeagueMatches = parseMatches(gamesSheet || { header: [], rows: [] })
+    .filter((m) => m.league === league)
+    .sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+  const availableDates = [...new Set(allLeagueMatches.map((m) => m.date).filter(Boolean))].sort().reverse();
+  const selectedDate = (dateYMD && availableDates.includes(dateYMD)) ? dateYMD : (availableDates[0] || '');
+  const dayMatches = allLeagueMatches.filter((m) => m.date === selectedDate);
+  const dayLogs = parseLogs(logsSheet || { header: [], rows: [] }).filter((entry) => entry.league === league && entry.date === selectedDate);
+
+  const tableNow = parseScoreboardRows(leagueSheet || { header: [], rows: [] }, league);
+  const nowByNick = new Map(tableNow.map((row) => [normalizeHeader(row.nick), row]));
+  const dayParticipants = new Set(dayMatches.flatMap((m) => [...(m.team1 || []), ...(m.team2 || []), ...(m.team3 || []), ...(m.team4 || [])].map(normalizeHeader)));
+  const deltaByNick = new Map();
+  dayLogs.forEach((entry) => {
+    const key = normalizeHeader(entry.nick);
+    deltaByNick.set(key, (deltaByNick.get(key) || 0) + (Number(entry.delta) || 0));
+  });
+
+  const allAfter = tableNow.map((row) => ({ nick: row.nick, key: normalizeHeader(row.nick), points: Number(row.points) || 0 }));
+  const allBefore = allAfter.map((row) => ({ ...row, points: row.points - (deltaByNick.get(row.key) || 0) }));
+  const sortPlayers = (list = []) => [...list].sort((a, b) => b.points - a.points || a.nick.localeCompare(b.nick, 'uk'));
+  const afterPlace = new Map(sortPlayers(allAfter).map((row, index) => [row.key, index + 1]));
+  const beforePlace = new Map(sortPlayers(allBefore).map((row, index) => [row.key, index + 1]));
+
+  const dailyStats = new Map();
   const touch = (nick) => {
     const key = normalizeHeader(nick);
-    if (!playerStats.has(key)) playerStats.set(key, { nick, winsToday: 0, drawsToday: 0, lossesToday: 0 });
-    return playerStats.get(key);
+    if (!dailyStats.has(key)) {
+      const now = nowByNick.get(key);
+      const pointsAfter = Number(now?.points) || 0;
+      const pointsBefore = pointsAfter - (deltaByNick.get(key) || 0);
+      dailyStats.set(key, {
+        nick,
+        avatarUrl: avatarsMap.get(key) || '',
+        pointsBefore,
+        pointsAfter,
+        delta: deltaByNick.get(key) || 0,
+        rankBefore: rankFromPoints(pointsBefore),
+        rankAfter: rankFromPoints(pointsAfter),
+        placeBefore: beforePlace.get(key) || null,
+        placeAfter: afterPlace.get(key) || null,
+        matches: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        mvp1: 0,
+        mvp2: 0,
+        mvp3: 0
+      });
+    }
+    return dailyStats.get(key);
   };
-  const mappedMatches = view.matches.map((m, index) => {
-    const teams = {
-      team1: m.team1 || [],
-      team2: m.team2 || [],
-      team3: m.team3 || [],
-      team4: m.team4 || []
-    };
+
+  const mappedMatches = dayMatches.map((m, index) => {
+    const teams = { team1: m.team1 || [], team2: m.team2 || [], team3: m.team3 || [], team4: m.team4 || [] };
     const winner = normalizeWinnerToken(m.winner);
-    Object.values(teams).forEach((list) => {
-      list.forEach((nick) => {
+    const participantKeys = new Set(Object.values(teams).flat().map(normalizeHeader));
+    const tsMs = Date.parse(m.timestamp || '');
+    const localChanges = dayLogs.filter((entry) => {
+      const nickKey = normalizeHeader(entry.nick);
+      if (!participantKeys.has(nickKey)) return false;
+      if (!Number.isFinite(tsMs) || !Number.isFinite(entry.tsMs)) return true;
+      return Math.abs(entry.tsMs - tsMs) <= 90_000;
+    });
+
+    Object.entries(teams).forEach(([teamKey, members]) => {
+      members.forEach((nick) => {
         const row = touch(nick);
-        if (winner === 'tie') row.drawsToday += 1;
-        else if (Array.isArray(teams[winner]) && teams[winner].map(normalizeHeader).includes(normalizeHeader(nick))) row.winsToday += 1;
-        else row.lossesToday += 1;
+        row.matches += 1;
+        if (winner === 'tie') row.draws += 1;
+        else if (winner === teamKey) row.wins += 1;
+        else row.losses += 1;
       });
     });
 
+    if (m.mvp1) touch(m.mvp1).mvp1 += 1;
+    if (m.mvp2) touch(m.mvp2).mvp2 += 1;
+    if (m.mvp3) touch(m.mvp3).mvp3 += 1;
+
     return {
+      index: index + 1,
       timestamp: m.timestamp,
       date: m.date,
-      teams: { sideA: m.team1, sideB: m.team2, sideC: m.team3 || [], sideD: m.team4 || [] },
-      mvp: m.mvp1,
       winner,
-      rounds: m.rounds,
+      teams: { sideA: m.team1 || [], sideB: m.team2 || [], sideC: m.team3 || [], sideD: m.team4 || [] },
+      mvp1: m.mvp1 || '',
+      mvp2: m.mvp2 || '',
+      mvp3: m.mvp3 || '',
       series: m.rawSeries || '',
-      seriesSummary: formatSeriesSummaryCompact(parseSeriesWins(m.rawSeries || ''), {
-        team1: m.team1,
-        team2: m.team2,
-        team3: m.team3,
-        team4: m.team4
-      }),
-      pointsChanges: (view.logsByMatch[index] || []).map((entry) => ({ nick: entry.nick, delta: entry.delta, newPoints: entry.newPoints }))
+      seriesSummary: formatSeriesSummaryCompact(parseSeriesWins(m.rawSeries || ''), teams),
+      link: m.link || '',
+      pointsChanges: localChanges.map((entry) => ({ nick: entry.nick, delta: Number(entry.delta) || 0, newPoints: entry.newPoints }))
     };
   });
 
+  const players = [...dailyStats.values()]
+    .filter((row) => row.matches > 0 || dayParticipants.has(normalizeHeader(row.nick)))
+    .sort((a, b) => (a.placeAfter || 9999) - (b.placeAfter || 9999) || (b.delta || 0) - (a.delta || 0));
+  const pointsPlayed = players.reduce((sum, p) => sum + Math.max(0, Number(p.delta) || 0), 0);
+  const topGain = [...players].sort((a, b) => (b.delta || 0) - (a.delta || 0))[0] || null;
+  const mvpLeader = [...players].sort((a, b) => ((b.mvp1 * 3 + b.mvp2 * 2 + b.mvp3) - (a.mvp1 * 3 + a.mvp2 * 2 + a.mvp3)))[0] || null;
+  const winrateLeader = [...players]
+    .filter((p) => p.matches > 0)
+    .sort((a, b) => ((b.wins / b.matches) - (a.wins / a.matches)) || b.matches - a.matches)[0] || null;
+
   return {
-    date: view.dateYMD,
-    league: view.league,
-    mode: { mobile: true, tv: true },
+    date: selectedDate,
+    league,
+    availableDates,
+    gamesCount: dayMatches.length,
+    battlesCount: dayMatches.length,
+    roundsCount: dayMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0),
+    activePlayers: players,
     matches: mappedMatches,
-    gamesCount: view.gamesCount,
-    battlesCount: view.battlesCount,
-    roundsCount: view.roundsCount,
-    metricsExact: view.exact,
-    activePlayers: view.playersToday.map((p) => {
-      const stats = playerStats.get(normalizeHeader(p.nick)) || { winsToday: 0, drawsToday: 0, lossesToday: 0 };
-      return { nick: p.nick, matchesToday: p.games, mvpToday: p.mvp, winsToday: stats.winsToday, drawsToday: stats.drawsToday, lossesToday: stats.lossesToday, rankingPlace: null };
-    })
+    summary: {
+      matches: dayMatches.length,
+      participants: players.length,
+      totalPointsPlayed: pointsPlayed,
+      bestGain: topGain ? { nick: topGain.nick, delta: topGain.delta } : null,
+      mvpDay: mvpLeader ? { nick: mvpLeader.nick, score: mvpLeader.mvp1 * 3 + mvpLeader.mvp2 * 2 + mvpLeader.mvp3 } : null,
+      bestWinRate: winrateLeader ? { nick: winrateLeader.nick, winRate: Math.round((winrateLeader.wins / winrateLeader.matches) * 100), matches: winrateLeader.matches } : null
+    }
   };
 }
 

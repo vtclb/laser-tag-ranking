@@ -53,7 +53,7 @@ async function ensureNavSheet() {
   const sheet = document.createElement('aside');
   sheet.id = 'v2-navsheet';
   sheet.className = 'navsheet';
-  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><section class="navsheet__section"><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></section></div>`;
+  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><section class="navsheet__section"><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#gameday?league=sundaygames" data-nav-link="1">Ігровий день</a><a class="btn" href="#rules" data-nav-link="1">Правила</a><a class="btn" href="#seasons" data-nav-link="1">Важливо</a></div></section></div>`;
 
   let scrollY = 0;
   let touchStartY = 0;

@@ -1,42 +1,59 @@
 <section id="rulesRoot" class="rules-v2">
   <article class="px-card rules-v2__hero">
-    <h1 class="px-card__title">Правила ліг Laser Tag</h1>
-    <p class="px-card__text">Коротка mobile-версія правил для швидкого читання перед ігровим днем.</p>
+    <h1 class="px-card__title">Правила клубу та рейтингових ігор</h1>
+    <p class="px-card__text rules-v2__notice">⚠️ Тестовий сезон. Деякі правила можуть змінюватись.</p>
   </article>
 
   <article class="px-card rules-v2__section">
-    <h2 class="px-card__title">1) Формат матчу</h2>
+    <h2 class="px-card__title">Загальні правила поведінки</h2>
     <ul class="rules-v2__list">
-      <li>Матч складається з раундів, серія фіксується в протоколі.</li>
-      <li>Грають команди Team A vs Team B (за потреби Team C / Team D).</li>
-      <li>Після завершення фіксується Winner, MVP1, MVP2, MVP3.</li>
+      <li>Дотримуйся вказівок інструктора.</li>
+      <li>Не використовуй нецензурну лексику та агресію.</li>
+      <li>Бережи обладнання та майно клубу.</li>
+      <li>Грай чесно — фейрплей понад усе!</li>
+      <li>Після гри поверни все обладнання.</li>
     </ul>
   </article>
 
   <article class="px-card rules-v2__section">
-    <h2 class="px-card__title">2) Рейтинг і очки</h2>
-    <ul class="rules-v2__list">
-      <li>Кожен матч впливає на персональні очки гравця (Δ points).</li>
-      <li>Зміна очок впливає на місце в таблиці та rank-літеру.</li>
-      <li>MVP-нагороди враховуються окремо як статистика активності дня/сезону.</li>
-    </ul>
+    <h2 class="px-card__title">Нарахування балів</h2>
+    <div class="rules-v2__table-wrap">
+      <table class="rules-v2__points-table" aria-label="Нарахування балів">
+        <thead>
+          <tr><th>Подія</th><th>Бали</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Перемога</td><td>+20</td></tr>
+          <tr><td>MVP (1-й у списку)</td><td>+12</td></tr>
+          <tr><td>MVP (2-й у списку)</td><td>+7</td></tr>
+          <tr><td>MVP (3-й у списку)</td><td>+3</td></tr>
+          <tr><td>Участь F ранг</td><td>+0</td></tr>
+          <tr><td>Участь E ранг</td><td>-4</td></tr>
+          <tr><td>Участь D ранг</td><td>-6</td></tr>
+          <tr><td>Участь C ранг</td><td>-8</td></tr>
+          <tr><td>Участь B ранг</td><td>-10</td></tr>
+          <tr><td>Участь A ранг</td><td>-12</td></tr>
+          <tr><td>Участь S ранг</td><td>-14</td></tr>
+        </tbody>
+      </table>
+    </div>
   </article>
 
   <article class="px-card rules-v2__section">
-    <h2 class="px-card__title">3) Чесна гра</h2>
-    <ul class="rules-v2__list">
-      <li>Поважай суперників, суддів і партнерів по команді.</li>
-      <li>Заборонені навмисні порушення та токсична поведінка.</li>
-      <li>Спірні моменти вирішуються після матчу через організаторів ліги.</li>
-    </ul>
+    <h2 class="px-card__title">Ранги гравців</h2>
+    <div class="rules-v2__rank-grid">
+      <div class="rules-v2__rank-item"><span class="rules-v2__rank-icon">⚪</span><div><strong>F ранг</strong><br>0–199 — новачки <span class="rules-v2__rank-penalty">0</span></div></div>
+      <div class="rules-v2__rank-item"><span class="rules-v2__rank-icon">🟢</span><div><strong>E ранг</strong><br>200–399 — початківці <span class="rules-v2__rank-penalty">-4</span></div></div>
+      <div class="rules-v2__rank-item"><span class="rules-v2__rank-icon">🔵</span><div><strong>D ранг</strong><br>400–599 — з досвідом <span class="rules-v2__rank-penalty">-6</span></div></div>
+      <div class="rules-v2__rank-item"><span class="rules-v2__rank-icon">🟡</span><div><strong>C ранг</strong><br>600–799 — досвідчені <span class="rules-v2__rank-penalty">-8</span></div></div>
+      <div class="rules-v2__rank-item"><span class="rules-v2__rank-icon">🟠</span><div><strong>B ранг</strong><br>800–999 — профі <span class="rules-v2__rank-penalty">-10</span></div></div>
+      <div class="rules-v2__rank-item"><span class="rules-v2__rank-icon">🔴</span><div><strong>A ранг</strong><br>1000–1199 — майстри <span class="rules-v2__rank-penalty">-12</span></div></div>
+      <div class="rules-v2__rank-item"><span class="rules-v2__rank-icon">🟣</span><div><strong>S ранг</strong><br>1200+ — еліта <span class="rules-v2__rank-penalty">-14</span></div></div>
+    </div>
   </article>
 
   <article class="px-card rules-v2__section">
-    <h2 class="px-card__title">4) Логи та протоколи</h2>
-    <ul class="rules-v2__list">
-      <li>Усі матчі фіксуються в games/logs із timestamp.</li>
-      <li>Ігровий день будується тільки на фактичних даних матчів.</li>
-      <li>Якщо доступний PDF/log, він публікується в картці матчу.</li>
-    </ul>
+    <h2 class="px-card__title">Прогрес та сезон</h2>
+    <p class="px-card__text">Кожен сезон триває 3 місяці. Після завершення — нагородження ТОП гравців та обнулення статистики.</p>
   </article>
 </section>

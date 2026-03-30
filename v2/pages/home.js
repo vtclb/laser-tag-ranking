@@ -1,7 +1,6 @@
 import { getCurrentLeagueLiveStats, getHomeLiveData, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
 
-const HOME_CURRENT_SEASON = { id: 'spring_2026', label: 'Весна 2026', endDate: '2026-05-31' };
 const HOME_LEAGUES = ['sundaygames', 'kids'];
 const STATS_LINKS = {
   sundaygames: '#league-stats?league=sundaygames',
@@ -129,7 +128,7 @@ function leagueProgressInfographic(logs = [], games = [], league, players = []) 
 }
 
 function renderLeagueSection({ league, players, logs, games }) {
-  const statsLink = STATS_LINKS[league] || '#seasons';
+  const statsLink = STATS_LINKS[league] || '#league-stats';
   return `<section class="px-card home-card home-league home-leaders home-leaders-frame" data-league="${league}">
     <div class="home-league__head"><h3 class="home-league__title">${esc(leagueLabelUA(league))} — top 10</h3></div>
     <article class="home-panel home-section-panel"><h4 class="home-section-title">Поточний топ-10</h4>${currentRankingCard(players)}</article>
@@ -138,17 +137,9 @@ function renderLeagueSection({ league, players, logs, games }) {
   </section>`;
 }
 
-function daysToSeasonEnd(endDate) {
-  const target = new Date(`${endDate}T23:59:59`);
-  const now = new Date();
-  const ms = target.getTime() - now.getTime();
-  return Math.max(0, Math.ceil(ms / 86_400_000));
-}
-
 function footerBlock() {
-  const daysLeft = daysToSeasonEnd(HOME_CURRENT_SEASON.endDate);
   return `<section class="px-card home-card home-footer-block" id="homeFooterBlock">
-    <p class="home-footer-days">До завершення сезону: <strong>${daysLeft}</strong> днів</p>
+    <p class="home-footer-days">Швидкі переходи до ліг та статистики</p>
     <div class="home-footer-actions">
       <button type="button" class="btn btn--secondary" id="homeScrollTopBtn">Вгору</button>
       <a class="btn btn--secondary" href="${STATS_LINKS.sundaygames}">Детальна статистика дорослої ліги</a>
@@ -161,7 +152,7 @@ export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">Лазертаг рейтинг</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">Лазертаг рейтинг</h1><p class="home-current-season">Live рейтинг клубу</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
   <section class="section home-leaders-frame"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
   <section class="section" id="leagueSections"></section>

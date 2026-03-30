@@ -114,6 +114,16 @@ function renderShell() {
   ensureGlobalStyles();
 }
 
+function animateRouteView() {
+  const view = getView();
+  if (!view) return;
+  view.classList.remove('route-enter-active');
+  view.classList.add('route-enter');
+  requestAnimationFrame(() => {
+    view.classList.add('route-enter-active');
+  });
+}
+
 function routeErrorCard(message) {
   const view = getView();
   if (!view) return;
@@ -175,6 +185,7 @@ async function renderRoute() {
     const { initRulesPage } = await import('../pages/rules.js');
     await initRulesPage();
   } finally {
+    animateRouteView();
     window.dispatchEvent(new CustomEvent('v2:route-rendered', { detail: { route } }));
   }
 }

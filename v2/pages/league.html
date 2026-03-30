@@ -3,28 +3,45 @@
 
   <section class="px-card league-top10" id="leagueTop10Section">
     <h2 class="px-card__title league-section-title">ТОП-10 поточного сезону</h2>
-    <div class="league-table-toolbar">
+    <div class="league-table-toolbar" role="toolbar" aria-label="Керування таблицею рейтингу">
       <label class="league-search-wrap" for="leagueSearchInput">
         <span>Пошук</span>
         <input class="search-input league-search-input" id="leagueSearchInput" type="search" placeholder="Нікнейм гравця" autocomplete="off">
       </label>
-      <label class="league-sort-wrap" for="leagueSortSelect">
-        <span>Сортування</span>
-        <select class="league-sort-select" id="leagueSortSelect">
-          <option value="default">Рейтинг (за замовч.)</option>
-          <option value="points">Очки</option>
-          <option value="matches">Матчі</option>
-          <option value="battles">Бої</option>
-          <option value="winRate">WR</option>
-          <option value="mvpTotal">MVP total</option>
-          <option value="delta">Delta</option>
-        </select>
-      </label>
+      <div class="league-sort-controls" id="leagueSortControls" aria-label="Сортування">
+        <span class="league-sort-controls__label">Сортування</span>
+        <div class="league-sort-controls__buttons">
+          <button class="league-sort-btn is-active" type="button" data-sort="default">Рейтинг</button>
+          <button class="league-sort-btn" type="button" data-sort="points">Очки</button>
+          <button class="league-sort-btn" type="button" data-sort="matches">Ігри</button>
+          <button class="league-sort-btn" type="button" data-sort="battles">Бої</button>
+          <button class="league-sort-btn" type="button" data-sort="winRate">WR</button>
+          <button class="league-sort-btn" type="button" data-sort="mvpTotal">MVP</button>
+          <button class="league-sort-btn" type="button" data-sort="delta">Δ</button>
+        </div>
+      </div>
     </div>
-    <div class="league-table-shell league-table">
-      <div class="league-table-header league-table__head" aria-hidden="true"></div>
-      <div class="league-table-list league-table__body" id="leagueTop10Table"></div>
+
+    <div class="league-table-shell">
+      <table class="league-ranking-table" aria-label="ТОП-10 гравців ліги">
+        <thead class="league-ranking-table__head">
+          <tr>
+            <th class="league-ranking-table__cell league-ranking-table__cell--place" scope="col">#</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--player" scope="col">Гравець</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--points" scope="col">Очки</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Ігри</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Бої</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">WR</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP1</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP2</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP3</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Δ</th>
+          </tr>
+        </thead>
+        <tbody class="league-ranking-table__body" id="leagueTop10Table"></tbody>
+      </table>
     </div>
+
     <div class="px-card__actions league-actions">
       <button class="btn btn--secondary" id="leagueExpandBtn" type="button">Показати всіх гравців</button>
     </div>
@@ -32,9 +49,24 @@
 
   <section class="px-card league-full" id="leagueFullSection" hidden>
     <h2 class="px-card__title league-section-title">Повний список гравців</h2>
-    <div class="league-table-shell league-table">
-      <div class="league-table-header league-table__head" aria-hidden="true"></div>
-      <div class="league-table-list league-table__body" id="leagueFullTable"></div>
+    <div class="league-table-shell">
+      <table class="league-ranking-table" aria-label="Повний список гравців ліги">
+        <thead class="league-ranking-table__head">
+          <tr>
+            <th class="league-ranking-table__cell league-ranking-table__cell--place" scope="col">#</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--player" scope="col">Гравець</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--points" scope="col">Очки</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Ігри</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Бої</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">WR</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP1</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP2</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP3</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Δ</th>
+          </tr>
+        </thead>
+        <tbody class="league-ranking-table__body" id="leagueFullTable"></tbody>
+      </table>
     </div>
   </section>
 

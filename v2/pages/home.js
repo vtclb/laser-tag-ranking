@@ -131,7 +131,7 @@ function leagueProgressInfographic(logs = [], games = [], league, players = []) 
 function renderLeagueSection({ league, players, logs, games }) {
   const statsLink = STATS_LINKS[league] || '#seasons';
   return `<section class="px-card home-card home-league home-leaders home-leaders-frame" data-league="${league}">
-    <div class="home-league__head"><h3>${esc(leagueLabelUA(league))} — top 10</h3></div>
+    <div class="home-league__head"><h3 class="home-league__title">${esc(leagueLabelUA(league))} — top 10</h3></div>
     <article class="home-panel home-section-panel"><h4 class="home-section-title">Поточний топ-10</h4>${currentRankingCard(players)}</article>
     <div class="home-cta-row"><a class="btn btn--secondary" href="${statsLink}">Детальна статистика</a></div>
     <article class="home-panel home-section-panel"><h4 class="home-section-title">Прогрес ліги</h4>${leagueProgressInfographic(logs, games, league, players)}</article>
@@ -182,6 +182,8 @@ export async function initHomePage() {
     const adultsPlayers = pickSeasonActive(adultsLive.players);
     const kidsPlayers = pickSeasonActive(kidsLive.players);
 
+    topHeroes.innerHTML = heroCard(adultsPlayers[0] || null, 'sundaygames', true) + heroCard(kidsPlayers[0] || null, 'kids');
+
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({
       league,
       players: league === 'sundaygames' ? adultsPlayers : kidsPlayers,
@@ -202,10 +204,6 @@ export async function initHomePage() {
     const live = await getHomeLiveData();
     stateBox.hidden = true;
     stateBox.textContent = '';
-    const adultsLeader = [...(live.adults.players || [])].filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc)[0] || null;
-    const kidsLeader = [...(live.kids.players || [])].filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc)[0] || null;
-    topHeroes.innerHTML = heroCard(adultsLeader, 'sundaygames', true) + heroCard(kidsLeader, 'kids');
-
     await renderHome(live);
   } catch (error) {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');

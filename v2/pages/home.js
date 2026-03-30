@@ -11,6 +11,14 @@ const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/20
 
 function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
 function fmtSigned(v) { const n = Number(v); return Number.isFinite(n) ? `${n > 0 ? '+' : ''}${n}` : '—'; }
+function isCurrentSeasonActive(player = {}) {
+  const hasActiveFlag = Object.prototype.hasOwnProperty.call(player || {}, 'active');
+  const activeFlag = hasActiveFlag ? Boolean(player.active) : true;
+  return activeFlag && Number(player.matches || 0) > 0;
+}
+function byPointsDesc(a, b) {
+  return (Number(b?.points) || 0) - (Number(a?.points) || 0);
+}
 function getRankClass(rank) {
   const normalized = String(rank || '').trim().toUpperCase();
   return ['S', 'A', 'B', 'C', 'D', 'E', 'F'].includes(normalized) ? `rank-${normalized.toLowerCase()}` : 'rank-f';
@@ -153,7 +161,7 @@ export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">Laser Tag та охоронка</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">Лазертаг рейтинг</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
   <section class="section home-leaders-frame"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
   <section class="section" id="leagueSections"></section>
@@ -170,7 +178,7 @@ export async function initHomePage() {
       getCurrentLeagueLiveStats('sundaygames'),
       getCurrentLeagueLiveStats('kids')
     ]);
-    const pickSeasonActive = (livePlayers = []) => (livePlayers || []).filter((player) => Number(player.matches || 0) > 0);
+    const pickSeasonActive = (livePlayers = []) => (livePlayers || []).filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc);
     const adultsPlayers = pickSeasonActive(adultsLive.players);
     const kidsPlayers = pickSeasonActive(kidsLive.players);
 
@@ -194,8 +202,8 @@ export async function initHomePage() {
     const live = await getHomeLiveData();
     stateBox.hidden = true;
     stateBox.textContent = '';
-    const adultsLeader = (live.adults.players || []).find((player) => Number(player.matches || 0) > 0) || null;
-    const kidsLeader = (live.kids.players || []).find((player) => Number(player.matches || 0) > 0) || null;
+    const adultsLeader = [...(live.adults.players || [])].filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc)[0] || null;
+    const kidsLeader = [...(live.kids.players || [])].filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc)[0] || null;
     topHeroes.innerHTML = heroCard(adultsLeader, 'sundaygames', true) + heroCard(kidsLeader, 'kids');
 
     await renderHome(live);

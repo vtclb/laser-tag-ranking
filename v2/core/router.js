@@ -123,57 +123,60 @@ function routeErrorCard(message) {
 async function renderRoute() {
   renderShell();
   const { route, queryParams } = parseHashRoute();
+  try {
+    if (!location.hash || String(location.hash || '').replace(/^#/, '').split('?')[0].replace(/^\/+/, '').toLowerCase() !== route) {
+      location.replace(buildHash(route, queryParams));
+      return;
+    }
 
-  if (!location.hash || String(location.hash || '').replace(/^#/, '').split('?')[0].replace(/^\/+/, '').toLowerCase() !== route) {
-    location.replace(buildHash(route, queryParams));
-    return;
+    if (route === 'main') {
+      await mountTemplate('./pages/index.html');
+      const { initHomePage } = await import('../pages/home.js');
+      await initHomePage();
+      return;
+    }
+
+    if (route === 'seasons') {
+      await mountTemplate('./pages/seasons.html');
+      const { initSeasonsPage } = await import('../pages/seasons.js');
+      await initSeasonsPage();
+      return;
+    }
+
+    if (route === 'season') {
+      await mountTemplate('./pages/season.html');
+      const { initSeasonPage } = await import('../pages/season.js');
+      await initSeasonPage({ season: queryParams.season, league: queryParams.league });
+      return;
+    }
+
+    if (route === 'league-stats') {
+      await mountTemplate('./pages/league.html');
+      const { initLeagueStatsPage } = await import('../pages/league-stats.js');
+      await initLeagueStatsPage({ league: queryParams.league });
+      return;
+    }
+
+    if (route === 'gameday') {
+      await mountTemplate('./pages/gameday.html');
+      const { initGameDayPage } = await import('../pages/gameday.js');
+      await initGameDayPage({ league: queryParams.league, date: queryParams.date });
+      return;
+    }
+
+    if (route === 'player') {
+      await mountTemplate('./pages/profile.html');
+      const { initProfilePage } = await import('../pages/profile.js');
+      await initProfilePage({ league: queryParams.league, nick: queryParams.nick });
+      return;
+    }
+
+    await mountTemplate('./pages/rules.html');
+    const { initRulesPage } = await import('../pages/rules.js');
+    await initRulesPage();
+  } finally {
+    window.dispatchEvent(new CustomEvent('v2:route-rendered', { detail: { route } }));
   }
-
-  if (route === 'main') {
-    await mountTemplate('./pages/index.html');
-    const { initHomePage } = await import('../pages/home.js');
-    await initHomePage();
-    return;
-  }
-
-  if (route === 'seasons') {
-    await mountTemplate('./pages/seasons.html');
-    const { initSeasonsPage } = await import('../pages/seasons.js');
-    await initSeasonsPage();
-    return;
-  }
-
-  if (route === 'season') {
-    await mountTemplate('./pages/season.html');
-    const { initSeasonPage } = await import('../pages/season.js');
-    await initSeasonPage({ season: queryParams.season, league: queryParams.league });
-    return;
-  }
-
-  if (route === 'league-stats') {
-    await mountTemplate('./pages/league.html');
-    const { initLeagueStatsPage } = await import('../pages/league-stats.js');
-    await initLeagueStatsPage({ league: queryParams.league });
-    return;
-  }
-
-  if (route === 'gameday') {
-    await mountTemplate('./pages/gameday.html');
-    const { initGameDayPage } = await import('../pages/gameday.js');
-    await initGameDayPage({ league: queryParams.league, date: queryParams.date });
-    return;
-  }
-
-  if (route === 'player') {
-    await mountTemplate('./pages/profile.html');
-    const { initProfilePage } = await import('../pages/profile.js');
-    await initProfilePage({ league: queryParams.league, nick: queryParams.nick });
-    return;
-  }
-
-  await mountTemplate('./pages/rules.html');
-  const { initRulesPage } = await import('../pages/rules.js');
-  await initRulesPage();
 }
 
 window.addEventListener('hashchange', () => {

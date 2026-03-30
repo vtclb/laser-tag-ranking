@@ -40,16 +40,13 @@ function tableRowMarkup(player, league) {
   const href = playerProfileHash(league, player.nickname);
   const deltaValue = Number(player.delta || 0);
   const deltaClass = deltaValue >= 0 ? 'is-positive' : 'is-negative';
-  const inactiveClass = player.isSeasonActive ? '' : ' league-ranking-table__row--inactive';
-  const inactiveTag = player.isSeasonActive ? '' : '<span class="league-status-tag">inactive</span>';
-
-  return `<tr class="league-ranking-table__row league-ranking-table__row--rank-${rankKey}${inactiveClass}" data-href="${href}" tabindex="0" role="link" aria-label="Профіль ${esc(player.nickname)}">
+  return `<tr class="league-ranking-table__row league-ranking-table__row--rank-${rankKey}" data-href="${href}" tabindex="0" role="link" aria-label="Профіль ${esc(player.nickname)}">
     <td class="league-ranking-table__cell league-ranking-table__cell--place">${player.place ? `#${player.place}` : '—'}</td>
     <td class="league-ranking-table__cell league-ranking-table__cell--player">
       <span class="league-player-cell">
         <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
         <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
-        <span class="league-player-cell__name">${esc(player.nickname)}${inactiveTag}</span>
+        <span class="league-player-cell__name">${esc(player.nickname)}</span>
       </span>
     </td>
     <td class="league-ranking-table__cell league-ranking-table__cell--points">${esc(player.points ?? 0)}</td>
@@ -94,8 +91,7 @@ function renderInfographic(root, data) {
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-kpi-grid">
     ${statCard('Активних гравців', data.summary.activePlayersCount, '👥')}
-    ${statCard('Усього в ростері', data.summary.playersCount, '🧾')}
-    ${statCard('Матчів', data.summary.matchesCount, '🎯')}
+        ${statCard('Матчів', data.summary.matchesCount, '🎯')}
     ${statCard('Боїв', data.summary.battlesCount, '⚔️')}
     ${statCard('Сер. рейтинг', data.summary.avgRating, '📈')}
     ${statCard('Total MVP', data.summary.totalMvp, '🏅')}
@@ -164,16 +160,15 @@ export async function initLeagueStatsPage(params = {}) {
     const data = await getCurrentLeagueLiveStats(league);
 
     const hero = root.querySelector('#leagueHero');
-    const top10Table = root.querySelector('#leagueTop10Table');
-    const fullTable = root.querySelector('#leagueFullTable');
+    const rankingTable = root.querySelector('#leagueTableBody');
+    const tableTitle = root.querySelector('#leagueTableTitle');
     const expandBtn = root.querySelector('#leagueExpandBtn');
-    const fullSection = root.querySelector('#leagueFullSection');
     const infographic = root.querySelector('#leagueInfographic');
     const lastGameDay = root.querySelector('#leagueLastGameDay');
     const searchInput = root.querySelector('#leagueSearchInput');
     const sortControls = root.querySelector('#leagueSortControls');
 
-    if (!hero || !top10Table || !fullTable || !expandBtn || !fullSection || !infographic || !lastGameDay || !searchInput || !sortControls) {
+    if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !lastGameDay || !searchInput || !sortControls) {
       throw new Error('League stats template не знайдено.');
     }
 
@@ -184,23 +179,15 @@ export async function initLeagueStatsPage(params = {}) {
       sortDirection: 'desc'
     };
 
-    const fullBase = [...(data.players || [])];
-    const top10Base = fullBase.filter((player) => player.isSeasonActive).slice(0, 10);
+    const activePlayersBase = [...(data.players || [])].filter((player) => isSeasonActive(player));
 
     const renderTables = () => {
-      const topFiltered = filterPlayers(top10Base, state.searchTerm);
-      const topSorted = sortPlayers(topFiltered, state.sortBy, state.sortDirection).slice(0, 10);
-      top10Table.innerHTML = topSorted.map((player) => tableRowMarkup(player, league)).join('')
-        || '<tr><td class="league-ranking-table__empty" colspan="10">Немає активних гравців у цьому сезоні.</td></tr>';
-
-      if (!state.isFullOpen) return;
-
-      const fullFiltered = filterPlayers(fullBase, state.searchTerm);
-      const active = fullFiltered.filter((player) => player.isSeasonActive);
-      const inactive = fullFiltered.filter((player) => !player.isSeasonActive);
-      const fullSorted = [...sortPlayers(active, state.sortBy, state.sortDirection), ...sortPlayers(inactive, state.sortBy, state.sortDirection)];
-      fullTable.innerHTML = fullSorted.map((player) => tableRowMarkup(player, league)).join('')
-        || '<tr><td class="league-ranking-table__empty" colspan="10">Немає гравців за вибраним пошуком.</td></tr>';
+      const filtered = filterPlayers(activePlayersBase, state.searchTerm);
+      const sorted = sortPlayers(filtered, state.sortBy, state.sortDirection);
+      const visible = state.isFullOpen ? sorted : sorted.slice(0, 10);
+      rankingTable.innerHTML = visible.map((player) => tableRowMarkup(player, league)).join('')
+        || '<tr><td class="league-ranking-table__empty" colspan="10">Немає активних гравців за вибраним пошуком.</td></tr>';
+      tableTitle.textContent = state.isFullOpen ? 'Повний список гравців' : 'ТОП-10 поточного сезону';
     };
 
     const setSortButtonState = () => {
@@ -232,19 +219,11 @@ export async function initLeagueStatsPage(params = {}) {
     setSortButtonState();
     renderTables();
 
-    setupRowNavigation(top10Table);
-    setupRowNavigation(fullTable);
+    setupRowNavigation(rankingTable);
 
     expandBtn.addEventListener('click', () => {
       state.isFullOpen = !state.isFullOpen;
-      if (state.isFullOpen) {
-        fullSection.removeAttribute('hidden');
-        expandBtn.textContent = 'Сховати повний список';
-      } else {
-        fullSection.setAttribute('hidden', 'hidden');
-        fullTable.innerHTML = '';
-        expandBtn.textContent = 'Показати всіх гравців';
-      }
+      expandBtn.textContent = state.isFullOpen ? 'Сховати повний список' : 'Показати всіх гравців';
       renderTables();
     });
 

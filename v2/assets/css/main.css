@@ -1396,3 +1396,224 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   gap: .5rem;
   text-align: center;
 }
+
+/* Final V2 tightening: menu/home/league rectangular compact overrides */
+.topnav {
+  min-height: 50px;
+}
+
+.topnav .container.topnav__row {
+  width: min(520px, 100% - 20px);
+  min-height: 50px;
+  padding: 6px 0;
+}
+
+.topnav__actions {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+#globalMenuBtn.topnav__pill,
+#globalMenuBtn.menu-btn {
+  min-height: 34px;
+  padding: .34rem .62rem !important;
+  gap: .4rem;
+  border-radius: 0 !important;
+}
+
+main.page {
+  padding-top: 52px;
+}
+
+.container {
+  width: min(520px, 100% - 20px);
+  padding-top: 10px;
+}
+
+.navsheet__panel {
+  width: min(500px, 100% - 16px);
+  border-radius: 0 !important;
+  padding: 10px;
+}
+
+.navsheet__grid .btn {
+  min-height: 40px;
+  border-radius: 0 !important;
+}
+
+.navsheet__head,
+.navsheet__close-btn,
+.navsheet__section h3,
+.navsheet__head strong {
+  display: none !important;
+}
+
+.home-v2 .home-hero,
+.home-v2 .home-hero .hero__title,
+.home-v2 .home-hero .hero__kicker,
+.home-v2 .home-current-season,
+.home-v2 .home-hero-buttons,
+.home-v2 .home-leaders-frame > h2 {
+  text-align: center;
+  justify-content: center;
+}
+
+.home-v2 .home-hero {
+  margin-top: 0;
+  padding-top: .6rem;
+  padding-bottom: .65rem;
+}
+
+.home-v2 .section {
+  margin-top: .3rem;
+  margin-bottom: .3rem;
+}
+
+.home-v2 .home-leaders-frame {
+  padding-top: .55rem;
+}
+
+.league-page {
+  gap: .45rem;
+}
+
+.league-page .px-card {
+  padding: .5rem;
+}
+
+.league-page .league-table-toolbar {
+  grid-template-columns: minmax(0, 1fr);
+  gap: .3rem;
+  padding: .35rem;
+}
+
+.league-page .league-sort-controls__label {
+  display: none;
+}
+
+.league-page .league-sort-controls__buttons {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: .2rem;
+}
+
+.league-page .league-sort-btn {
+  min-height: 26px;
+  padding: .2rem .1rem;
+  font-size: .66rem;
+  font-weight: 700;
+}
+
+.league-page .league-table-shell {
+  margin-inline: -.32rem;
+}
+
+.league-page .league-ranking-table {
+  min-width: 646px;
+  font-size: .74rem;
+}
+
+.league-page .league-ranking-table__head th {
+  background: rgba(5, 10, 18, .98);
+  color: #b7c9e5;
+  border-bottom: 2px solid rgba(255,255,255,.24);
+}
+
+.league-page .league-ranking-table__cell {
+  border-right: 1px solid rgba(255,255,255,.2);
+  border-bottom: 1px solid rgba(255,255,255,.2);
+  padding: .24rem .14rem;
+}
+
+.league-page .league-ranking-table__cell--place {
+  width: 28px;
+  min-width: 28px;
+  padding-inline: .04rem;
+}
+
+.league-page .league-ranking-table__cell--player {
+  width: 210px;
+}
+
+.league-page .league-ranking-table__cell--points {
+  width: 48px;
+}
+
+.league-page .league-ranking-table__cell--num {
+  width: 44px;
+}
+
+.league-page .league-player-cell {
+  grid-template-columns: 18px 24px minmax(0, 1fr);
+  gap: .1rem;
+}
+
+.league-page .league-rank-badge {
+  width: 18px;
+  height: 18px;
+  font-size: .6rem;
+}
+
+.league-page .league-avatar-wrap {
+  width: 24px;
+  height: 24px;
+}
+
+.league-page .league-kpi-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .3rem;
+}
+
+.league-page .league-kpi-card {
+  min-height: 68px;
+  border-color: rgba(49,208,255,.32);
+  background: linear-gradient(180deg, rgba(10,16,28,.98), rgba(2,6,12,.98));
+}
+
+.league-page .league-kpi-card__value {
+  font-size: 1.1rem;
+  color: #f2fbff;
+}
+
+.league-page .league-rank-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .25rem;
+}
+
+.league-page .league-rank-tile {
+  padding: .28rem .15rem;
+  background: rgba(3, 8, 14, .98);
+}
+
+.league-page .league-highlights-grid {
+  grid-template-columns: 1fr;
+  gap: .3rem;
+}
+
+.league-page .league-highlight-card {
+  border-width: 1px;
+  background: linear-gradient(180deg, rgba(7, 12, 22, .98), rgba(2, 5, 11, .98));
+}
+
+@media (max-width: 640px) {
+  .container {
+    width: min(520px, 100% - 14px);
+    padding-top: 8px;
+  }
+
+  .league-page .league-table-shell {
+    margin-inline: -.36rem;
+  }
+
+  .league-page .league-ranking-table {
+    min-width: 620px;
+    font-size: .71rem;
+  }
+
+  .league-page .league-ranking-table__cell--player {
+    width: 180px;
+  }
+
+  .league-page .league-sort-controls__buttons {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}

@@ -42,7 +42,7 @@ function ensureTopNav() {
   const header = document.querySelector('header.topbar, header.topnav');
   if (!header || header.dataset.v2Topnav === '1') return;
   header.className = 'topnav';
-  header.innerHTML = `<div class="container topnav__row"><div class="topnav__actions"><button type="button" class="topnav__pill menu-btn topnav__pill--square" id="globalMenuBtn"><span class="icon icon--menu" aria-hidden="true"></span> MENU</button></div></div>`;
+  header.innerHTML = `<div class="container topnav__row"><div class="topnav__actions"><button type="button" class="topnav__pill menu-btn topnav__pill--square" id="globalMenuBtn" aria-label="Відкрити меню"><span class="icon icon--menu" aria-hidden="true"></span><span>Меню</span></button></div></div>`;
   header.dataset.v2Topnav = '1';
 }
 
@@ -53,7 +53,7 @@ async function ensureNavSheet() {
   const sheet = document.createElement('aside');
   sheet.id = 'v2-navsheet';
   sheet.className = 'navsheet';
-  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><div class="navsheet__head"><strong>MENU</strong><button class="btn navsheet__close-btn" type="button" data-nav-close="1"><span class="icon icon--close"></span> Закрити</button></div><section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></section></div>`;
+  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><section class="navsheet__section"><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></section></div>`;
 
   let scrollY = 0;
   let touchStartY = 0;

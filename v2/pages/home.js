@@ -153,7 +153,7 @@ export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">LaserTag Ranking</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">Laser Tag та охоронка</h1><p class="home-current-season">Актуальний сезон: ${HOME_CURRENT_SEASON.label}</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--primary" href="#seasons">Сезони</a><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
   <section class="section home-leaders-frame"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
   <section class="section" id="leagueSections"></section>
@@ -194,7 +194,9 @@ export async function initHomePage() {
     const live = await getHomeLiveData();
     stateBox.hidden = true;
     stateBox.textContent = '';
-    topHeroes.innerHTML = heroCard(live.adults.players[0] || null, 'sundaygames', true) + heroCard(live.kids.players[0] || null, 'kids');
+    const adultsLeader = (live.adults.players || []).find((player) => Number(player.matches || 0) > 0) || null;
+    const kidsLeader = (live.kids.players || []).find((player) => Number(player.matches || 0) > 0) || null;
+    topHeroes.innerHTML = heroCard(adultsLeader, 'sundaygames', true) + heroCard(kidsLeader, 'kids');
 
     await renderHome(live);
   } catch (error) {

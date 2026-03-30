@@ -70,17 +70,21 @@ function statCard(label, value, icon) {
 
 function highlightCard(player, value, label, icon, tone) {
   if (!player) {
-    return `<article class="league-highlight-card league-highlight-card--${tone}"><div class="league-highlight-card__title">${esc(label)}</div><div class="league-highlight-card__value">—</div></article>`;
+    return `<article class="league-highlight-card league-highlight-card--${tone}">
+      <div class="league-highlight-card__name">—</div>
+      <div class="league-highlight-card__value">—</div>
+      <div class="league-highlight-card__title">${esc(icon)} ${esc(label)}</div>
+    </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
   return `<article class="league-highlight-card league-highlight-card--${tone}">
-    <div class="league-highlight-card__title">${esc(label)}</div>
     <div class="league-highlight-card__player">
       <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
       <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
-      <span class="league-highlight-card__name">${esc(player.nickname)}</span>
     </div>
-    <div class="league-highlight-card__value">${esc(icon)} ${esc(value)}</div>
+    <div class="league-highlight-card__name">${esc(player.nickname)}</div>
+    <div class="league-highlight-card__value">${esc(value)}</div>
+    <div class="league-highlight-card__title">${esc(icon)} ${esc(label)}</div>
   </article>`;
 }
 

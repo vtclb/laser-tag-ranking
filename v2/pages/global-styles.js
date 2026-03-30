@@ -53,7 +53,7 @@ async function ensureNavSheet() {
   const sheet = document.createElement('aside');
   sheet.id = 'v2-navsheet';
   sheet.className = 'navsheet';
-  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><div class="navsheet__head"><strong>MENU</strong><button class="topnav__pill" type="button" data-nav-close="1"><span class="icon icon--close"></span> Закрити</button></div><section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid"><a class="btn" href="./index.html" data-nav-direct="1">Головна</a><a class="btn" href="./sunday.html" data-nav-direct="1">Доросла ліга</a><a class="btn" href="./kids.html" data-nav-direct="1">Дитяча ліга</a><a class="btn" href="#seasons" data-nav-link="1">Сезони</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></section></div>`;
+  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><div class="navsheet__head"><strong>MENU</strong><button class="btn navsheet__close-btn" type="button" data-nav-close="1"><span class="icon icon--close"></span> Закрити</button></div><section class="navsheet__section"><h3>NAV</h3><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></section></div>`;
 
   let scrollY = 0;
   let touchStartY = 0;
@@ -82,14 +82,6 @@ async function ensureNavSheet() {
       close(() => { location.hash = href; });
     });
   });
-  sheet.querySelectorAll('[data-nav-direct="1"]').forEach((el) => {
-    el.addEventListener('click', (event) => {
-      event.preventDefault();
-      const href = el.getAttribute('href') || './index.html';
-      close(() => { location.href = href; });
-    });
-  });
-
   const panel = sheet.querySelector('.navsheet__panel');
   panel?.addEventListener('touchstart', (e) => { touchStartY = e.touches[0]?.clientY || 0; }, { passive: true });
   panel?.addEventListener('touchend', (e) => {

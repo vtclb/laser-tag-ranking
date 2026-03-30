@@ -25,7 +25,7 @@ function resolveParams(params = {}) {
 }
 
 function renderSkeleton(root) {
-  root.innerHTML = '<section class="px-card"><p class="px-card__text">Завантаження профілю…</p></section>';
+  root.innerHTML = '<section class="px-card profile-loading-shell"><h1 class="px-card__title">Профіль гравця</h1><p class="px-card__text">Завантаження профілю…</p><div class="profile-loading-bar" aria-hidden="true"></div></section>';
 }
 
 export async function initProfilePage(params = {}) {

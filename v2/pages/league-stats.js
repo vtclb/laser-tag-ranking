@@ -90,7 +90,7 @@ function highlightCard(player, value, label, icon, tone) {
 
 function renderHero(root, league, data) {
   root.innerHTML = `<h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
-  <p class="px-card__text league-season-title">Сезон: <strong>${esc(data.seasonLabel)}</strong></p>
+  <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>
   <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Ігровий день: ${esc(data.lastGameDay?.date || '—')}</span></div>
   <div class="px-card__actions league-actions"><a class="btn" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;
 }
@@ -98,7 +98,7 @@ function renderHero(root, league, data) {
 function renderInfographic(root, data) {
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-dashboard-group league-dashboard-group--kpi">
-    <h3 class="league-subtitle">KPI сезону</h3>
+    <h3 class="league-subtitle">KPI ліги</h3>
     <div class="league-kpi-grid">
     ${statCard('Активних гравців', data.summary.activePlayersCount, '👥')}
     ${statCard('Матчів', data.summary.matchesCount, '🎯')}
@@ -134,7 +134,7 @@ function resolveLeague(params = {}) {
 }
 
 function renderLoading(root) {
-  const loadingMarkup = `<h1 class="px-card__title league-section-title">Статистика ліги</h1><p class="px-card__text">Завантажуємо live статистику поточного сезону…</p><div class="league-loading-bar" aria-hidden="true"></div>`;
+  const loadingMarkup = `<h1 class="px-card__title league-section-title">Статистика ліги</h1><p class="px-card__text">Завантажуємо live статистику…</p><div class="league-loading-bar" aria-hidden="true"></div>`;
   const hero = root.querySelector('#leagueHero');
   if (hero) {
     hero.classList.add('league-loading-block');
@@ -201,7 +201,7 @@ export async function initLeagueStatsPage(params = {}) {
       const visible = state.isFullOpen ? sorted : sorted.slice(0, 10);
       rankingTable.innerHTML = visible.map((player) => tableRowMarkup(player, league)).join('')
         || '<tr><td class="league-ranking-table__empty" colspan="10">Немає активних гравців за вибраним пошуком.</td></tr>';
-      tableTitle.textContent = state.isFullOpen ? 'Повний список гравців' : 'ТОП-10 поточного сезону';
+      tableTitle.textContent = state.isFullOpen ? 'Повний список гравців' : 'ТОП-10 гравців';
     };
 
     const setSortButtonState = () => {

@@ -1,17 +1,4 @@
-import { getSeasonsList } from '../core/dataHub.js';
-
 const V2_BASE_URL = new URL('../', import.meta.url);
-const lastSeasonCache = { kids: '', olds: '', loaded: false };
-
-async function ensureLastSeasons() {
-  if (lastSeasonCache.loaded) return lastSeasonCache;
-  const seasons = await getSeasonsList();
-  const fallback = seasons[0]?.id || 'winter_2025_2026';
-  lastSeasonCache.kids = window.__v2LastSeason?.kids || fallback;
-  lastSeasonCache.olds = window.__v2LastSeason?.olds || fallback;
-  lastSeasonCache.loaded = true;
-  return lastSeasonCache;
-}
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
   let link = document.getElementById(id);
@@ -48,12 +35,11 @@ function ensureTopNav() {
 
 async function ensureNavSheet() {
   if (document.getElementById('v2-navsheet')) return;
-  await ensureLastSeasons();
 
   const sheet = document.createElement('aside');
   sheet.id = 'v2-navsheet';
   sheet.className = 'navsheet';
-  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><section class="navsheet__section"><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#gameday?league=sundaygames" data-nav-link="1">Ігровий день</a><a class="btn" href="#rules" data-nav-link="1">Правила</a><a class="btn" href="#seasons" data-nav-link="1">Важливо</a></div></section></div>`;
+  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><section class="navsheet__section"><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#gameday?league=sundaygames" data-nav-link="1">Ігровий день</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></section></div>`;
 
   let scrollY = 0;
   let touchStartY = 0;

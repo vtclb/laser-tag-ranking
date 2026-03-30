@@ -62,7 +62,7 @@ async function ensureNavSheet() {
     document.body.classList.remove('navsheet-open');
     document.body.style.top = '';
     window.scrollTo(0, scrollY);
-    if (typeof afterClose === 'function') setTimeout(afterClose, 120);
+    if (typeof afterClose === 'function') afterClose();
   };
   const open = () => {
     scrollY = window.scrollY;
@@ -79,7 +79,8 @@ async function ensureNavSheet() {
     el.addEventListener('click', (event) => {
       event.preventDefault();
       const href = el.getAttribute('href') || '#main';
-      close(() => { location.hash = href; });
+      location.hash = href;
+      close();
     });
   });
   const panel = sheet.querySelector('.navsheet__panel');
@@ -90,6 +91,8 @@ async function ensureNavSheet() {
   }, { passive: true });
 
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+  window.addEventListener('hashchange', () => close());
+  window.addEventListener('v2:route-rendered', () => close());
   document.body.addEventListener('click', (event) => {
     const trigger = event.target.closest('#globalMenuBtn, [data-open-global-menu="1"]');
     if (!trigger) return;

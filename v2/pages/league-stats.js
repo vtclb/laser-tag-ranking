@@ -13,7 +13,11 @@ function fmtSigned(v) {
   if (!Number.isFinite(n)) return '—';
   return `${n > 0 ? '+' : ''}${n}`;
 }
-function isSeasonActive(player = {}) { return Number(player.matches || 0) > 0; }
+function isSeasonActive(player = {}) {
+  const hasActiveFlag = Object.prototype.hasOwnProperty.call(player || {}, 'active');
+  const activeFlag = hasActiveFlag ? Boolean(player.active) : true;
+  return activeFlag && Number(player.matches || 0) > 0;
+}
 
 const SORTERS = {
   points: (a, b) => (Number(b.points) || 0) - (Number(a.points) || 0),
@@ -89,21 +93,27 @@ function renderHero(root, league, data) {
 
 function renderInfographic(root, data) {
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
-  <section class="league-kpi-grid">
+  <section class="league-dashboard-group league-dashboard-group--kpi">
+    <h3 class="league-subtitle">KPI сезону</h3>
+    <div class="league-kpi-grid">
     ${statCard('Активних гравців', data.summary.activePlayersCount, '👥')}
-        ${statCard('Матчів', data.summary.matchesCount, '🎯')}
+    ${statCard('Матчів', data.summary.matchesCount, '🎯')}
     ${statCard('Боїв', data.summary.battlesCount, '⚔️')}
     ${statCard('Сер. рейтинг', data.summary.avgRating, '📈')}
     ${statCard('Total MVP', data.summary.totalMvp, '🏅')}
+    </div>
   </section>
-  <section class="league-rank-distribution">
+  <section class="league-dashboard-group league-rank-distribution">
     <h3 class="league-subtitle">Розподіл за рангами</h3>
     <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}</div>
   </section>
-  <section class="league-highlights-grid">
+  <section class="league-dashboard-group">
+    <h3 class="league-subtitle">Highlights</h3>
+    <div class="league-highlights-grid">
     ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', '🚀', 'up')}
     ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', '🏆', 'mvp')}
     ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', '📉', 'down')}
+    </div>
   </section>`;
 }
 

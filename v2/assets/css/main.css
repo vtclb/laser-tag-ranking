@@ -1617,3 +1617,154 @@ main.page {
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 }
+
+/* Final pass: anchored menu + compact header spacing + square-only home/league UI */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  border-radius: 0 !important;
+}
+
+#globalMenuBtn.topnav__pill,
+#globalMenuBtn.menu-btn {
+  min-height: 40px;
+  border-radius: 0 !important;
+  border: 1px solid rgba(124, 255, 114, .42) !important;
+  background: linear-gradient(180deg, rgba(14, 22, 36, .98), rgba(5, 10, 18, .98)) !important;
+  box-shadow: 0 0 0 1px rgba(124, 255, 114, .12), 0 8px 18px rgba(0, 0, 0, .26);
+}
+
+.navsheet,
+.navsheet__panel,
+.navsheet__backdrop,
+.navsheet__grid,
+.navsheet__grid .btn {
+  border-radius: 0 !important;
+}
+
+.navsheet__grid .btn {
+  min-height: 44px;
+  font-weight: 700;
+}
+
+main.page {
+  padding-top: 50px;
+}
+
+.home-v2 .home-hero {
+  margin-top: 0;
+  padding-top: .4rem;
+  padding-bottom: .45rem;
+}
+
+.home-v2 .home-hero .hero__title {
+  margin: .1rem 0 .2rem;
+  text-align: center;
+}
+
+.home-v2 .section,
+.home-v2 .home-leaders-frame {
+  margin-top: .2rem;
+  padding-top: .4rem;
+}
+
+.home-v2 .btn,
+.home-v2 .px-card,
+.home-v2 .home-card,
+.home-v2 .home-panel,
+.home-v2 input,
+.home-v2 button {
+  border-radius: 0 !important;
+}
+
+.league-page {
+  gap: .35rem;
+  padding-top: .15rem;
+}
+
+.league-page,
+.league-page .px-card,
+.league-page .league-section-title,
+.league-page .league-season-title,
+.league-page .league-summary-strip,
+.league-page .league-summary-strip span,
+.league-page .league-actions .btn,
+.league-page .league-table-toolbar,
+.league-page .league-search-wrap,
+.league-page .league-search-input,
+.league-page .league-sort-controls,
+.league-page .league-sort-controls__buttons,
+.league-page .league-sort-btn,
+.league-page .league-kpi-card,
+.league-page .league-rank-tile,
+.league-page .league-highlight-card,
+.league-page input,
+.league-page button {
+  border-radius: 0 !important;
+}
+
+.league-page .league-table-toolbar {
+  display: grid;
+  grid-template-columns: minmax(128px, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: .35rem;
+}
+
+.league-page .league-search-wrap > span {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.league-page .league-search-input {
+  min-height: 34px;
+  padding: .35rem .5rem;
+}
+
+.league-page .league-sort-controls__buttons {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: .2rem;
+}
+
+.league-page .league-sort-btn {
+  min-height: 30px;
+  padding: .2rem .15rem;
+  font-size: .63rem;
+  letter-spacing: .03em;
+}
+
+.league-page .league-dashboard-group {
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: linear-gradient(180deg, rgba(8, 14, 24, .88), rgba(3, 8, 16, .94));
+  padding: .42rem;
+}
+
+.league-page .league-kpi-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.league-page .league-highlights-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.league-page .league-highlight-card__title {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+@media (max-width: 760px) {
+  .league-page .league-table-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .league-page .league-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .league-page .league-highlights-grid {
+    grid-template-columns: 1fr;
+  }
+}

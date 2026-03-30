@@ -46,13 +46,30 @@ function currentRankingCard(players = []) {
 }
 
 function heroCard(player, league, isPrimary = false) {
-  if (!player) return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}"><h3>${esc(leagueLabelUA(league))}</h3><p class="px-card__text">Немає даних</p></article>`;
+  if (!player) {
+    return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}">
+      <h3 class="home-hero-card__league">${esc(leagueLabelUA(league))}</h3>
+      <p class="home-hero-card__note">Немає активних даних для ліги</p>
+    </article>`;
+  }
   const rankText = player.rankText || rankFromPoints(player.points);
   const rankClass = getRankClass(rankText);
+  const winRateText = Number.isFinite(Number(player.winRate)) ? `${Number(player.winRate).toFixed(1)}%` : '—';
+  const mvpSummary = Number.isFinite(Number(player.mvpTotal))
+    ? String(player.mvpTotal)
+    : `${Number(player.mvp1 || 0)}/${Number(player.mvp2 || 0)}/${Number(player.mvp3 || 0)}`;
+  const leaderTitle = league === 'kids' ? 'Лідер дитячої ліги' : 'Лідер дорослої ліги';
   return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}">
-    <div class="home-hero-card__head"><span class="px-badge">${esc(leagueLabelUA(league))}</span><strong class="home-hero-card__place">#1</strong></div>
-    <div class="home-hero-card__player"><span class="home-avatar-wrap home-rank-frame ${rankClass}">${avatarImage(player)}</span><h3 class="home-hero-card__name">${esc(player.nickname)}</h3></div>
-    <p class="home-hero-card__rating">Ранг: <strong class="home-rank-letter ${rankClass}">${esc(rankText)}</strong> · Очки: <strong>${esc(player.points)}</strong></p>
+    <h3 class="home-hero-card__league">${esc(leaderTitle)}</h3>
+    <p class="home-hero-card__subtitle">${esc(leagueLabelUA(league))} — поточний лідер сезону</p>
+    <span class="home-avatar-wrap home-rank-frame ${rankClass} home-hero-card__avatar">${avatarImage(player)}</span>
+    <h4 class="home-hero-card__name">${esc(player.nickname)}</h4>
+    <p class="home-hero-card__line">Ранг: <strong class="home-rank-letter ${rankClass}">${esc(rankText)}</strong></p>
+    <p class="home-hero-card__line">Очки: <strong>${esc(player.points)}</strong></p>
+    <p class="home-hero-card__line">Матчі: <strong>${esc(player.matches)}</strong></p>
+    <p class="home-hero-card__line">WinRate: <strong>${esc(winRateText)}</strong></p>
+    <p class="home-hero-card__line">MVP: <strong>${esc(mvpSummary)}</strong></p>
+    <p class="home-hero-card__note">Поточний лідер ліги серед активних гравців сезону</p>
   </article>`;
 }
 

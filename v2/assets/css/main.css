@@ -194,6 +194,60 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   gap: .5rem;
 }
 
+.home-v2 .home-hero-card {
+  background: linear-gradient(165deg, rgba(13, 23, 41, .95), rgba(8, 15, 30, .98));
+  border: 1px solid rgba(110, 195, 255, .36);
+  box-shadow: 0 0 0 1px rgba(124, 255, 114, .08), 0 10px 26px rgba(0, 0, 0, .35);
+  padding: .95rem;
+  display: grid;
+  gap: .3rem;
+}
+
+.home-v2 .home-hero-card--primary {
+  border-color: rgba(124, 255, 114, .45);
+}
+
+.home-v2 .home-hero-card__league {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.home-v2 .home-hero-card__subtitle,
+.home-v2 .home-hero-card__note,
+.home-v2 .home-hero-card__line {
+  margin: 0;
+}
+
+.home-v2 .home-hero-card__subtitle {
+  color: var(--muted);
+  font-size: .86rem;
+}
+
+.home-v2 .home-hero-card__avatar {
+  width: 68px;
+  height: 68px;
+  margin-top: .35rem;
+}
+
+.home-v2 .home-hero-card__name {
+  margin: .15rem 0 .2rem;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.home-v2 .home-hero-card__line {
+  font-size: .92rem;
+  color: #dce7ff;
+}
+
+.home-v2 .home-hero-card__note {
+  margin-top: .25rem;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
 .home-v2 .home-full-list {
   display: grid;
   gap: .4rem;
@@ -601,6 +655,19 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
 }
 
 @media (max-width: 640px) {
+  .home-v2 .home-hero-card {
+    padding: .75rem;
+  }
+
+  .home-v2 .home-hero-card__avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .home-v2 .home-hero-card__name {
+    font-size: 1.05rem;
+  }
+
   .home-v2 .home-current-row,
   .home-v2 .home-player-row {
     grid-template-columns: 38px 24px 32px minmax(0, 1fr) auto;

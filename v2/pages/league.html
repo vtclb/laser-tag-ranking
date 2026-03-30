@@ -2,7 +2,7 @@
   <section class="px-card league-hero" id="leagueHero"></section>
 
   <section class="px-card league-top10" id="leagueTop10Section">
-    <h2 class="px-card__title">ТОП-10 поточного сезону</h2>
+    <h2 class="px-card__title league-section-title">ТОП-10 поточного сезону</h2>
     <div class="league-table-toolbar">
       <label class="league-search-wrap" for="leagueSearchInput">
         <span>Пошук</span>
@@ -21,9 +21,9 @@
         </select>
       </label>
     </div>
-    <div class="league-table-shell">
-      <div class="league-table-header" aria-hidden="true"></div>
-      <div class="league-table-list" id="leagueTop10Table"></div>
+    <div class="league-table-shell league-table">
+      <div class="league-table-header league-table__head" aria-hidden="true"></div>
+      <div class="league-table-list league-table__body" id="leagueTop10Table"></div>
     </div>
     <div class="px-card__actions league-actions">
       <button class="btn btn--secondary" id="leagueExpandBtn" type="button">Показати всіх гравців</button>
@@ -31,10 +31,10 @@
   </section>
 
   <section class="px-card league-full" id="leagueFullSection" hidden>
-    <h2 class="px-card__title">Повний список гравців</h2>
-    <div class="league-table-shell">
-      <div class="league-table-header" aria-hidden="true"></div>
-      <div class="league-table-list" id="leagueFullTable"></div>
+    <h2 class="px-card__title league-section-title">Повний список гравців</h2>
+    <div class="league-table-shell league-table">
+      <div class="league-table-header league-table__head" aria-hidden="true"></div>
+      <div class="league-table-list league-table__body" id="leagueFullTable"></div>
     </div>
   </section>
 

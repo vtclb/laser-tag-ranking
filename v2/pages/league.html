@@ -3,6 +3,24 @@
 
   <section class="px-card league-top10" id="leagueTop10Section">
     <h2 class="px-card__title">ТОП-10 поточного сезону</h2>
+    <div class="league-table-toolbar">
+      <label class="league-search-wrap" for="leagueSearchInput">
+        <span>Пошук</span>
+        <input class="search-input league-search-input" id="leagueSearchInput" type="search" placeholder="Нікнейм гравця" autocomplete="off">
+      </label>
+      <label class="league-sort-wrap" for="leagueSortSelect">
+        <span>Сортування</span>
+        <select class="league-sort-select" id="leagueSortSelect">
+          <option value="default">Рейтинг (за замовч.)</option>
+          <option value="points">Очки</option>
+          <option value="matches">Матчі</option>
+          <option value="battles">Бої</option>
+          <option value="winRate">WR</option>
+          <option value="mvpTotal">MVP total</option>
+          <option value="delta">Delta</option>
+        </select>
+      </label>
+    </div>
     <div class="league-table-shell">
       <div class="league-table-header" aria-hidden="true"></div>
       <div class="league-table-list" id="leagueTop10Table"></div>
@@ -21,6 +39,5 @@
   </section>
 
   <section class="px-card league-infographic" id="leagueInfographic"></section>
-  <section class="px-card league-awards" id="leagueAwards"></section>
   <section class="px-card league-last-day" id="leagueLastGameDay"></section>
 </section>

@@ -99,6 +99,9 @@ function buildMatchCard(match = {}, roster = new Map()) {
   const scoreboard = teams.map(([key]) => Number(series[key] || 0));
   const scoreLabel = scoreboard.length >= 2 ? `${scoreboard[0]}:${scoreboard[1]}` : (match.seriesSummary || '—');
   const winnerKey = match.winner === 'team1' || match.winner === 'team2' ? match.winner : '';
+  const winnerLabel = prettyWinner(match.winner);
+  const teamsPreview = teams.map(([, members]) => members.join(', ')).filter(Boolean).join(' vs ');
+  const matchId = `gamedayMatch${match.index}`;
   const mvpRows = [
     { label: 'MVP 1', nick: match.mvp1 },
     { label: 'MVP 2', nick: match.mvp2 },
@@ -106,13 +109,17 @@ function buildMatchCard(match = {}, roster = new Map()) {
   ];
 
   return `
-    <article class="gameday-match-card">
-      <header class="gameday-match-head">
-        <div class="gameday-match-head__title">Матч #${match.index}</div>
+    <article class="gameday-match-card" data-match-id="${matchId}">
+      <button class="gameday-match-head" type="button" aria-expanded="false" aria-controls="${matchId}Details" id="${matchId}Trigger">
+        <div class="gameday-match-head__row">
+          <div class="gameday-match-head__title">Матч #${match.index}</div>
+          <div class="gameday-match-head__score">${esc(scoreLabel)}</div>
+        </div>
         <div class="gameday-match-head__meta">${esc(match.date || '')} ${esc(match.timestamp || '')}</div>
-        <div class="gameday-match-head__sub">${esc(match.seriesSummary || '—')}</div>
-      </header>
+        <div class="gameday-match-head__sub">${esc(winnerLabel)} · ${esc(teamsPreview || match.seriesSummary || 'Склад команд недоступний')}</div>
+      </button>
 
+      <div class="gameday-match-details" id="${matchId}Details" role="region" aria-labelledby="${matchId}Trigger" hidden>
       <div class="gameday-match-layout">
         ${teams.map(([key, members]) => {
           const stats = computeTeamStats(members, match.pointsChanges || [], roster);
@@ -144,6 +151,7 @@ function buildMatchCard(match = {}, roster = new Map()) {
       </section>
 
       ${match.link ? `<a class="btn btn--secondary" href="${esc(match.link)}" target="_blank" rel="noopener">PDF / Log</a>` : ''}
+      </div>
     </article>`;
 }
 
@@ -172,11 +180,25 @@ function render(root, payload, filters) {
         </label>
         <button id="gamedayLoad" class="btn">Завантажити</button>
       </div>
-      <div class="league-summary-strip">
+      <div class="league-summary-strip gameday-hero-strip">
         <span>${esc(leagueLabelUA(payload.league))}</span>
         <span>Матчів: ${payload.gamesCount ?? 0}</span>
         <span>Раундів: ${payload.roundsCount ?? 0}</span>
         <span>Гравців: ${players.length}</span>
+      </div>
+    </section>
+
+    <section class="px-card gameday-day-summary">
+      <h2 class="px-card__title">Короткий підсумок дня</h2>
+      <div class="gameday-footer-grid">
+        <div class="gameday-footer-item"><span>Дата</span><b>${esc(payload.date || '—')}</b></div>
+        <div class="gameday-footer-item"><span>Матчів</span><b>${summary.matches ?? payload.gamesCount ?? 0}</b></div>
+        <div class="gameday-footer-item"><span>Учасників</span><b>${summary.participants ?? players.length}</b></div>
+        <div class="gameday-footer-item"><span>Раундів</span><b>${payload.roundsCount ?? 0}</b></div>
+        <div class="gameday-footer-item"><span>Топ приріст</span><b>${esc(summary.bestGain?.nick || '—')} (${esc(fmtDelta(summary.bestGain?.delta || 0))})</b></div>
+        <div class="gameday-footer-item"><span>MVP дня</span><b>${esc(summary.mvpDay?.nick || '—')}</b></div>
+        <div class="gameday-footer-item"><span>Кращий winrate</span><b>${esc(summary.bestWinRate?.nick || '—')} (${summary.bestWinRate?.winRate ?? 0}%)</b></div>
+        <div class="gameday-footer-item"><span>Розіграно балів</span><b>${summary.totalPointsPlayed ?? 0}</b></div>
       </div>
     </section>
 
@@ -191,18 +213,6 @@ function render(root, payload, filters) {
         ${matches.map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Немає матчів за цей день.</p>'}
       </div>
     </section>
-
-    <section class="px-card gameday-footer-summary">
-      <h3 class="px-card__title">Короткий підсумок дня</h3>
-      <div class="gameday-footer-grid">
-        <div class="gameday-footer-item"><span>Матчів</span><b>${summary.matches ?? 0}</b></div>
-        <div class="gameday-footer-item"><span>Учасників</span><b>${summary.participants ?? 0}</b></div>
-        <div class="gameday-footer-item"><span>Розіграно балів</span><b>${summary.totalPointsPlayed ?? 0}</b></div>
-        <div class="gameday-footer-item"><span>Топ приріст</span><b>${esc(summary.bestGain?.nick || '—')} (${esc(fmtDelta(summary.bestGain?.delta || 0))})</b></div>
-        <div class="gameday-footer-item"><span>MVP дня</span><b>${esc(summary.mvpDay?.nick || '—')}</b></div>
-        <div class="gameday-footer-item"><span>Кращий winrate</span><b>${esc(summary.bestWinRate?.nick || '—')} (${summary.bestWinRate?.winRate ?? 0}%)</b></div>
-      </div>
-    </section>
   `;
 
   const leagueSelect = root.querySelector('#gamedayLeague');
@@ -215,6 +225,31 @@ function render(root, payload, filters) {
 
   loadBtn?.addEventListener('click', () => {
     location.hash = buildHash('gameday', { league: normalizeLeague(leagueSelect?.value) || payload.league, date: String(dateSelect?.value || '').trim() });
+  });
+
+  const matchCards = Array.from(root.querySelectorAll('.gameday-match-card'));
+  const closeCard = (card) => {
+    const trigger = card.querySelector('.gameday-match-head');
+    const details = card.querySelector('.gameday-match-details');
+    card.classList.remove('is-open');
+    trigger?.setAttribute('aria-expanded', 'false');
+    details?.setAttribute('hidden', '');
+  };
+  const openCard = (card) => {
+    const trigger = card.querySelector('.gameday-match-head');
+    const details = card.querySelector('.gameday-match-details');
+    card.classList.add('is-open');
+    details?.removeAttribute('hidden');
+    trigger?.setAttribute('aria-expanded', 'true');
+  };
+
+  matchCards.forEach((card) => {
+    const trigger = card.querySelector('.gameday-match-head');
+    trigger?.addEventListener('click', () => {
+      const isOpen = card.classList.contains('is-open');
+      matchCards.forEach((item) => closeCard(item));
+      if (!isOpen) openCard(card);
+    });
   });
 }
 

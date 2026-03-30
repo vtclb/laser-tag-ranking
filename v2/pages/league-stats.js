@@ -25,7 +25,7 @@ const SORTERS = {
 };
 
 function tableHeader() {
-  return '<span>#</span><span>Ранг</span><span>Гравець</span><span>Очки</span>';
+  return `<span class="league-table__hcell league-table__hcell--place">#</span><span class="league-table__hcell league-table__hcell--rank">Ранг</span><span class="league-table__hcell league-table__hcell--player">Гравець</span><span class="league-table__hcell league-table__hcell--points">Очки</span>`;
 }
 
 function playerProfileHash(league, nickname) {
@@ -34,19 +34,21 @@ function playerProfileHash(league, nickname) {
 
 function rowMarkup(player, league, { showDelta = false, showInactive = false } = {}) {
   const rank = String(player.rankLetter || 'F').toUpperCase();
+  const rankKey = String(rank || 'F').trim().toLowerCase();
   const href = playerProfileHash(league, player.nickname);
-  const inactiveClass = player.isSeasonActive ? '' : ' is-inactive';
+  const inactiveClass = player.isSeasonActive ? '' : ' is-inactive league-table__row--inactive';
   const inactiveLabel = showInactive && !player.isSeasonActive ? '<span class="league-status-tag">inactive</span>' : '';
-  const deltaText = showDelta ? `<span class="league-row-delta ${Number(player.delta || 0) >= 0 ? 'is-positive' : 'is-negative'}">Δ ${esc(fmtSigned(player.delta || 0))}</span>` : '';
-  return `<a class="league-table-row league-player-row${inactiveClass}" href="${href}">
-    <div class="league-row-top">
-      <span class="league-place">${player.place ? `#${player.place}` : '—'}</span>
-      <span class="league-rank-letter ${rankClass(rank)}">${esc(rank)}</span>
-      <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
-      <span class="league-col-nickname">${esc(player.nickname)} ${inactiveLabel}</span>
-      <span class="league-points">${esc(player.points)}</span>
+  const deltaValue = Number(player.delta || 0);
+  const deltaText = showDelta ? `<span class="league-row-delta ${deltaValue >= 0 ? 'is-positive' : 'is-negative'}">Δ ${esc(fmtSigned(deltaValue))}</span>` : '';
+  return `<a class="league-table-row league-player-row league-table__row league-table__row--rank-${rankKey}${inactiveClass}" href="${href}">
+    <div class="league-row-top league-table__main">
+      <span class="league-place league-table__place">${player.place ? `#${player.place}` : '—'}</span>
+      <span class="league-rank-letter league-table__rank ${rankClass(rank)}">${esc(rank)}</span>
+      <span class="league-avatar-wrap league-rank-frame league-table__avatar ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
+      <span class="league-col-nickname league-table__nickname">${esc(player.nickname)} ${inactiveLabel}</span>
+      <span class="league-points league-table__points">${esc(player.points)}</span>
     </div>
-    <div class="league-row-meta">
+    <div class="league-row-meta league-table__meta">
       <span>Ігри: ${esc(player.matches)}</span>
       <span>Бої: ${esc(player.battles)}</span>
       <span>WR: ${esc(winRateText(player.winRate))}</span>
@@ -88,7 +90,7 @@ function renderInfographic(root, data) {
     ${statCard('Сер. рейтинг', data.summary.avgRating, '📈')}
     ${statCard('Total MVP', data.summary.totalMvp, '🏅')}
   </div>
-  <div class="league-rank-grid">${RANKS.map((rank) => `<div class="league-rank-card"><strong>${rank}</strong><span>${dist[rank] || 0}</span></div>`).join('')}</div>
+  <div class="league-rank-grid">${RANKS.map((rank) => `<div class="league-rank-card league-rank-card--${String(rank).toLowerCase()}"><strong>${rank}</strong><span>${dist[rank] || 0}</span></div>`).join('')}</div>
   <div class="league-progress-grid">
     ${progressCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', '🚀')}
     ${progressCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', '🏆')}

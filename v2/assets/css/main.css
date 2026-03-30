@@ -1927,8 +1927,15 @@ main.page {
 
 /* GameDay + Rules mobile-first V2 */
 .gameday-v2,
-.gameday-v2 * {
+.gameday-v2 *,
+.rules-v2,
+.rules-v2 * {
   border-radius: 0 !important;
+}
+
+.gameday-v2 .px-card__title,
+.rules-v2 .px-card__title {
+  text-align: center;
 }
 
 .gameday-v2 .gameday-toolbar {
@@ -1948,6 +1955,23 @@ main.page {
 .gameday-v2 .btn,
 .gameday-v2 .search-input {
   min-height: 40px;
+}
+
+.gameday-v2 .gameday-hero,
+.gameday-v2 .league-summary-strip,
+.gameday-v2 .gameday-table-wrap,
+.gameday-v2 .gameday-match-card,
+.gameday-v2 .gameday-team-box,
+.gameday-v2 .gameday-result-box,
+.gameday-v2 .gameday-mvp-box,
+.gameday-v2 .gameday-mvp-item,
+.gameday-v2 .gameday-footer-item,
+.rules-v2 .rules-v2__hero,
+.rules-v2 .rules-v2__section,
+.rules-v2 .rules-v2__rank-item,
+.rules-v2 .rules-v2__rank-penalty,
+.rules-v2 .rules-v2__points-table {
+  border-radius: 0 !important;
 }
 
 .gameday-table-wrap {
@@ -1976,60 +2000,186 @@ main.page {
   border: 1px solid rgba(255,255,255,.2);
 }
 
-.gameday-table .pos { color: #7cff72; }
-.gameday-table .neg { color: #ff7b72; }
-.gameday-table .neu { color: #b8c6dd; }
+.gameday-table .pos,
+.gameday-delta-list .pos { color: #7cff72; }
+.gameday-table .neg,
+.gameday-delta-list .neg { color: #ff7b72; }
+.gameday-table .neu,
+.gameday-delta-list .neu { color: #b8c6dd; }
 
 .gameday-match-list {
   display: grid;
-  gap: .55rem;
+  gap: .65rem;
 }
 
 .gameday-match-card {
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(17,25,42,.65);
-  padding: .55rem;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(12, 18, 31, .8);
+  padding: .65rem;
+  display: grid;
+  gap: .5rem;
 }
 
 .gameday-match-head {
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(49, 208, 255, .08);
+  padding: .45rem;
   display: grid;
-  grid-template-columns: 1fr;
   gap: .2rem;
-  margin-bottom: .45rem;
 }
 
-.gameday-match-body {
+.gameday-match-head__title {
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.gameday-match-head__meta,
+.gameday-match-head__sub {
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.gameday-match-layout {
   display: grid;
-  gap: .35rem;
-  font-size: .9rem;
+  grid-template-columns: 1fr minmax(120px, .6fr) 1fr;
+  gap: .45rem;
+  align-items: stretch;
 }
 
-.gameday-points-row {
+.gameday-team-box,
+.gameday-result-box {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.02);
+  padding: .45rem;
+}
+
+.gameday-team-box h3 {
+  margin: 0 0 .35rem;
+  font-size: .85rem;
+  text-align: center;
+}
+
+.gameday-team-box ul {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: .18rem;
+  font-size: .85rem;
+}
+
+.gameday-team-box__stat {
+  margin-top: .32rem;
+  font-size: .78rem;
+  color: var(--muted);
+}
+
+.gameday-team-box.is-winner {
+  border-color: rgba(124,255,114,.8);
+  background: rgba(124,255,114,.09);
+  box-shadow: inset 0 0 0 1px rgba(124,255,114,.35);
+}
+
+.winner-tag {
+  display: inline-block;
+  margin-left: .35rem;
+  border: 1px solid rgba(124,255,114,.8);
+  padding: .05rem .3rem;
+  font-size: .62rem;
+  color: #b7ffc2;
+}
+
+.gameday-result-box {
+  display: grid;
+  align-content: center;
+  text-align: center;
+  gap: .2rem;
+}
+
+.gameday-result-box__score {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.gameday-result-box__draws,
+.gameday-result-box__winner {
+  font-size: .8rem;
+  color: var(--muted);
+}
+
+.gameday-mvp-box {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+  padding: .45rem;
+}
+
+.gameday-mvp-box h4 {
+  margin: 0 0 .35rem;
+  text-align: center;
+}
+
+.gameday-mvp-box__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .35rem;
+}
+
+.gameday-mvp-item {
+  border: 1px solid rgba(255,255,255,.18);
+  padding: .32rem;
+  display: grid;
+  gap: .18rem;
+  text-align: center;
+  font-size: .78rem;
+}
+
+.gameday-delta-list {
   display: flex;
   flex-wrap: wrap;
   gap: .35rem;
 }
 
-.gameday-points-row span {
+.gameday-delta-list span {
   border: 1px solid rgba(255,255,255,.15);
-  padding: .15rem .35rem;
+  padding: .12rem .35rem;
+  font-size: .76rem;
 }
 
-.rules-v2,
-.rules-v2 * {
-  border-radius: 0 !important;
+.gameday-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .45rem;
+}
+
+.gameday-footer-item {
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.02);
+  padding: .4rem;
+  display: grid;
+  gap: .15rem;
+  text-align: center;
+}
+
+.gameday-footer-item span {
+  color: var(--muted);
+  font-size: .78rem;
 }
 
 .rules-v2 {
   display: grid;
   gap: .6rem;
-  max-width: 760px;
+  max-width: 840px;
   margin: 0 auto;
 }
 
-.rules-v2__section,
-.rules-v2__hero {
+.rules-v2__hero,
+.rules-v2__section {
   border: 1px solid rgba(255,255,255,.15);
+  padding: .7rem;
+}
+
+.rules-v2__notice {
+  line-height: 1.45;
+  text-align: center;
 }
 
 .rules-v2__list {
@@ -2037,11 +2187,65 @@ main.page {
   padding-left: 1.1rem;
   display: grid;
   gap: .35rem;
-  line-height: 1.45;
+  line-height: 1.5;
+}
+
+.rules-v2__table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+.rules-v2__points-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 320px;
+}
+
+.rules-v2__points-table th,
+.rules-v2__points-table td {
+  border: 1px solid rgba(255,255,255,.14);
+  padding: .38rem .45rem;
+  text-align: left;
+  font-size: .86rem;
+}
+
+.rules-v2__rank-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .42rem;
+}
+
+.rules-v2__rank-item {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+  padding: .38rem;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: .4rem;
+  align-items: start;
+  line-height: 1.4;
+}
+
+.rules-v2__rank-icon {
+  font-size: 1rem;
+  text-align: center;
+}
+
+.rules-v2__rank-penalty {
+  display: inline-block;
+  margin-left: .3rem;
+  border: 1px solid rgba(255,255,255,.2);
+  padding: 0 .26rem;
+  font-size: .74rem;
 }
 
 @media (max-width: 780px) {
   .gameday-v2 .gameday-toolbar { grid-template-columns: 1fr; }
   .gameday-v2 .btn { width: 100%; }
+  .gameday-match-layout { grid-template-columns: 1fr; }
+  .gameday-mvp-box__grid { grid-template-columns: 1fr; }
+  .gameday-footer-grid { grid-template-columns: 1fr; }
   .rules-v2 { max-width: 100%; }
+  .rules-v2__rank-grid { grid-template-columns: 1fr; }
 }
+

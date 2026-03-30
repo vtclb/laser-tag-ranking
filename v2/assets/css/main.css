@@ -1961,6 +1961,7 @@ main.page {
 .gameday-v2 .league-summary-strip,
 .gameday-v2 .gameday-table-wrap,
 .gameday-v2 .gameday-match-card,
+.gameday-v2 .gameday-match-details,
 .gameday-v2 .gameday-team-box,
 .gameday-v2 .gameday-result-box,
 .gameday-v2 .gameday-mvp-box,
@@ -2015,17 +2016,42 @@ main.page {
 .gameday-match-card {
   border: 1px solid rgba(255,255,255,.18);
   background: rgba(12, 18, 31, .8);
-  padding: .65rem;
+  padding: .55rem;
   display: grid;
-  gap: .5rem;
+  gap: .45rem;
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.gameday-match-card.is-open {
+  border-color: rgba(49,208,255,.52);
+  box-shadow: inset 0 0 0 1px rgba(49,208,255,.24), 0 0 16px rgba(49,208,255,.08);
 }
 
 .gameday-match-head {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
   border: 1px solid rgba(255,255,255,.16);
   background: rgba(49, 208, 255, .08);
   padding: .45rem;
   display: grid;
-  gap: .2rem;
+  gap: .22rem;
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+
+.gameday-match-card.is-open .gameday-match-head {
+  border-color: rgba(49,208,255,.55);
+  background: rgba(49,208,255,.15);
+}
+
+.gameday-match-head__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .45rem;
 }
 
 .gameday-match-head__title {
@@ -2033,10 +2059,34 @@ main.page {
   text-transform: uppercase;
 }
 
+.gameday-match-head__score {
+  font-weight: 800;
+  color: #dff6ff;
+  border: 1px solid rgba(255,255,255,.18);
+  padding: .08rem .36rem;
+  background: rgba(7, 12, 20, .8);
+}
+
 .gameday-match-head__meta,
 .gameday-match-head__sub {
   color: var(--muted);
   font-size: .8rem;
+}
+
+.gameday-match-details {
+  display: grid;
+  gap: .45rem;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transform: translateY(-4px);
+  transition: max-height .22s ease, opacity .18s ease, transform .18s ease;
+}
+
+.gameday-match-card.is-open .gameday-match-details {
+  opacity: 1;
+  max-height: 1400px;
+  transform: translateY(0);
 }
 
 .gameday-match-layout {
@@ -2098,6 +2148,9 @@ main.page {
 .gameday-result-box__score {
   font-size: 1.25rem;
   font-weight: 800;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(7,12,20,.75);
+  padding: .16rem .4rem;
 }
 
 .gameday-result-box__draws,
@@ -2162,6 +2215,10 @@ main.page {
 .gameday-footer-item span {
   color: var(--muted);
   font-size: .78rem;
+}
+
+.gameday-day-summary .gameday-footer-grid {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .rules-v2 {
@@ -2245,6 +2302,7 @@ main.page {
   .gameday-match-layout { grid-template-columns: 1fr; }
   .gameday-mvp-box__grid { grid-template-columns: 1fr; }
   .gameday-footer-grid { grid-template-columns: 1fr; }
+  .gameday-day-summary .gameday-footer-grid { grid-template-columns: 1fr; }
   .rules-v2 { max-width: 100%; }
   .rules-v2__rank-grid { grid-template-columns: 1fr; }
 }
@@ -2308,6 +2366,65 @@ body.theme-game #app :is(
   textarea
 ) {
   border-radius: 0 !important;
+}
+
+/* V2 geometry guardrail: neutralize legacy rounded/pseudo frames inside shell */
+body.theme-game #app :is(
+  .px-card,
+  .section,
+  .hero,
+  .home-card,
+  .home-panel,
+  .home-league,
+  .league-kpi-card,
+  .league-highlight-card,
+  .league-rank-tile,
+  .league-summary-strip,
+  .gameday-hero,
+  .gameday-day-summary,
+  .gameday-match-card,
+  .gameday-match-head,
+  .gameday-match-details,
+  .gameday-team-box,
+  .gameday-result-box,
+  .gameday-mvp-box,
+  .gameday-mvp-item,
+  .gameday-footer-item,
+  .rules-v2__hero,
+  .rules-v2__section,
+  .rules-v2__rank-item,
+  .table-wrap,
+  .league-table-shell
+)::before,
+body.theme-game #app :is(
+  .px-card,
+  .section,
+  .hero,
+  .home-card,
+  .home-panel,
+  .home-league,
+  .league-kpi-card,
+  .league-highlight-card,
+  .league-rank-tile,
+  .league-summary-strip,
+  .gameday-hero,
+  .gameday-day-summary,
+  .gameday-match-card,
+  .gameday-match-head,
+  .gameday-match-details,
+  .gameday-team-box,
+  .gameday-result-box,
+  .gameday-mvp-box,
+  .gameday-mvp-item,
+  .gameday-footer-item,
+  .rules-v2__hero,
+  .rules-v2__section,
+  .rules-v2__rank-item,
+  .table-wrap,
+  .league-table-shell
+)::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 body.theme-game .topnav {

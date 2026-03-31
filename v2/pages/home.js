@@ -63,20 +63,20 @@ function formatWinRate(value) {
 function renderLeaderCard({ leagueTitle, subtitle, leader, variant }) {
   if (!leader) {
     return `
-      <article class="leader-hero-card leader-hero-card--${variant}">
-        <div class="leader-hero-card__league">${escapeHtml(leagueTitle)}</div>
-        <div class="leader-hero-card__subtitle">${escapeHtml(subtitle)}</div>
-        <div class="leader-hero-card__main">
-          <img class="leader-hero-card__avatar" src="${FALLBACK_AVATAR}" alt="Немає активних даних" />
-          <div>
-            <div class="leader-hero-card__name-row">
-              <div class="leader-hero-card__name">Немає активних даних</div>
-              <div class="leader-hero-card__rank">—</div>
+      <article class="leader-card leader-card--${variant}">
+        <div class="leader-card__league">${escapeHtml(leagueTitle)}</div>
+        <div class="leader-card__subtitle">${escapeHtml(subtitle)}</div>
+        <div class="leader-card__main">
+          <img class="leader-card__avatar" src="${FALLBACK_AVATAR}" alt="Немає активних даних" />
+          <div class="leader-card__identity">
+            <div class="leader-card__name-row">
+              <div class="leader-card__name">Немає активних даних</div>
+              <div class="leader-card__rank">—</div>
             </div>
-            <div class="leader-hero-card__points">—</div>
+            <div class="leader-card__points">—</div>
           </div>
         </div>
-        <div class="leader-hero-card__stats">
+        <div class="leader-card__stats">
           <span>0</span>
           <span>0%</span>
           <span>0 MVP</span>
@@ -97,22 +97,22 @@ function renderLeaderCard({ leagueTitle, subtitle, leader, variant }) {
   );
 
   return `
-    <article class="leader-hero-card leader-hero-card--${variant}">
-      <div class="leader-hero-card__league">${escapeHtml(leagueTitle)}</div>
-      <div class="leader-hero-card__subtitle">${escapeHtml(subtitle)}</div>
+    <article class="leader-card leader-card--${variant}">
+      <div class="leader-card__league">${escapeHtml(leagueTitle)}</div>
+      <div class="leader-card__subtitle">${escapeHtml(subtitle)}</div>
 
-      <div class="leader-hero-card__main">
-        <img class="leader-hero-card__avatar" src="${avatar}" alt="${nick}" />
-        <div>
-          <div class="leader-hero-card__name-row">
-            <div class="leader-hero-card__name">${nick}</div>
-            <div class="leader-hero-card__rank">${rank}</div>
+      <div class="leader-card__main">
+        <img class="leader-card__avatar" src="${avatar}" alt="${nick}" />
+        <div class="leader-card__identity">
+          <div class="leader-card__name-row">
+            <div class="leader-card__name">${nick}</div>
+            <div class="leader-card__rank">${rank}</div>
           </div>
-          <div class="leader-hero-card__points">${points}</div>
+          <div class="leader-card__points">${points}</div>
         </div>
       </div>
 
-      <div class="leader-hero-card__stats">
+      <div class="leader-card__stats">
         <span>${matches}</span>
         <span>${String(winRate).replace(' WR', '')}</span>
         <span>${mvp} MVP</span>

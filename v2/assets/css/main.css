@@ -2337,32 +2337,21 @@ body.theme-game #view.route-enter.route-enter-active {
 .leaders-now *::before,
 .leaders-now *::after {
   box-sizing: border-box;
-  border-radius: 0 !important;
-}
-
-.leaders-now .card,
-.leaders-now .panel,
-.leaders-now .chip,
-.leaders-now .pill,
-.leaders-now .leader-box,
-.leaders-now .home-hero-card,
-.leaders-now .leader-meta {
-  all: unset !important;
-  display: revert !important;
+  border-radius: 0;
 }
 
 .leaders-now {
   width: 100%;
   min-width: 0;
   margin-top: 20px;
-  overflow: hidden;
+  overflow-x: clip;
 }
 
 .leaders-now-grid {
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2376,6 +2365,9 @@ body.theme-game #view.route-enter.route-enter-active {
   flex-direction: column;
   gap: 8px;
   padding: 10px;
+  border: 1px solid rgba(145, 173, 235, 0.35);
+  background: linear-gradient(180deg, rgba(11, 17, 32, 0.94) 0%, rgba(13, 21, 39, 0.94) 100%);
+  border-radius: 0 !important;
   overflow: hidden;
 }
 
@@ -2454,6 +2446,61 @@ body.theme-game #view.route-enter.route-enter-active {
 .leaders-now-card__stats span {
   flex: 1 1 0;
   min-width: 0;
+}
+
+.home-ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.home-ranking__row {
+  display: grid;
+  grid-template-columns: 42px 34px 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid rgba(145, 173, 235, 0.24);
+  background: rgba(11, 17, 32, 0.6);
+}
+
+.home-ranking__place {
+  font-size: 12px;
+  font-weight: 800;
+  color: #aab7d4;
+}
+
+.home-ranking__rank {
+  font-size: 12px;
+  font-weight: 900;
+  color: #f6cf7d;
+  text-align: center;
+}
+
+.home-ranking__avatar {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border: 1px solid rgba(145, 173, 235, 0.45);
+}
+
+.home-ranking__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e7efff;
+}
+
+.home-ranking__points {
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffffff;
 }
 
 .leaders-now-card--adult {

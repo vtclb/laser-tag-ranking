@@ -60,10 +60,6 @@ function formatWinRate(value) {
   return `${num.toFixed(1)}% WR`;
 }
 
-function rankClass(rank = '') {
-  return `leader-hero-card__rank--${String(rank).trim().toLowerCase() || 'e'}`;
-}
-
 function renderLeaderCard({ leagueTitle, subtitle, leader, variant }) {
   if (!leader) {
     return `
@@ -71,14 +67,18 @@ function renderLeaderCard({ leagueTitle, subtitle, leader, variant }) {
         <div class="leader-hero-card__league">${escapeHtml(leagueTitle)}</div>
         <div class="leader-hero-card__subtitle">${escapeHtml(subtitle)}</div>
         <div class="leader-hero-card__main">
-          <div class="leader-hero-card__identity">
-            <div class="leader-hero-card__name">Немає активних даних</div>
+          <img class="leader-hero-card__avatar" src="${FALLBACK_AVATAR}" alt="Немає активних даних" />
+          <div>
+            <div class="leader-hero-card__name-row">
+              <div class="leader-hero-card__name">Немає активних даних</div>
+              <div class="leader-hero-card__rank">—</div>
+            </div>
             <div class="leader-hero-card__points">—</div>
           </div>
         </div>
         <div class="leader-hero-card__stats">
-          <span>0 ігор</span>
-          <span>0.0% WR</span>
+          <span>0</span>
+          <span>0%</span>
           <span>0 MVP</span>
         </div>
       </article>
@@ -103,18 +103,18 @@ function renderLeaderCard({ leagueTitle, subtitle, leader, variant }) {
 
       <div class="leader-hero-card__main">
         <img class="leader-hero-card__avatar" src="${avatar}" alt="${nick}" />
-        <div class="leader-hero-card__identity">
+        <div>
           <div class="leader-hero-card__name-row">
             <div class="leader-hero-card__name">${nick}</div>
-            <div class="leader-hero-card__rank ${rankClass(rank)}">${rank}</div>
+            <div class="leader-hero-card__rank">${rank}</div>
           </div>
           <div class="leader-hero-card__points">${points}</div>
         </div>
       </div>
 
       <div class="leader-hero-card__stats">
-        <span>${matches} ігор</span>
-        <span>${winRate}</span>
+        <span>${matches}</span>
+        <span>${String(winRate).replace(' WR', '')}</span>
         <span>${mvp} MVP</span>
       </div>
     </article>
@@ -128,13 +128,13 @@ function renderLeadersNow(adultLeader, kidsLeader) {
       <div class="leaders-grid">
         ${renderLeaderCard({
           leagueTitle: 'ДОРОСЛА ЛІГА',
-          subtitle: 'Поточний лідер сезону',
+          subtitle: 'Лідер сезону',
           leader: adultLeader,
           variant: 'adult',
         })}
         ${renderLeaderCard({
           leagueTitle: 'ДИТЯЧА ЛІГА',
-          subtitle: 'Поточний лідер сезону',
+          subtitle: 'Лідер сезону',
           leader: kidsLeader,
           variant: 'kids',
         })}

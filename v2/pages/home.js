@@ -36,6 +36,29 @@ function getLeaderRankClass(rank = '') {
   return `leaders-now-card__rank--${key || 'e'}`;
 }
 
+function isCurrentSeasonActive() {
+  return true;
+}
+
+function byPointsDesc(a = {}, b = {}) {
+  return Number(b?.points || 0) - Number(a?.points || 0);
+}
+
+function currentRankingCard(players = []) {
+  const rows = (players || []).slice(0, 10).map((player, index) => {
+    const nickname = esc(player?.nickname || `Гравець ${index + 1}`);
+    const points = Number(player?.points || 0);
+    const rank = esc(player?.rankLetter || rankFromPoints(points) || 'E');
+    return `<li class="home-ranking__row"><span class="home-ranking__place">#${index + 1}</span><span class="home-ranking__name">${nickname}</span><span class="home-ranking__meta">${rank} · ${points}</span></li>`;
+  }).join('');
+
+  if (!rows) {
+    return '<p class="px-card__text">Немає активних гравців</p>';
+  }
+
+  return `<ol class="home-ranking">${rows}</ol>`;
+}
+
 function renderLeadersNowCard({ title, subtitle, leader, variant }) {
   if (!leader) {
     return `

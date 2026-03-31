@@ -2331,17 +2331,7 @@ body.theme-game #view.route-enter.route-enter-active {
   }
 }
 
-/* ===== FINAL: Leaders Now block ===== */
-/* Before adding this block:
-   REMOVE or DISABLE all older styles for:
-   .leaders-now
-   .leaders-grid
-   .leader-hero-card
-   .home-hero-card
-   .home-leaders-frame
-   .leader-card
-*/
-
+/* ===== Leaders Now (single active design) ===== */
 .leaders-now,
 .leaders-now *,
 .leaders-now *::before,
@@ -2351,20 +2341,18 @@ body.theme-game #view.route-enter.route-enter-active {
 }
 
 .leaders-now {
+  width: 100%;
+  min-width: 0;
   margin-top: 20px;
-}
-
-.leaders-now .section-title {
-  margin-bottom: 14px;
-  text-align: center;
+  overflow: hidden;
 }
 
 .leaders-now-grid {
+  width: 100%;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  width: 100%;
-  min-width: 0;
 }
 
 .leaders-now-grid > * {
@@ -2378,26 +2366,8 @@ body.theme-game #view.route-enter.route-enter-active {
   gap: 10px;
   padding: 12px;
   border: 1px solid rgba(110, 180, 255, 0.28);
-  background:
-    linear-gradient(180deg, rgba(6, 18, 50, 0.88), rgba(4, 10, 28, 0.96)),
-    linear-gradient(90deg, rgba(0, 180, 255, 0.04), rgba(0, 255, 200, 0.03));
+  background: linear-gradient(180deg, rgba(6, 18, 50, 0.88), rgba(4, 10, 28, 0.96));
   overflow: hidden;
-}
-
-.leaders-now-card__title {
-  text-align: center;
-  font-size: 13px;
-  line-height: 1.1;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #f2f6ff;
-}
-
-.leaders-now-card__subtitle {
-  text-align: center;
-  font-size: 11px;
-  line-height: 1.2;
-  color: rgba(200, 220, 255, 0.78);
 }
 
 .leaders-now-card__main {
@@ -2407,19 +2377,11 @@ body.theme-game #view.route-enter.route-enter-active {
   gap: 10px;
 }
 
-.leaders-now-card__main--empty {
-  min-height: 78px;
-  justify-content: center;
-  flex-direction: column;
-}
-
 .leaders-now-card__avatar {
-  width: 58px;
-  height: 58px;
-  flex: 0 0 58px;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
   object-fit: cover;
-  border: 1px solid rgba(130, 190, 255, 0.28);
-  box-shadow: 0 0 10px rgba(0, 140, 255, 0.14);
 }
 
 .leaders-now-card__identity {
@@ -2430,9 +2392,8 @@ body.theme-game #view.route-enter.route-enter-active {
 .leaders-now-card__name-row {
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
-  margin-bottom: 6px;
 }
 
 .leaders-now-card__name {
@@ -2449,17 +2410,10 @@ body.theme-game #view.route-enter.route-enter-active {
 
 .leaders-now-card__rank {
   flex: 0 0 auto;
-  min-width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 5px;
   font-size: 13px;
   line-height: 1;
   font-weight: 900;
-  border: 1px solid currentColor;
-  background: transparent;
+  letter-spacing: 0.03em;
 }
 
 .leaders-now-card__rank--s { color: #f9d66b; }
@@ -2475,55 +2429,31 @@ body.theme-game #view.route-enter.route-enter-active {
   line-height: 1;
   font-weight: 900;
   color: #ffffff;
-  text-shadow: 0 0 10px rgba(150, 210, 255, 0.12);
+  margin-top: 6px;
 }
 
 .leaders-now-card__stats {
   min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(120, 180, 255, 0.16);
+  display: flex;
+  gap: 8px;
   font-size: 12px;
   line-height: 1.15;
   color: rgba(226, 235, 255, 0.88);
-  text-align: center;
+  white-space: nowrap;
 }
 
 .leaders-now-card__stats span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .leaders-now-card--adult {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 174, 84, 0.03),
-    0 0 14px rgba(255, 120, 40, 0.06);
+  box-shadow: 0 0 14px rgba(255, 120, 40, 0.05);
 }
 
 .leaders-now-card--kids {
-  box-shadow:
-    inset 0 0 0 1px rgba(100, 255, 220, 0.03),
-    0 0 14px rgba(0, 180, 160, 0.06);
-}
-
-/* kill old inner boxes if legacy classes still leak */
-.leaders-now .box,
-.leaders-now .card,
-.leaders-now .panel,
-.leaders-now .chip,
-.leaders-now .leader-box,
-.leaders-now .leader-meta,
-.leaders-now .leader-stat,
-.leaders-now .home-hero-card,
-.leaders-now .home-leaders-frame {
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
+  box-shadow: 0 0 14px rgba(0, 180, 160, 0.05);
 }
 
 @media (max-width: 380px) {
@@ -2536,13 +2466,13 @@ body.theme-game #view.route-enter.route-enter-active {
   }
 
   .leaders-now-card__avatar {
-    width: 52px;
-    height: 52px;
-    flex-basis: 52px;
+    width: 50px;
+    height: 50px;
+    flex-basis: 50px;
   }
 
   .leaders-now-card__name {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .leaders-now-card__points {
@@ -2550,6 +2480,8 @@ body.theme-game #view.route-enter.route-enter-active {
   }
 
   .leaders-now-card__stats {
+    gap: 6px;
     font-size: 11px;
   }
 }
+

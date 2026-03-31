@@ -8,32 +8,43 @@ const STATS_LINKS = {
 };
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 rx=%220%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
 
-function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
+function esc(v) {
+  return String(v ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function isCurrentSeasonActive(player = {}) {
   const hasActiveFlag = Object.prototype.hasOwnProperty.call(player || {}, 'active');
   const activeFlag = hasActiveFlag ? Boolean(player.active) : true;
   return activeFlag && Number(player.matches || 0) > 0;
 }
+
 function byPointsDesc(a, b) {
   return (Number(b?.points) || 0) - (Number(a?.points) || 0);
-}
-function getRankClass(rank) {
-  const normalized = String(rank || '').trim().toUpperCase();
-  return ['S', 'A', 'B', 'C', 'D', 'E', 'F'].includes(normalized) ? `rank-${normalized.toLowerCase()}` : 'rank-f';
-}
-function avatarImage(player) {
-  const src = player?.avatarUrl || FALLBACK_AVATAR;
-  return `<img class="home-avatar" src="${esc(src)}" alt="${esc(player?.nickname || 'Player')}" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
 }
 
 function playerRow(player) {
   const rankText = String(player.rankText || rankFromPoints(player.points) || 'F').toUpperCase();
-  const rankClass = getRankClass(rankText);
+  const rankClass = ['S', 'A', 'B', 'C', 'D', 'E', 'F'].includes(rankText) ? `rank-${rankText.toLowerCase()}` : 'rank-f';
   const topClass = Number(player.place) <= 3 ? 'is-top3' : '';
+  const avatarSrc = player?.avatarUrl || FALLBACK_AVATAR;
   return `<div class="home-current-row home-player-row ${topClass}">
     <span class="home-place">#${player.place}</span>
     <span class="home-rank-letter ${rankClass}">${esc(rankText)}</span>
-    <span class="home-avatar-wrap home-rank-frame ${rankClass}">${avatarImage(player)}</span>
+    <span class="home-avatar-wrap home-rank-frame ${rankClass}"><img class="home-avatar" src="${esc(avatarSrc)}" alt="${esc(player?.nickname || 'Player')}" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>
     <span class="home-player-name">${esc(player.nickname)}</span>
     <span class="home-points-box">${esc(player.points)}</span>
   </div>`;
@@ -44,34 +55,92 @@ function currentRankingCard(players = []) {
   return `<div class="home-current-table">${players.slice(0, 10).map(playerRow).join('')}</div>`;
 }
 
-function heroCard(player, league, isPrimary = false) {
-  const leagueTitle = league === 'kids' ? 'Дитяча ліга' : 'Доросла ліга';
-  if (!player) {
-    return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}">
-      <h3 class="home-hero-card__league">${esc(leagueTitle)}</h3>
-      <p class="home-hero-card__subtitle">Поточний лідер сезону</p>
-      <p class="home-hero-card__note">Немає активних даних</p>
-    </article>`;
+function formatWinRate(value) {
+  const num = Number(value || 0);
+  return `${num.toFixed(1)}% WR`;
+}
+
+function rankClass(rank = '') {
+  return `leader-hero-card__rank--${String(rank).trim().toLowerCase() || 'e'}`;
+}
+
+function renderLeaderCard({ leagueTitle, subtitle, leader, variant }) {
+  if (!leader) {
+    return `
+      <article class="leader-hero-card leader-hero-card--${variant}">
+        <div class="leader-hero-card__league">${escapeHtml(leagueTitle)}</div>
+        <div class="leader-hero-card__subtitle">${escapeHtml(subtitle)}</div>
+        <div class="leader-hero-card__main">
+          <div class="leader-hero-card__identity">
+            <div class="leader-hero-card__name">Немає активних даних</div>
+            <div class="leader-hero-card__points">—</div>
+          </div>
+        </div>
+        <div class="leader-hero-card__stats">
+          <span>0 ігор</span>
+          <span>0.0% WR</span>
+          <span>0 MVP</span>
+        </div>
+      </article>
+    `;
   }
-  const rankText = String(player.rankText || rankFromPoints(player.points) || 'F').toUpperCase();
-  const rankClass = getRankClass(rankText);
-  const winRateText = Number.isFinite(Number(player.winRate)) ? `${Number(player.winRate).toFixed(1)}%` : '—';
-  const mvpSummary = Number.isFinite(Number(player.mvpTotal))
-    ? String(player.mvpTotal)
-    : `${Number(player.mvp1 || 0) + Number(player.mvp2 || 0) + Number(player.mvp3 || 0)}`;
-  return `<article class="px-card home-card ${isPrimary ? 'home-hero-card home-hero-card--primary' : 'home-hero-card'}">
-    <h3 class="home-hero-card__league">${esc(leagueTitle)}</h3>
-    <p class="home-hero-card__subtitle">Поточний лідер сезону</p>
-    <div class="home-hero-card__hero-line">
-      <span class="home-hero-card__avatar">${avatarImage(player)}</span>
-      <div class="home-hero-card__identity">
-        <h4 class="home-hero-card__name">${esc(player.nickname)}</h4>
-        <span class="home-rank-letter home-hero-card__rank-badge ${rankClass}" aria-label="Ранг ${esc(rankText)}">${esc(rankText)}</span>
+
+  const avatar = escapeHtml(leader.avatarUrl || leader.avatar || FALLBACK_AVATAR);
+  const nick = escapeHtml(leader.nickname || 'Гравець');
+  const rank = escapeHtml(leader.rankText || leader.rankLetter || leader.rank || rankFromPoints(leader.points) || 'E');
+  const points = Number(leader.points || 0);
+  const matches = Number(leader.matches || 0);
+  const winRate = formatWinRate(leader.winRate || 0);
+  const mvp = Number(
+    leader.mvpTotal ??
+    ((Number(leader.mvp1 || 0)) + (Number(leader.mvp2 || 0)) + (Number(leader.mvp3 || 0)))
+  );
+
+  return `
+    <article class="leader-hero-card leader-hero-card--${variant}">
+      <div class="leader-hero-card__league">${escapeHtml(leagueTitle)}</div>
+      <div class="leader-hero-card__subtitle">${escapeHtml(subtitle)}</div>
+
+      <div class="leader-hero-card__main">
+        <img class="leader-hero-card__avatar" src="${avatar}" alt="${nick}" />
+        <div class="leader-hero-card__identity">
+          <div class="leader-hero-card__name-row">
+            <div class="leader-hero-card__name">${nick}</div>
+            <div class="leader-hero-card__rank ${rankClass(rank)}">${rank}</div>
+          </div>
+          <div class="leader-hero-card__points">${points}</div>
+        </div>
       </div>
-    </div>
-    <strong class="home-hero-card__points-value">${esc(player.points)}</strong>
-    <p class="home-hero-card__stats" aria-label="Ключова статистика">${esc(player.matches)} · WR ${esc(winRateText)} · MVP ${esc(mvpSummary)}</p>
-  </article>`;
+
+      <div class="leader-hero-card__stats">
+        <span>${matches} ігор</span>
+        <span>${winRate}</span>
+        <span>${mvp} MVP</span>
+      </div>
+    </article>
+  `;
+}
+
+function renderLeadersNow(adultLeader, kidsLeader) {
+  return `
+    <section class="leaders-now section">
+      <div class="section-title">ЛІДЕРИ ЗАРАЗ</div>
+      <div class="leaders-grid">
+        ${renderLeaderCard({
+          leagueTitle: 'ДОРОСЛА ЛІГА',
+          subtitle: 'Поточний лідер сезону',
+          leader: adultLeader,
+          variant: 'adult',
+        })}
+        ${renderLeaderCard({
+          leagueTitle: 'ДИТЯЧА ЛІГА',
+          subtitle: 'Поточний лідер сезону',
+          leader: kidsLeader,
+          variant: 'kids',
+        })}
+      </div>
+    </section>
+  `;
 }
 
 function renderLeagueSection({ league, players }) {
@@ -100,15 +169,15 @@ export async function initHomePage() {
   root.classList.add('home-v2');
   root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">Лазертаг рейтинг</h1><p class="home-current-season">Live рейтинг клубу</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
   <div class="px-divider"></div>
-  <section class="section home-leaders-frame"><h2 class="px-card__title">Лідери зараз</h2><div class="home-heroes" id="topHeroes"></div></section>
+  <section class="section" id="leadersNowMount"></section>
   <section class="section" id="leagueSections"></section>
   <section class="section" id="homeFooter"></section>`;
 
   const stateBox = document.getElementById('stateBox');
-  const topHeroes = document.getElementById('topHeroes');
+  const leadersNowMount = document.getElementById('leadersNowMount');
   const leagueSections = document.getElementById('leagueSections');
   const homeFooter = document.getElementById('homeFooter');
-  if (!stateBox || !topHeroes || !leagueSections || !homeFooter) return;
+  if (!stateBox || !leadersNowMount || !leagueSections || !homeFooter) return;
 
   const renderHome = async () => {
     const [adultsLive, kidsLive] = await Promise.all([
@@ -119,7 +188,7 @@ export async function initHomePage() {
     const adultsPlayers = pickSeasonActive(adultsLive.players);
     const kidsPlayers = pickSeasonActive(kidsLive.players);
 
-    topHeroes.innerHTML = heroCard(adultsPlayers[0] || null, 'sundaygames', true) + heroCard(kidsPlayers[0] || null, 'kids');
+    leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
 
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({
       league,
@@ -144,7 +213,7 @@ export async function initHomePage() {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');
     stateBox.hidden = false;
     stateBox.textContent = msg;
-    topHeroes.innerHTML = `<article class="px-card home-card"><p class="px-card__text">${esc(msg)}</p></article>`;
+    leadersNowMount.innerHTML = `<section class="leaders-now section"><div class="section-title">ЛІДЕРИ ЗАРАЗ</div><p class="px-card__text">${esc(msg)}</p></section>`;
     leagueSections.innerHTML = '';
     homeFooter.innerHTML = footerBlock();
   }

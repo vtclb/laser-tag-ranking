@@ -756,12 +756,6 @@ body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 760px) {
-  .home-v2 #topHeroes {
-    grid-template-columns: 1fr;
-  }
-}
-
 .home-v2 .home-footer-actions .btn { flex: 1 1 180px; }
 
 .home-v2 .rank-s { color: #ffd98f; border-color: #ffd98f; box-shadow: 0 0 8px rgba(255, 217, 143, .25); }
@@ -2904,4 +2898,127 @@ body.theme-game #view.route-enter.route-enter-active {
   }
 
   .home-v2 .home-hero-card__points-value { font-size: 1.75rem; }
+}
+
+
+/* Home V2 leaders-now v2: keep two compact cards in one row */
+.home-v2 #topHeroes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .6rem;
+}
+
+.home-v2 .home-hero-card {
+  padding: .75rem;
+  gap: .28rem;
+  align-content: start;
+  text-align: left;
+}
+
+.home-v2 .home-hero-card__league {
+  font-size: .78rem;
+}
+
+.home-v2 .home-hero-card__subtitle {
+  font-size: .72rem;
+  margin-bottom: .15rem;
+}
+
+.home-v2 .home-hero-card__hero-line {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: .55rem;
+  width: 100%;
+}
+
+.home-v2 .home-hero-card__avatar {
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  min-height: 76px;
+  margin: 0;
+}
+
+.home-v2 .home-hero-card__identity {
+  min-width: 0;
+  display: grid;
+  gap: .35rem;
+  justify-items: start;
+}
+
+.home-v2 .home-hero-card__name {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-v2 .home-hero-card__rank-badge {
+  margin: 0;
+  width: 34px;
+  height: 24px;
+  font-size: .9rem;
+}
+
+.home-v2 .home-hero-card__points-label {
+  margin-top: .2rem;
+}
+
+.home-v2 .home-hero-card__points-value {
+  font-size: 1.7rem;
+}
+
+.home-v2 .home-hero-card__stats {
+  margin-top: .35rem;
+  padding-top: .35rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .35rem;
+  font-size: .74rem;
+}
+
+.home-v2 .home-hero-card__stats span {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .home-v2 #topHeroes {
+    gap: .45rem;
+  }
+
+  .home-v2 .home-hero-card {
+    padding: .62rem;
+  }
+
+  .home-v2 .home-hero-card__hero-line {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: .4rem;
+  }
+
+  .home-v2 .home-hero-card__avatar {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    min-height: 64px;
+  }
+
+  .home-v2 .home-hero-card__name {
+    font-size: .92rem;
+  }
+
+  .home-v2 .home-hero-card__points-value {
+    font-size: 1.45rem;
+  }
+
+  .home-v2 .home-hero-card__stats {
+    font-size: .68rem;
+    gap: .25rem;
+  }
 }

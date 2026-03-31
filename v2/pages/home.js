@@ -63,13 +63,12 @@ function heroCard(player, league, isPrimary = false) {
     <h3 class="home-hero-card__league">${esc(leagueTitle)}</h3>
     <p class="home-hero-card__subtitle">Поточний лідер сезону</p>
     <div class="home-hero-card__hero-line">
-      <span class="home-avatar-wrap home-rank-frame ${rankClass} home-hero-card__avatar">${avatarImage(player)}</span>
       <div class="home-hero-card__identity">
+        <span class="home-hero-card__avatar">${avatarImage(player)}</span>
         <h4 class="home-hero-card__name">${esc(player.nickname)}</h4>
-        <span class="home-rank-letter home-hero-card__rank-badge ${rankClass}">${esc(rankText)}</span>
       </div>
+      <span class="home-rank-letter home-hero-card__rank-badge ${rankClass}" aria-label="Ранг ${esc(rankText)}">${esc(rankText)}</span>
     </div>
-    <p class="home-hero-card__points-label">Очки</p>
     <strong class="home-hero-card__points-value">${esc(player.points)}</strong>
     <div class="home-hero-card__stats" aria-label="Ключова статистика">
       <span>⚔ ${esc(player.matches)}</span>

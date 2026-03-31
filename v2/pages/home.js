@@ -36,8 +36,12 @@ function getLeaderRankClass(rank = '') {
   return `leaders-now-card__rank--${key || 'e'}`;
 }
 
-function isCurrentSeasonActive() {
-  return true;
+function isCurrentSeasonActive(player = null) {
+  if (!player || typeof player !== 'object') return false;
+  if (player.isSeasonActive === false) return false;
+  if (player.isSeasonActive === true) return true;
+  const matches = Number(player.matches || 0);
+  return matches > 0;
 }
 
 function byPointsDesc(a = {}, b = {}) {
@@ -46,10 +50,17 @@ function byPointsDesc(a = {}, b = {}) {
 
 function currentRankingCard(players = []) {
   const rows = (players || []).slice(0, 10).map((player, index) => {
+    const avatarUrl = esc(player?.avatarUrl || player?.avatar || FALLBACK_AVATAR);
     const nickname = esc(player?.nickname || `Гравець ${index + 1}`);
     const points = Number(player?.points || 0);
     const rank = esc(player?.rankLetter || rankFromPoints(points) || 'E');
-    return `<li class="home-ranking__row"><span class="home-ranking__place">#${index + 1}</span><span class="home-ranking__name">${nickname}</span><span class="home-ranking__meta">${rank} · ${points}</span></li>`;
+    return `<li class="home-ranking__row">
+      <span class="home-ranking__place">#${index + 1}</span>
+      <span class="home-ranking__rank">${rank}</span>
+      <img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" />
+      <span class="home-ranking__name">${nickname}</span>
+      <span class="home-ranking__points">${points}</span>
+    </li>`;
   }).join('');
 
   if (!rows) {

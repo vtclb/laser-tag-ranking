@@ -59,41 +59,23 @@ function currentRankingCard(players = []) {
   return `<ol class="home-ranking">${rows}</ol>`;
 }
 
-function renderLeadersNowCard({ title, subtitle, leader, variant }) {
-  if (!leader) {
-    return `
-      <article class="leaders-now-card leaders-now-card--${variant}">
-        <div class="leaders-now-card__title">${escapeHtml(title)}</div>
-        <div class="leaders-now-card__subtitle">${escapeHtml(subtitle)}</div>
-        <div class="leaders-now-card__main leaders-now-card__main--empty">
-          <div class="leaders-now-card__name">Немає активних даних</div>
-          <div class="leaders-now-card__points">—</div>
-        </div>
-        <div class="leaders-now-card__stats">
-          <span>0 ігор</span>
-          <span>0.0% WR</span>
-          <span>0 MVP</span>
-        </div>
-      </article>
-    `;
-  }
-
-  const nickname = escapeHtml(leader.nickname || 'Гравець');
-  const avatarUrl = escapeHtml(leader.avatarUrl || leader.avatar || '');
-  const rank = escapeHtml(leader.rankLetter || leader.rank || 'E');
-  const points = Number(leader.points || 0);
-  const matches = Number(leader.matches || 0);
-  const winRate = formatLeaderWinRate(leader.winRate || 0);
-  const mvpTotal = Number(
-    leader.mvpTotal ??
-    (Number(leader.mvp1 || 0) + Number(leader.mvp2 || 0) + Number(leader.mvp3 || 0))
-  );
+function renderLeadersNowCard({ leader, variant }) {
+  const hasLeader = Boolean(leader);
+  const nickname = escapeHtml(hasLeader ? (leader.nickname || 'Гравець') : 'Немає активних даних');
+  const avatarUrl = escapeHtml(hasLeader ? (leader.avatarUrl || leader.avatar || FALLBACK_AVATAR) : FALLBACK_AVATAR);
+  const rank = escapeHtml(hasLeader ? (leader.rankLetter || leader.rank || 'E') : '—');
+  const points = hasLeader ? Number(leader.points || 0) : '—';
+  const matches = hasLeader ? Number(leader.matches || 0) : 0;
+  const winRate = hasLeader ? formatLeaderWinRate(leader.winRate || 0) : '0.0% WR';
+  const mvpTotal = hasLeader
+    ? Number(
+      leader.mvpTotal ??
+      (Number(leader.mvp1 || 0) + Number(leader.mvp2 || 0) + Number(leader.mvp3 || 0))
+    )
+    : 0;
 
   return `
     <article class="leaders-now-card leaders-now-card--${variant}">
-      <div class="leaders-now-card__title">${escapeHtml(title)}</div>
-      <div class="leaders-now-card__subtitle">${escapeHtml(subtitle)}</div>
-
       <div class="leaders-now-card__main">
         <img
           class="leaders-now-card__avatar"
@@ -101,17 +83,14 @@ function renderLeadersNowCard({ title, subtitle, leader, variant }) {
           alt="${nickname}"
           loading="lazy"
         />
-
         <div class="leaders-now-card__identity">
           <div class="leaders-now-card__name-row">
             <div class="leaders-now-card__name">${nickname}</div>
             <div class="leaders-now-card__rank ${getLeaderRankClass(rank)}">${rank}</div>
           </div>
-
           <div class="leaders-now-card__points">${points}</div>
         </div>
       </div>
-
       <div class="leaders-now-card__stats">
         <span>${matches} ігор</span>
         <span>${winRate}</span>
@@ -123,22 +102,10 @@ function renderLeadersNowCard({ title, subtitle, leader, variant }) {
 
 function renderLeadersNow(adultLeader, kidsLeader) {
   return `
-    <section class="leaders-now section">
-      <div class="section-title">ЛІДЕРИ ЗАРАЗ</div>
-
+    <section class="leaders-now">
       <div class="leaders-now-grid">
-        ${renderLeadersNowCard({
-          title: 'ДОРОСЛА ЛІГА',
-          subtitle: 'Поточний лідер сезону',
-          leader: adultLeader,
-          variant: 'adult'
-        })}
-        ${renderLeadersNowCard({
-          title: 'ДИТЯЧА ЛІГА',
-          subtitle: 'Поточний лідер сезону',
-          leader: kidsLeader,
-          variant: 'kids'
-        })}
+        ${renderLeadersNowCard({ leader: adultLeader, variant: 'adult' })}
+        ${renderLeadersNowCard({ leader: kidsLeader, variant: 'kids' })}
       </div>
     </section>
   `;
@@ -146,7 +113,7 @@ function renderLeadersNow(adultLeader, kidsLeader) {
 
 function renderLeagueSection({ league, players }) {
   const statsLink = STATS_LINKS[league] || '#league-stats';
-  return `<section class="px-card home-card home-league home-leaders home-leaders-frame" data-league="${league}">
+  return `<section class="px-card home-card home-league home-leaders" data-league="${league}">
     <div class="home-league__head"><h3 class="home-league__title">${esc(leagueLabelUA(league))} — top 10</h3></div>
     <article class="home-panel home-section-panel"><h4 class="home-section-title">Поточний топ-10</h4>${currentRankingCard(players)}</article>
     <div class="home-cta-row"><a class="btn btn--secondary" href="${statsLink}">Детальна статистика</a></div>
@@ -214,7 +181,7 @@ export async function initHomePage() {
     const msg = safeErrorMessage(error, 'Дані тимчасово недоступні');
     stateBox.hidden = false;
     stateBox.textContent = msg;
-    leadersNowMount.innerHTML = `<section class="leaders-now section"><div class="section-title">ЛІДЕРИ ЗАРАЗ</div><p class="px-card__text">${esc(msg)}</p></section>`;
+    leadersNowMount.innerHTML = renderLeadersNow(null, null);
     leagueSections.innerHTML = '';
     homeFooter.innerHTML = footerBlock();
   }

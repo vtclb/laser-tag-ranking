@@ -1133,7 +1133,7 @@ function getFolderByPropKey_(key) {
   return id ? DriveApp.getFolderById(id) : null;
 }
 function publicFileUrl_(fileId) {
-  return 'https://drive.google.com/uc?export=view&id=' + fileId;
+  return 'https://drive.google.com/uc?export=download&id=' + fileId;
 }
 
 function thumbnailUrl_(fileId) {

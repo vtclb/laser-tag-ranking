@@ -2901,56 +2901,69 @@ body.theme-game #view.route-enter.route-enter-active {
 }
 
 
-/* Home V2 leaders-now v2: keep two compact cards in one row */
+/* Home V2 leaders-now: two compact hero cards with single visual center */
 .home-v2 #topHeroes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .6rem;
+  gap: .65rem;
 }
 
 .home-v2 .home-hero-card {
-  padding: .75rem;
-  gap: .28rem;
+  padding: .85rem;
+  gap: .35rem;
   align-content: start;
   text-align: left;
+  border-color: rgba(108, 240, 255, .45);
+  background: linear-gradient(150deg, rgba(11, 24, 45, .98), rgba(5, 11, 24, .98));
+}
+
+.home-v2 .home-hero-card::before,
+.home-v2 .home-hero-card::after {
+  display: none;
 }
 
 .home-v2 .home-hero-card__league {
+  margin: 0;
   font-size: .78rem;
+  letter-spacing: .06em;
 }
 
 .home-v2 .home-hero-card__subtitle {
+  margin: 0;
   font-size: .72rem;
-  margin-bottom: .15rem;
+  color: #8ca4c7;
 }
 
 .home-v2 .home-hero-card__hero-line {
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: .55rem;
-  width: 100%;
-}
-
-.home-v2 .home-hero-card__avatar {
-  width: 76px;
-  height: 76px;
-  min-width: 76px;
-  min-height: 76px;
-  margin: 0;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-top: .2rem;
 }
 
 .home-v2 .home-hero-card__identity {
   min-width: 0;
-  display: grid;
-  gap: .35rem;
-  justify-items: start;
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.home-v2 .home-hero-card__avatar {
+  width: 82px;
+  height: 82px;
+  min-width: 82px;
+  min-height: 82px;
+  margin: 0;
+  border: 1px solid rgba(132, 218, 255, .4);
+  box-shadow: 0 0 16px rgba(84, 184, 255, .28);
 }
 
 .home-v2 .home-hero-card__name {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.15;
+  font-size: 1.08rem;
+  line-height: 1.12;
+  max-width: 10ch;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2959,66 +2972,48 @@ body.theme-game #view.route-enter.route-enter-active {
 .home-v2 .home-hero-card__rank-badge {
   margin: 0;
   width: 34px;
-  height: 24px;
+  height: 26px;
   font-size: .9rem;
 }
 
-.home-v2 .home-hero-card__points-label {
-  margin-top: .2rem;
-}
-
 .home-v2 .home-hero-card__points-value {
-  font-size: 1.7rem;
+  margin-top: .2rem;
+  font-size: 2rem;
+  line-height: 1;
+  color: #8ff4ff;
 }
 
 .home-v2 .home-hero-card__stats {
-  margin-top: .35rem;
-  padding-top: .35rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .35rem;
+  margin-top: .2rem;
+  padding-top: 0;
+  border-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
   font-size: .74rem;
+  color: #c3d6f0;
 }
 
 .home-v2 .home-hero-card__stats span {
-  display: block;
   min-width: 0;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .home-v2 #topHeroes {
-    gap: .45rem;
+    grid-template-columns: 1fr;
+    gap: .5rem;
   }
 
   .home-v2 .home-hero-card {
-    padding: .62rem;
-  }
-
-  .home-v2 .home-hero-card__hero-line {
-    grid-template-columns: 64px minmax(0, 1fr);
-    gap: .4rem;
+    padding: .72rem;
   }
 
   .home-v2 .home-hero-card__avatar {
-    width: 64px;
-    height: 64px;
-    min-width: 64px;
-    min-height: 64px;
-  }
-
-  .home-v2 .home-hero-card__name {
-    font-size: .92rem;
-  }
-
-  .home-v2 .home-hero-card__points-value {
-    font-size: 1.45rem;
-  }
-
-  .home-v2 .home-hero-card__stats {
-    font-size: .68rem;
-    gap: .25rem;
+    width: 74px;
+    height: 74px;
+    min-width: 74px;
+    min-height: 74px;
   }
 }

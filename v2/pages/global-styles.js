@@ -1,3 +1,5 @@
+import { normalizeLeague } from '../core/naming.js';
+
 const V2_BASE_URL = new URL('../', import.meta.url);
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
@@ -95,27 +97,31 @@ function ensureFonts() {
 }
 
 function updateTopNavActiveState() {
-  const hash = String(location.hash || '#main').replace(/^#/, '');
-  const [route = 'main', queryString = ''] = hash.split('?');
-  const qp = new URLSearchParams(queryString);
-  const league = normalizeLeague(qp.get('league') || qp.get('lg') || '');
+  try {
+    const hash = String(location.hash || '#main').replace(/^#/, '');
+    const [route = 'main', queryString = ''] = hash.split('?');
+    const qp = new URLSearchParams(queryString);
+    const league = normalizeLeague?.(qp.get('league') || qp.get('lg') || '') || '';
 
-  document.querySelectorAll('.topnav__links .topnav__pill').forEach((link) => {
-    const href = String(link.getAttribute('href') || '');
-    const [linkRoute = '', linkQs = ''] = href.replace(/^#/, '').split('?');
-    const linkParams = new URLSearchParams(linkQs);
-    const linkLeague = normalizeLeague(linkParams.get('league') || linkParams.get('lg') || '');
+    document.querySelectorAll('.topnav__links .topnav__pill').forEach((link) => {
+      const href = String(link.getAttribute('href') || '');
+      const [linkRoute = '', linkQs = ''] = href.replace(/^#/, '').split('?');
+      const linkParams = new URLSearchParams(linkQs);
+      const linkLeague = normalizeLeague?.(linkParams.get('league') || linkParams.get('lg') || '') || '';
 
-    const isCurrent = (
-      (route === 'main' && linkRoute === 'main')
-      || (route === 'rules' && linkRoute === 'rules')
-      || (route === 'league-stats' && linkRoute === 'league-stats' && (!linkLeague || linkLeague === league))
-      || (route === 'gameday' && linkRoute === 'gameday' && (!linkLeague || linkLeague === league))
-    );
+      const isCurrent = (
+        (route === 'main' && linkRoute === 'main')
+        || (route === 'rules' && linkRoute === 'rules')
+        || (route === 'league-stats' && linkRoute === 'league-stats' && (!linkLeague || linkLeague === league))
+        || (route === 'gameday' && linkRoute === 'gameday' && (!linkLeague || linkLeague === league))
+      );
 
-    if (isCurrent) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  });
+      if (isCurrent) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+  } catch (error) {
+    console.error('[global-styles] updateTopNavActiveState failed', error);
+  }
 }
 
 function ensureLoadingScript() {
@@ -149,11 +155,27 @@ export function ensureGlobalStyles() {
   ensureFonts();
   ensureTopNav();
   ensureNavSheet();
-  updateTopNavActiveState();
+  try {
+    updateTopNavActiveState();
+  } catch (error) {
+    console.error('[global-styles] topnav active-state bootstrap failed', error);
+  }
   if (!window.__v2TopNavActiveBound) {
     window.__v2TopNavActiveBound = true;
-    window.addEventListener('hashchange', updateTopNavActiveState);
-    window.addEventListener('v2:route-rendered', updateTopNavActiveState);
+    window.addEventListener('hashchange', () => {
+      try {
+        updateTopNavActiveState();
+      } catch (error) {
+        console.error('[global-styles] hashchange topnav active-state failed', error);
+      }
+    });
+    window.addEventListener('v2:route-rendered', () => {
+      try {
+        updateTopNavActiveState();
+      } catch (error) {
+        console.error('[global-styles] route-rendered topnav active-state failed', error);
+      }
+    });
   }
   ensureLoadingScript();
   attachLoadingHooks();

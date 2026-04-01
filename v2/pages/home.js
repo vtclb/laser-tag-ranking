@@ -38,16 +38,21 @@ function byPointsDesc(a = {}, b = {}) {
   return Number(b?.points || 0) - Number(a?.points || 0);
 }
 
+function rankKeyFromPlayer(player = {}) {
+  return String(player?.rankLetter || rankFromPoints(Number(player?.points || 0)) || 'E').toLowerCase();
+}
+
 function currentRankingCard(players = []) {
   const rows = (players || []).slice(0, 10).map((player, index) => {
     const avatarUrl = esc(player?.avatarUrl || player?.avatar || FALLBACK_AVATAR);
     const nickname = esc(player?.nickname || `Гравець ${index + 1}`);
     const points = Number(player?.points || 0);
     const rank = esc(player?.rankLetter || rankFromPoints(points) || 'E');
-    return `<li class="home-ranking__row">
+    const rankKey = rankKeyFromPlayer(player);
+    return `<li class="home-ranking__row rank-${rankKey}">
       <span class="home-ranking__place">#${index + 1}</span>
-      <span class="home-ranking__rank">${rank}</span>
-      <img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" />
+      <span class="home-ranking__rank rank-${rankKey}">${rank}</span>
+      <span class="home-ranking__avatar-wrap rank-${rankKey}"><img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" /></span>
       <span class="home-ranking__name">${nickname}</span>
       <span class="home-ranking__points">${points}</span>
     </li>`;
@@ -60,11 +65,12 @@ function currentRankingCard(players = []) {
   return `<ol class="home-ranking">${rows}</ol>`;
 }
 
-function renderLeadersNowCard({ leader }) {
+function renderLeadersNowCard({ leader, leagueLabel }) {
   const hasLeader = Boolean(leader);
   const nickname = escapeHtml(hasLeader ? (leader.nickname || 'Гравець') : 'Немає активних даних');
   const avatarUrl = escapeHtml(hasLeader ? (leader.avatarUrl || leader.avatar || FALLBACK_AVATAR) : FALLBACK_AVATAR);
   const rank = escapeHtml(hasLeader ? (leader.rankLetter || leader.rank || 'E') : '—');
+  const rankKey = hasLeader ? rankKeyFromPlayer(leader) : 'e';
   const points = hasLeader ? Number(leader.points || 0) : '—';
   const matches = hasLeader ? Number(leader.matches || 0) : 0;
   const winRate = hasLeader ? `${Number(leader.winRate || 0).toFixed(0)}%` : '0%';
@@ -76,13 +82,14 @@ function renderLeadersNowCard({ leader }) {
     : 0;
 
   return `
-    <div class="leader-card">
+    <div class="leader-card rank-${rankKey}">
+      <div class="leader-league-label">${escapeHtml(leagueLabel)}</div>
       <div class="leader-top">
-        <img class="leader-avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" />
+        <div class="leader-avatar-wrap rank-${rankKey}"><img class="leader-avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" /></div>
 
         <div class="leader-info">
           <div class="leader-name">${nickname}</div>
-          <div class="leader-rank">${rank}</div>
+          <div class="leader-rank rank-${rankKey}">${rank}</div>
         </div>
       </div>
 
@@ -100,9 +107,10 @@ function renderLeadersNowCard({ leader }) {
 function renderLeadersNow(adultLeader, kidsLeader) {
   return `
     <section class="leaders-now">
+      <h2 class="px-card__title">Лідери сезону</h2>
       <div class="leaders-now-grid">
-        ${renderLeadersNowCard({ leader: adultLeader })}
-        ${renderLeadersNowCard({ leader: kidsLeader })}
+        ${renderLeadersNowCard({ leader: adultLeader, leagueLabel: 'Доросла ліга' })}
+        ${renderLeadersNowCard({ leader: kidsLeader, leagueLabel: 'Дитяча ліга' })}
       </div>
     </section>
   `;
@@ -132,7 +140,7 @@ export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">HOME V2</span><h1 class="hero__title">Лазертаг рейтинг</h1><p class="home-current-season">Live рейтинг клубу</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p><div class="hero__actions home-hero-buttons"><a class="btn btn--secondary" href="#rules">Правила</a></div></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">Лазертаг рейтинг</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
   <div class="px-divider"></div>
   <section class="section" id="leadersNowMount"></section>
   <section class="section" id="leagueSections"></section>

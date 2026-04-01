@@ -2318,6 +2318,152 @@ body.theme-game #view.route-enter {
   transform: translateY(6px);
 }
 
+/* V2 cleanup pass: static top header, home accents, league polish, gameday emphasis */
+.topnav__links {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .35rem;
+  width: 100%;
+}
+
+.topnav__links .topnav__pill {
+  text-align: center;
+  padding: .42rem .28rem !important;
+  min-height: 36px;
+  font-size: .72rem;
+}
+
+.home-v2 .hero__kicker,
+.home-v2 .hero__title,
+.home-v2 .home-current-season {
+  text-align: center;
+  width: 100%;
+}
+
+.home-v2 .leaders-now-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+}
+
+.home-v2 .leader-card {
+  border: 1px solid rgba(255,255,255,.18);
+  background: linear-gradient(180deg, rgba(11, 18, 31, .9), rgba(5, 10, 18, .92));
+  padding: .55rem;
+}
+
+.home-v2 .leader-league-label {
+  text-align: center;
+  border: 1px solid rgba(255,255,255,.16);
+  padding: .2rem .35rem;
+  margin-bottom: .45rem;
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+.home-v2 .leader-avatar-wrap {
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255,255,255,.26);
+}
+
+.home-v2 .leader-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-v2 .leader-card.rank-s,
+.home-v2 .leader-avatar-wrap.rank-s { border-color: #e2bf6a; box-shadow: 0 0 10px rgba(226,191,106,.22); }
+.home-v2 .leader-card.rank-a,
+.home-v2 .leader-avatar-wrap.rank-a { border-color: #f3a44e; box-shadow: 0 0 10px rgba(243,164,78,.2); }
+.home-v2 .leader-card.rank-b,
+.home-v2 .leader-avatar-wrap.rank-b { border-color: #47a8ff; box-shadow: 0 0 10px rgba(71,168,255,.2); }
+.home-v2 .leader-card.rank-c,
+.home-v2 .leader-avatar-wrap.rank-c { border-color: #3bcfbf; box-shadow: 0 0 10px rgba(59,207,191,.18); }
+.home-v2 .leader-card.rank-d,
+.home-v2 .leader-avatar-wrap.rank-d { border-color: #9164da; }
+.home-v2 .leader-card.rank-e,
+.home-v2 .leader-avatar-wrap.rank-e { border-color: #73859f; }
+.home-v2 .leader-card.rank-f,
+.home-v2 .leader-avatar-wrap.rank-f { border-color: #a65d61; }
+
+.home-v2 .home-ranking__row {
+  display: grid;
+  grid-template-columns: 44px 32px 42px minmax(0, 1fr) auto;
+  gap: .45rem;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(8, 14, 24, .65);
+  margin-bottom: .35rem;
+  padding: .35rem;
+}
+
+.home-v2 .home-ranking__avatar-wrap {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255,255,255,.2);
+}
+
+.home-v2 .home-ranking__avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-v2 .home-ranking__row.rank-s { box-shadow: inset 3px 0 0 #e2bf6a; background: rgba(226,191,106,.07); }
+.home-v2 .home-ranking__row.rank-a { box-shadow: inset 3px 0 0 #f3a44e; background: rgba(243,164,78,.07); }
+.home-v2 .home-ranking__row.rank-b { box-shadow: inset 3px 0 0 #47a8ff; background: rgba(71,168,255,.07); }
+.home-v2 .home-ranking__row.rank-c { box-shadow: inset 3px 0 0 #3bcfbf; background: rgba(59,207,191,.07); }
+.home-v2 .home-ranking__row.rank-d { box-shadow: inset 3px 0 0 #9164da; background: rgba(145,100,218,.07); }
+.home-v2 .home-ranking__row.rank-e { box-shadow: inset 3px 0 0 #73859f; background: rgba(115,133,159,.07); }
+.home-v2 .home-ranking__row.rank-f { box-shadow: inset 3px 0 0 #a65d61; background: rgba(166,93,97,.07); }
+
+.league-page .league-search-toolbar {
+  margin-bottom: .35rem;
+  padding: .4rem;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(4, 8, 16, .88);
+}
+
+.league-page .league-table-toolbar {
+  border-color: rgba(49,208,255,.3);
+}
+
+.league-page .league-rank-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.league-page .league-rank-tile--meta {
+  border-color: rgba(49,208,255,.5);
+}
+
+.league-page #leagueLastGameDay .px-card__actions {
+  display: flex;
+  justify-content: center;
+}
+
+.league-page #leagueLastGameDay .px-card__actions .btn {
+  width: min(360px, 100%);
+}
+
+.gameday-match-card--winner-team1 .gameday-match-head {
+  border-left: 3px solid rgba(124,255,114,.7);
+}
+
+.gameday-match-card--winner-team2 .gameday-match-head {
+  border-left: 3px solid rgba(255,130,118,.72);
+}
+
+.gameday-team-box.is-loser {
+  border-color: rgba(255,130,118,.72);
+  background: rgba(255,130,118,.09);
+  box-shadow: inset 0 0 0 1px rgba(255,130,118,.28);
+}
+
+.gameday-team-box .is-winner-player { color: #bfffd4; }
+.gameday-team-box .is-loser-player { color: #ffd1cb; }
+
 body.theme-game #view.route-enter.route-enter-active {
   opacity: 1;
   transform: translateY(0);

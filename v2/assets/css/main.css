@@ -2362,10 +2362,14 @@ body.theme-game #view.route-enter.route-enter-active {
   padding: 10px;
   border: 1px solid rgba(0,255,200,0.2);
   background: rgba(0,0,0,0.4);
-
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.leader-card > * {
+  border: 0 !important;
+  background: transparent !important;
 }
 
 .leader-top {
@@ -2406,6 +2410,11 @@ body.theme-game #view.route-enter.route-enter-active {
   justify-content: space-between;
   font-size: 11px;
   opacity: 0.8;
+}
+
+.leader-stats span {
+  text-align: center;
+  flex: 1;
 }
 
 .home-ranking {
@@ -2463,3 +2472,11 @@ body.theme-game #view.route-enter.route-enter-active {
   color: #ffffff;
 }
 
+/* ===== FINAL HARD FIX: NO ROUNDED UI ===== */
+
+.leader-card,
+.leader-card *,
+.leaders-now,
+.leaders-now * {
+  border-radius: 0 !important;
+}

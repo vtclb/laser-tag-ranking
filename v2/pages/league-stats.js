@@ -189,10 +189,11 @@ export async function initLeagueStatsPage(params = {}) {
   renderLoading(root);
   try {
     const league = resolveLeague(params);
-    const [data, currentSeason] = await Promise.all([
-      getCurrentLeagueLiveStats(league),
-      getCurrentSeason()
-    ]);
+    const data = await getCurrentLeagueLiveStats(league);
+    const currentSeason = await getCurrentSeason().catch((error) => {
+      console.warn('[league-stats] optional season context unavailable', error);
+      return null;
+    });
     const remainingGameDays = calculateRemainingGameDays(data, currentSeason);
 
     const hero = root.querySelector('#leagueHero');

@@ -512,7 +512,7 @@ async function readSheet(sheetName, options = {}) {
   try { return await promise; } finally { inFlight.delete(key); }
 }
 
-async function fetchCritical(sourceLabel, loader) {
+async function loadCritical(sourceLabel, loader) {
   try {
     return await loader();
   } catch (error) {
@@ -521,7 +521,7 @@ async function fetchCritical(sourceLabel, loader) {
   }
 }
 
-async function fetchOptional(sourceLabel, loader, fallbackValue) {
+async function loadOptional(sourceLabel, loader, fallbackValue) {
   try {
     const value = await loader();
     return value ?? fallbackValue;
@@ -530,6 +530,19 @@ async function fetchOptional(sourceLabel, loader, fallbackValue) {
     return fallbackValue;
   }
 }
+
+async function loadSoftCritical(sourceLabel, loader, fallbackValue) {
+  try {
+    const value = await loader();
+    return value ?? fallbackValue;
+  } catch (error) {
+    console.warn(`[dataHub] soft-critical source failed: ${sourceLabel}`, String(error?.message || error));
+    return fallbackValue;
+  }
+}
+
+const fetchCritical = loadCritical;
+const fetchOptional = loadOptional;
 
 function detectCols(header = []) {
   const normalized = header.map(normalizeHeader);
@@ -1406,16 +1419,45 @@ async function getSeasonBundle(season) {
   const key = `bundle:${season.id}`;
   const cached = readCache(key, TTL.ratings);
   if (cached) return cached;
-  const bundle = { seasonSheet: null, kidsSheet: null, sundaySheet: null, gamesSheet: null, logsSheet: null, matches: [], logs: [] };
-  const tasks = [];
-  if (season.sources.seasonSheet) tasks.push(readSheet(season.sources.seasonSheet).then((s) => { bundle.seasonSheet = s; }));
-  if (season.sources.kidsSheet) tasks.push(readSheet(season.sources.kidsSheet).then((s) => { bundle.kidsSheet = s; }));
-  if (season.sources.sundaygamesSheet) tasks.push(readSheet(season.sources.sundaygamesSheet).then((s) => { bundle.sundaySheet = s; }));
-  if (season.sources.gamesSheet) tasks.push(readSheet(season.sources.gamesSheet).then((s) => { bundle.gamesSheet = s; }));
-  if (season.sources.logsSheet) tasks.push(readSheet(season.sources.logsSheet).then((s) => { bundle.logsSheet = s; }));
-  await Promise.all(tasks);
-  bundle.matches = parseMatches(bundle.gamesSheet || bundle.seasonSheet || { header: [], rows: [] });
-  bundle.logs = parseLogs(bundle.logsSheet || { header: [], rows: [] });
+
+  const emptySheet = { header: [], rows: [] };
+  const bundle = {
+    seasonSheet: null,
+    kidsSheet: null,
+    sundaySheet: null,
+    gamesSheet: null,
+    logsSheet: null,
+    matches: [],
+    logs: []
+  };
+
+  const [seasonSheet, kidsSheet, sundaySheet, gamesSheet, logsSheet] = await Promise.all([
+    season.sources.seasonSheet
+      ? loadSoftCritical(`${season.id}:season-sheet`, () => readSheet(season.sources.seasonSheet), null)
+      : Promise.resolve(null),
+    season.sources.kidsSheet
+      ? loadSoftCritical(`${season.id}:kids-sheet`, () => readSheet(season.sources.kidsSheet), null)
+      : Promise.resolve(null),
+    season.sources.sundaygamesSheet
+      ? loadSoftCritical(`${season.id}:sundaygames-sheet`, () => readSheet(season.sources.sundaygamesSheet), null)
+      : Promise.resolve(null),
+    season.sources.gamesSheet
+      ? loadSoftCritical(`${season.id}:games-sheet`, () => readSheet(season.sources.gamesSheet), null)
+      : Promise.resolve(null),
+    season.sources.logsSheet
+      ? loadOptional(`${season.id}:logs-sheet`, () => readSheet(season.sources.logsSheet), null)
+      : Promise.resolve(null)
+  ]);
+
+  bundle.seasonSheet = seasonSheet;
+  bundle.kidsSheet = kidsSheet;
+  bundle.sundaySheet = sundaySheet;
+  bundle.gamesSheet = gamesSheet;
+  bundle.logsSheet = logsSheet;
+
+  bundle.matches = parseMatches(gamesSheet || seasonSheet || kidsSheet || sundaySheet || emptySheet);
+  bundle.logs = parseLogs(logsSheet || emptySheet);
+
   return writeCache(key, bundle);
 }
 
@@ -1526,10 +1568,15 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     console.debug('[dataHub] getSnapshot league fallback', { seasonId: season.id, league: selectedLeague, error: String(error?.message || error) });
   }
 
-  const [bundle, avatars] = await Promise.all([getSeasonBundle(season), getAvatarsMap()]);
+  const [bundle, avatars] = await Promise.all([
+    getSeasonBundle(season),
+    loadOptional('avatars-map', () => getAvatarsMap(), new Map())
+  ]);
   let rows = bundle.seasonSheet ? parseScoreboardRows(bundle.seasonSheet, selectedLeague) : [];
-  const fallbackSheet = selectedLeague === 'kids' ? bundle.kidsSheet || {} : bundle.sundaySheet || {};
-  const pointsByNick = rows.length ? pointsMapFromRows(rows) : pointsMapFromRows(parseScoreboardRows(fallbackSheet, selectedLeague));
+  const fallbackSheet = selectedLeague === 'kids' ? (bundle.kidsSheet || {}) : (bundle.sundaySheet || {});
+  const fallbackRows = parseScoreboardRows(fallbackSheet, selectedLeague);
+  if (!rows.length) rows = fallbackRows;
+  const pointsByNick = rows.length ? pointsMapFromRows(rows) : pointsMapFromRows(fallbackRows);
   let statsMap = buildStatsFromMatches(bundle.matches, selectedLeague, pointsByNick);
 
   if (!statsMap.size && rows.length) statsMap = new Map(rows.map((row) => [normalizeHeader(row.nick), row]));
@@ -1539,6 +1586,10 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
       if (!statsMap.has(key)) statsMap.set(key, row);
       else Object.assign(statsMap.get(key), { ...statsMap.get(key), ...row, points: row.points ?? statsMap.get(key).points });
     });
+  }
+
+  if (!statsMap.size && !rows.length && !bundle.matches.length) {
+    throw new Error('Недостатньо базових даних для побудови snapshot.');
   }
 
   const leaderboard = mapToRows(statsMap, avatars);
@@ -1901,13 +1952,11 @@ export async function getPlayerProfile(nickOrOptions = {}, leagueArg = 'kids') {
 export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dateYMD = typeof dateOrOptions === 'object' ? (dateOrOptions.date || dateOrOptions.dateYMD) : dateOrOptions;
   const league = normalizeLeague(typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg) || 'kids';
-  const [leagueSheet, gamesSheet] = await Promise.all([
-    fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 })),
-    fetchCritical('games-sheet', () => readSheet('games', { limitRows: 8000, limitCols: 40 }))
-  ]);
-  const [logsSheet, avatarsMap] = await Promise.all([
-    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
-    fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
+  const gamesSheet = await loadCritical('games-sheet', () => readSheet('games', { limitRows: 8000, limitCols: 40 }));
+  const [leagueSheet, logsSheet, avatarsMap] = await Promise.all([
+    loadSoftCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }), { header: [], rows: [] }),
+    loadOptional('logs-sheet', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
+    loadOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
 
   const allLeagueMatches = parseMatches(gamesSheet || { header: [], rows: [] })
@@ -1918,6 +1967,10 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dayMatches = allLeagueMatches.filter((m) => m.date === selectedDate);
   const dayLogs = parseLogs(logsSheet || { header: [], rows: [] }).filter((entry) => entry.league === league && entry.date === selectedDate);
 
+  const leagueSheetMissing = !Array.isArray(leagueSheet?.rows) || !leagueSheet.rows.length;
+  if (leagueSheetMissing) {
+    console.warn(`[dataHub] gameday soft fallback: ${league}-sheet unavailable, rendering from games/logs only`);
+  }
   const tableNow = parseScoreboardRows(leagueSheet || { header: [], rows: [] }, league);
   const nowByNick = new Map(tableNow.map((row) => [normalizeHeader(row.nick), row]));
   const dayParticipants = new Set(dayMatches.flatMap((m) => [...(m.team1 || []), ...(m.team2 || []), ...(m.team3 || []), ...(m.team4 || [])].map(normalizeHeader)));
@@ -2018,6 +2071,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     date: selectedDate,
     league,
     availableDates,
+    hasLeagueSnapshot: !leagueSheetMissing,
     gamesCount: dayMatches.length,
     battlesCount: dayMatches.length,
     roundsCount: dayMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0),

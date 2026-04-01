@@ -26,16 +26,6 @@ function escapeHtml(value = '') {
     .replace(/'/g, '&#39;');
 }
 
-function formatLeaderWinRate(value) {
-  const n = Number(value || 0);
-  return `${n.toFixed(1)}% WR`;
-}
-
-function getLeaderRankClass(rank = '') {
-  const key = String(rank || '').trim().toLowerCase();
-  return `leaders-now-card__rank--${key || 'e'}`;
-}
-
 function isCurrentSeasonActive(player = null) {
   if (!player || typeof player !== 'object') return false;
   if (player.isSeasonActive === false) return false;
@@ -70,14 +60,14 @@ function currentRankingCard(players = []) {
   return `<ol class="home-ranking">${rows}</ol>`;
 }
 
-function renderLeadersNowCard({ leader, variant }) {
+function renderLeadersNowCard({ leader }) {
   const hasLeader = Boolean(leader);
   const nickname = escapeHtml(hasLeader ? (leader.nickname || 'Гравець') : 'Немає активних даних');
   const avatarUrl = escapeHtml(hasLeader ? (leader.avatarUrl || leader.avatar || FALLBACK_AVATAR) : FALLBACK_AVATAR);
   const rank = escapeHtml(hasLeader ? (leader.rankLetter || leader.rank || 'E') : '—');
   const points = hasLeader ? Number(leader.points || 0) : '—';
   const matches = hasLeader ? Number(leader.matches || 0) : 0;
-  const winRate = hasLeader ? formatLeaderWinRate(leader.winRate || 0) : '0.0% WR';
+  const winRate = hasLeader ? `${Number(leader.winRate || 0).toFixed(0)}%` : '0%';
   const mvpTotal = hasLeader
     ? Number(
       leader.mvpTotal ??
@@ -86,28 +76,24 @@ function renderLeadersNowCard({ leader, variant }) {
     : 0;
 
   return `
-    <article class="leaders-now-card leaders-now-card--${variant}">
-      <div class="leaders-now-card__main">
-        <img
-          class="leaders-now-card__avatar"
-          src="${avatarUrl}"
-          alt="${nickname}"
-          loading="lazy"
-        />
-        <div class="leaders-now-card__identity">
-          <div class="leaders-now-card__name-row">
-            <div class="leaders-now-card__name">${nickname}</div>
-            <div class="leaders-now-card__rank ${getLeaderRankClass(rank)}">${rank}</div>
-          </div>
-          <div class="leaders-now-card__points">${points}</div>
+    <div class="leader-card">
+      <div class="leader-top">
+        <img class="leader-avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" />
+
+        <div class="leader-info">
+          <div class="leader-name">${nickname}</div>
+          <div class="leader-rank">${rank}</div>
         </div>
       </div>
-      <div class="leaders-now-card__stats">
+
+      <div class="leader-points">${points}</div>
+
+      <div class="leader-stats">
         <span>${matches} ігор</span>
         <span>${winRate}</span>
         <span>${mvpTotal} MVP</span>
       </div>
-    </article>
+    </div>
   `;
 }
 
@@ -115,8 +101,8 @@ function renderLeadersNow(adultLeader, kidsLeader) {
   return `
     <section class="leaders-now">
       <div class="leaders-now-grid">
-        ${renderLeadersNowCard({ leader: adultLeader, variant: 'adult' })}
-        ${renderLeadersNowCard({ leader: kidsLeader, variant: 'kids' })}
+        ${renderLeadersNowCard({ leader: adultLeader })}
+        ${renderLeadersNowCard({ leader: kidsLeader })}
       </div>
     </section>
   `;

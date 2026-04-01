@@ -1,3 +1,8 @@
+/* GLOBAL HARD RESET — NO ROUNDED UI */
+* {
+  border-radius: 0 !important;
+}
+
 :root {
   --bg: #090d16;
   --card: #11192a;
@@ -2337,7 +2342,6 @@ body.theme-game #view.route-enter.route-enter-active {
 .leaders-now *::before,
 .leaders-now *::after {
   box-sizing: border-box;
-  border-radius: 0;
 }
 
 .leaders-now {
@@ -2348,104 +2352,60 @@ body.theme-game #view.route-enter.route-enter-active {
 }
 
 .leaders-now-grid {
-  width: 100%;
-  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.leaders-now-grid > * {
-  min-width: 0;
-}
+.leader-card {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgba(0,255,200,0.2);
+  background: rgba(0,0,0,0.4);
 
-.leaders-now-card {
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
-  border: 1px solid rgba(145, 173, 235, 0.35);
-  background: linear-gradient(180deg, rgba(11, 17, 32, 0.94) 0%, rgba(13, 21, 39, 0.94) 100%);
-  border-radius: 0 !important;
-  overflow: hidden;
 }
 
-.leaders-now-card__main {
-  min-width: 0;
+.leader-top {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.leaders-now-card__avatar {
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
+.leader-avatar {
+  width: 48px;
+  height: 48px;
   object-fit: cover;
 }
 
-.leaders-now-card__identity {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.leaders-now-card__name-row {
-  min-width: 0;
+.leader-info {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
 }
 
-.leaders-now-card__name {
-  min-width: 0;
-  flex: 1 1 auto;
-  font-size: 16px;
-  line-height: 1.05;
-  font-weight: 800;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.leader-name {
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.leaders-now-card__rank {
-  flex: 0 0 auto;
-  font-size: 13px;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: 0.03em;
+.leader-rank {
+  font-size: 12px;
+  opacity: 0.7;
 }
 
-.leaders-now-card__rank--s { color: #f9d66b; }
-.leaders-now-card__rank--a { color: #ffb36a; }
-.leaders-now-card__rank--b { color: #77b7ff; }
-.leaders-now-card__rank--c { color: #6ee7c8; }
-.leaders-now-card__rank--d { color: #b391ff; }
-.leaders-now-card__rank--e { color: #aab4c8; }
-.leaders-now-card__rank--f { color: #ff7c7c; }
-
-.leaders-now-card__points {
-  font-size: 24px;
-  line-height: 1;
-  font-weight: 900;
-  color: #ffffff;
-  margin-top: 6px;
+.leader-points {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
 }
 
-.leaders-now-card__stats {
-  min-width: 0;
+.leader-stats {
   display: flex;
   justify-content: space-between;
-  gap: 4px;
   font-size: 11px;
-  line-height: 1.15;
-  color: rgba(226, 235, 255, 0.88);
-}
-
-.leaders-now-card__stats span {
-  flex: 1 1 0;
-  min-width: 0;
+  opacity: 0.8;
 }
 
 .home-ranking {
@@ -2503,31 +2463,3 @@ body.theme-game #view.route-enter.route-enter-active {
   color: #ffffff;
 }
 
-.leaders-now-card--adult {
-  box-shadow: none;
-}
-
-.leaders-now-card--kids {
-  box-shadow: none;
-}
-
-@media (max-width: 380px) {
-  .leaders-now-card__avatar {
-    width: 50px;
-    height: 50px;
-    flex-basis: 50px;
-  }
-
-  .leaders-now-card__name {
-    font-size: 14px;
-  }
-
-  .leaders-now-card__points {
-    font-size: 22px;
-  }
-
-  .leaders-now-card__stats {
-    gap: 4px;
-    font-size: 10px;
-  }
-}

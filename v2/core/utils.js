@@ -45,6 +45,7 @@ export function jsonp(url, params = {}, timeoutMs = 12_000) {
     const callbackName = `__cb${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const script = document.createElement('script');
     const requestUrl = new URL(url);
+    const CALLBACK_DELETE_DELAY_MS = 60_000;
 
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -53,33 +54,53 @@ export function jsonp(url, params = {}, timeoutMs = 12_000) {
     });
     requestUrl.searchParams.set('callback', callbackName);
 
-    let done = false;
-    const cleanup = () => {
-      if (script.parentNode) script.parentNode.removeChild(script);
-      delete window[callbackName];
+    let settled = false;
+    let cleaned = false;
+    let timeoutHandled = false;
+    let deleteCallbackTimer = null;
+
+    const scheduleCallbackDelete = () => {
+      if (deleteCallbackTimer) clearTimeout(deleteCallbackTimer);
+      const callbackRef = window[callbackName];
+      deleteCallbackTimer = setTimeout(() => {
+        if (window[callbackName] === callbackRef) {
+          delete window[callbackName];
+        }
+      }, CALLBACK_DELETE_DELAY_MS);
+    };
+
+    const cleanupOnce = () => {
+      if (cleaned) return;
+      cleaned = true;
       if (timer) clearTimeout(timer);
+      if (deleteCallbackTimer) clearTimeout(deleteCallbackTimer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      scheduleCallbackDelete();
     };
 
     const timer = setTimeout(() => {
-      if (done) return;
-      done = true;
-      cleanup();
+      if (settled) return;
+      settled = true;
+      timeoutHandled = true;
+      window[callbackName] = () => {};
+      cleanupOnce();
       reject(new Error(`JSONP timeout for ${requestUrl}`));
     }, timeoutMs);
 
     window[callbackName] = (payload) => {
-      if (done) return;
-      done = true;
-      cleanup();
+      if (settled) return;
+      settled = true;
+      cleanupOnce();
       resolve(payload);
     };
 
     script.src = requestUrl.toString();
     script.async = true;
     script.onerror = () => {
-      if (done) return;
-      done = true;
-      cleanup();
+      if (settled) return;
+      settled = true;
+      if (!timeoutHandled) window[callbackName] = () => {};
+      cleanupOnce();
       reject(new Error(`JSONP network error for ${requestUrl}`));
     };
 

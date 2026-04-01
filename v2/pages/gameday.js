@@ -164,6 +164,9 @@ function render(root, payload, filters) {
   const dates = Array.isArray(payload.availableDates) ? payload.availableDates : [];
   const summary = payload.summary || {};
   const rosterMap = new Map(players.map((p) => [String(p.nick || '').trim().toLowerCase(), p]));
+  const partialNote = payload.hasLeagueSnapshot
+    ? ''
+    : '<p class="px-card__text">Частковий режим: таблиця ліги недоступна, показані базові матчі дня.</p>';
 
   root.classList.add('gameday-v2');
   root.innerHTML = `
@@ -189,6 +192,7 @@ function render(root, payload, filters) {
         <span>Раундів: ${payload.roundsCount ?? 0}</span>
         <span>Гравців: ${players.length}</span>
       </div>
+      ${partialNote}
     </section>
 
     <section class="px-card gameday-day-summary">
@@ -263,6 +267,9 @@ export async function initGameDayPage(params = {}) {
   try {
     const filters = resolveParams(params);
     const payload = await getGameDay({ league: filters.league, date: filters.date });
+    if (!payload?.hasLeagueSnapshot) {
+      console.warn('[gameday] rendered in partial mode without league snapshot sheet');
+    }
     render(root, payload, filters);
   } catch (error) {
     root.innerHTML = `<section class="px-card"><h1 class="px-card__title">Ігровий день</h1><p class="px-card__text">${esc(safeErrorMessage(error, 'Помилка завантаження'))}</p></section>`;

@@ -128,6 +128,20 @@ function renderLeagueSection({ league, players }) {
 export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
+  console.log('[home] init start');
+  try {
+    await safeInitHomePage(root);
+  } catch (err) {
+    console.error('[home] fatal crash:', err);
+    root.innerHTML = `
+      <div style="padding:20px;color:#fff">
+        ❌ Помилка завантаження сторінки
+      </div>
+    `;
+  }
+}
+
+async function safeInitHomePage(root) {
   root.classList.add('home-v2');
   root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
   <div class="px-divider"></div>
@@ -138,27 +152,36 @@ export async function initHomePage() {
   const leadersNowMount = document.getElementById('leadersNowMount');
   const leagueSections = document.getElementById('leagueSections');
   if (!stateBox || !leadersNowMount || !leagueSections) return;
+  const renderEmptyState = () => {
+    stateBox.hidden = false;
+    stateBox.textContent = 'Дані тимчасово недоступні';
+    leadersNowMount.innerHTML = renderLeadersNow(null, null);
+    leagueSections.innerHTML = '';
+  };
 
   const renderHome = async () => {
-    const [adultsResult, kidsResult] = await Promise.allSettled([
-      getCurrentLeagueLiveStats('sundaygames'),
-      getCurrentLeagueLiveStats('kids')
-    ]);
-    const adultsLive = adultsResult.status === 'fulfilled' ? adultsResult.value : { players: [] };
-    const kidsLive = kidsResult.status === 'fulfilled' ? kidsResult.value : { players: [] };
-    const pickSeasonActive = (livePlayers = []) => (livePlayers || []).filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc);
-    const adultsPlayers = pickSeasonActive(adultsLive.players);
-    const kidsPlayers = pickSeasonActive(kidsLive.players);
+    let adultsLive = null;
+    let kidsLive = null;
+    try {
+      adultsLive = await getCurrentLeagueLiveStats('sundaygames');
+    } catch (error) {
+      console.warn('[home] adult failed', error);
+    }
+    try {
+      kidsLive = await getCurrentLeagueLiveStats('kids');
+    } catch (error) {
+      console.warn('[home] kids failed', error);
+    }
+    console.log('[home] data loaded', { adultsLive, kidsLive });
+    if (!adultsLive && !kidsLive) {
+      console.warn('[home] no data, rendering empty state');
+      renderEmptyState();
+      return;
+    }
 
-    if (adultsResult.status === 'rejected') {
-      console.warn('[home] optional league data failed: sundaygames', adultsResult.reason);
-    }
-    if (kidsResult.status === 'rejected') {
-      console.warn('[home] optional league data failed: kids', kidsResult.reason);
-    }
-    if (!adultsPlayers.length && !kidsPlayers.length) {
-      throw new Error('Не вдалося завантажити live-рейтинг');
-    }
+    const pickSeasonActive = (livePlayers = []) => (livePlayers || []).filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc);
+    const adultsPlayers = pickSeasonActive(adultsLive?.players || []);
+    const kidsPlayers = pickSeasonActive(kidsLive?.players || []);
 
     leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
 

@@ -26,12 +26,31 @@ function ensureStyleOrder() {
   ensureLink({ id: 'v2-assets-main', href: new URL('assets/css/main.css', V2_BASE_URL).href });
 }
 
-function ensureTopNav() {
+function ensureBottomNav() {
   const header = document.querySelector('header.topbar, header.topnav');
-  if (!header || header.dataset.v2Topnav === '1') return;
-  header.className = 'topnav';
-  header.innerHTML = `<div class="container topnav__row"><nav class="topnav__actions topnav__links v2-nav" aria-label="Головна навігація"><div class="v2-nav-grid"><a class="topnav__pill v2-nav-item" href="#main">Головна</a><a class="topnav__pill v2-nav-item" href="#league-stats?league=sundaygames">Доросла ліга</a><a class="topnav__pill v2-nav-item" href="#league-stats?league=kids">Дитяча ліга</a><a class="topnav__pill v2-nav-item" href="#gameday?league=sundaygames">Ігровий день</a></div><a class="topnav__pill v2-nav-item v2-nav-item--wide" href="#rules">Правила</a></nav></div>`;
-  header.dataset.v2Topnav = '1';
+  if (header) {
+    header.className = 'topnav';
+    header.innerHTML = '';
+    header.dataset.v2Topnav = '1';
+  }
+  if (document.querySelector('.v2-bottom-nav')) return;
+
+  const nav = document.createElement('div');
+  nav.className = 'v2-bottom-nav';
+  nav.setAttribute('aria-label', 'Нижня навігація');
+  nav.innerHTML = `<a class="v2-nav-btn" data-route="#main" href="#main"><span>🏠</span><small>Головна</small></a><a class="v2-nav-btn" data-route="#league-stats?league=sundaygames" href="#league-stats?league=sundaygames"><span>🏆</span><small>Дорослі</small></a><a class="v2-nav-btn" data-route="#league-stats?league=kids" href="#league-stats?league=kids"><span>🧒</span><small>Дитяча</small></a><a class="v2-nav-btn" data-route="#gameday?league=sundaygames" href="#gameday?league=sundaygames"><span>🎯</span><small>Ігри</small></a><a class="v2-nav-btn" data-route="#rules" href="#rules"><span>📜</span><small>Правила</small></a>`;
+
+  nav.querySelectorAll('.v2-nav-btn').forEach((el) => {
+    el.addEventListener('click', (event) => {
+      const route = el.getAttribute('data-route') || el.getAttribute('href');
+      if (!route) return;
+      event.preventDefault();
+      location.hash = route;
+    });
+  });
+
+  document.body.appendChild(nav);
+  document.querySelector('.page')?.classList.add('page-root');
 }
 
 async function ensureNavSheet() {
@@ -103,8 +122,8 @@ function updateTopNavActiveState() {
     const qp = new URLSearchParams(queryString);
     const league = normalizeLeague?.(qp.get('league') || qp.get('lg') || '') || '';
 
-    document.querySelectorAll('.topnav__links .v2-nav-item').forEach((link) => {
-      const href = String(link.getAttribute('href') || '');
+    document.querySelectorAll('.v2-bottom-nav .v2-nav-btn').forEach((link) => {
+      const href = String(link.getAttribute('data-route') || link.getAttribute('href') || '');
       const [linkRoute = '', linkQs = ''] = href.replace(/^#/, '').split('?');
       const linkParams = new URLSearchParams(linkQs);
       const linkLeague = normalizeLeague?.(linkParams.get('league') || linkParams.get('lg') || '') || '';
@@ -158,7 +177,7 @@ export function ensureGlobalStyles() {
   document.body?.classList.add('theme-game');
   ensureStyleOrder();
   ensureFonts();
-  ensureTopNav();
+  ensureBottomNav();
   ensureNavSheet();
   try {
     updateTopNavActiveState();

@@ -54,7 +54,7 @@ function currentRankingCard(players = []) {
       <span class="home-ranking__rank rank-${rankKey}">${rank}</span>
       <span class="home-ranking__avatar-wrap rank-${rankKey}"><img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" /></span>
       <span class="home-ranking__name">${nickname}</span>
-      <span class="home-ranking__points">${points}</span>
+      <span class="home-ranking__points"><small>очки</small>${points}</span>
     </li>`;
   }).join('');
 
@@ -93,7 +93,7 @@ function renderLeadersNowCard({ leader, leagueLabel }) {
         </div>
       </div>
 
-      <div class="leader-points">${points}</div>
+      <div class="leader-points"><small>очки</small>${points}</div>
 
       <div class="leader-stats">
         <span>${matches} ігор</span>
@@ -140,7 +140,7 @@ export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">Лазертаг рейтинг</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
+  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
   <div class="px-divider"></div>
   <section class="section" id="leadersNowMount"></section>
   <section class="section" id="leagueSections"></section>

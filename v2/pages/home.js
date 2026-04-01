@@ -128,6 +128,11 @@ function renderLeagueSection({ league, players }) {
 export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
+  await initPage(root);
+}
+
+export async function initPage(root) {
+  if (!root) return;
   console.log('[home] init start');
   try {
     await safeInitHomePage(root);

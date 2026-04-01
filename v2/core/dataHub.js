@@ -1444,14 +1444,15 @@ async function getSeasonBundle(season) {
     season: seasonSheet || emptySheet,
     kids: kidsSheet || emptySheet,
     sunday: sundaySheet || emptySheet,
-    games: parseMatches(gamesSheet || seasonSheet || kidsSheet || sundaySheet || emptySheet) || [],
-    logs: parseLogs(logsSheet || emptySheet) || [],
+    games: gamesSheet || emptySheet,
+    logs: logsSheet || emptySheet,
     seasonSheet: seasonSheet || emptySheet,
     kidsSheet: kidsSheet || emptySheet,
     sundaySheet: sundaySheet || emptySheet,
     gamesSheet: gamesSheet || emptySheet,
     logsSheet: logsSheet || emptySheet,
-    matches: parseMatches(gamesSheet || seasonSheet || kidsSheet || sundaySheet || emptySheet) || []
+    matches: parseMatches(gamesSheet || seasonSheet || kidsSheet || sundaySheet || emptySheet) || [],
+    logEntries: parseLogs(logsSheet || emptySheet) || []
   };
 
   return writeCache(key, normalizedBundle);
@@ -1575,7 +1576,7 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   const fallbackRows = parseScoreboardRows(fallbackSheet || { header: [], rows: [] }, selectedLeague);
   if (!rows.length) rows = fallbackRows;
   const pointsByNick = rows.length ? pointsMapFromRows(rows) : pointsMapFromRows(fallbackRows);
-  const bundleGames = Array.isArray(bundle.games) ? bundle.games : Array.isArray(bundle.matches) ? bundle.matches : [];
+  const bundleGames = Array.isArray(bundle.matches) ? bundle.matches : parseMatches(bundle.games || bundle.gamesSheet || { header: [], rows: [] });
   let statsMap = buildStatsFromMatches(bundleGames, selectedLeague, pointsByNick);
 
   if (!statsMap.size && rows.length) statsMap = new Map(rows.map((row) => [normalizeHeader(row.nick), row]));
@@ -1588,7 +1589,13 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   }
 
   if (!rows.length && !bundleGames.length) {
-    throw new Error('Недостатньо базових даних для побудови snapshot.');
+    console.warn('[snapshot] no data, returning empty');
+    return {
+      players: [],
+      matches: [],
+      logs: [],
+      rankDistribution: {}
+    };
   }
 
   const leaderboard = mapToRows(statsMap, avatars);
@@ -1605,7 +1612,13 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   seasonStats.metricsExact = volume.exact;
   seasonStats.mvp = leaderboard.reduce((best, p) => (p.mvp > (best.mvp || -1) ? p : best), {}).nick || null;
 
-  return writeCache(cacheKey, { seasonId: season.id, seasonTitle: season.uiLabel, league: selectedLeague, top3: leaderboard.slice(0, 3), table: leaderboard, leaderboard, seasonStats, rankDistribution: getRankDistribution(leaderboard), matches: leagueMatches });
+  const normalized = writeCache(cacheKey, { seasonId: season.id, seasonTitle: season.uiLabel, league: selectedLeague, top3: leaderboard.slice(0, 3), table: leaderboard, leaderboard, seasonStats, rankDistribution: getRankDistribution(leaderboard), matches: leagueMatches });
+  return normalized || {
+    players: [],
+    matches: [],
+    logs: [],
+    rankDistribution: {}
+  };
 }
 
 
@@ -1619,8 +1632,21 @@ export async function getLiveLeagueSnapshot(league = 'kids') {
 
   const payload = await gasCall('getSnapshot', { scope: 'league', league: selectedLeague }, 12_000, TTL.leagueSnapshot);
   const normalized = normalizeLeagueSnapshotResponse(payload, currentSeason, selectedLeague);
-  if (!normalized) throw new Error('Live snapshot недоступний');
-  return writeCache(cacheKey, { ...normalized, updatedAt: pickFirst(normalized?.seasonStats?.updated_at, payload?.updated_at, payload?.timestamp, '') || '' });
+  if (!normalized) {
+    console.warn('[snapshot] normalized missing');
+    return {
+      players: [],
+      matches: [],
+      logs: [],
+      rankDistribution: {}
+    };
+  }
+  return writeCache(cacheKey, { ...normalized, updatedAt: pickFirst(normalized?.seasonStats?.updated_at, payload?.updated_at, payload?.timestamp, '') || '' }) || {
+    players: [],
+    matches: [],
+    logs: [],
+    rankDistribution: {}
+  };
 }
 
 export async function getHomeOverview() {
@@ -1683,10 +1709,10 @@ export async function getGameDayView({ dateYMD, league } = {}) {
   const season = await getSeasonByDate((await loadSeasonsConfig()), day);
   const bundle = await getSeasonBundle(season);
   const matches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague && m.date === day);
-  const logsByMatch = matches.map((match) => {
+  const logsByMatch = (matches || []).map((match) => {
     const centerTs = Date.parse(match.timestamp);
     const participants = new Set([...match.team1, ...match.team2].map(normalizeHeader));
-    const entries = bundle.logs.filter((entry) => {
+    const entries = (bundle.logEntries || []).filter((entry) => {
       if (normalizeLeague(entry.league) !== selectedLeague) return false;
       if (entry.date !== day) return false;
       if (!participants.has(normalizeHeader(entry.nick))) return false;
@@ -1887,7 +1913,7 @@ export async function getPlayerSeasonLogs({ nick, seasonId } = {}) {
   const bundle = await getSeasonBundle(season);
   const nickname = normalizeHeader(nick);
   const matchLogs = bundle.matches.filter((m) => [...m.team1, ...m.team2].some((n) => normalizeHeader(n) === nickname));
-  const playerLogs = bundle.logs.filter((entry) => normalizeHeader(entry.nick) === nickname);
+  const playerLogs = (bundle.logEntries || []).filter((entry) => normalizeHeader(entry.nick) === nickname);
   const sortedByTime = [...playerLogs].sort((a, b) => (a.tsMs || 0) - (b.tsMs || 0));
   const seasonGain = sortedByTime.length ? (sortedByTime[sortedByTime.length - 1].newPoints ?? 0) - (sortedByTime[0].newPoints ?? 0) : 0;
   const maxPoints = sortedByTime.reduce((max, entry) => (entry.newPoints !== null && entry.newPoints > max ? entry.newPoints : max), Number.NEGATIVE_INFINITY);

@@ -186,6 +186,11 @@ function filterPlayers(players, searchTerm) {
 export async function initLeagueStatsPage(params = {}) {
   const root = document.getElementById('view');
   if (!root) return;
+  await initPage(root, params);
+}
+
+export async function initPage(root, params = {}) {
+  if (!root) return;
   console.log('[league-stats] init start');
   try {
     await safeInitLeagueStatsPage(root, params);

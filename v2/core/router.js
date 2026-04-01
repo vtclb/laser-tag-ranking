@@ -103,14 +103,42 @@ async function mountTemplate(path) {
   rewriteLinks(view);
 }
 
-function renderShell() {
+function ensureShell() {
   let app = document.getElementById('app');
   if (!app) {
     app = document.createElement('div');
     app.id = 'app';
     document.body.appendChild(app);
   }
-  app.innerHTML = '<header class="topbar"></header><main class="page"><div class="container section" id="view"></div></main>';
+
+  let header = app.querySelector('header.topbar, header.topnav');
+  if (!header) {
+    header = document.createElement('header');
+    header.className = 'topbar';
+    app.appendChild(header);
+  }
+
+  let page = app.querySelector('main.page');
+  if (!page) {
+    page = document.createElement('main');
+    page.className = 'page';
+    app.appendChild(page);
+  }
+
+  let container = page.querySelector('.container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'container section';
+    page.appendChild(container);
+  }
+
+  let view = page.querySelector('#view');
+  if (!view) {
+    view = document.createElement('div');
+    view.id = 'view';
+    container.appendChild(view);
+  }
+
   ensureGlobalStyles();
 }
 
@@ -130,9 +158,28 @@ function routeErrorCard(message) {
   view.innerHTML = `<section class="px-card px-card--accent"><h1 class="px-card__title">Помилка маршруту</h1><p class="px-card__text">${message}</p><div class="px-card__actions"><a class="btn" href="#main">Повернутися на головну</a></div></section>`;
 }
 
+function routeInitErrorCard(route, message) {
+  const view = getView();
+  if (!view) return;
+  view.innerHTML = `<section class="px-card px-card--accent"><h1 class="px-card__title">Сторінка тимчасово недоступна</h1><p class="px-card__text">[${route}] ${message}</p><div class="px-card__actions"><a class="btn" href="#main">Повернутися на головну</a></div></section>`;
+}
+
+async function runPageInit(route, initFn, params = {}) {
+  try {
+    console.info('[router] init:start', { route, params });
+    await initFn(params);
+    console.info('[router] init:ok', { route });
+  } catch (error) {
+    console.error('[router] init:fail', { route, error });
+    routeInitErrorCard(route, error?.message || 'Помилка ініціалізації сторінки');
+  }
+}
+
 async function renderRoute() {
-  renderShell();
+  ensureShell();
   const { route, queryParams } = parseHashRoute();
+  console.info('[router] render:start', { hash: location.hash, route, queryParams });
+
   try {
     if (!location.hash || String(location.hash || '').replace(/^#/, '').split('?')[0].replace(/^\/+/, '').toLowerCase() !== route) {
       location.replace(buildHash(route, queryParams));
@@ -142,49 +189,50 @@ async function renderRoute() {
     if (route === 'main') {
       await mountTemplate('./pages/index.html');
       const { initHomePage } = await import('../pages/home.js');
-      await initHomePage();
+      await runPageInit(route, initHomePage);
       return;
     }
 
     if (route === 'seasons') {
       await mountTemplate('./pages/seasons.html');
       const { initSeasonsPage } = await import('../pages/seasons.js');
-      await initSeasonsPage();
+      await runPageInit(route, initSeasonsPage);
       return;
     }
 
     if (route === 'season') {
       await mountTemplate('./pages/season.html');
       const { initSeasonPage } = await import('../pages/season.js');
-      await initSeasonPage({ season: queryParams.season, league: queryParams.league });
+      await runPageInit(route, initSeasonPage, { season: queryParams.season, league: queryParams.league });
       return;
     }
 
     if (route === 'league-stats') {
       await mountTemplate('./pages/league.html');
       const { initLeagueStatsPage } = await import('../pages/league-stats.js');
-      await initLeagueStatsPage({ league: queryParams.league });
+      await runPageInit(route, initLeagueStatsPage, { league: queryParams.league });
       return;
     }
 
     if (route === 'gameday') {
       await mountTemplate('./pages/gameday.html');
       const { initGameDayPage } = await import('../pages/gameday.js');
-      await initGameDayPage({ league: queryParams.league, date: queryParams.date });
+      await runPageInit(route, initGameDayPage, { league: queryParams.league, date: queryParams.date });
       return;
     }
 
     if (route === 'player') {
       await mountTemplate('./pages/profile.html');
       const { initProfilePage } = await import('../pages/profile.js');
-      await initProfilePage({ league: queryParams.league, nick: queryParams.nick });
+      await runPageInit(route, initProfilePage, { league: queryParams.league, nick: queryParams.nick });
       return;
     }
 
     await mountTemplate('./pages/rules.html');
     const { initRulesPage } = await import('../pages/rules.js');
-    await initRulesPage();
+    await runPageInit(route, initRulesPage);
   } finally {
+    console.info('[router] render:end', { route });
     animateRouteView();
     window.dispatchEvent(new CustomEvent('v2:route-rendered', { detail: { route } }));
   }
@@ -195,6 +243,6 @@ window.addEventListener('hashchange', () => {
 });
 
 renderRoute().catch((error) => {
-  renderShell();
+  ensureShell();
   routeErrorCard(error?.message || 'Невідома помилка маршруту');
 });

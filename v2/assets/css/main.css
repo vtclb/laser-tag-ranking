@@ -2695,3 +2695,195 @@ body.theme-game #view.route-enter.route-enter-active {
 .gameday-v2 .gameday-team-box.is-loser li {
   color: #ffd8d3;
 }
+
+/* ===== V2 final anti-oval + symmetry + canonical rank palette ===== */
+body.theme-game {
+  --rank-s: #9c27b0;
+  --rank-a: #e91e63;
+  --rank-b: #ffb300;
+  --rank-c: #fdd835;
+  --rank-d: #4fc3f7;
+  --rank-e: #43a047;
+  --rank-f: #9e9e9e;
+}
+
+body.theme-game .topnav {
+  border-bottom: 1px solid rgba(145, 173, 235, .28);
+}
+
+body.theme-game .topnav__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid rgba(145, 173, 235, .32);
+  background: linear-gradient(180deg, rgba(12, 20, 34, .97), rgba(7, 11, 20, .97));
+}
+
+body.theme-game .topnav__links .topnav__pill {
+  flex: 1 1 120px;
+  border: 0 !important;
+  border-right: 1px solid rgba(145, 173, 235, .24) !important;
+  min-height: 40px;
+  border-radius: 0 !important;
+}
+
+body.theme-game .topnav__links .topnav__pill:last-child { border-right: 0 !important; }
+
+body.theme-game .section-title,
+body.theme-game .cta,
+body.theme-game .btn,
+body.theme-game .leaders-now .px-card__title,
+body.theme-game .leaders-now,
+body.theme-game .leaders-now-grid,
+body.theme-game .leader-card,
+body.theme-game .leader-card *,
+body.theme-game .home-ranking__row,
+body.theme-game .home-ranking__row *,
+body.theme-game .league-page .league-kpi-card,
+body.theme-game .league-page .league-highlight-card,
+body.theme-game .league-page .league-rank-tile,
+body.theme-game .league-page .league-sort-btn,
+body.theme-game .league-page #leagueExpandBtn,
+body.theme-game .league-page .league-search-wrap,
+body.theme-game .league-page .league-search-input {
+  border-radius: 0 !important;
+}
+
+.home-v2 .leaders-now-grid {
+  align-items: stretch;
+}
+
+.home-v2 .leader-card {
+  min-height: 182px;
+  justify-content: space-between;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+}
+
+.home-v2 .leader-avatar-wrap,
+.home-v2 .home-ranking__avatar-wrap,
+.league-page .league-avatar-wrap,
+.league-page .league-rank-badge,
+.home-v2 .home-ranking__rank,
+.home-v2 .leader-rank {
+  border-radius: 0 !important;
+}
+
+.home-v2 .leader-card.rank-s,
+.home-v2 .leader-avatar-wrap.rank-s,
+.home-v2 .home-ranking__row.rank-s,
+.home-v2 .home-ranking__avatar-wrap.rank-s,
+.league-page .league-ranking-table__row--rank-s,
+.league-page .league-rank-badge.rank-s,
+.league-page .league-rank-frame.rank-s,
+.league-page .league-rank-tile--s { border-color: var(--rank-s) !important; }
+.home-v2 .leader-card.rank-a,
+.home-v2 .leader-avatar-wrap.rank-a,
+.home-v2 .home-ranking__row.rank-a,
+.home-v2 .home-ranking__avatar-wrap.rank-a,
+.league-page .league-ranking-table__row--rank-a,
+.league-page .league-rank-badge.rank-a,
+.league-page .league-rank-frame.rank-a,
+.league-page .league-rank-tile--a { border-color: var(--rank-a) !important; }
+.home-v2 .leader-card.rank-b,
+.home-v2 .leader-avatar-wrap.rank-b,
+.home-v2 .home-ranking__row.rank-b,
+.home-v2 .home-ranking__avatar-wrap.rank-b,
+.league-page .league-ranking-table__row--rank-b,
+.league-page .league-rank-badge.rank-b,
+.league-page .league-rank-frame.rank-b,
+.league-page .league-rank-tile--b { border-color: var(--rank-b) !important; }
+.home-v2 .leader-card.rank-c,
+.home-v2 .leader-avatar-wrap.rank-c,
+.home-v2 .home-ranking__row.rank-c,
+.home-v2 .home-ranking__avatar-wrap.rank-c,
+.league-page .league-ranking-table__row--rank-c,
+.league-page .league-rank-badge.rank-c,
+.league-page .league-rank-frame.rank-c,
+.league-page .league-rank-tile--c { border-color: var(--rank-c) !important; }
+.home-v2 .leader-card.rank-d,
+.home-v2 .leader-avatar-wrap.rank-d,
+.home-v2 .home-ranking__row.rank-d,
+.home-v2 .home-ranking__avatar-wrap.rank-d,
+.league-page .league-ranking-table__row--rank-d,
+.league-page .league-rank-badge.rank-d,
+.league-page .league-rank-frame.rank-d,
+.league-page .league-rank-tile--d { border-color: var(--rank-d) !important; }
+.home-v2 .leader-card.rank-e,
+.home-v2 .leader-avatar-wrap.rank-e,
+.home-v2 .home-ranking__row.rank-e,
+.home-v2 .home-ranking__avatar-wrap.rank-e,
+.league-page .league-ranking-table__row--rank-e,
+.league-page .league-rank-badge.rank-e,
+.league-page .league-rank-frame.rank-e,
+.league-page .league-rank-tile--e { border-color: var(--rank-e) !important; }
+.home-v2 .leader-card.rank-f,
+.home-v2 .leader-avatar-wrap.rank-f,
+.home-v2 .home-ranking__row.rank-f,
+.home-v2 .home-ranking__avatar-wrap.rank-f,
+.league-page .league-ranking-table__row--rank-f,
+.league-page .league-rank-badge.rank-f,
+.league-page .league-rank-frame.rank-f,
+.league-page .league-rank-tile--f { border-color: var(--rank-f) !important; }
+
+.home-v2 .home-ranking__row.rank-s { box-shadow: inset 3px 0 0 var(--rank-s); background: color-mix(in srgb, var(--rank-s) 10%, transparent); }
+.home-v2 .home-ranking__row.rank-a { box-shadow: inset 3px 0 0 var(--rank-a); background: color-mix(in srgb, var(--rank-a) 10%, transparent); }
+.home-v2 .home-ranking__row.rank-b { box-shadow: inset 3px 0 0 var(--rank-b); background: color-mix(in srgb, var(--rank-b) 10%, transparent); }
+.home-v2 .home-ranking__row.rank-c { box-shadow: inset 3px 0 0 var(--rank-c); background: color-mix(in srgb, var(--rank-c) 10%, transparent); }
+.home-v2 .home-ranking__row.rank-d { box-shadow: inset 3px 0 0 var(--rank-d); background: color-mix(in srgb, var(--rank-d) 10%, transparent); }
+.home-v2 .home-ranking__row.rank-e { box-shadow: inset 3px 0 0 var(--rank-e); background: color-mix(in srgb, var(--rank-e) 10%, transparent); }
+.home-v2 .home-ranking__row.rank-f { box-shadow: inset 3px 0 0 var(--rank-f); background: color-mix(in srgb, var(--rank-f) 10%, transparent); }
+
+.league-page .league-ranking-table__row--rank-s { box-shadow: inset 2px 0 0 var(--rank-s); background: color-mix(in srgb, var(--rank-s) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-a { box-shadow: inset 2px 0 0 var(--rank-a); background: color-mix(in srgb, var(--rank-a) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-b { box-shadow: inset 2px 0 0 var(--rank-b); background: color-mix(in srgb, var(--rank-b) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-c { box-shadow: inset 2px 0 0 var(--rank-c); background: color-mix(in srgb, var(--rank-c) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-d { box-shadow: inset 2px 0 0 var(--rank-d); background: color-mix(in srgb, var(--rank-d) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-e { box-shadow: inset 2px 0 0 var(--rank-e); background: color-mix(in srgb, var(--rank-e) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-f { box-shadow: inset 2px 0 0 var(--rank-f); background: color-mix(in srgb, var(--rank-f) 9%, transparent); }
+
+.league-page .league-kpi-grid,
+.league-page .league-highlights-grid {
+  align-items: stretch;
+}
+
+.league-page .league-kpi-card,
+.league-page .league-highlight-card,
+.league-page .league-rank-tile {
+  min-height: 118px;
+  display: grid;
+  align-content: space-between;
+  gap: .35rem;
+}
+
+.league-page .league-kpi-card__label {
+  border: 1px solid rgba(255, 255, 255, .12);
+  padding: .35rem .45rem;
+  min-height: 34px;
+}
+
+.league-page .league-kpi-card__value {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+}
+
+.league-page .league-rank-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .45rem;
+}
+
+.league-page .league-rank-tile--meta {
+  min-height: 118px;
+  border-color: rgba(49, 208, 255, .52) !important;
+}
+
+@media (max-width: 760px) {
+  body.theme-game .topnav__links .topnav__pill {
+    flex-basis: calc(50% - .5px);
+    border-bottom: 1px solid rgba(145, 173, 235, .24) !important;
+  }
+
+  body.theme-game .topnav__links .topnav__pill:nth-child(2n) {
+    border-right: 0 !important;
+  }
+}

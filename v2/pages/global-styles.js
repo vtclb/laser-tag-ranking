@@ -95,19 +95,24 @@ function ensureFonts() {
 }
 
 function updateTopNavActiveState() {
-  const route = String(location.hash || '#main').replace(/^#/, '').split('?')[0] || 'main';
-  const routeToHref = {
-    main: '#main',
-    'league-stats': null,
-    gameday: '#gameday',
-    rules: '#rules'
-  };
+  const hash = String(location.hash || '#main').replace(/^#/, '');
+  const [route = 'main', queryString = ''] = hash.split('?');
+  const qp = new URLSearchParams(queryString);
+  const league = normalizeLeague(qp.get('league') || qp.get('lg') || '');
 
   document.querySelectorAll('.topnav__links .topnav__pill').forEach((link) => {
     const href = String(link.getAttribute('href') || '');
-    const normalizedHref = href.split('?')[0];
-    const isLeagueStats = route === 'league-stats' && normalizedHref === '#league-stats';
-    const isCurrent = isLeagueStats || (routeToHref[route] && normalizedHref === routeToHref[route]);
+    const [linkRoute = '', linkQs = ''] = href.replace(/^#/, '').split('?');
+    const linkParams = new URLSearchParams(linkQs);
+    const linkLeague = normalizeLeague(linkParams.get('league') || linkParams.get('lg') || '');
+
+    const isCurrent = (
+      (route === 'main' && linkRoute === 'main')
+      || (route === 'rules' && linkRoute === 'rules')
+      || (route === 'league-stats' && linkRoute === 'league-stats' && (!linkLeague || linkLeague === league))
+      || (route === 'gameday' && linkRoute === 'gameday' && (!linkLeague || linkLeague === league))
+    );
+
     if (isCurrent) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });

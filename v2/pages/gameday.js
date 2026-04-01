@@ -217,7 +217,7 @@ function render(root, payload, filters) {
     <section class="px-card">
       <h2 class="px-card__title">Матчі ігрового дня</h2>
       <div class="gameday-match-list">
-        ${matches.map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Немає матчів за цей день.</p>'}
+        ${(matches || []).map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Немає матчів за цей день.</p>'}
       </div>
     </section>
   `;
@@ -262,6 +262,11 @@ function render(root, payload, filters) {
 
 export async function initGameDayPage(params = {}) {
   const root = document.getElementById('gamedayRoot') || document.getElementById('view');
+  if (!root) return;
+  await initPage(root, params);
+}
+
+export async function initPage(root, params = {}) {
   if (!root) return;
   console.log('[gameday] init start');
   try {

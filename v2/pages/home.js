@@ -125,17 +125,6 @@ function renderLeagueSection({ league, players }) {
   </section>`;
 }
 
-function footerBlock() {
-  return `<section class="px-card home-card home-footer-block" id="homeFooterBlock">
-    <p class="home-footer-days">Швидкі переходи до ліг та статистики</p>
-    <div class="home-footer-actions">
-      <button type="button" class="btn btn--secondary" id="homeScrollTopBtn">Вгору</button>
-      <a class="btn btn--secondary" href="${STATS_LINKS.sundaygames}">Детальна статистика дорослої ліги</a>
-      <a class="btn btn--secondary" href="${STATS_LINKS.kids}">Детальна статистика дитячої ліги</a>
-    </div>
-  </section>`;
-}
-
 export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
@@ -143,14 +132,12 @@ export async function initHomePage() {
   root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
   <div class="px-divider"></div>
   <section class="section" id="leadersNowMount"></section>
-  <section class="section" id="leagueSections"></section>
-  <section class="section" id="homeFooter"></section>`;
+  <section class="section" id="leagueSections"></section>`;
 
   const stateBox = document.getElementById('stateBox');
   const leadersNowMount = document.getElementById('leadersNowMount');
   const leagueSections = document.getElementById('leagueSections');
-  const homeFooter = document.getElementById('homeFooter');
-  if (!stateBox || !leadersNowMount || !leagueSections || !homeFooter) return;
+  if (!stateBox || !leadersNowMount || !leagueSections) return;
 
   const renderHome = async () => {
     const [adultsResult, kidsResult] = await Promise.allSettled([
@@ -180,13 +167,6 @@ export async function initHomePage() {
       players: league === 'sundaygames' ? adultsPlayers : kidsPlayers
     })).join('');
 
-    homeFooter.innerHTML = footerBlock();
-    const scrollTopBtn = document.getElementById('homeScrollTopBtn');
-    if (scrollTopBtn) {
-      scrollTopBtn.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-    }
   };
 
   try {
@@ -199,6 +179,5 @@ export async function initHomePage() {
     stateBox.textContent = msg;
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
     leagueSections.innerHTML = '';
-    homeFooter.innerHTML = footerBlock();
   }
 }

@@ -3,21 +3,23 @@
 
   <section class="px-card league-top10" id="leagueTop10Section">
     <h2 class="px-card__title league-section-title" id="leagueTableTitle">ТОП-10 гравців</h2>
-    <div class="league-table-toolbar" role="toolbar" aria-label="Керування таблицею рейтингу">
+    <div class="league-search-toolbar" aria-label="Пошук гравців">
       <label class="league-search-wrap" for="leagueSearchInput">
         <span>Пошук</span>
         <input class="search-input league-search-input" id="leagueSearchInput" type="search" placeholder="Нікнейм гравця" autocomplete="off">
       </label>
+    </div>
+    <div class="league-table-toolbar" role="toolbar" aria-label="Сортування таблиці рейтингу">
       <div class="league-sort-controls" id="leagueSortControls" aria-label="Сортування">
         <span class="league-sort-controls__label">Сортування</span>
         <div class="league-sort-controls__buttons">
-          <button class="league-sort-btn is-active" type="button" data-sort="default" title="Рейтинг">RTG</button>
-          <button class="league-sort-btn" type="button" data-sort="points" title="Очки">PTS</button>
-          <button class="league-sort-btn" type="button" data-sort="matches" title="Ігри">G</button>
-          <button class="league-sort-btn" type="button" data-sort="battles" title="Бої">B</button>
-          <button class="league-sort-btn" type="button" data-sort="winRate" title="WR">WR</button>
-          <button class="league-sort-btn" type="button" data-sort="mvpTotal" title="MVP">MVP</button>
-          <button class="league-sort-btn" type="button" data-sort="delta" title="Δ">Δ</button>
+          <button class="league-sort-btn is-active" type="button" data-sort="default" title="Рейтинг" aria-label="Сортувати за рейтингом">RTG</button>
+          <button class="league-sort-btn" type="button" data-sort="points" title="Очки" aria-label="Сортувати за очками">PTS</button>
+          <button class="league-sort-btn" type="button" data-sort="matches" title="Ігри" aria-label="Сортувати за кількістю ігор">G</button>
+          <button class="league-sort-btn" type="button" data-sort="battles" title="Бої" aria-label="Сортувати за кількістю боїв">B</button>
+          <button class="league-sort-btn" type="button" data-sort="winRate" title="Відсоток перемог" aria-label="Сортувати за відсотком перемог">WR</button>
+          <button class="league-sort-btn" type="button" data-sort="mvpTotal" title="Кількість MVP" aria-label="Сортувати за кількістю MVP">MVP</button>
+          <button class="league-sort-btn" type="button" data-sort="delta" title="Зміна рейтингу" aria-label="Сортувати за зміною рейтингу">Δ</button>
         </div>
       </div>
     </div>

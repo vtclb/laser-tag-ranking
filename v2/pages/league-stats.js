@@ -1,4 +1,4 @@
-import { getCurrentLeagueLiveStats, safeErrorMessage } from '../core/dataHub.js';
+import { getCurrentLeagueLiveStats, getCurrentSeason, safeErrorMessage } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
 
@@ -68,6 +68,19 @@ function statCard(label, value, icon) {
   return `<article class="league-kpi-card"><div class="league-kpi-card__label">${esc(icon)} ${esc(label)}</div><div class="league-kpi-card__value">${esc(value)}</div></article>`;
 }
 
+function calculateRemainingGameDays(data, currentSeason) {
+  const seasonEndRaw = String(currentSeason?.dateEnd || '').slice(0, 10);
+  const lastGameDayRaw = String(data?.lastGameDay?.date || '').slice(0, 10);
+  if (!seasonEndRaw) return '—';
+  const seasonEnd = new Date(`${seasonEndRaw}T00:00:00Z`);
+  if (Number.isNaN(seasonEnd.getTime())) return '—';
+  const anchorDate = lastGameDayRaw || new Date().toISOString().slice(0, 10);
+  const anchor = new Date(`${anchorDate}T00:00:00Z`);
+  if (Number.isNaN(anchor.getTime())) return '—';
+  const days = Math.ceil((seasonEnd - anchor) / (1000 * 60 * 60 * 24));
+  return `${Math.max(days, 0)}`;
+}
+
 function highlightCard(player, value, label, icon, tone) {
   if (!player) {
     return `<article class="league-highlight-card league-highlight-card--${tone}">
@@ -88,14 +101,17 @@ function highlightCard(player, value, label, icon, tone) {
   </article>`;
 }
 
-function renderHero(root, league, data) {
+function renderHero(root, league, data, remainingGameDays) {
   root.innerHTML = `<h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
   <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>
-  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Ігровий день: ${esc(data.lastGameDay?.date || '—')}</span></div>
+  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Ігровий день: ${esc(data.lastGameDay?.date || '—')}</span><span>Залишилось днів: ${esc(remainingGameDays)}</span></div>
   <div class="px-card__actions league-actions"><a class="btn" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;
 }
 
-function renderInfographic(root, data) {
+function renderInfographic(root, data, remainingGameDays) {
+  const averageWinRate = data.summary.activePlayersCount
+    ? `${(data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount).toFixed(1)}%`
+    : '—';
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-dashboard-group league-dashboard-group--kpi">
     <h3 class="league-subtitle">KPI ліги</h3>
@@ -105,11 +121,12 @@ function renderInfographic(root, data) {
     ${statCard('Боїв', data.summary.battlesCount, '⚔️')}
     ${statCard('Сер. рейтинг', data.summary.avgRating, '📈')}
     ${statCard('Total MVP', data.summary.totalMvp, '🏅')}
+    ${statCard('Середній WR', averageWinRate, '🎯')}
     </div>
   </section>
   <section class="league-dashboard-group league-rank-distribution">
     <h3 class="league-subtitle">Розподіл за рангами</h3>
-    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}</div>
+    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><strong>GD</strong><span>${esc(remainingGameDays)}</span></article></div>
   </section>
   <section class="league-dashboard-group">
     <h3 class="league-subtitle">Highlights</h3>
@@ -171,7 +188,11 @@ export async function initLeagueStatsPage(params = {}) {
   renderLoading(root);
   try {
     const league = resolveLeague(params);
-    const data = await getCurrentLeagueLiveStats(league);
+    const [data, currentSeason] = await Promise.all([
+      getCurrentLeagueLiveStats(league),
+      getCurrentSeason()
+    ]);
+    const remainingGameDays = calculateRemainingGameDays(data, currentSeason);
 
     const hero = root.querySelector('#leagueHero');
     const rankingTable = root.querySelector('#leagueTableBody');
@@ -227,8 +248,8 @@ export async function initLeagueStatsPage(params = {}) {
       });
     };
 
-    renderHero(hero, league, data);
-    renderInfographic(infographic, data);
+    renderHero(hero, league, data, remainingGameDays);
+    renderInfographic(infographic, data, remainingGameDays);
     renderLastGameDay(lastGameDay, data.lastGameDay, league);
     setSortButtonState();
     renderTables();

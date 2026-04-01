@@ -28,7 +28,7 @@ function ensureTopNav() {
   const header = document.querySelector('header.topbar, header.topnav');
   if (!header || header.dataset.v2Topnav === '1') return;
   header.className = 'topnav';
-  header.innerHTML = `<div class="container topnav__row"><div class="topnav__actions"><button type="button" class="topnav__pill menu-btn topnav__pill--square" id="globalMenuBtn" aria-label="Відкрити меню"><span class="icon icon--menu" aria-hidden="true"></span><span>Меню</span></button></div></div>`;
+  header.innerHTML = `<div class="container topnav__row"><nav class="topnav__actions topnav__links" aria-label="Головна навігація"><a class="topnav__pill" href="#league-stats?league=sundaygames">Доросла ліга</a><a class="topnav__pill" href="#league-stats?league=kids">Дитяча ліга</a><a class="topnav__pill" href="#gameday?league=sundaygames">Ігровий день</a><a class="topnav__pill" href="#rules">Правила</a></nav></div>`;
   header.dataset.v2Topnav = '1';
 }
 

@@ -99,6 +99,7 @@ function buildMatchCard(match = {}, roster = new Map()) {
   const scoreboard = teams.map(([key]) => Number(series[key] || 0));
   const scoreLabel = scoreboard.length >= 2 ? `${scoreboard[0]}:${scoreboard[1]}` : (match.seriesSummary || '—');
   const winnerKey = match.winner === 'team1' || match.winner === 'team2' ? match.winner : '';
+  const loserKey = winnerKey === 'team1' ? 'team2' : winnerKey === 'team2' ? 'team1' : '';
   const winnerLabel = prettyWinner(match.winner);
   const teamsPreview = teams.map(([, members]) => members.join(', ')).filter(Boolean).join(' vs ');
   const matchId = `gamedayMatch${match.index}`;
@@ -109,7 +110,7 @@ function buildMatchCard(match = {}, roster = new Map()) {
   ];
 
   return `
-    <article class="gameday-match-card" data-match-id="${matchId}">
+    <article class="gameday-match-card ${winnerKey ? `gameday-match-card--winner-${winnerKey}` : ''}" data-match-id="${matchId}">
       <button class="gameday-match-head" type="button" aria-expanded="false" aria-controls="${matchId}Details" id="${matchId}Trigger">
         <div class="gameday-match-head__row">
           <div class="gameday-match-head__title">Матч #${match.index}</div>
@@ -124,9 +125,11 @@ function buildMatchCard(match = {}, roster = new Map()) {
         ${teams.map(([key, members]) => {
           const stats = computeTeamStats(members, match.pointsChanges || [], roster);
           const winnerClass = key === winnerKey ? ' is-winner' : '';
-          return `<section class="gameday-team-box${winnerClass}">
+          const loserClass = key === loserKey ? ' is-loser' : '';
+          const teamClass = `${winnerClass}${loserClass}`;
+          return `<section class="gameday-team-box${teamClass}">
             <h3>${teamLabel(key)} ${key === winnerKey ? '<span class="winner-tag">WINNER</span>' : ''}</h3>
-            <ul>${members.map((nick) => `<li>${esc(nick)}</li>`).join('')}</ul>
+            <ul>${members.map((nick) => `<li class="${key === winnerKey ? 'is-winner-player' : key === loserKey ? 'is-loser-player' : ''}">${esc(nick)}</li>`).join('')}</ul>
             <div class="gameday-team-box__stat">Σ рейтинг: <b>${stats.totalRating || 0}</b></div>
             <div class="gameday-team-box__stat">Σ Δ очок: <b class="${stats.totalDelta > 0 ? 'pos' : stats.totalDelta < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(stats.totalDelta))}</b></div>
           </section>`;

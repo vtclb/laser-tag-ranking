@@ -165,6 +165,12 @@ function routeInitErrorCard(route, message) {
 }
 
 async function runPageInit(route, initFn, params = {}) {
+  console.log('[router] loading route:', route);
+  if (typeof initFn !== 'function') {
+    console.error('INIT FUNCTION NOT FOUND');
+    routeInitErrorCard(route, 'INIT FUNCTION NOT FOUND');
+    return;
+  }
   try {
     console.info('[router] init:start', { route, params });
     await initFn(params);
@@ -228,9 +234,14 @@ async function renderRoute() {
       return;
     }
 
-    await mountTemplate('./pages/rules.html');
-    const { initRulesPage } = await import('../pages/rules.js');
-    await runPageInit(route, initRulesPage);
+    if (route === 'rules') {
+      await mountTemplate('./pages/rules.html');
+      const { initRulesPage } = await import('../pages/rules.js');
+      await runPageInit(route, initRulesPage);
+      return;
+    }
+
+    location.replace(buildHash('main'));
   } finally {
     console.info('[router] render:end', { route });
     animateRouteView();

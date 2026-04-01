@@ -1,4 +1,4 @@
-import { getGameDay, safeErrorMessage } from '../core/dataHub.js';
+import { getGameDay } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
 
@@ -263,15 +263,38 @@ function render(root, payload, filters) {
 export async function initGameDayPage(params = {}) {
   const root = document.getElementById('gamedayRoot') || document.getElementById('view');
   if (!root) return;
-  root.innerHTML = '<section class="px-card"><h1 class="px-card__title">Ігровий день</h1><p class="px-card__text">Завантаження…</p></section>';
+  console.log('[gameday] init start');
   try {
-    const filters = resolveParams(params);
-    const payload = await getGameDay({ league: filters.league, date: filters.date });
-    if (!payload?.hasLeagueSnapshot) {
-      console.warn('[gameday] rendered in partial mode without league snapshot sheet');
-    }
-    render(root, payload, filters);
-  } catch (error) {
-    root.innerHTML = `<section class="px-card"><h1 class="px-card__title">Ігровий день</h1><p class="px-card__text">${esc(safeErrorMessage(error, 'Помилка завантаження'))}</p></section>`;
+    await safeInitGameDayPage(root, params);
+  } catch (err) {
+    console.error('[gameday] fatal crash:', err);
+    root.innerHTML = `
+      <div style="padding:20px;color:#fff">
+        ❌ Помилка завантаження сторінки
+      </div>
+    `;
   }
+}
+
+async function safeInitGameDayPage(root, params = {}) {
+  root.innerHTML = '<section class="px-card"><h1 class="px-card__title">Ігровий день</h1><p class="px-card__text">Завантаження…</p></section>';
+  const filters = resolveParams(params);
+  const payload = await getGameDay({ league: filters.league, date: filters.date });
+  console.log('[gameday] data loaded', payload);
+  if (!payload) {
+    console.warn('[gameday] no data, rendering empty state');
+    root.innerHTML = '<section class="px-card"><h1 class="px-card__title">Ігровий день</h1><p class="px-card__text">Немає даних для відображення.</p></section>';
+    return;
+  }
+  const safePayload = {
+    ...payload,
+    activePlayers: Array.isArray(payload?.activePlayers) ? payload.activePlayers : [],
+    matches: Array.isArray(payload?.matches) ? payload.matches : [],
+    availableDates: Array.isArray(payload?.availableDates) ? payload.availableDates : [],
+    summary: payload?.summary || {}
+  };
+  if (!safePayload?.hasLeagueSnapshot) {
+    console.warn('[gameday] rendered in partial mode without league snapshot sheet');
+  }
+  render(root, safePayload, filters);
 }

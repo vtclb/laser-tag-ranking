@@ -1,4 +1,4 @@
-import { getCurrentLeagueLiveStats, getCurrentSeason, safeErrorMessage } from '../core/dataHub.js';
+import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
 
@@ -186,103 +186,128 @@ function filterPlayers(players, searchTerm) {
 export async function initLeagueStatsPage(params = {}) {
   const root = document.getElementById('view');
   if (!root) return;
-  renderLoading(root);
+  console.log('[league-stats] init start');
   try {
-    const league = resolveLeague(params);
-    const data = await getCurrentLeagueLiveStats(league);
-    const currentSeason = await getCurrentSeason().catch((error) => {
-      console.warn('[league-stats] optional season context unavailable', error);
-      return null;
+    await safeInitLeagueStatsPage(root, params);
+  } catch (err) {
+    console.error('[league-stats] fatal crash:', err);
+    root.innerHTML = `
+      <div style="padding:20px;color:#fff">
+        ❌ Помилка завантаження сторінки
+      </div>
+    `;
+  }
+}
+
+async function safeInitLeagueStatsPage(root, params = {}) {
+  renderLoading(root);
+  const league = resolveLeague(params);
+  const data = await getCurrentLeagueLiveStats(league);
+  console.log('[league-stats] data loaded', data);
+  if (!data) {
+    console.warn('[league-stats] no data, rendering empty state');
+    root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">Статистика ліги</h1><p class="px-card__text">Немає даних для відображення.</p></section>`;
+    return;
+  }
+  const currentSeason = await getCurrentSeason().catch((error) => {
+    console.warn('[league-stats] optional season context unavailable', error);
+    return null;
+  });
+  const remainingGameDays = calculateRemainingGameDays(data, currentSeason);
+  const safeData = {
+    ...data,
+    players: Array.isArray(data?.players) ? data.players : [],
+    activePlayers: Array.isArray(data?.activePlayers) ? data.activePlayers : [],
+    summary: data?.summary || {},
+    progress: data?.progress || {},
+    lastGameDay: data?.lastGameDay || null
+  };
+
+  const hero = root.querySelector('#leagueHero');
+  const rankingTable = root.querySelector('#leagueTableBody');
+  const tableTitle = root.querySelector('#leagueTableTitle');
+  const expandBtn = root.querySelector('#leagueExpandBtn');
+  const infographic = root.querySelector('#leagueInfographic');
+  const lastGameDay = root.querySelector('#leagueLastGameDay');
+  const searchInput = root.querySelector('#leagueSearchInput');
+  const sortControls = root.querySelector('#leagueSortControls');
+
+  if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !lastGameDay || !searchInput || !sortControls) {
+    console.warn('[league-stats] template nodes missing, rendering empty state');
+    root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">Статистика ліги</h1><p class="px-card__text">Немає даних для відображення.</p></section>`;
+    return;
+  }
+
+  const state = {
+    isFullOpen: false,
+    searchTerm: '',
+    sortBy: 'default',
+    sortDirection: 'desc'
+  };
+  const activePlayersBase = [...(safeData.players || [])].filter((player) => isSeasonActive(player));
+
+  const renderTables = () => {
+    const filtered = filterPlayers(activePlayersBase, state.searchTerm);
+    const sorted = sortPlayers(filtered, state.sortBy, state.sortDirection);
+    const visible = state.isFullOpen ? sorted : sorted.slice(0, 10);
+    rankingTable.innerHTML = visible.map((player) => tableRowMarkup(player, league)).join('')
+      || '<tr><td class="league-ranking-table__empty" colspan="10">Немає активних гравців за вибраним пошуком.</td></tr>';
+    tableTitle.textContent = state.isFullOpen ? 'Повний список гравців' : 'ТОП-10 гравців';
+  };
+
+  const setSortButtonState = () => {
+    sortControls.querySelectorAll('.league-sort-btn').forEach((btn) => {
+      const isActive = btn.dataset.sort === state.sortBy;
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
-    const remainingGameDays = calculateRemainingGameDays(data, currentSeason);
+  };
 
-    const hero = root.querySelector('#leagueHero');
-    const rankingTable = root.querySelector('#leagueTableBody');
-    const tableTitle = root.querySelector('#leagueTableTitle');
-    const expandBtn = root.querySelector('#leagueExpandBtn');
-    const infographic = root.querySelector('#leagueInfographic');
-    const lastGameDay = root.querySelector('#leagueLastGameDay');
-    const searchInput = root.querySelector('#leagueSearchInput');
-    const sortControls = root.querySelector('#leagueSortControls');
+  const setupRowNavigation = (tbody) => {
+    tbody.addEventListener('click', (event) => {
+      const row = event.target.closest('tr[data-href]');
+      if (!row) return;
+      window.location.hash = row.dataset.href;
+    });
+    tbody.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const row = event.target.closest('tr[data-href]');
+      if (!row) return;
+      event.preventDefault();
+      window.location.hash = row.dataset.href;
+    });
+  };
 
-    if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !lastGameDay || !searchInput || !sortControls) {
-      throw new Error('League stats template не знайдено.');
+  renderHero(hero, league, safeData, remainingGameDays);
+  renderInfographic(infographic, safeData, remainingGameDays);
+  renderLastGameDay(lastGameDay, safeData.lastGameDay, league);
+  setSortButtonState();
+  renderTables();
+
+  setupRowNavigation(rankingTable);
+
+  expandBtn.addEventListener('click', () => {
+    state.isFullOpen = !state.isFullOpen;
+    expandBtn.textContent = state.isFullOpen ? 'Сховати повний список' : 'Показати всіх гравців';
+    renderTables();
+  });
+
+  searchInput.addEventListener('input', () => {
+    state.searchTerm = searchInput.value || '';
+    renderTables();
+  });
+
+  sortControls.addEventListener('click', (event) => {
+    const button = event.target.closest('.league-sort-btn');
+    if (!button) return;
+    const nextSort = button.dataset.sort || 'default';
+    if (state.sortBy === nextSort && nextSort !== 'default') {
+      state.sortDirection = state.sortDirection === 'desc' ? 'asc' : 'desc';
+    } else {
+      state.sortDirection = 'desc';
     }
-
-    const state = {
-      isFullOpen: false,
-      searchTerm: '',
-      sortBy: 'default',
-      sortDirection: 'desc'
-    };
-
-    const activePlayersBase = [...(data.players || [])].filter((player) => isSeasonActive(player));
-
-    const renderTables = () => {
-      const filtered = filterPlayers(activePlayersBase, state.searchTerm);
-      const sorted = sortPlayers(filtered, state.sortBy, state.sortDirection);
-      const visible = state.isFullOpen ? sorted : sorted.slice(0, 10);
-      rankingTable.innerHTML = visible.map((player) => tableRowMarkup(player, league)).join('')
-        || '<tr><td class="league-ranking-table__empty" colspan="10">Немає активних гравців за вибраним пошуком.</td></tr>';
-      tableTitle.textContent = state.isFullOpen ? 'Повний список гравців' : 'ТОП-10 гравців';
-    };
-
-    const setSortButtonState = () => {
-      sortControls.querySelectorAll('.league-sort-btn').forEach((btn) => {
-        const isActive = btn.dataset.sort === state.sortBy;
-        btn.classList.toggle('is-active', isActive);
-        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      });
-    };
-
-    const setupRowNavigation = (tbody) => {
-      tbody.addEventListener('click', (event) => {
-        const row = event.target.closest('tr[data-href]');
-        if (!row) return;
-        window.location.hash = row.dataset.href;
-      });
-      tbody.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        const row = event.target.closest('tr[data-href]');
-        if (!row) return;
-        event.preventDefault();
-        window.location.hash = row.dataset.href;
-      });
-    };
-
-    renderHero(hero, league, data, remainingGameDays);
-    renderInfographic(infographic, data, remainingGameDays);
-    renderLastGameDay(lastGameDay, data.lastGameDay, league);
+    state.sortBy = nextSort;
     setSortButtonState();
     renderTables();
-
-    setupRowNavigation(rankingTable);
-
-    expandBtn.addEventListener('click', () => {
-      state.isFullOpen = !state.isFullOpen;
-      expandBtn.textContent = state.isFullOpen ? 'Сховати повний список' : 'Показати всіх гравців';
-      renderTables();
-    });
-
-    searchInput.addEventListener('input', () => {
-      state.searchTerm = searchInput.value || '';
-      renderTables();
-    });
-
-    sortControls.addEventListener('click', (event) => {
-      const button = event.target.closest('.league-sort-btn');
-      if (!button) return;
-      const nextSort = button.dataset.sort || 'default';
-      if (state.sortBy === nextSort && nextSort !== 'default') {
-        state.sortDirection = state.sortDirection === 'desc' ? 'asc' : 'desc';
-      } else {
-        state.sortDirection = 'desc';
-      }
-      state.sortBy = nextSort;
-      setSortButtonState();
-      renderTables();
-    });
-  } catch (error) {
-    root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">Статистика ліги</h1><p class="px-card__text">${esc(safeErrorMessage(error, 'Помилка завантаження live-даних'))}</p></section>`;
-  }
+  });
 }

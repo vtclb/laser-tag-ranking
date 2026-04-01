@@ -1421,15 +1421,6 @@ async function getSeasonBundle(season) {
   if (cached) return cached;
 
   const emptySheet = { header: [], rows: [] };
-  const bundle = {
-    seasonSheet: null,
-    kidsSheet: null,
-    sundaySheet: null,
-    gamesSheet: null,
-    logsSheet: null,
-    matches: [],
-    logs: []
-  };
 
   const [seasonSheet, kidsSheet, sundaySheet, gamesSheet, logsSheet] = await Promise.all([
     season.sources.seasonSheet
@@ -1445,20 +1436,25 @@ async function getSeasonBundle(season) {
       ? loadSoftCritical(`${season.id}:games-sheet`, () => readSheet(season.sources.gamesSheet), null)
       : Promise.resolve(null),
     season.sources.logsSheet
-      ? loadOptional(`${season.id}:logs-sheet`, () => readSheet(season.sources.logsSheet), null)
+      ? loadOptional(`${season.id}:logs-sheet`, () => readSheet(season.sources.logsSheet), emptySheet)
       : Promise.resolve(null)
   ]);
 
-  bundle.seasonSheet = seasonSheet;
-  bundle.kidsSheet = kidsSheet;
-  bundle.sundaySheet = sundaySheet;
-  bundle.gamesSheet = gamesSheet;
-  bundle.logsSheet = logsSheet;
+  const normalizedBundle = {
+    season: seasonSheet || emptySheet,
+    kids: kidsSheet || emptySheet,
+    sunday: sundaySheet || emptySheet,
+    games: parseMatches(gamesSheet || seasonSheet || kidsSheet || sundaySheet || emptySheet) || [],
+    logs: parseLogs(logsSheet || emptySheet) || [],
+    seasonSheet: seasonSheet || emptySheet,
+    kidsSheet: kidsSheet || emptySheet,
+    sundaySheet: sundaySheet || emptySheet,
+    gamesSheet: gamesSheet || emptySheet,
+    logsSheet: logsSheet || emptySheet,
+    matches: parseMatches(gamesSheet || seasonSheet || kidsSheet || sundaySheet || emptySheet) || []
+  };
 
-  bundle.matches = parseMatches(gamesSheet || seasonSheet || kidsSheet || sundaySheet || emptySheet);
-  bundle.logs = parseLogs(logsSheet || emptySheet);
-
-  return writeCache(key, bundle);
+  return writeCache(key, normalizedBundle);
 }
 
 export async function getAvatarsMap() {
@@ -1572,12 +1568,15 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     getSeasonBundle(season),
     loadOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
-  let rows = bundle.seasonSheet ? parseScoreboardRows(bundle.seasonSheet, selectedLeague) : [];
-  const fallbackSheet = selectedLeague === 'kids' ? (bundle.kidsSheet || {}) : (bundle.sundaySheet || {});
-  const fallbackRows = parseScoreboardRows(fallbackSheet, selectedLeague);
+  let rows = parseScoreboardRows(bundle.season || bundle.seasonSheet || { header: [], rows: [] }, selectedLeague);
+  const fallbackSheet = selectedLeague === 'kids'
+    ? (bundle.kids || bundle.kidsSheet || { header: [], rows: [] })
+    : (bundle.sunday || bundle.sundaySheet || { header: [], rows: [] });
+  const fallbackRows = parseScoreboardRows(fallbackSheet || { header: [], rows: [] }, selectedLeague);
   if (!rows.length) rows = fallbackRows;
   const pointsByNick = rows.length ? pointsMapFromRows(rows) : pointsMapFromRows(fallbackRows);
-  let statsMap = buildStatsFromMatches(bundle.matches, selectedLeague, pointsByNick);
+  const bundleGames = Array.isArray(bundle.games) ? bundle.games : Array.isArray(bundle.matches) ? bundle.matches : [];
+  let statsMap = buildStatsFromMatches(bundleGames, selectedLeague, pointsByNick);
 
   if (!statsMap.size && rows.length) statsMap = new Map(rows.map((row) => [normalizeHeader(row.nick), row]));
   else if (rows.length) {
@@ -1588,7 +1587,7 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     });
   }
 
-  if (!statsMap.size && !rows.length && !bundle.matches.length) {
+  if (!rows.length && !bundleGames.length) {
     throw new Error('Недостатньо базових даних для побудови snapshot.');
   }
 
@@ -1597,7 +1596,7 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     acc.games += item.games || 0; acc.wins += item.wins || 0; acc.draws += item.draws || 0; acc.losses += item.losses || 0; acc.pointsDelta += item.points || 0;
     return acc;
   }, { games: 0, wins: 0, draws: 0, losses: 0, pointsDelta: 0, players: leaderboard.length, rounds: 0, mvp: 0 });
-  const leagueMatches = bundle.matches.filter((m) => normalizeLeague(m.league) === selectedLeague);
+  const leagueMatches = bundleGames.filter((m) => normalizeLeague(m.league) === selectedLeague);
   const volume = deriveGameAndBattleCounts(leagueMatches);
   seasonStats.playerGames = seasonStats.games;
   seasonStats.rounds = leagueMatches.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0);
@@ -1952,12 +1951,15 @@ export async function getPlayerProfile(nickOrOptions = {}, leagueArg = 'kids') {
 export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dateYMD = typeof dateOrOptions === 'object' ? (dateOrOptions.date || dateOrOptions.dateYMD) : dateOrOptions;
   const league = normalizeLeague(typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg) || 'kids';
-  const gamesSheet = await loadCritical('games-sheet', () => readSheet('games', { limitRows: 8000, limitCols: 40 }));
-  const [leagueSheet, logsSheet, avatarsMap] = await Promise.all([
-    loadSoftCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }), { header: [], rows: [] }),
-    loadOptional('logs-sheet', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
-    loadOptional('avatars-map', () => getAvatarsMap(), new Map())
+  const games = await loadCritical('games', () => readSheet('games', { limitRows: 8000, limitCols: 40 }));
+  const [leagueSheet, logs, avatars] = await Promise.all([
+    loadSoftCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }), null),
+    loadOptional('logs', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
+    loadOptional('avatars', () => getAvatarsMap(), new Map())
   ]);
+  const gamesSheet = games || { header: [], rows: [] };
+  const logsSheet = logs || { header: [], rows: [] };
+  const avatarsMap = avatars || new Map();
 
   const allLeagueMatches = parseMatches(gamesSheet || { header: [], rows: [] })
     .filter((m) => m.league === league)

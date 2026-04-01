@@ -1,4 +1,4 @@
-import { getCurrentLeagueLiveStats, getHomeLiveData, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
@@ -153,13 +153,25 @@ export async function initHomePage() {
   if (!stateBox || !leadersNowMount || !leagueSections || !homeFooter) return;
 
   const renderHome = async () => {
-    const [adultsLive, kidsLive] = await Promise.all([
+    const [adultsResult, kidsResult] = await Promise.allSettled([
       getCurrentLeagueLiveStats('sundaygames'),
       getCurrentLeagueLiveStats('kids')
     ]);
+    const adultsLive = adultsResult.status === 'fulfilled' ? adultsResult.value : { players: [] };
+    const kidsLive = kidsResult.status === 'fulfilled' ? kidsResult.value : { players: [] };
     const pickSeasonActive = (livePlayers = []) => (livePlayers || []).filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc);
     const adultsPlayers = pickSeasonActive(adultsLive.players);
     const kidsPlayers = pickSeasonActive(kidsLive.players);
+
+    if (adultsResult.status === 'rejected') {
+      console.warn('[home] optional league data failed: sundaygames', adultsResult.reason);
+    }
+    if (kidsResult.status === 'rejected') {
+      console.warn('[home] optional league data failed: kids', kidsResult.reason);
+    }
+    if (!adultsPlayers.length && !kidsPlayers.length) {
+      throw new Error('Не вдалося завантажити live-рейтинг');
+    }
 
     leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
 
@@ -178,7 +190,6 @@ export async function initHomePage() {
   };
 
   try {
-    await getHomeLiveData();
     stateBox.hidden = true;
     stateBox.textContent = '';
     await renderHome();

@@ -512,6 +512,25 @@ async function readSheet(sheetName, options = {}) {
   try { return await promise; } finally { inFlight.delete(key); }
 }
 
+async function fetchCritical(sourceLabel, loader) {
+  try {
+    return await loader();
+  } catch (error) {
+    console.error(`[dataHub] critical source failed: ${sourceLabel}`, error);
+    throw error;
+  }
+}
+
+async function fetchOptional(sourceLabel, loader, fallbackValue) {
+  try {
+    const value = await loader();
+    return value ?? fallbackValue;
+  } catch (error) {
+    console.warn(`[dataHub] optional source failed: ${sourceLabel}`, String(error?.message || error));
+    return fallbackValue;
+  }
+}
+
 function detectCols(header = []) {
   const normalized = header.map(normalizeHeader);
   const idx = (names) => normalized.findIndex((col) => names.includes(col));
@@ -1081,12 +1100,12 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
   const cached = readCache(cacheKey, TTL.leagueSnapshot);
   if (cached) return cached;
 
-  const [season, leagueSheet, gamesSheet, logsSheet, avatarsMap] = await Promise.all([
-    getCurrentSeason(),
-    readSheet(league, { limitRows: 4000, limitCols: 40 }),
-    readSheet('games', { limitRows: 8000, limitCols: 40 }),
-    readSheet('logs', { limitRows: 8000, limitCols: 30 }),
-    getAvatarsMap()
+  const season = await fetchCritical('current-season', () => getCurrentSeason());
+  const leagueSheet = await fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 4000, limitCols: 40 }));
+  const [gamesSheet, logsSheet, avatarsMap] = await Promise.all([
+    fetchOptional('games-sheet', () => readSheet('games', { limitRows: 8000, limitCols: 40 }), { header: [], rows: [] }),
+    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
 
   const seasonStart = String(season?.dateStart || '').slice(0, 10);
@@ -1242,11 +1261,11 @@ export async function getLeagueLiveData(leagueId = 'kids') {
   const cached = readCache(cacheKey, TTL.leagueSnapshot);
   if (cached) return cached;
 
-  const [leagueSheet, logsSheet, gamesSheet, avatarsMap] = await Promise.all([
-    readSheet(league, { limitRows: 3000, limitCols: 40 }),
-    readSheet('logs', { limitRows: 6000, limitCols: 30 }),
-    readSheet('games', { limitRows: 6000, limitCols: 40 }),
-    getAvatarsMap()
+  const leagueSheet = await fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }));
+  const [logsSheet, gamesSheet, avatarsMap] = await Promise.all([
+    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 6000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('games-sheet', () => readSheet('games', { limitRows: 6000, limitCols: 40 }), { header: [], rows: [] }),
+    fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
 
   const players = parseLeagueTableForLive(leagueSheet?.rows || [], leagueSheet?.header || [], avatarsMap);
@@ -1309,12 +1328,14 @@ export async function getLeagueLiveData(leagueId = 'kids') {
 }
 
 export async function getHomeLiveData() {
-  const [adultsSheet, kidsSheet, logsSheet, gamesSheet, avatarsMap] = await Promise.all([
-    readSheet('sundaygames', { limitRows: 2000, limitCols: 30 }),
-    readSheet('kids', { limitRows: 2000, limitCols: 30 }),
-    readSheet('logs', { limitRows: 5000, limitCols: 30 }),
-    readSheet('games', { limitRows: 5000, limitCols: 30 }),
-    getAvatarsMap()
+  const [adultsSheet, kidsSheet] = await Promise.all([
+    fetchCritical('sundaygames-sheet', () => readSheet('sundaygames', { limitRows: 2000, limitCols: 30 })),
+    fetchCritical('kids-sheet', () => readSheet('kids', { limitRows: 2000, limitCols: 30 }))
+  ]);
+  const [logsSheet, gamesSheet, avatarsMap] = await Promise.all([
+    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 5000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('games-sheet', () => readSheet('games', { limitRows: 5000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
 
   return {
@@ -1880,11 +1901,13 @@ export async function getPlayerProfile(nickOrOptions = {}, leagueArg = 'kids') {
 export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dateYMD = typeof dateOrOptions === 'object' ? (dateOrOptions.date || dateOrOptions.dateYMD) : dateOrOptions;
   const league = normalizeLeague(typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg) || 'kids';
-  const [leagueSheet, gamesSheet, logsSheet, avatarsMap] = await Promise.all([
-    readSheet(league, { limitRows: 3000, limitCols: 40 }),
-    readSheet('games', { limitRows: 8000, limitCols: 40 }),
-    readSheet('logs', { limitRows: 8000, limitCols: 30 }),
-    getAvatarsMap()
+  const [leagueSheet, gamesSheet] = await Promise.all([
+    fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 })),
+    fetchCritical('games-sheet', () => readSheet('games', { limitRows: 8000, limitCols: 40 }))
+  ]);
+  const [logsSheet, avatarsMap] = await Promise.all([
+    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
 
   const allLeagueMatches = parseMatches(gamesSheet || { header: [], rows: [] })

@@ -109,6 +109,7 @@ function renderHero(root, league, data, remainingGameDays) {
 }
 
 function renderInfographic(root, data, remainingGameDays) {
+  const totalDeltaPoints = data.activePlayers.reduce((sum, player) => sum + (Number(player.delta) || 0), 0);
   const averageWinRate = data.summary.activePlayersCount
     ? `${(data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount).toFixed(1)}%`
     : '—';
@@ -126,7 +127,7 @@ function renderInfographic(root, data, remainingGameDays) {
   </section>
   <section class="league-dashboard-group league-rank-distribution">
     <h3 class="league-subtitle">Розподіл за рангами</h3>
-    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><strong>GD</strong><span>${esc(remainingGameDays)}</span></article></div>
+    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><strong>Σ Δ балів</strong><span>${esc(fmtSigned(totalDeltaPoints))}</span></article></div>
   </section>
   <section class="league-dashboard-group">
     <h3 class="league-subtitle">Highlights</h3>

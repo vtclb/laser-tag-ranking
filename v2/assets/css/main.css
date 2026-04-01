@@ -1,6 +1,6 @@
-/* GLOBAL HARD RESET — NO ROUNDED UI */
-* {
-  border-radius: 0 !important;
+/* V2 scope-only geometry guard: avoid global reset leakage */
+body.theme-game #app :is(.topnav, .page, .container, .hero, .px-card, .section, .btn, input, select, textarea) {
+  border-radius: 0;
 }
 
 :root {
@@ -2625,4 +2625,73 @@ body.theme-game #view.route-enter.route-enter-active {
 .leaders-now,
 .leaders-now * {
   border-radius: 0 !important;
+}
+
+/* Final V2 polish overrides: unified header, rectangular internals, clear stats */
+.topnav__links {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.topnav__links .topnav__pill {
+  min-height: 38px;
+  font-size: .7rem;
+  border: 1px solid rgba(145, 173, 235, .35);
+  background: linear-gradient(180deg, rgba(15, 24, 40, .98), rgba(6, 11, 20, .98)) !important;
+  color: #deebff;
+  text-decoration: none;
+}
+
+.topnav__links .topnav__pill[aria-current='page'] {
+  border-color: rgba(124, 255, 114, .6);
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 114, .24), 0 0 12px rgba(124, 255, 114, .2);
+  color: #f1fff0;
+}
+
+.home-v2 .home-ranking__points,
+.home-v2 .leader-points {
+  display: grid;
+  gap: .08rem;
+  line-height: 1.1;
+}
+
+.home-v2 .home-ranking__points small,
+.home-v2 .leader-points small {
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+
+.league-page .league-sort-btn {
+  font-size: .62rem;
+}
+
+.league-page .league-kpi-card,
+.league-page .league-highlight-card,
+.league-page .league-rank-tile,
+.league-page .league-dashboard-group,
+.league-page #leagueLastGameDay .px-card__actions,
+.league-page #leagueLastGameDay .btn {
+  border-radius: 0 !important;
+}
+
+.league-page .league-highlight-card__value {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.gameday-v2 .gameday-team-box.is-winner ul,
+.gameday-v2 .gameday-team-box.is-loser ul {
+  padding: .3rem .45rem;
+  border: 1px solid rgba(255, 255, 255, .16);
+  list-style: none;
+}
+
+.gameday-v2 .gameday-team-box.is-winner li {
+  color: #cffff0;
+}
+
+.gameday-v2 .gameday-team-box.is-loser li {
+  color: #ffd8d3;
 }

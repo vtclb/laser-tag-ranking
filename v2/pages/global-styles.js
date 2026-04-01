@@ -28,7 +28,7 @@ function ensureTopNav() {
   const header = document.querySelector('header.topbar, header.topnav');
   if (!header || header.dataset.v2Topnav === '1') return;
   header.className = 'topnav';
-  header.innerHTML = `<div class="container topnav__row"><nav class="topnav__actions topnav__links" aria-label="Головна навігація"><a class="topnav__pill" href="#league-stats?league=sundaygames">Доросла ліга</a><a class="topnav__pill" href="#league-stats?league=kids">Дитяча ліга</a><a class="topnav__pill" href="#gameday?league=sundaygames">Ігровий день</a><a class="topnav__pill" href="#rules">Правила</a></nav></div>`;
+  header.innerHTML = `<div class="container topnav__row"><nav class="topnav__actions topnav__links" aria-label="Головна навігація"><a class="topnav__pill" href="#main">Головна</a><a class="topnav__pill" href="#league-stats?league=sundaygames">Доросла ліга</a><a class="topnav__pill" href="#league-stats?league=kids">Дитяча ліга</a><a class="topnav__pill" href="#gameday?league=sundaygames">Ігровий день</a><a class="topnav__pill" href="#rules">Правила</a></nav></div>`;
   header.dataset.v2Topnav = '1';
 }
 
@@ -94,6 +94,25 @@ function ensureFonts() {
   ensureLink({ id: 'v2-fonts-css', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;700&display=swap' });
 }
 
+function updateTopNavActiveState() {
+  const route = String(location.hash || '#main').replace(/^#/, '').split('?')[0] || 'main';
+  const routeToHref = {
+    main: '#main',
+    'league-stats': null,
+    gameday: '#gameday',
+    rules: '#rules'
+  };
+
+  document.querySelectorAll('.topnav__links .topnav__pill').forEach((link) => {
+    const href = String(link.getAttribute('href') || '');
+    const normalizedHref = href.split('?')[0];
+    const isLeagueStats = route === 'league-stats' && normalizedHref === '#league-stats';
+    const isCurrent = isLeagueStats || (routeToHref[route] && normalizedHref === routeToHref[route]);
+    if (isCurrent) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+}
+
 function ensureLoadingScript() {
   if (window.LoadingCubes || document.getElementById('v2-loading-cubes-script')) return;
   const script = document.createElement('script');
@@ -125,6 +144,12 @@ export function ensureGlobalStyles() {
   ensureFonts();
   ensureTopNav();
   ensureNavSheet();
+  updateTopNavActiveState();
+  if (!window.__v2TopNavActiveBound) {
+    window.__v2TopNavActiveBound = true;
+    window.addEventListener('hashchange', updateTopNavActiveState);
+    window.addEventListener('v2:route-rendered', updateTopNavActiveState);
+  }
   ensureLoadingScript();
   attachLoadingHooks();
 }

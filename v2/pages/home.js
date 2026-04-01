@@ -133,7 +133,7 @@ export async function initHomePage() {
 
 export async function initPage(root) {
   if (!root) return;
-  console.log('[home] init start');
+  console.log('[home] init called');
   try {
     await safeInitHomePage(root);
   } catch (err) {

@@ -65,7 +65,7 @@ function tableRowMarkup(player, league) {
 }
 
 function statCard(label, value, icon) {
-  return `<article class="league-kpi-card"><div class="league-kpi-card__label">${esc(icon)} ${esc(label)}</div><div class="league-kpi-card__value">${esc(value)}</div></article>`;
+  return `<article class="league-kpi-card"><div class="league-kpi-card__label"><span class="league-kpi-card__icon">${esc(icon)}</span><span>${esc(label)}</span></div><div class="league-kpi-card__value">${esc(value)}</div></article>`;
 }
 
 function calculateRemainingGameDays(data, currentSeason) {
@@ -84,20 +84,20 @@ function calculateRemainingGameDays(data, currentSeason) {
 function highlightCard(player, value, label, icon, tone) {
   if (!player) {
     return `<article class="league-highlight-card league-highlight-card--${tone}">
+      <div class="league-highlight-card__meta"><span class="league-highlight-card__icon">${esc(icon)}</span><span class="league-highlight-card__category">${esc(label)}</span></div>
       <div class="league-highlight-card__name">—</div>
       <div class="league-highlight-card__value">—</div>
-      <div class="league-highlight-card__title">${esc(icon)} ${esc(label)}</div>
     </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
   return `<article class="league-highlight-card league-highlight-card--${tone}">
-    <div class="league-highlight-card__player">
+    <div class="league-highlight-card__meta">
       <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
       <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
+      <span class="league-highlight-card__category">${esc(label)}</span>
     </div>
     <div class="league-highlight-card__name">${esc(player.nickname)}</div>
     <div class="league-highlight-card__value">${esc(value)}</div>
-    <div class="league-highlight-card__title">${esc(icon)} ${esc(label)}</div>
   </article>`;
 }
 
@@ -130,7 +130,7 @@ function renderInfographic(root, data, remainingGameDays) {
     <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><strong>Σ Δ балів</strong><span>${esc(fmtSigned(totalDeltaPoints))}</span></article></div>
   </section>
   <section class="league-dashboard-group">
-    <h3 class="league-subtitle">Highlights</h3>
+    <h3 class="league-subtitle">КЛЮЧОВІ МОМЕНТИ</h3>
     <div class="league-highlights-grid">
     ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', '🚀', 'up')}
     ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', '🏆', 'mvp')}

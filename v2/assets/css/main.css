@@ -3052,3 +3052,173 @@ body.theme-game .page-root {
 body.theme-game main.page {
   padding-top: 0;
 }
+
+/* ===== V2 LEAGUE DASHBOARD COMPACTION ===== */
+.league-page #leagueInfographic .league-dashboard-group {
+  padding: 12px;
+  border: 1px solid rgba(138, 170, 238, .24);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(14, 22, 38, .96), rgba(9, 14, 26, .94));
+}
+
+.league-page #leagueInfographic .league-subtitle {
+  min-height: 38px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px solid rgba(138, 170, 238, .26);
+  border-radius: 6px;
+  letter-spacing: .08em;
+}
+
+.league-page #leagueInfographic .league-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.league-page #leagueInfographic .league-kpi-card {
+  min-height: 96px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgba(138, 170, 238, .24);
+  border-radius: 6px;
+  background: rgba(14, 24, 44, .78);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.league-page #leagueInfographic .league-kpi-card__label {
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(224, 236, 255, .72);
+}
+
+.league-page #leagueInfographic .league-kpi-card__icon {
+  font-size: 13px;
+}
+
+.league-page #leagueInfographic .league-kpi-card__value {
+  min-height: 0;
+  display: block;
+  font-size: clamp(1.75rem, 6.5vw, 2rem);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: #f4f8ff;
+}
+
+.league-page #leagueInfographic .league-rank-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.league-page #leagueInfographic .league-rank-tile {
+  min-height: 84px;
+  margin: 0;
+  padding: 10px;
+  border-width: 1px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.league-page #leagueInfographic .league-rank-tile strong {
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: .76;
+}
+
+.league-page #leagueInfographic .league-rank-tile span {
+  font-size: clamp(1.25rem, 4.5vw, 1.55rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.league-page #leagueInfographic .league-rank-tile--meta {
+  border-color: rgba(49, 208, 255, .52) !important;
+}
+
+.league-page #leagueInfographic .league-highlights-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.league-page #leagueInfographic .league-highlight-card {
+  min-height: 102px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgba(138, 170, 238, .24);
+  border-radius: 6px;
+  background: rgba(14, 24, 44, .78);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.league-page #leagueInfographic .league-highlight-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.league-page #leagueInfographic .league-highlight-card__meta .league-avatar-wrap {
+  width: 22px;
+  height: 22px;
+}
+
+.league-page #leagueInfographic .league-highlight-card__meta .league-rank-badge {
+  min-width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+.league-page #leagueInfographic .league-highlight-card__category,
+.league-page #leagueInfographic .league-highlight-card__icon {
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(224, 236, 255, .74);
+}
+
+.league-page #leagueInfographic .league-highlight-card__name {
+  font-size: 15px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.league-page #leagueInfographic .league-highlight-card__value {
+  margin: 0;
+  font-size: clamp(1.5rem, 5.8vw, 1.85rem);
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+@media (min-width: 761px) {
+  .league-page #leagueInfographic .league-kpi-card {
+    min-height: 104px;
+  }
+
+  .league-page #leagueInfographic .league-rank-tile {
+    min-height: 90px;
+  }
+
+  .league-page #leagueInfographic .league-highlight-card {
+    min-height: 108px;
+  }
+}

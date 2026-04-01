@@ -30,7 +30,7 @@ function ensureTopNav() {
   const header = document.querySelector('header.topbar, header.topnav');
   if (!header || header.dataset.v2Topnav === '1') return;
   header.className = 'topnav';
-  header.innerHTML = `<div class="container topnav__row"><nav class="topnav__actions topnav__links" aria-label="Головна навігація"><a class="topnav__pill" href="#main">Головна</a><a class="topnav__pill" href="#league-stats?league=sundaygames">Доросла ліга</a><a class="topnav__pill" href="#league-stats?league=kids">Дитяча ліга</a><a class="topnav__pill" href="#gameday?league=sundaygames">Ігровий день</a><a class="topnav__pill" href="#rules">Правила</a></nav></div>`;
+  header.innerHTML = `<div class="container topnav__row"><nav class="topnav__actions topnav__links v2-nav" aria-label="Головна навігація"><div class="v2-nav-grid"><a class="topnav__pill v2-nav-item" href="#main">Головна</a><a class="topnav__pill v2-nav-item" href="#league-stats?league=sundaygames">Доросла ліга</a><a class="topnav__pill v2-nav-item" href="#league-stats?league=kids">Дитяча ліга</a><a class="topnav__pill v2-nav-item" href="#gameday?league=sundaygames">Ігровий день</a></div><a class="topnav__pill v2-nav-item v2-nav-item--wide" href="#rules">Правила</a></nav></div>`;
   header.dataset.v2Topnav = '1';
 }
 
@@ -103,7 +103,7 @@ function updateTopNavActiveState() {
     const qp = new URLSearchParams(queryString);
     const league = normalizeLeague?.(qp.get('league') || qp.get('lg') || '') || '';
 
-    document.querySelectorAll('.topnav__links .topnav__pill').forEach((link) => {
+    document.querySelectorAll('.topnav__links .v2-nav-item').forEach((link) => {
       const href = String(link.getAttribute('href') || '');
       const [linkRoute = '', linkQs = ''] = href.replace(/^#/, '').split('?');
       const linkParams = new URLSearchParams(linkQs);
@@ -116,8 +116,13 @@ function updateTopNavActiveState() {
         || (route === 'gameday' && linkRoute === 'gameday' && (!linkLeague || linkLeague === league))
       );
 
-      if (isCurrent) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
+      if (isCurrent) {
+        link.setAttribute('aria-current', 'page');
+        link.classList.add('active');
+      } else {
+        link.removeAttribute('aria-current');
+        link.classList.remove('active');
+      }
     });
   } catch (error) {
     console.error('[global-styles] updateTopNavActiveState failed', error);

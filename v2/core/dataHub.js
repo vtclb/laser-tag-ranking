@@ -41,13 +41,13 @@ const SHEET_ALIASES = {
   архів: ['archive']
 };
 const RANK_META = {
-  S: { label: 'S', cssClass: 'rank-S', themeVars: { '--rank-color': '#ffd166', '--rank-glow': 'rgba(255,209,102,.45)' } },
-  A: { label: 'A', cssClass: 'rank-A', themeVars: { '--rank-color': '#ff7b72', '--rank-glow': 'rgba(255,123,114,.4)' } },
-  B: { label: 'B', cssClass: 'rank-B', themeVars: { '--rank-color': '#58a6ff', '--rank-glow': 'rgba(88,166,255,.38)' } },
-  C: { label: 'C', cssClass: 'rank-C', themeVars: { '--rank-color': '#3fb950', '--rank-glow': 'rgba(63,185,80,.35)' } },
-  D: { label: 'D', cssClass: 'rank-D', themeVars: { '--rank-color': '#9da7b3', '--rank-glow': 'rgba(157,167,179,.3)' } },
-  E: { label: 'E', cssClass: 'rank-E', themeVars: { '--rank-color': '#8b949e', '--rank-glow': 'rgba(139,148,158,.28)' } },
-  F: { label: 'F', cssClass: 'rank-F', themeVars: { '--rank-color': '#6e7681', '--rank-glow': 'rgba(110,118,129,.2)' } }
+  S: { label: 'S', cssClass: 'rank-S', themeVars: { '--rank-color': '#9c27b0', '--rank-glow': 'rgba(156,39,176,.45)' } },
+  A: { label: 'A', cssClass: 'rank-A', themeVars: { '--rank-color': '#e91e63', '--rank-glow': 'rgba(233,30,99,.4)' } },
+  B: { label: 'B', cssClass: 'rank-B', themeVars: { '--rank-color': '#ffb300', '--rank-glow': 'rgba(255,179,0,.38)' } },
+  C: { label: 'C', cssClass: 'rank-C', themeVars: { '--rank-color': '#4fc3f7', '--rank-glow': 'rgba(79,195,247,.35)' } },
+  D: { label: 'D', cssClass: 'rank-D', themeVars: { '--rank-color': '#777', '--rank-glow': 'rgba(119,119,119,.3)' } },
+  E: { label: 'E', cssClass: 'rank-E', themeVars: { '--rank-color': '#666', '--rank-glow': 'rgba(102,102,102,.28)' } },
+  F: { label: 'F', cssClass: 'rank-F', themeVars: { '--rank-color': '#444', '--rank-glow': 'rgba(68,68,68,.22)' } }
 };
 const RANK_THRESHOLDS = [['S', 1200], ['A', 1000], ['B', 800], ['C', 600], ['D', 400], ['E', 200], ['F', 0]];
 const MAX_BATTLES_PER_GAME = 7;

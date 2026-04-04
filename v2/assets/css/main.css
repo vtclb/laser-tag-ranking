@@ -3531,3 +3531,54 @@ body.theme-game {
 .league-page .league-rank-tile--d { background: color-mix(in srgb, var(--rank-d) 14%, transparent) !important; }
 .league-page .league-rank-tile--e { background: color-mix(in srgb, var(--rank-e) 18%, transparent) !important; }
 .league-page .league-rank-tile--f { background: color-mix(in srgb, var(--rank-f) 18%, transparent) !important; }
+
+/* Rank badge readability hardening (home + league + key moments). */
+.home-v2 .leader-rank,
+.home-v2 .home-ranking__rank,
+.league-page .league-rank-badge,
+.league-page #leagueInfographic .league-highlight-card__badge {
+  --_rank-color: var(--rank-e);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--_rank-color) !important;
+  background: color-mix(in srgb, var(--_rank-color) 22%, rgba(8, 12, 24, 0.96)) !important;
+  color: #fff !important;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), 0 0 10px color-mix(in srgb, var(--_rank-color) 28%, transparent);
+}
+
+.home-v2 .leader-rank.rank-s,
+.home-v2 .home-ranking__rank.rank-s,
+.league-page .league-rank-badge.rank-s,
+.league-page #leagueInfographic .league-highlight-card__badge.rank-s { --_rank-color: var(--rank-s); }
+.home-v2 .leader-rank.rank-a,
+.home-v2 .home-ranking__rank.rank-a,
+.league-page .league-rank-badge.rank-a,
+.league-page #leagueInfographic .league-highlight-card__badge.rank-a { --_rank-color: var(--rank-a); }
+.home-v2 .leader-rank.rank-b,
+.home-v2 .home-ranking__rank.rank-b,
+.league-page .league-rank-badge.rank-b,
+.league-page #leagueInfographic .league-highlight-card__badge.rank-b { --_rank-color: var(--rank-b); }
+.home-v2 .leader-rank.rank-c,
+.home-v2 .home-ranking__rank.rank-c,
+.league-page .league-rank-badge.rank-c,
+.league-page #leagueInfographic .league-highlight-card__badge.rank-c { --_rank-color: var(--rank-c); }
+.home-v2 .leader-rank.rank-d,
+.home-v2 .home-ranking__rank.rank-d,
+.league-page .league-rank-badge.rank-d,
+.league-page #leagueInfographic .league-highlight-card__badge.rank-d { --_rank-color: var(--rank-d); }
+.home-v2 .leader-rank.rank-e,
+.home-v2 .home-ranking__rank.rank-e,
+.league-page .league-rank-badge.rank-e,
+.league-page #leagueInfographic .league-highlight-card__badge.rank-e { --_rank-color: var(--rank-e); }
+.home-v2 .leader-rank.rank-f,
+.home-v2 .home-ranking__rank.rank-f,
+.league-page .league-rank-badge.rank-f,
+.league-page #leagueInfographic .league-highlight-card__badge.rank-f { --_rank-color: var(--rank-f); }

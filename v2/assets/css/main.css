@@ -10,6 +10,14 @@ body.theme-game #app :is(.topnav, .page, .container, .hero, .px-card, .section, 
   --muted: #9cb0cf;
   --accent: #31d0ff;
   --accent-2: #7cff72;
+  /* Canonical rank palette (synced with original/main site). */
+  --rank-s: #9c27b0;
+  --rank-a: #e91e63;
+  --rank-b: #ffb300;
+  --rank-c: #4fc3f7;
+  --rank-d: #777;
+  --rank-e: #666;
+  --rank-f: #444;
 }
 * { box-sizing: border-box; }
 body {
@@ -59,20 +67,20 @@ mark { background: #ffe066; color: #101320; border-radius: .2rem; padding: 0 .1r
 .profile-header { border-width: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,.15), 0 0 28px rgba(88,178,255,.16); }
 .progress-shell { margin-top: .75rem; width: 100%; height: 10px; border-radius: 999px; background: rgba(255,255,255,.15); overflow: hidden; }
 .progress-bar { height: 100%; background: linear-gradient(90deg, #5dd6ff, #83f28a); }
-.rank-F { color: #9aa7bd; background: rgba(154,167,189,.18); }
-.rank-E { color: #61c3ff; background: rgba(97,195,255,.18); }
-.rank-D { color: #55d896; background: rgba(85,216,150,.18); }
-.rank-C { color: #89cf4e; background: rgba(137,207,78,.18); }
-.rank-B { color: #ffd166; background: rgba(255,209,102,.2); }
-.rank-A { color: #ff9f6e; background: rgba(255,159,110,.18); }
-.rank-S { color: #e7b3ff; background: rgba(231,179,255,.2); box-shadow: 0 0 16px rgba(231,179,255,.3); }
-.rank-theme-F { background: linear-gradient(145deg, rgba(154,167,189,.25), rgba(154,167,189,.05)); }
-.rank-theme-E { background: linear-gradient(145deg, rgba(97,195,255,.25), rgba(97,195,255,.05)); }
-.rank-theme-D { background: linear-gradient(145deg, rgba(85,216,150,.25), rgba(85,216,150,.05)); }
-.rank-theme-C { background: linear-gradient(145deg, rgba(137,207,78,.25), rgba(137,207,78,.05)); }
-.rank-theme-B { background: linear-gradient(145deg, rgba(255,209,102,.25), rgba(255,209,102,.05)); }
-.rank-theme-A { background: linear-gradient(145deg, rgba(255,159,110,.25), rgba(255,159,110,.05)); }
-.rank-theme-S { background: linear-gradient(145deg, rgba(231,179,255,.3), rgba(231,179,255,.08)); box-shadow: 0 0 24px rgba(231,179,255,.25); }
+.rank-F { color: var(--rank-f); background: color-mix(in srgb, var(--rank-f) 18%, transparent); }
+.rank-E { color: var(--rank-e); background: color-mix(in srgb, var(--rank-e) 18%, transparent); }
+.rank-D { color: var(--rank-d); background: color-mix(in srgb, var(--rank-d) 18%, transparent); }
+.rank-C { color: var(--rank-c); background: color-mix(in srgb, var(--rank-c) 18%, transparent); }
+.rank-B { color: var(--rank-b); background: color-mix(in srgb, var(--rank-b) 20%, transparent); }
+.rank-A { color: var(--rank-a); background: color-mix(in srgb, var(--rank-a) 18%, transparent); }
+.rank-S { color: var(--rank-s); background: color-mix(in srgb, var(--rank-s) 20%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--rank-s) 30%, transparent); }
+.rank-theme-F { background: linear-gradient(145deg, color-mix(in srgb, var(--rank-f) 25%, transparent), color-mix(in srgb, var(--rank-f) 5%, transparent)); }
+.rank-theme-E { background: linear-gradient(145deg, color-mix(in srgb, var(--rank-e) 25%, transparent), color-mix(in srgb, var(--rank-e) 5%, transparent)); }
+.rank-theme-D { background: linear-gradient(145deg, color-mix(in srgb, var(--rank-d) 25%, transparent), color-mix(in srgb, var(--rank-d) 5%, transparent)); }
+.rank-theme-C { background: linear-gradient(145deg, color-mix(in srgb, var(--rank-c) 25%, transparent), color-mix(in srgb, var(--rank-c) 5%, transparent)); }
+.rank-theme-B { background: linear-gradient(145deg, color-mix(in srgb, var(--rank-b) 25%, transparent), color-mix(in srgb, var(--rank-b) 5%, transparent)); }
+.rank-theme-A { background: linear-gradient(145deg, color-mix(in srgb, var(--rank-a) 25%, transparent), color-mix(in srgb, var(--rank-a) 5%, transparent)); }
+.rank-theme-S { background: linear-gradient(145deg, color-mix(in srgb, var(--rank-s) 30%, transparent), color-mix(in srgb, var(--rank-s) 8%, transparent)); box-shadow: 0 0 24px color-mix(in srgb, var(--rank-s) 25%, transparent); }
 
 @media (max-width: 780px) {
   .top3, .menu-grid, .kpi, .kpi-5, .kpi-2, .tv-layout, .two-col { grid-template-columns: 1fr; }
@@ -81,13 +89,13 @@ mark { background: #ffe066; color: #101320; border-radius: .2rem; padding: 0 .1r
 
 .top-card h3 { display: flex; align-items: center; justify-content: center; gap: .35rem; margin: .45rem 0; }
 .menu-btn { text-align: center; background: linear-gradient(160deg, rgba(49,208,255,.18), rgba(124,255,114,.08)); box-shadow: 0 6px 22px rgba(0,0,0,.18); }
-body.rank-F { background: radial-gradient(circle at top, rgba(154,167,189,.2), #090d16 52%); }
-body.rank-E { background: radial-gradient(circle at top, rgba(97,195,255,.2), #090d16 52%); }
-body.rank-D { background: radial-gradient(circle at top, rgba(85,216,150,.2), #090d16 52%); }
-body.rank-C { background: radial-gradient(circle at top, rgba(137,207,78,.22), #090d16 52%); }
-body.rank-B { background: radial-gradient(circle at top, rgba(255,209,102,.24), #090d16 52%); }
-body.rank-A { background: radial-gradient(circle at top, rgba(255,159,110,.24), #090d16 52%); }
-body.rank-S { background: radial-gradient(circle at top, rgba(231,179,255,.3), #090d16 52%); }
+body.rank-F { background: radial-gradient(circle at top, color-mix(in srgb, var(--rank-f) 20%, transparent), #090d16 52%); }
+body.rank-E { background: radial-gradient(circle at top, color-mix(in srgb, var(--rank-e) 20%, transparent), #090d16 52%); }
+body.rank-D { background: radial-gradient(circle at top, color-mix(in srgb, var(--rank-d) 20%, transparent), #090d16 52%); }
+body.rank-C { background: radial-gradient(circle at top, color-mix(in srgb, var(--rank-c) 22%, transparent), #090d16 52%); }
+body.rank-B { background: radial-gradient(circle at top, color-mix(in srgb, var(--rank-b) 24%, transparent), #090d16 52%); }
+body.rank-A { background: radial-gradient(circle at top, color-mix(in srgb, var(--rank-a) 24%, transparent), #090d16 52%); }
+body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(--rank-s) 30%, transparent), #090d16 52%); }
 
 /* Home V2: unified square UI */
 .home-v2 .hero,
@@ -2701,10 +2709,10 @@ body.theme-game {
   --rank-s: #9c27b0;
   --rank-a: #e91e63;
   --rank-b: #ffb300;
-  --rank-c: #fdd835;
-  --rank-d: #4fc3f7;
-  --rank-e: #43a047;
-  --rank-f: #9e9e9e;
+  --rank-c: #4fc3f7;
+  --rank-d: #777;
+  --rank-e: #666;
+  --rank-f: #444;
 }
 
 body.theme-game .topnav {
@@ -3277,13 +3285,13 @@ body.theme-game main.page {
 
 /* ===== V2 LEAGUE DASHBOARD POLISH ===== */
 .league-page {
-  --rank-s: #e2bf6a;
-  --rank-a: #f3a44e;
-  --rank-b: #47a8ff;
-  --rank-c: #3bcfbf;
-  --rank-d: #9164da;
-  --rank-e: #73859f;
-  --rank-f: #a65d61;
+  --rank-s: #9c27b0;
+  --rank-a: #e91e63;
+  --rank-b: #ffb300;
+  --rank-c: #4fc3f7;
+  --rank-d: #777;
+  --rank-e: #666;
+  --rank-f: #444;
 }
 
 .league-page .league-section-title,
@@ -3480,3 +3488,46 @@ body.theme-game main.page {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* ===== Canonical V2 rank system (single source of truth) ===== */
+body.theme-game {
+  --rank-s: #9c27b0;
+  --rank-a: #e91e63;
+  --rank-b: #ffb300;
+  --rank-c: #4fc3f7;
+  --rank-d: #777;
+  --rank-e: #666;
+  --rank-f: #444;
+}
+
+.home-v2 .leader-rank.rank-s, .home-v2 .home-ranking__rank.rank-s, .league-page .league-rank-badge.rank-s { color: var(--rank-s) !important; }
+.home-v2 .leader-rank.rank-a, .home-v2 .home-ranking__rank.rank-a, .league-page .league-rank-badge.rank-a { color: var(--rank-a) !important; }
+.home-v2 .leader-rank.rank-b, .home-v2 .home-ranking__rank.rank-b, .league-page .league-rank-badge.rank-b { color: var(--rank-b) !important; }
+.home-v2 .leader-rank.rank-c, .home-v2 .home-ranking__rank.rank-c, .league-page .league-rank-badge.rank-c { color: var(--rank-c) !important; }
+.home-v2 .leader-rank.rank-d, .home-v2 .home-ranking__rank.rank-d, .league-page .league-rank-badge.rank-d { color: var(--rank-d) !important; }
+.home-v2 .leader-rank.rank-e, .home-v2 .home-ranking__rank.rank-e, .league-page .league-rank-badge.rank-e { color: var(--rank-e) !important; }
+.home-v2 .leader-rank.rank-f, .home-v2 .home-ranking__rank.rank-f, .league-page .league-rank-badge.rank-f { color: var(--rank-f) !important; }
+
+.home-v2 .leader-card.rank-s, .home-v2 .leader-avatar-wrap.rank-s, .home-v2 .home-ranking__avatar-wrap.rank-s, .league-page .league-rank-frame.rank-s, .league-page .league-rank-tile--s { border-color: var(--rank-s) !important; }
+.home-v2 .leader-card.rank-a, .home-v2 .leader-avatar-wrap.rank-a, .home-v2 .home-ranking__avatar-wrap.rank-a, .league-page .league-rank-frame.rank-a, .league-page .league-rank-tile--a { border-color: var(--rank-a) !important; }
+.home-v2 .leader-card.rank-b, .home-v2 .leader-avatar-wrap.rank-b, .home-v2 .home-ranking__avatar-wrap.rank-b, .league-page .league-rank-frame.rank-b, .league-page .league-rank-tile--b { border-color: var(--rank-b) !important; }
+.home-v2 .leader-card.rank-c, .home-v2 .leader-avatar-wrap.rank-c, .home-v2 .home-ranking__avatar-wrap.rank-c, .league-page .league-rank-frame.rank-c, .league-page .league-rank-tile--c { border-color: var(--rank-c) !important; }
+.home-v2 .leader-card.rank-d, .home-v2 .leader-avatar-wrap.rank-d, .home-v2 .home-ranking__avatar-wrap.rank-d, .league-page .league-rank-frame.rank-d, .league-page .league-rank-tile--d { border-color: var(--rank-d) !important; }
+.home-v2 .leader-card.rank-e, .home-v2 .leader-avatar-wrap.rank-e, .home-v2 .home-ranking__avatar-wrap.rank-e, .league-page .league-rank-frame.rank-e, .league-page .league-rank-tile--e { border-color: var(--rank-e) !important; }
+.home-v2 .leader-card.rank-f, .home-v2 .leader-avatar-wrap.rank-f, .home-v2 .home-ranking__avatar-wrap.rank-f, .league-page .league-rank-frame.rank-f, .league-page .league-rank-tile--f { border-color: var(--rank-f) !important; }
+
+.home-v2 .home-ranking__row.rank-s, .league-page .league-ranking-table__row--rank-s { box-shadow: inset 3px 0 0 var(--rank-s) !important; background: color-mix(in srgb, var(--rank-s) 10%, transparent) !important; }
+.home-v2 .home-ranking__row.rank-a, .league-page .league-ranking-table__row--rank-a { box-shadow: inset 3px 0 0 var(--rank-a) !important; background: color-mix(in srgb, var(--rank-a) 10%, transparent) !important; }
+.home-v2 .home-ranking__row.rank-b, .league-page .league-ranking-table__row--rank-b { box-shadow: inset 3px 0 0 var(--rank-b) !important; background: color-mix(in srgb, var(--rank-b) 10%, transparent) !important; }
+.home-v2 .home-ranking__row.rank-c, .league-page .league-ranking-table__row--rank-c { box-shadow: inset 3px 0 0 var(--rank-c) !important; background: color-mix(in srgb, var(--rank-c) 10%, transparent) !important; }
+.home-v2 .home-ranking__row.rank-d, .league-page .league-ranking-table__row--rank-d { box-shadow: inset 3px 0 0 var(--rank-d) !important; background: color-mix(in srgb, var(--rank-d) 10%, transparent) !important; }
+.home-v2 .home-ranking__row.rank-e, .league-page .league-ranking-table__row--rank-e { box-shadow: inset 3px 0 0 var(--rank-e) !important; background: color-mix(in srgb, var(--rank-e) 10%, transparent) !important; }
+.home-v2 .home-ranking__row.rank-f, .league-page .league-ranking-table__row--rank-f { box-shadow: inset 3px 0 0 var(--rank-f) !important; background: color-mix(in srgb, var(--rank-f) 10%, transparent) !important; }
+
+.league-page .league-rank-tile--s { background: color-mix(in srgb, var(--rank-s) 14%, transparent) !important; }
+.league-page .league-rank-tile--a { background: color-mix(in srgb, var(--rank-a) 14%, transparent) !important; }
+.league-page .league-rank-tile--b { background: color-mix(in srgb, var(--rank-b) 14%, transparent) !important; }
+.league-page .league-rank-tile--c { background: color-mix(in srgb, var(--rank-c) 14%, transparent) !important; }
+.league-page .league-rank-tile--d { background: color-mix(in srgb, var(--rank-d) 14%, transparent) !important; }
+.league-page .league-rank-tile--e { background: color-mix(in srgb, var(--rank-e) 18%, transparent) !important; }
+.league-page .league-rank-tile--f { background: color-mix(in srgb, var(--rank-f) 18%, transparent) !important; }

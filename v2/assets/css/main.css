@@ -3428,3 +3428,37 @@ body.theme-game main.page {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* League infographic KPI rebuild: compact dashboard cards */
+.league-page #leagueInfographic .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.league-page #leagueInfographic .kpi-card {
+  padding: 13px;
+  background: linear-gradient(180deg, rgba(18, 26, 42, .96), rgba(12, 18, 32, .96));
+  border: 1px solid rgba(49, 208, 255, .22);
+  border-radius: 4px;
+}
+
+.league-page #leagueInfographic .kpi-label {
+  font-size: 12px;
+  line-height: 1.25;
+  opacity: .7;
+  letter-spacing: .01em;
+}
+
+.league-page #leagueInfographic .kpi-value {
+  margin-top: 6px;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .league-page #leagueInfographic .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

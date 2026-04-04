@@ -64,8 +64,8 @@ function tableRowMarkup(player, league) {
   </tr>`;
 }
 
-function statCard(label, value, icon) {
-  return `<article class="league-kpi-card"><div class="league-kpi-card__label"><span class="league-kpi-card__icon">${esc(icon)}</span><span>${esc(label)}</span></div><div class="league-kpi-card__value">${esc(value)}</div></article>`;
+function statCard(label, value) {
+  return `<div class="kpi-card"><div class="kpi-label">${esc(label)}</div><div class="kpi-value">${esc(value)}</div></div>`;
 }
 
 function calculateRemainingGameDays(data, currentSeason) {
@@ -133,13 +133,13 @@ function renderInfographic(root, data) {
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-dashboard-group league-dashboard-group--kpi">
     <h3 class="league-subtitle">KPI ліги</h3>
-    <div class="league-kpi-grid">
-    ${statCard('Активних гравців', data.summary.activePlayersCount, '👥')}
-    ${statCard('Матчів', data.summary.matchesCount, '🎯')}
-    ${statCard('Боїв', data.summary.battlesCount, '⚔️')}
-    ${statCard('Сер. рейтинг', data.summary.avgRating, '📈')}
-    ${statCard('Total MVP', data.summary.totalMvp, '🏅')}
-    ${statCard('Середній WR', averageWinRate, '🎯')}
+    <div class="kpi-grid">
+    ${statCard('Активних гравців', data.summary.activePlayersCount)}
+    ${statCard('Матчів', data.summary.matchesCount)}
+    ${statCard('Боїв', data.summary.battlesCount)}
+    ${statCard('Сер. рейтинг', data.summary.avgRating)}
+    ${statCard('Total MVP', data.summary.totalMvp)}
+    ${statCard('Середній WR', averageWinRate)}
     </div>
   </section>
   <section class="league-dashboard-group league-rank-distribution">

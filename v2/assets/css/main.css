@@ -3057,7 +3057,7 @@ body.theme-game main.page {
 .league-page #leagueInfographic .league-dashboard-group {
   padding: 12px;
   border: 1px solid rgba(138, 170, 238, .24);
-  border-radius: 8px;
+  border-radius: 6px;
   background: linear-gradient(180deg, rgba(14, 22, 38, .96), rgba(9, 14, 26, .94));
 }
 
@@ -3129,28 +3129,37 @@ body.theme-game main.page {
   min-height: 84px;
   margin: 0;
   padding: 10px;
-  border-width: 1px;
+  border: 1px solid rgba(143, 173, 226, .26);
   border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  display: grid;
+  align-content: center;
+  text-align: center;
   gap: 6px;
 }
 
-.league-page #leagueInfographic .league-rank-tile strong {
-  font-size: 12px;
-  line-height: 1.2;
-  opacity: .76;
+.league-page #leagueInfographic .league-rank-tile__rank {
+  font-size: .78rem;
+  line-height: 1.15;
+  color: rgba(223, 236, 255, .76);
 }
 
-.league-page #leagueInfographic .league-rank-tile span {
-  font-size: clamp(1.25rem, 4.5vw, 1.55rem);
+.league-page #leagueInfographic .league-rank-tile__count {
+  font-size: clamp(1.3rem, 4.8vw, 1.68rem);
   font-weight: 800;
   line-height: 1;
 }
 
+.league-page #leagueInfographic .league-rank-tile__label {
+  font-size: .64rem;
+  line-height: 1.2;
+  color: rgba(200, 214, 240, .58);
+  letter-spacing: .03em;
+  text-transform: lowercase;
+}
+
 .league-page #leagueInfographic .league-rank-tile--meta {
-  border-color: rgba(49, 208, 255, .52) !important;
+  border-color: rgba(49, 208, 255, .52);
+  background: rgba(49, 112, 164, .14);
 }
 
 .league-page #leagueInfographic .league-highlights-grid {
@@ -3163,7 +3172,7 @@ body.theme-game main.page {
   min-height: 102px;
   margin: 0;
   padding: 10px;
-  border: 1px solid rgba(138, 170, 238, .24);
+  border: 1px solid rgba(138, 170, 238, .26);
   border-radius: 6px;
   background: rgba(14, 24, 44, .78);
   display: flex;
@@ -3174,26 +3183,45 @@ body.theme-game main.page {
 .league-page #leagueInfographic .league-highlight-card__meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
   min-height: 24px;
 }
 
-.league-page #leagueInfographic .league-highlight-card__meta .league-avatar-wrap {
-  width: 22px;
-  height: 22px;
+.league-page #leagueInfographic .league-highlight-card__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-.league-page #leagueInfographic .league-highlight-card__meta .league-rank-badge {
+.league-page #leagueInfographic .league-highlight-card__badge {
   min-width: 20px;
+  width: 20px;
   height: 20px;
   font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 4px;
+  border: 1px solid rgba(162, 186, 231, .4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.league-page #leagueInfographic .league-highlight-card__category,
-.league-page #leagueInfographic .league-highlight-card__icon {
+.league-page #leagueInfographic .league-highlight-card__avatar {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.league-page #leagueInfographic .league-highlight-card__category {
   font-size: 12px;
   line-height: 1.2;
   color: rgba(224, 236, 255, .74);
+  text-align: right;
 }
 
 .league-page #leagueInfographic .league-highlight-card__name {
@@ -3207,6 +3235,30 @@ body.theme-game main.page {
   font-size: clamp(1.5rem, 5.8vw, 1.85rem);
   line-height: 1.05;
   font-weight: 800;
+}
+
+.league-page #leagueInfographic .league-highlight-card--gain {
+  border-color: rgba(127, 220, 108, .42);
+}
+
+.league-page #leagueInfographic .league-highlight-card--gain .league-highlight-card__value {
+  color: #8be870;
+}
+
+.league-page #leagueInfographic .league-highlight-card--mvp {
+  border-color: rgba(243, 164, 78, .48);
+}
+
+.league-page #leagueInfographic .league-highlight-card--mvp .league-highlight-card__value {
+  color: #ffcd78;
+}
+
+.league-page #leagueInfographic .league-highlight-card--minus {
+  border-color: rgba(255, 141, 141, .48);
+}
+
+.league-page #leagueInfographic .league-highlight-card--minus .league-highlight-card__value {
+  color: #ff9f9f;
 }
 
 @media (min-width: 761px) {
@@ -3426,224 +3478,5 @@ body.theme-game main.page {
 @media (max-width: 640px) {
   .league-page .league-rank-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-/* League infographic KPI rebuild: compact dashboard cards */
-.league-page #leagueInfographic .kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.league-page #leagueInfographic .kpi-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 10px 12px;
-  min-height: auto;
-  background: linear-gradient(180deg, rgba(18, 26, 42, .96), rgba(12, 18, 32, .96));
-  border: 1px solid rgba(49, 208, 255, .22);
-  border-radius: 6px;
-  box-shadow: none;
-}
-
-.league-page #leagueInfographic .kpi-label {
-  font-size: 11px;
-  line-height: 1.25;
-  opacity: .6;
-  letter-spacing: .01em;
-}
-
-.league-page #leagueInfographic .kpi-value {
-  margin-top: 4px;
-  font-size: 26px;
-  line-height: 1;
-  font-weight: 700;
-}
-
-/* ===== V2 RANK + MOMENTS HARD REBUILD ===== */
-.league-page #leagueInfographic .section-title {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: rgba(228, 238, 255, .88);
-}
-
-.league-page #leagueInfographic .rank-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.league-page #leagueInfographic .rank-card {
-  min-height: 102px;
-  border: 1px solid rgba(255, 255, 255, .24);
-  background: rgba(11, 18, 33, .92);
-  border-radius: 4px;
-  padding: 10px 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  box-shadow: none;
-}
-
-.league-page #leagueInfographic .rank-card__head {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .03em;
-  opacity: .7;
-}
-
-.league-page #leagueInfographic .rank-card__value {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.league-page #leagueInfographic .rank-card__meta {
-  font-size: 10px;
-  color: rgba(228, 238, 255, .68);
-  text-transform: lowercase;
-  letter-spacing: .02em;
-  opacity: .5;
-}
-
-.league-page #leagueInfographic .rank-card--s { border-color: color-mix(in srgb, var(--rank-s) 74%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-s) 8%, rgba(11,18,33,.94)); }
-.league-page #leagueInfographic .rank-card--a { border-color: color-mix(in srgb, var(--rank-a) 74%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-a) 8%, rgba(11,18,33,.94)); }
-.league-page #leagueInfographic .rank-card--b { border-color: color-mix(in srgb, var(--rank-b) 74%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-b) 8%, rgba(11,18,33,.94)); }
-.league-page #leagueInfographic .rank-card--c { border-color: color-mix(in srgb, var(--rank-c) 74%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-c) 8%, rgba(11,18,33,.94)); }
-.league-page #leagueInfographic .rank-card--d { border-color: color-mix(in srgb, var(--rank-d) 74%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-d) 8%, rgba(11,18,33,.94)); }
-.league-page #leagueInfographic .rank-card--e { border-color: color-mix(in srgb, var(--rank-e) 74%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-e) 8%, rgba(11,18,33,.94)); }
-.league-page #leagueInfographic .rank-card--f { border-color: color-mix(in srgb, var(--rank-f) 74%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-f) 8%, rgba(11,18,33,.94)); }
-.league-page #leagueInfographic .rank-card--delta { border-color: rgba(49, 208, 255, .62); background: rgba(49, 112, 164, .16); }
-.league-page #leagueInfographic .rank-card--delta .rank-card__value { font-size: 30px; }
-.league-page #leagueInfographic .rank-card--delta .rank-card__meta { font-size: 9px; }
-
-.league-page #leagueInfographic .moment-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.league-page #leagueInfographic .moment-card {
-  background: rgba(11, 18, 33, .92);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, .24);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  box-shadow: none;
-}
-
-.league-page #leagueInfographic .moment-card__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.league-page #leagueInfographic .moment-card__identity {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.league-page #leagueInfographic .moment-card__badge {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, .24);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  border-radius: 3px;
-}
-
-.league-page #leagueInfographic .moment-card__avatar {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  object-fit: cover;
-}
-
-.league-page #leagueInfographic .moment-card__category {
-  font-size: 11px;
-  color: rgba(228, 238, 255, .92);
-  opacity: .7;
-  letter-spacing: .02em;
-  text-align: right;
-}
-
-.league-page #leagueInfographic .moment-card__name {
-  margin-top: 8px;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.15;
-}
-
-.league-page #leagueInfographic .moment-card__value {
-  margin-top: 6px;
-  font-size: 32px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.league-page #leagueInfographic .moment-card--gain {
-  border-color: rgba(127, 220, 108, .42);
-}
-
-.league-page #leagueInfographic .moment-card--gain .moment-card__value {
-  color: #8be870;
-}
-
-.league-page #leagueInfographic .moment-card--mvp {
-  border-color: rgba(243, 164, 78, .48);
-}
-
-.league-page #leagueInfographic .moment-card--mvp .moment-card__value {
-  color: #ffcd78;
-}
-
-.league-page #leagueInfographic .moment-card--minus {
-  border-color: rgba(255, 141, 141, .48);
-}
-
-.league-page #leagueInfographic .moment-card--minus .moment-card__value {
-  color: #ff9f9f;
-}
-
-@media (max-width: 480px) {
-  .league-page #leagueInfographic .rank-card {
-    min-height: 96px;
-    padding: 10px;
-  }
-
-  .league-page #leagueInfographic .rank-card__value {
-    font-size: 28px;
-  }
-
-  .league-page #leagueInfographic .rank-card__meta {
-    font-size: 9px;
-  }
-
-  .league-page #leagueInfographic .moment-card__name {
-    font-size: 18px;
-  }
-
-  .league-page #leagueInfographic .moment-card__value {
-    font-size: 28px;
-  }
-
-  .league-page #leagueInfographic .moment-card__category {
-    font-size: 10px;
   }
 }

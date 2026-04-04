@@ -34,7 +34,7 @@ function playerProfileHash(league, nickname) {
 
 function rankDistributionTiles(distribution = {}) {
   return RANKS
-    .map((rank) => `<article class="league-rank-tile league-rank-tile--${rank.toLowerCase()}"><strong>${rank}</strong><span>${distribution[rank] || 0}</span></article>`)
+    .map((rank) => `<article class="league-rank-tile league-rank-tile--${rank.toLowerCase()}"><strong class="league-rank-tile__rank">${rank}</strong><span class="league-rank-tile__count">${distribution[rank] || 0}</span><span class="league-rank-tile__label">гравців</span></article>`)
     .join('');
 }
 
@@ -69,16 +69,33 @@ function statCard(label, value, icon) {
 }
 
 function calculateRemainingGameDays(data, currentSeason) {
+  const seasonStartRaw = String(currentSeason?.dateStart || '').slice(0, 10);
   const seasonEndRaw = String(currentSeason?.dateEnd || '').slice(0, 10);
-  const lastGameDayRaw = String(data?.lastGameDay?.date || '').slice(0, 10);
-  if (!seasonEndRaw) return '—';
+  if (!seasonStartRaw || !seasonEndRaw) return '—';
+
+  const seasonStart = new Date(`${seasonStartRaw}T00:00:00Z`);
   const seasonEnd = new Date(`${seasonEndRaw}T00:00:00Z`);
-  if (Number.isNaN(seasonEnd.getTime())) return '—';
-  const anchorDate = lastGameDayRaw || new Date().toISOString().slice(0, 10);
-  const anchor = new Date(`${anchorDate}T00:00:00Z`);
-  if (Number.isNaN(anchor.getTime())) return '—';
-  const days = Math.ceil((seasonEnd - anchor) / (1000 * 60 * 60 * 24));
-  return `${Math.max(days, 0)}`;
+  if (Number.isNaN(seasonStart.getTime()) || Number.isNaN(seasonEnd.getTime())) return '—';
+  if (seasonEnd < seasonStart) return '0';
+
+  const todayRaw = new Date().toISOString().slice(0, 10);
+  const today = new Date(`${todayRaw}T00:00:00Z`);
+  if (Number.isNaN(today.getTime())) return '—';
+
+  const seasonAnchor = today < seasonStart ? seasonStart : today;
+  if (seasonAnchor > seasonEnd) return '0';
+
+  // Базова оцінка розкладу: 3 ігрові дні щотижня (вт/чт/сб).
+  const scheduleDays = new Set([2, 4, 6]);
+  let remaining = 0;
+  const cursor = new Date(seasonAnchor);
+  while (cursor <= seasonEnd) {
+    if (scheduleDays.has(cursor.getUTCDay())) {
+      remaining += 1;
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return `${remaining}`;
 }
 
 function highlightCard(player, value, label, icon, tone) {
@@ -104,11 +121,11 @@ function highlightCard(player, value, label, icon, tone) {
 function renderHero(root, league, data, remainingGameDays) {
   root.innerHTML = `<h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
   <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>
-  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Ігровий день: ${esc(data.lastGameDay?.date || '—')}</span><span>Залишилось днів: ${esc(remainingGameDays)}</span></div>
+  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Ігровий день: ${esc(data.lastGameDay?.date || '—')}</span><span>Залишилось ігрових днів: ${esc(remainingGameDays)}</span></div>
   <div class="px-card__actions league-actions"><a class="btn" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;
 }
 
-function renderInfographic(root, data, remainingGameDays) {
+function renderInfographic(root, data) {
   const totalDeltaPoints = data.activePlayers.reduce((sum, player) => sum + (Number(player.delta) || 0), 0);
   const averageWinRate = data.summary.activePlayersCount
     ? `${(data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount).toFixed(1)}%`
@@ -127,7 +144,7 @@ function renderInfographic(root, data, remainingGameDays) {
   </section>
   <section class="league-dashboard-group league-rank-distribution">
     <h3 class="league-subtitle">Розподіл за рангами</h3>
-    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><strong>Σ Δ балів</strong><span>${esc(fmtSigned(totalDeltaPoints))}</span></article></div>
+    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><strong class="league-rank-tile__rank">Σ Δ балів</strong><span class="league-rank-tile__count">${esc(fmtSigned(totalDeltaPoints))}</span><span class="league-rank-tile__label">сумарна зміна</span></article></div>
   </section>
   <section class="league-dashboard-group">
     <h3 class="league-subtitle">КЛЮЧОВІ МОМЕНТИ</h3>
@@ -142,8 +159,13 @@ function renderInfographic(root, data, remainingGameDays) {
 function renderLastGameDay(root, lastGameDay, league) {
   const day = lastGameDay || { date: '', matchesCount: 0, battlesCount: 0, mvp: null };
   root.innerHTML = `<h2 class="px-card__title league-section-title">Ігровий день</h2>
-  <div class="league-summary-strip"><span>Дата: ${esc(day.date || '—')}</span><span>Матчів: ${esc(day.matchesCount || 0)}</span><span>Боїв: ${esc(day.battlesCount || 0)}</span><span>MVP дня: ${esc(day.mvp || '—')}</span></div>
-  <div class="px-card__actions"><a class="btn btn--secondary" href="#gameday?league=${encodeURIComponent(league)}">Відкрити ігровий день</a></div>`;
+  <div class="league-game-day-grid">
+    <article class="league-game-day-card"><span class="league-game-day-card__label">Дата</span><strong class="league-game-day-card__value">${esc(day.date || '—')}</strong></article>
+    <article class="league-game-day-card"><span class="league-game-day-card__label">Матчів</span><strong class="league-game-day-card__value">${esc(day.matchesCount || 0)}</strong></article>
+    <article class="league-game-day-card"><span class="league-game-day-card__label">Боїв</span><strong class="league-game-day-card__value">${esc(day.battlesCount || 0)}</strong></article>
+    <article class="league-game-day-card"><span class="league-game-day-card__label">MVP дня</span><strong class="league-game-day-card__value">${esc(day.mvp || '—')}</strong></article>
+  </div>
+  <div class="px-card__actions league-actions league-actions--center"><a class="btn btn--secondary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>`;
 }
 
 function resolveLeague(params = {}) {
@@ -284,7 +306,7 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   };
 
   renderHero(hero, league, safeData, remainingGameDays);
-  renderInfographic(infographic, safeData, remainingGameDays);
+  renderInfographic(infographic, safeData);
   renderLastGameDay(lastGameDay, safeData.lastGameDay, league);
   setSortButtonState();
   renderTables();

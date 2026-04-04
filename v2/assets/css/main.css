@@ -3473,23 +3473,24 @@ body.theme-game main.page {
   min-height: 100px;
   border: 1px solid rgba(255, 255, 255, .24);
   background: rgba(11, 18, 33, .92);
-  border-radius: 6px;
-  padding: 10px 8px;
+  border-radius: 4px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 6px;
+  gap: 4px;
 }
 
 .league-page #leagueInfographic .rank-card__head {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: .03em;
+  opacity: .7;
 }
 
 .league-page #leagueInfographic .rank-card__value {
-  font-size: 31px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1;
 }
@@ -3499,16 +3500,19 @@ body.theme-game main.page {
   color: rgba(228, 238, 255, .68);
   text-transform: lowercase;
   letter-spacing: .02em;
+  opacity: .5;
 }
 
-.league-page #leagueInfographic .rank-card--s { border-color: color-mix(in srgb, var(--rank-s) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-s) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-s) 24%, transparent); }
-.league-page #leagueInfographic .rank-card--a { border-color: color-mix(in srgb, var(--rank-a) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-a) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-a) 24%, transparent); }
-.league-page #leagueInfographic .rank-card--b { border-color: color-mix(in srgb, var(--rank-b) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-b) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-b) 24%, transparent); }
-.league-page #leagueInfographic .rank-card--c { border-color: color-mix(in srgb, var(--rank-c) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-c) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-c) 24%, transparent); }
-.league-page #leagueInfographic .rank-card--d { border-color: color-mix(in srgb, var(--rank-d) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-d) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-d) 24%, transparent); }
-.league-page #leagueInfographic .rank-card--e { border-color: color-mix(in srgb, var(--rank-e) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-e) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-e) 24%, transparent); }
-.league-page #leagueInfographic .rank-card--f { border-color: color-mix(in srgb, var(--rank-f) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-f) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-f) 24%, transparent); }
-.league-page #leagueInfographic .rank-card--delta { border-color: rgba(49, 208, 255, .62); background: rgba(49, 208, 255, .1); box-shadow: 0 0 12px rgba(49, 208, 255, .22); }
+.league-page #leagueInfographic .rank-card--s { border-color: color-mix(in srgb, var(--rank-s) 76%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-s) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 6px color-mix(in srgb, var(--rank-s) 25%, transparent); }
+.league-page #leagueInfographic .rank-card--a { border-color: color-mix(in srgb, var(--rank-a) 76%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-a) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 6px color-mix(in srgb, var(--rank-a) 25%, transparent); }
+.league-page #leagueInfographic .rank-card--b { border-color: color-mix(in srgb, var(--rank-b) 76%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-b) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 6px color-mix(in srgb, var(--rank-b) 25%, transparent); }
+.league-page #leagueInfographic .rank-card--c { border-color: color-mix(in srgb, var(--rank-c) 76%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-c) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 6px color-mix(in srgb, var(--rank-c) 25%, transparent); }
+.league-page #leagueInfographic .rank-card--d { border-color: color-mix(in srgb, var(--rank-d) 76%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-d) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 6px color-mix(in srgb, var(--rank-d) 25%, transparent); }
+.league-page #leagueInfographic .rank-card--e { border-color: color-mix(in srgb, var(--rank-e) 76%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-e) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 6px color-mix(in srgb, var(--rank-e) 25%, transparent); }
+.league-page #leagueInfographic .rank-card--f { border-color: color-mix(in srgb, var(--rank-f) 76%, rgba(255,255,255,.24)); background: color-mix(in srgb, var(--rank-f) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 6px color-mix(in srgb, var(--rank-f) 25%, transparent); }
+.league-page #leagueInfographic .rank-card--delta { border-color: rgba(49, 208, 255, .68); background: rgba(56, 136, 196, .16); box-shadow: 0 0 6px rgba(49, 208, 255, .25); }
+.league-page #leagueInfographic .rank-card--delta .rank-card__value { font-size: 30px; }
+.league-page #leagueInfographic .rank-card--delta .rank-card__meta { font-size: 9px; }
 
 .league-page #leagueInfographic .moment-list {
   display: flex;
@@ -3613,7 +3617,7 @@ body.theme-game main.page {
 @media (max-width: 480px) {
   .league-page #leagueInfographic .rank-card {
     min-height: 96px;
-    padding: 8px;
+    padding: 10px;
   }
 
   .league-page #leagueInfographic .rank-card__value {

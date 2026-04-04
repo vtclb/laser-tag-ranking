@@ -34,7 +34,7 @@ function playerProfileHash(league, nickname) {
 
 function rankDistributionTiles(distribution = {}) {
   return RANKS
-    .map((rank) => `<article class="league-rank-tile league-rank-tile--${rank.toLowerCase()}"><strong class="league-rank-tile__rank">${rank}</strong><span class="league-rank-tile__count">${distribution[rank] || 0}</span><span class="league-rank-tile__label">гравців</span></article>`)
+    .map((rank) => `<article class="rank-card rank-card--${rank.toLowerCase()}"><div class="rank-card__label">${rank}</div><div class="rank-card__value">${distribution[rank] || 0}</div><div class="rank-card__meta">гравців</div></article>`)
     .join('');
 }
 
@@ -98,23 +98,31 @@ function calculateRemainingGameDays(data, currentSeason) {
   return `${remaining}`;
 }
 
-function highlightCard(player, value, label, icon, tone) {
+function highlightCard(player, value, label, tone) {
   if (!player) {
-    return `<article class="league-highlight-card league-highlight-card--${tone}">
-      <div class="league-highlight-card__meta"><span class="league-highlight-card__icon">${esc(icon)}</span><span class="league-highlight-card__category">${esc(label)}</span></div>
-      <div class="league-highlight-card__name">—</div>
-      <div class="league-highlight-card__value">—</div>
+    return `<article class="moment-card moment-card--${tone}">
+      <div class="moment-card__top">
+        <div class="moment-card__identity">
+          <span class="league-rank-badge rank-f">—</span>
+          <span class="league-avatar-wrap league-rank-frame rank-f"><img class="league-avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар"></span>
+        </div>
+        <div class="moment-card__category">${esc(label)}</div>
+      </div>
+      <div class="moment-card__name">—</div>
+      <div class="moment-card__value">—</div>
     </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
-  return `<article class="league-highlight-card league-highlight-card--${tone}">
-    <div class="league-highlight-card__meta">
-      <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
-      <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
-      <span class="league-highlight-card__category">${esc(label)}</span>
+  return `<article class="moment-card moment-card--${tone}">
+    <div class="moment-card__top">
+      <div class="moment-card__identity">
+        <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
+        <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
+      </div>
+      <div class="moment-card__category">${esc(label)}</div>
     </div>
-    <div class="league-highlight-card__name">${esc(player.nickname)}</div>
-    <div class="league-highlight-card__value">${esc(value)}</div>
+    <div class="moment-card__name">${esc(player.nickname)}</div>
+    <div class="moment-card__value">${esc(value)}</div>
   </article>`;
 }
 
@@ -143,15 +151,15 @@ function renderInfographic(root, data) {
     </div>
   </section>
   <section class="league-dashboard-group league-rank-distribution">
-    <h3 class="league-subtitle">Розподіл за рангами</h3>
-    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><strong class="league-rank-tile__rank">Σ Δ балів</strong><span class="league-rank-tile__count">${esc(fmtSigned(totalDeltaPoints))}</span><span class="league-rank-tile__label">сумарна зміна</span></article></div>
+    <h3 class="league-subtitle">РОЗПОДІЛ ЗА РАНГАМИ</h3>
+    <div class="rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="rank-card rank-card--delta"><div class="rank-card__label">Σ Δ</div><div class="rank-card__value">${esc(fmtSigned(totalDeltaPoints))}</div><div class="rank-card__meta">сумарна зміна</div></article></div>
   </section>
   <section class="league-dashboard-group">
     <h3 class="league-subtitle">КЛЮЧОВІ МОМЕНТИ</h3>
-    <div class="league-highlights-grid">
-    ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', '🚀', 'up')}
-    ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', '🏆', 'mvp')}
-    ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', '📉', 'down')}
+    <div class="moment-list">
+    ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'up')}
+    ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', 'mvp')}
+    ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'down')}
     </div>
   </section>`;
 }

@@ -102,10 +102,8 @@ function highlightCard(player, value, label, tone) {
   if (!player) {
     return `<article class="moment-card moment-card--${tone}">
       <div class="moment-card__top">
-        <div class="moment-card__identity">
-          <span class="moment-card__badge rank-f">—</span>
-          <img class="moment-card__avatar league-rank-frame rank-f" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
-        </div>
+        <span class="moment-card__badge rank-f">—</span>
+        <img class="moment-card__avatar league-rank-frame rank-f" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
         <div class="moment-card__category">${esc(label)}</div>
       </div>
       <div class="moment-card__name">—</div>
@@ -115,10 +113,8 @@ function highlightCard(player, value, label, tone) {
   const rank = String(player.rankLetter || 'F').toUpperCase();
   return `<article class="moment-card moment-card--${tone}">
     <div class="moment-card__top">
-      <div class="moment-card__identity">
-        <span class="moment-card__badge ${rankClass(rank)}">${esc(rank)}</span>
-        <img class="moment-card__avatar league-rank-frame ${rankClass(rank)}" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
-      </div>
+      <span class="moment-card__badge ${rankClass(rank)}">${esc(rank)}</span>
+      <img class="moment-card__avatar league-rank-frame ${rankClass(rank)}" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
       <div class="moment-card__category">${esc(label)}</div>
     </div>
     <div class="moment-card__name">${esc(player.nickname)}</div>

@@ -3517,7 +3517,6 @@ body.theme-game main.page {
 }
 
 .league-page #leagueInfographic .moment-card {
-  border: 1px solid rgba(255, 255, 255, .22);
   background: rgba(11, 18, 33, .92);
   border-radius: 6px;
   padding: 12px;
@@ -3529,15 +3528,8 @@ body.theme-game main.page {
 .league-page #leagueInfographic .moment-card__top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
-}
-
-.league-page #leagueInfographic .moment-card__identity {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
 }
 
 .league-page #leagueInfographic .moment-card__badge {
@@ -3559,33 +3551,33 @@ body.theme-game main.page {
   height: 32px;
   min-width: 32px;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, .22);
 }
 
 .league-page #leagueInfographic .moment-card__category {
   font-size: 11px;
-  color: rgba(228, 238, 255, .74);
+  color: rgba(228, 238, 255, .92);
+  opacity: .6;
   letter-spacing: .02em;
-  text-align: right;
+  margin-left: 2px;
 }
 
 .league-page #leagueInfographic .moment-card__name {
   margin-top: 8px;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.15;
 }
 
 .league-page #leagueInfographic .moment-card__value {
   margin-top: 6px;
-  font-size: 30px;
-  font-weight: 700;
+  font-size: 32px;
+  font-weight: 800;
   line-height: 1;
 }
 
 .league-page #leagueInfographic .moment-card--gain {
-  border-color: rgba(127, 220, 108, .58);
-  box-shadow: 0 0 12px rgba(127, 220, 108, .16);
+  background: linear-gradient(180deg, rgba(20, 47, 27, .9), rgba(11, 18, 33, .92));
+  box-shadow: inset 0 0 0 1px rgba(127, 220, 108, .42);
 }
 
 .league-page #leagueInfographic .moment-card--gain .moment-card__value {
@@ -3593,8 +3585,8 @@ body.theme-game main.page {
 }
 
 .league-page #leagueInfographic .moment-card--mvp {
-  border-color: rgba(243, 164, 78, .62);
-  box-shadow: 0 0 12px rgba(243, 164, 78, .16);
+  background: linear-gradient(180deg, rgba(54, 38, 16, .9), rgba(11, 18, 33, .92));
+  box-shadow: inset 0 0 0 1px rgba(243, 164, 78, .48);
 }
 
 .league-page #leagueInfographic .moment-card--mvp .moment-card__value {
@@ -3602,8 +3594,8 @@ body.theme-game main.page {
 }
 
 .league-page #leagueInfographic .moment-card--minus {
-  border-color: rgba(255, 141, 141, .6);
-  box-shadow: 0 0 12px rgba(255, 141, 141, .16);
+  background: linear-gradient(180deg, rgba(58, 22, 27, .9), rgba(11, 18, 33, .92));
+  box-shadow: inset 0 0 0 1px rgba(255, 141, 141, .48);
 }
 
 .league-page #leagueInfographic .moment-card--minus .moment-card__value {

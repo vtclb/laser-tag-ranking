@@ -34,7 +34,7 @@ function playerProfileHash(league, nickname) {
 
 function rankDistributionTiles(distribution = {}) {
   return RANKS
-    .map((rank) => `<article class="rank-card rank-card--${rank.toLowerCase()}"><div class="rank-card__head">${rank}</div><div class="rank-card__value">${distribution[rank] || 0}</div><div class="rank-card__meta">гравців</div></article>`)
+    .map((rank) => `<article class="league-rank-tile league-rank-tile--${rank.toLowerCase()}"><div class="league-rank-tile__rank">${rank}</div><div class="league-rank-tile__count">${distribution[rank] || 0}</div><div class="league-rank-tile__label">гравців</div></article>`)
     .join('');
 }
 
@@ -65,7 +65,7 @@ function tableRowMarkup(player, league) {
 }
 
 function statCard(label, value) {
-  return `<div class="kpi-card"><div class="kpi-label">${esc(label)}</div><div class="kpi-value">${esc(value)}</div></div>`;
+  return `<article class="league-kpi-card"><div class="league-kpi-card__label">${esc(label)}</div><div class="league-kpi-card__value">${esc(value)}</div></article>`;
 }
 
 function calculateRemainingGameDays(data, currentSeason) {
@@ -100,29 +100,29 @@ function calculateRemainingGameDays(data, currentSeason) {
 
 function highlightCard(player, value, label, tone) {
   if (!player) {
-    return `<article class="moment-card moment-card--${tone}">
-      <div class="moment-card__top">
-        <div class="moment-card__identity">
-          <span class="moment-card__badge rank-f">—</span>
-          <img class="moment-card__avatar league-rank-frame rank-f" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
+    return `<article class="league-highlight-card league-highlight-card--${tone}">
+      <div class="league-highlight-card__meta">
+        <div class="league-highlight-card__identity">
+          <span class="league-highlight-card__badge rank-f">—</span>
+          <img class="league-highlight-card__avatar league-rank-frame rank-f" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
         </div>
-        <div class="moment-card__category">${esc(label)}</div>
+        <div class="league-highlight-card__category">${esc(label)}</div>
       </div>
-      <div class="moment-card__name">—</div>
-      <div class="moment-card__value">—</div>
+      <div class="league-highlight-card__name">—</div>
+      <div class="league-highlight-card__value">—</div>
     </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
-  return `<article class="moment-card moment-card--${tone}">
-    <div class="moment-card__top">
-      <div class="moment-card__identity">
-        <span class="moment-card__badge ${rankClass(rank)}">${esc(rank)}</span>
-        <img class="moment-card__avatar league-rank-frame ${rankClass(rank)}" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
+  return `<article class="league-highlight-card league-highlight-card--${tone}">
+    <div class="league-highlight-card__meta">
+      <div class="league-highlight-card__identity">
+        <span class="league-highlight-card__badge ${rankClass(rank)}">${esc(rank)}</span>
+        <img class="league-highlight-card__avatar league-rank-frame ${rankClass(rank)}" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
       </div>
-      <div class="moment-card__category">${esc(label)}</div>
+      <div class="league-highlight-card__category">${esc(label)}</div>
     </div>
-    <div class="moment-card__name">${esc(player.nickname)}</div>
-    <div class="moment-card__value">${esc(value)}</div>
+    <div class="league-highlight-card__name">${esc(player.nickname)}</div>
+    <div class="league-highlight-card__value">${esc(value)}</div>
   </article>`;
 }
 
@@ -141,7 +141,7 @@ function renderInfographic(root, data) {
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-dashboard-group league-dashboard-group--kpi">
     <h3 class="league-subtitle">KPI ліги</h3>
-    <div class="kpi-grid">
+    <div class="league-kpi-grid">
     ${statCard('Активних гравців', data.summary.activePlayersCount)}
     ${statCard('Матчів', data.summary.matchesCount)}
     ${statCard('Боїв', data.summary.battlesCount)}
@@ -150,13 +150,13 @@ function renderInfographic(root, data) {
     ${statCard('Середній WR', averageWinRate)}
     </div>
   </section>
-  <section class="league-dashboard-group rank-section">
-    <div class="section-title">РОЗПОДІЛ ЗА РАНГАМИ</div>
-    <div class="rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="rank-card rank-card--delta"><div class="rank-card__head">Σ Δ</div><div class="rank-card__value">${esc(fmtSigned(totalDeltaPoints))}</div><div class="rank-card__meta">сумарна зміна</div></article></div>
+  <section class="league-dashboard-group league-dashboard-group--ranks">
+    <h3 class="league-subtitle">Розподіл за рангами</h3>
+    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><div class="league-rank-tile__rank">Σ Δ</div><div class="league-rank-tile__count">${esc(fmtSigned(totalDeltaPoints))}</div><div class="league-rank-tile__label">сумарна зміна</div></article></div>
   </section>
-  <section class="league-dashboard-group moments-section">
-    <div class="section-title">КЛЮЧОВІ МОМЕНТИ</div>
-    <div class="moment-list">
+  <section class="league-dashboard-group league-dashboard-group--moments">
+    <h3 class="league-subtitle">Ключові моменти</h3>
+    <div class="league-highlights-grid">
     ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'gain')}
     ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', 'mvp')}
     ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'minus')}

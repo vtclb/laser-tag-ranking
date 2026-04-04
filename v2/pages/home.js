@@ -120,7 +120,7 @@ function renderLeagueSection({ league, players }) {
   const statsLink = STATS_LINKS[league] || '#league-stats';
   return `<section class="px-card home-card home-league home-leaders" data-league="${league}">
     <div class="home-league__head"><h3 class="home-league__title">${esc(leagueLabelUA(league))} — top 10</h3></div>
-    <article class="home-panel home-section-panel"><h4 class="home-section-title">Поточний топ-10</h4>${currentRankingCard(players)}</article>
+    <article class="home-panel home-section-panel">${currentRankingCard(players)}</article>
     <div class="home-cta-row"><a class="btn btn--secondary" href="${statsLink}">Детальна статистика</a></div>
   </section>`;
 }

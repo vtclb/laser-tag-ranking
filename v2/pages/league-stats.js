@@ -34,7 +34,7 @@ function playerProfileHash(league, nickname) {
 
 function rankDistributionTiles(distribution = {}) {
   return RANKS
-    .map((rank) => `<article class="rank-card rank-card--${rank.toLowerCase()}"><div class="rank-card__label">${rank}</div><div class="rank-card__value">${distribution[rank] || 0}</div><div class="rank-card__meta">гравців</div></article>`)
+    .map((rank) => `<article class="rank-card rank-card--${rank.toLowerCase()}"><div class="rank-card__head">${rank}</div><div class="rank-card__value">${distribution[rank] || 0}</div><div class="rank-card__meta">гравців</div></article>`)
     .join('');
 }
 
@@ -103,8 +103,8 @@ function highlightCard(player, value, label, tone) {
     return `<article class="moment-card moment-card--${tone}">
       <div class="moment-card__top">
         <div class="moment-card__identity">
-          <span class="league-rank-badge rank-f">—</span>
-          <span class="league-avatar-wrap league-rank-frame rank-f"><img class="league-avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар"></span>
+          <span class="moment-card__badge rank-f">—</span>
+          <img class="moment-card__avatar league-rank-frame rank-f" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
         </div>
         <div class="moment-card__category">${esc(label)}</div>
       </div>
@@ -116,8 +116,8 @@ function highlightCard(player, value, label, tone) {
   return `<article class="moment-card moment-card--${tone}">
     <div class="moment-card__top">
       <div class="moment-card__identity">
-        <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
-        <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
+        <span class="moment-card__badge ${rankClass(rank)}">${esc(rank)}</span>
+        <img class="moment-card__avatar league-rank-frame ${rankClass(rank)}" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
       </div>
       <div class="moment-card__category">${esc(label)}</div>
     </div>
@@ -152,14 +152,14 @@ function renderInfographic(root, data) {
   </section>
   <section class="league-dashboard-group league-rank-distribution">
     <h3 class="league-subtitle">РОЗПОДІЛ ЗА РАНГАМИ</h3>
-    <div class="rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="rank-card rank-card--delta"><div class="rank-card__label">Σ Δ</div><div class="rank-card__value">${esc(fmtSigned(totalDeltaPoints))}</div><div class="rank-card__meta">сумарна зміна</div></article></div>
+    <div class="rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="rank-card rank-card--delta"><div class="rank-card__head">Σ Δ</div><div class="rank-card__value">${esc(fmtSigned(totalDeltaPoints))}</div><div class="rank-card__meta">сумарна зміна</div></article></div>
   </section>
   <section class="league-dashboard-group">
     <h3 class="league-subtitle">КЛЮЧОВІ МОМЕНТИ</h3>
     <div class="moment-list">
-    ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'up')}
+    ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'gain')}
     ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', 'mvp')}
-    ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'down')}
+    ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'minus')}
     </div>
   </section>`;
 }

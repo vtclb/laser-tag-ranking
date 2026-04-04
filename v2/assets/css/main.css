@@ -3462,52 +3462,53 @@ body.theme-game main.page {
   font-weight: 700;
 }
 
-/* ===== V2 RANK GRID + KEY MOMENTS REBUILD ===== */
+/* ===== V2 RANK + MOMENTS HARD REBUILD ===== */
 .league-page #leagueInfographic .rank-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
 .league-page #leagueInfographic .rank-card {
-  min-height: 98px;
-  border: 1px solid rgba(255, 255, 255, .18);
-  background: rgba(11, 18, 33, .86);
-  padding: 10px;
+  min-height: 100px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  background: rgba(11, 18, 33, .92);
+  border-radius: 6px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+  align-items: flex-start;
+  gap: 6px;
 }
 
-.league-page #leagueInfographic .rank-card__label {
-  font-size: .72rem;
+.league-page #leagueInfographic .rank-card__head {
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: .03em;
 }
 
 .league-page #leagueInfographic .rank-card__value {
-  font-size: 1.3rem;
-  font-weight: 800;
-  line-height: 1.05;
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .league-page #leagueInfographic .rank-card__meta {
-  font-size: .66rem;
+  font-size: 10px;
   color: rgba(228, 238, 255, .68);
-  text-transform: uppercase;
-  letter-spacing: .04em;
+  text-transform: lowercase;
+  letter-spacing: .02em;
 }
 
-.league-page #leagueInfographic .rank-card--s { border-color: color-mix(in srgb, var(--rank-s) 62%, rgba(255,255,255,.2)); background: color-mix(in srgb, var(--rank-s) 11%, rgba(11,18,33,.94)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--rank-s) 55%, transparent); }
-.league-page #leagueInfographic .rank-card--a { border-color: color-mix(in srgb, var(--rank-a) 62%, rgba(255,255,255,.2)); background: color-mix(in srgb, var(--rank-a) 11%, rgba(11,18,33,.94)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--rank-a) 55%, transparent); }
-.league-page #leagueInfographic .rank-card--b { border-color: color-mix(in srgb, var(--rank-b) 62%, rgba(255,255,255,.2)); background: color-mix(in srgb, var(--rank-b) 11%, rgba(11,18,33,.94)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--rank-b) 55%, transparent); }
-.league-page #leagueInfographic .rank-card--c { border-color: color-mix(in srgb, var(--rank-c) 62%, rgba(255,255,255,.2)); background: color-mix(in srgb, var(--rank-c) 11%, rgba(11,18,33,.94)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--rank-c) 55%, transparent); }
-.league-page #leagueInfographic .rank-card--d { border-color: color-mix(in srgb, var(--rank-d) 62%, rgba(255,255,255,.2)); background: color-mix(in srgb, var(--rank-d) 11%, rgba(11,18,33,.94)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--rank-d) 55%, transparent); }
-.league-page #leagueInfographic .rank-card--e { border-color: color-mix(in srgb, var(--rank-e) 62%, rgba(255,255,255,.2)); background: color-mix(in srgb, var(--rank-e) 11%, rgba(11,18,33,.94)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--rank-e) 55%, transparent); }
-.league-page #leagueInfographic .rank-card--f { border-color: color-mix(in srgb, var(--rank-f) 62%, rgba(255,255,255,.2)); background: color-mix(in srgb, var(--rank-f) 11%, rgba(11,18,33,.94)); box-shadow: inset 0 2px 0 color-mix(in srgb, var(--rank-f) 55%, transparent); }
-.league-page #leagueInfographic .rank-card--delta { border-color: rgba(49, 208, 255, .56); background: rgba(49, 208, 255, .12); box-shadow: inset 0 2px 0 rgba(49, 208, 255, .42); }
+.league-page #leagueInfographic .rank-card--s { border-color: color-mix(in srgb, var(--rank-s) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-s) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-s) 24%, transparent); }
+.league-page #leagueInfographic .rank-card--a { border-color: color-mix(in srgb, var(--rank-a) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-a) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-a) 24%, transparent); }
+.league-page #leagueInfographic .rank-card--b { border-color: color-mix(in srgb, var(--rank-b) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-b) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-b) 24%, transparent); }
+.league-page #leagueInfographic .rank-card--c { border-color: color-mix(in srgb, var(--rank-c) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-c) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-c) 24%, transparent); }
+.league-page #leagueInfographic .rank-card--d { border-color: color-mix(in srgb, var(--rank-d) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-d) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-d) 24%, transparent); }
+.league-page #leagueInfographic .rank-card--e { border-color: color-mix(in srgb, var(--rank-e) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-e) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-e) 24%, transparent); }
+.league-page #leagueInfographic .rank-card--f { border-color: color-mix(in srgb, var(--rank-f) 68%, rgba(255,255,255,.22)); background: color-mix(in srgb, var(--rank-f) 10%, rgba(11,18,33,.94)); box-shadow: 0 0 12px color-mix(in srgb, var(--rank-f) 24%, transparent); }
+.league-page #leagueInfographic .rank-card--delta { border-color: rgba(49, 208, 255, .62); background: rgba(49, 208, 255, .1); box-shadow: 0 0 12px rgba(49, 208, 255, .22); }
 
 .league-page #leagueInfographic .moment-list {
   display: flex;
@@ -3516,12 +3517,13 @@ body.theme-game main.page {
 }
 
 .league-page #leagueInfographic .moment-card {
-  border: 1px solid rgba(255, 255, 255, .18);
-  background: rgba(11, 18, 33, .88);
-  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  background: rgba(11, 18, 33, .92);
+  border-radius: 6px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
 }
 
 .league-page #leagueInfographic .moment-card__top {
@@ -3532,91 +3534,105 @@ body.theme-game main.page {
 }
 
 .league-page #leagueInfographic .moment-card__identity {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
 
-.league-page #leagueInfographic .moment-card__identity .league-rank-badge {
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
+.league-page #leagueInfographic .moment-card__badge {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
   padding: 0;
-  font-size: .72rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .24);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.league-page #leagueInfographic .moment-card__identity .league-avatar-wrap {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  padding: 0;
-}
-
-.league-page #leagueInfographic .moment-card__identity .league-avatar {
-  width: 100%;
-  height: 100%;
+.league-page #leagueInfographic .moment-card__avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, .22);
 }
 
 .league-page #leagueInfographic .moment-card__category {
-  font-size: .68rem;
-  color: rgba(228, 238, 255, .66);
-  letter-spacing: .05em;
-  text-transform: uppercase;
+  font-size: 11px;
+  color: rgba(228, 238, 255, .74);
+  letter-spacing: .02em;
   text-align: right;
 }
 
 .league-page #leagueInfographic .moment-card__name {
-  font-size: .96rem;
-  font-weight: 700;
-  line-height: 1.1;
+  margin-top: 8px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.15;
 }
 
 .league-page #leagueInfographic .moment-card__value {
-  font-size: 1.45rem;
-  font-weight: 800;
+  margin-top: 6px;
+  font-size: 30px;
+  font-weight: 700;
   line-height: 1;
 }
 
-.league-page #leagueInfographic .moment-card--up {
-  border-color: rgba(127, 220, 108, .55);
+.league-page #leagueInfographic .moment-card--gain {
+  border-color: rgba(127, 220, 108, .58);
+  box-shadow: 0 0 12px rgba(127, 220, 108, .16);
 }
 
-.league-page #leagueInfographic .moment-card--up .moment-card__value {
+.league-page #leagueInfographic .moment-card--gain .moment-card__value {
   color: #8be870;
 }
 
 .league-page #leagueInfographic .moment-card--mvp {
-  border-color: rgba(243, 164, 78, .6);
+  border-color: rgba(243, 164, 78, .62);
+  box-shadow: 0 0 12px rgba(243, 164, 78, .16);
 }
 
 .league-page #leagueInfographic .moment-card--mvp .moment-card__value {
   color: #ffcd78;
 }
 
-.league-page #leagueInfographic .moment-card--down {
-  border-color: rgba(255, 141, 141, .58);
+.league-page #leagueInfographic .moment-card--minus {
+  border-color: rgba(255, 141, 141, .6);
+  box-shadow: 0 0 12px rgba(255, 141, 141, .16);
 }
 
-.league-page #leagueInfographic .moment-card--down .moment-card__value {
+.league-page #leagueInfographic .moment-card--minus .moment-card__value {
   color: #ff9f9f;
 }
 
 @media (max-width: 480px) {
   .league-page #leagueInfographic .rank-card {
-    min-height: 88px;
+    min-height: 96px;
     padding: 8px;
   }
 
   .league-page #leagueInfographic .rank-card__value {
-    font-size: 1.16rem;
+    font-size: 28px;
   }
 
   .league-page #leagueInfographic .rank-card__meta {
-    font-size: .6rem;
+    font-size: 9px;
+  }
+
+  .league-page #leagueInfographic .moment-card__name {
+    font-size: 18px;
   }
 
   .league-page #leagueInfographic .moment-card__value {
-    font-size: 1.32rem;
+    font-size: 28px;
+  }
+
+  .league-page #leagueInfographic .moment-card__category {
+    font-size: 10px;
   }
 }

@@ -3583,175 +3583,213 @@ body.theme-game {
 .league-page .league-rank-badge.rank-f,
 .league-page #leagueInfographic .league-highlight-card__badge.rank-f { --_rank-color: var(--rank-f); }
 
-/* ===== V2 HOME LOADING STATE ===== */
+/* ===== V2 SYSTEM LOADER ===== */
 .home-v2 {
   position: relative;
 }
 
 .home-v2 .home-content {
-  transition: opacity .2s ease;
+  transition: opacity .24s ease;
 }
 
 .home-v2 .home-content.home-content--hidden {
   opacity: 0;
 }
 
-.home-loading {
+.home-loader {
   position: absolute;
   inset: 0;
   z-index: 6;
-  padding: .4rem 0 .8rem;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(49, 208, 255, .08), transparent 45%),
-    radial-gradient(circle at 88% 0%, rgba(124, 255, 114, .06), transparent 42%),
-    linear-gradient(180deg, rgba(9, 14, 24, .98), rgba(8, 12, 22, .98));
   display: grid;
-  gap: .75rem;
+  gap: .65rem;
+  padding: .4rem 0 .7rem;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(67, 224, 255, .13), transparent 48%),
+    radial-gradient(circle at 92% 6%, rgba(106, 173, 255, .09), transparent 42%),
+    linear-gradient(180deg, rgba(8, 14, 27, .98), rgba(7, 12, 23, .98));
 }
 
-.home-loading.is-complete {
+.home-loader.is-complete {
   opacity: 0;
   pointer-events: none;
-  transition: opacity .2s ease;
+  transition: opacity .25s ease;
 }
 
-.home-loading__copy,
-.home-loading__hero,
-.home-loading__leaders,
-.home-loading__top10,
-.home-loading__lower {
-  border: 1px solid rgba(255, 255, 255, .1);
-  background: linear-gradient(180deg, rgba(19, 31, 53, .7), rgba(12, 20, 36, .74));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03);
+.home-loader__panel,
+.home-loader__console,
+.home-loader__progress,
+.home-loader__preview,
+.home-loader__slow {
+  border: 1px solid rgba(88, 177, 255, .22);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(15, 29, 52, .76), rgba(9, 17, 35, .84));
+  box-shadow: inset 0 0 0 1px rgba(198, 233, 255, .04);
 }
 
-.home-loading__copy {
-  padding: .65rem .7rem;
+.home-loader__panel {
+  padding: .62rem .72rem;
 }
 
-.home-loading__title {
+.home-loader__title {
   margin: 0;
+  font-size: .95rem;
+  letter-spacing: .08em;
+  font-weight: 800;
+}
+
+.home-loader__subtitle {
+  margin: .3rem 0 0;
+  color: rgba(167, 208, 236, .92);
+  font-size: .76rem;
+  letter-spacing: .035em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.home-loader__console {
+  min-height: 128px;
+  max-height: 160px;
+  overflow: auto;
+  padding: .58rem .68rem;
+  background: linear-gradient(180deg, rgba(8, 16, 33, .94), rgba(8, 16, 33, .88));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.home-loader__line {
+  margin: 0;
+  color: rgba(153, 198, 226, .9);
+  font-size: .72rem;
+  line-height: 1.35;
+  opacity: 0;
+  animation: home-loader-line-in .25s ease forwards;
+}
+
+.home-loader__line + .home-loader__line {
+  margin-top: .25rem;
+}
+
+.home-loader__line--ok {
+  color: rgba(120, 238, 194, .95);
+}
+
+.home-loader__line--wait {
+  color: rgba(255, 217, 133, .95);
+}
+
+.home-loader__line--load {
+  color: rgba(125, 202, 255, .95);
+}
+
+.home-loader__cursor {
+  display: block;
+  width: 8px;
+  height: 1em;
+  margin-top: .18rem;
+  background: rgba(124, 227, 255, .95);
+  animation: home-loader-cursor .9s steps(1) infinite;
+}
+
+.home-loader__progress {
+  padding: .55rem .68rem .62rem;
+}
+
+.home-loader__progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .55rem;
+}
+
+.home-loader__progress-label,
+.home-loader__progress-percent {
+  font-size: .72rem;
+  letter-spacing: .06em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.home-loader__progress-label {
+  color: rgba(150, 219, 247, .92);
+}
+
+.home-loader__progress-percent {
+  color: rgba(122, 232, 255, .98);
   font-weight: 700;
 }
 
-.home-loading__sub,
-.home-loading__slow {
-  margin: .35rem 0 0;
-  color: var(--muted);
+.home-loader__progress-bar {
+  margin-top: .42rem;
+  width: 100%;
+  height: 10px;
+  border: 1px solid rgba(91, 169, 228, .34);
+  border-radius: 4px;
+  background: rgba(4, 12, 26, .9);
+  overflow: hidden;
 }
 
-.home-loading__slow small {
-  display: block;
-  margin-top: .2rem;
+.home-loader__progress-fill {
+  width: 8%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(66, 175, 255, .8), rgba(98, 255, 241, .9));
+  box-shadow: 0 0 10px rgba(66, 206, 255, .45);
+  transition: width .35s ease;
 }
 
-.home-loading__hero,
-.home-loading__top10,
-.home-loading__leader-card,
-.home-loading__lower-card {
-  padding: .7rem;
-}
-
-.home-loading__leaders,
-.home-loading__lower {
+.home-loader__preview {
+  padding: .65rem;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .6rem;
-  padding: .6rem;
+  gap: .55rem;
 }
 
-.home-loading__leader-card {
-  display: grid;
-  grid-template-columns: 48px 1fr 58px;
-  gap: .6rem;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, .08);
-}
-
-.home-loading__leader-lines {
-  display: grid;
-  gap: .35rem;
-}
-
-.home-loading__leader-points {
-  height: 38px;
-}
-
-.home-loading__rows {
-  display: grid;
-  gap: .45rem;
-}
-
-.home-loading__row {
-  height: 44px;
-}
-
-.home-loading__lower-card {
-  min-height: 54px;
-}
-
-.skeleton-block,
-.skeleton-line,
-.skeleton-avatar {
+.home-loader__hero,
+.home-loader__leader-card,
+.home-loader__row {
   position: relative;
   overflow: hidden;
   border-radius: 4px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .11));
+  border: 1px solid rgba(154, 207, 255, .12);
+  background: linear-gradient(90deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .09));
 }
 
-.skeleton-line {
-  height: 12px;
+.home-loader__hero {
+  height: 108px;
 }
 
-.skeleton-avatar {
-  width: 46px;
-  height: 46px;
+.home-loader__leaders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+}
+
+.home-loader__leader-card {
+  min-height: 78px;
+}
+
+.home-loader__rows {
+  display: grid;
+  gap: .4rem;
+}
+
+.home-loader__row {
+  height: 38px;
+}
+
+.home-loader__slow {
+  padding: .45rem .68rem;
+  margin: 0;
+  color: rgba(174, 208, 231, .95);
+  font-size: .73rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .skeleton-shimmer::after,
-.skeleton-block::after,
-.skeleton-line::after,
-.skeleton-avatar::after {
+.home-loader__hero::after,
+.home-loader__leader-card::after,
+.home-loader__row::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 25%, rgba(255, 255, 255, .24) 48%, transparent 72%);
+  background: linear-gradient(100deg, transparent 22%, rgba(184, 236, 255, .24) 48%, transparent 73%);
   transform: translateX(-120%);
-  animation: home-skeleton-shimmer 1.5s ease-in-out infinite;
-}
-
-.skeleton-line--hero {
-  height: 132px;
-}
-
-.skeleton-line--subtitle {
-  width: 48%;
-  margin-top: .6rem;
-}
-
-.skeleton-line--cta {
-  width: 160px;
-  height: 36px;
-  margin-top: .55rem;
-}
-
-.skeleton-line--md {
-  width: 65%;
-}
-
-.skeleton-line--sm {
-  width: 44%;
-}
-
-.skeleton-line--section {
-  width: 220px;
-  margin-bottom: .55rem;
-}
-
-.skeleton-line--search {
-  width: 100%;
-  height: 40px;
-  margin-bottom: .65rem;
+  animation: home-skeleton-shimmer 1.55s ease-in-out infinite;
 }
 
 @keyframes home-skeleton-shimmer {
@@ -3760,9 +3798,43 @@ body.theme-game {
   }
 }
 
+@keyframes home-loader-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-loader-cursor {
+  50% {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 760px) {
-  .home-loading__leaders,
-  .home-loading__lower {
+  .home-loader {
+    gap: .55rem;
+    padding-bottom: .62rem;
+  }
+
+  .home-loader__title {
+    font-size: .86rem;
+  }
+
+  .home-loader__console {
+    min-height: 118px;
+    max-height: 146px;
+  }
+
+  .home-loader__leaders {
     grid-template-columns: 1fr;
+  }
+
+  .home-loader__hero {
+    height: 90px;
   }
 }

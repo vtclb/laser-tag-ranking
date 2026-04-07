@@ -3095,6 +3095,18 @@ body.theme-game main.page {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.league-page .league-kpi-grid--primary .kpi-card {
+  min-height: 150px;
+}
+
+.league-page .league-kpi-grid--secondary .kpi-card {
+  min-height: 124px;
+}
+
+.league-page .league-kpi-grid--tertiary .kpi-card {
+  min-height: 98px;
+}
+
 .league-page .league-rank-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -3104,22 +3116,73 @@ body.theme-game main.page {
 }
 
 .league-page .kpi-card {
-  background: linear-gradient(180deg, #0a1a33, #081224);
+  background: linear-gradient(180deg, rgba(10, 26, 51, 0.96), rgba(8, 18, 36, 0.92));
   padding: 18px;
   border-radius: 16px;
   border: none;
-  box-shadow: 0 0 20px rgba(0, 200, 255, 0.05);
+  box-shadow: 0 0 16px rgba(0, 200, 255, 0.04);
+  display: grid;
+  gap: 8px;
+  align-content: start;
 }
 
 .league-page .kpi-label {
   font-size: 12px;
   opacity: 0.5;
-  margin-bottom: 6px;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.league-page .kpi-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .league-page .kpi-value {
-  font-size: 30px;
+  line-height: 1.05;
+}
+
+.league-page .kpi-primary {
+  font-size: 32px;
   font-weight: 700;
+}
+
+.league-page .kpi-secondary {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.league-page .kpi-tertiary {
+  font-size: 18px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.league-page .kpi-divider {
+  height: 1px;
+  margin-top: 6px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+}
+
+.league-page .winrate-bar {
+  height: 6px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.league-page .winrate-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, cyan, blue);
 }
 
 .league-page .highlight-card {
@@ -4187,9 +4250,19 @@ body.theme-game .gameday-v2 label {
 
 body.theme-game .league-page .kpi-value,
 body.theme-game .league-page .league-game-day-card__value {
-  font-size: clamp(26px, 2.5vw, 32px);
-  font-weight: 700;
   line-height: 1.1;
+}
+
+body.theme-game .league-page .kpi-primary {
+  font-size: clamp(30px, 3.1vw, 36px);
+}
+
+body.theme-game .league-page .kpi-secondary {
+  font-size: clamp(22px, 2.3vw, 27px);
+}
+
+body.theme-game .league-page .kpi-tertiary {
+  font-size: clamp(17px, 1.7vw, 20px);
 }
 
 body.theme-game .league-page .league-subtitle,

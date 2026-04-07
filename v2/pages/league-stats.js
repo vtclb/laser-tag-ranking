@@ -75,8 +75,16 @@ function tableRowMarkup(player, league) {
   </tr>`;
 }
 
-function statCard(label, value) {
-  return `<article class="kpi-card card"><div class="kpi-label">${esc(label)}</div><div class="kpi-value">${esc(value)}</div></article>`;
+function statCard({ label, value, level = 'secondary', icon = '', divider = false, progress = null }) {
+  const progressMarkup = progress
+    ? `<div class="winrate-bar" aria-hidden="true"><div class="winrate-fill" style="width:${esc(progress.width)}"></div></div>`
+    : '';
+  return `<article class="kpi-card kpi-card--${esc(level)} card">
+    <div class="kpi-label">${icon ? `<span class="kpi-icon" aria-hidden="true">${icon}</span>` : ''}${esc(label)}</div>
+    <div class="kpi-value kpi-${esc(level)}">${esc(value)}</div>
+    ${divider ? '<div class="kpi-divider" aria-hidden="true"></div>' : ''}
+    ${progressMarkup}
+  </article>`;
 }
 
 function calculateRemainingGameDays(data, currentSeason) {
@@ -164,19 +172,25 @@ function renderHero(root, league, data, remainingGameDays) {
 
 function renderInfographic(root, data) {
   const totalDeltaPoints = data.activePlayers.reduce((sum, player) => sum + (Number(player.delta) || 0), 0);
-  const averageWinRate = data.summary.activePlayersCount
-    ? `${(data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount).toFixed(1)}%`
-    : '—';
+  const averageWinRateValue = data.summary.activePlayersCount
+    ? (data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount)
+    : null;
+  const averageWinRate = averageWinRateValue === null ? '—' : `${averageWinRateValue.toFixed(1)}%`;
+  const averageWinRateWidth = averageWinRateValue === null ? '0%' : `${Math.max(0, Math.min(100, averageWinRateValue)).toFixed(1)}%`;
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-dashboard-group league-dashboard-group--kpi">
     <h3 class="league-subtitle">KPI ліги</h3>
-    <div class="league-kpi-grid">
-    ${statCard('Активних гравців', data.summary.activePlayersCount)}
-    ${statCard('Матчів', data.summary.matchesCount)}
-    ${statCard('Боїв', data.summary.battlesCount)}
-    ${statCard('Сер. рейтинг', data.summary.avgRating)}
-    ${statCard('Total MVP', data.summary.totalMvp)}
-    ${statCard('Середній WR', averageWinRate)}
+    <div class="league-kpi-grid league-kpi-grid--primary">
+    ${statCard({ label: 'Активні гравці', value: data.summary.activePlayersCount, level: 'primary', icon: '👤' })}
+    ${statCard({ label: 'Матчі', value: data.summary.matchesCount, level: 'primary', divider: true })}
+    </div>
+    <div class="league-kpi-grid league-kpi-grid--secondary">
+    ${statCard({ label: 'Бої', value: data.summary.battlesCount, level: 'secondary' })}
+    ${statCard({ label: 'Сер. рейтинг', value: data.summary.avgRating, level: 'secondary' })}
+    </div>
+    <div class="league-kpi-grid league-kpi-grid--tertiary">
+    ${statCard({ label: 'Total MVP', value: data.summary.totalMvp, level: 'tertiary' })}
+    ${statCard({ label: 'Winrate', value: averageWinRate, level: 'tertiary', progress: { width: averageWinRateWidth } })}
     </div>
   </section>
   <section class="league-dashboard-group league-dashboard-group--ranks">

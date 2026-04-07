@@ -52,8 +52,10 @@ function currentRankingCard(players = []) {
     return `<li class="home-ranking__row rank-${rankKey}">
       <span class="home-ranking__place">#${index + 1}</span>
       <span class="home-ranking__rank rank-${rankKey}">${rank}</span>
-      <span class="home-ranking__avatar-wrap rank-${rankKey}"><img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" /></span>
-      <span class="home-ranking__name">${nickname}</span>
+      <span class="home-ranking__identity">
+        <span class="home-ranking__avatar-wrap rank-${rankKey}"><img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" /></span>
+        <span class="home-ranking__name">${nickname}</span>
+      </span>
       <span class="home-ranking__points"><small>очки</small>${points}</span>
     </li>`;
   }).join('');

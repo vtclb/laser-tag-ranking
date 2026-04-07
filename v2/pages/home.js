@@ -125,6 +125,105 @@ function renderLeagueSection({ league, players }) {
   </section>`;
 }
 
+function renderHomeLoadingSkeleton() {
+  return `
+    <section class="home-loading" id="homeLoading" aria-live="polite" aria-busy="true">
+      <div class="home-loading__copy">
+        <p class="home-loading__title">Завантажуємо рейтинг сезону…</p>
+        <p class="home-loading__sub" id="homeLoadingSub" hidden>Отримуємо дані ліг та статистику</p>
+        <p class="home-loading__slow" id="homeLoadingSlow" hidden>
+          <span>Завантаження триває довше, ніж зазвичай</span>
+          <small>Можна зачекати ще кілька секунд або оновити сторінку</small>
+        </p>
+      </div>
+
+      <div class="home-loading__hero skeleton-shimmer">
+        <div class="skeleton-line skeleton-line--hero"></div>
+        <div class="skeleton-line skeleton-line--subtitle"></div>
+        <div class="skeleton-block skeleton-line--cta"></div>
+      </div>
+
+      <div class="home-loading__leaders">
+        <article class="home-loading__leader-card skeleton-shimmer">
+          <div class="skeleton-avatar"></div>
+          <div class="home-loading__leader-lines">
+            <div class="skeleton-line skeleton-line--md"></div>
+            <div class="skeleton-line skeleton-line--sm"></div>
+            <div class="skeleton-line skeleton-line--sm"></div>
+          </div>
+          <div class="skeleton-block home-loading__leader-points"></div>
+        </article>
+        <article class="home-loading__leader-card skeleton-shimmer">
+          <div class="skeleton-avatar"></div>
+          <div class="home-loading__leader-lines">
+            <div class="skeleton-line skeleton-line--md"></div>
+            <div class="skeleton-line skeleton-line--sm"></div>
+            <div class="skeleton-line skeleton-line--sm"></div>
+          </div>
+          <div class="skeleton-block home-loading__leader-points"></div>
+        </article>
+      </div>
+
+      <section class="home-loading__top10 skeleton-shimmer">
+        <div class="skeleton-line skeleton-line--section"></div>
+        <div class="skeleton-block skeleton-line--search"></div>
+        <div class="home-loading__rows">
+          <div class="home-loading__row skeleton-block"></div>
+          <div class="home-loading__row skeleton-block"></div>
+          <div class="home-loading__row skeleton-block"></div>
+          <div class="home-loading__row skeleton-block"></div>
+          <div class="home-loading__row skeleton-block"></div>
+          <div class="home-loading__row skeleton-block"></div>
+        </div>
+      </section>
+
+      <div class="home-loading__lower">
+        <div class="skeleton-block home-loading__lower-card skeleton-shimmer"></div>
+        <div class="skeleton-block home-loading__lower-card skeleton-shimmer"></div>
+      </div>
+    </section>
+  `;
+}
+
+function setHomeLoadingLifecycle(root) {
+  const loadingRoot = root.querySelector('#homeLoading');
+  const contentRoot = root.querySelector('#homeContent');
+  const loadingSub = root.querySelector('#homeLoadingSub');
+  const loadingSlow = root.querySelector('#homeLoadingSlow');
+
+  if (!loadingRoot || !contentRoot) {
+    return {
+      revealContent() {},
+      destroy() {}
+    };
+  }
+
+  contentRoot.classList.add('home-content--hidden');
+
+  const delayedSubTimer = window.setTimeout(() => {
+    if (loadingSub) loadingSub.hidden = false;
+  }, 1500);
+
+  const delayedSlowTimer = window.setTimeout(() => {
+    if (loadingSlow) loadingSlow.hidden = false;
+  }, 6500);
+
+  const destroy = () => {
+    window.clearTimeout(delayedSubTimer);
+    window.clearTimeout(delayedSlowTimer);
+  };
+
+  const revealContent = () => {
+    destroy();
+    contentRoot.classList.remove('home-content--hidden');
+    loadingRoot.classList.add('is-complete');
+    loadingRoot.setAttribute('aria-busy', 'false');
+    window.setTimeout(() => loadingRoot.remove(), 220);
+  };
+
+  return { revealContent, destroy };
+}
+
 export async function initHomePage() {
   const root = document.getElementById('homeRoot') || document.getElementById('view');
   if (!root) return;
@@ -148,15 +247,24 @@ export async function initPage(root) {
 
 async function safeInitHomePage(root) {
   root.classList.add('home-v2');
-  root.innerHTML = `<section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
-  <div class="px-divider"></div>
-  <section class="section" id="leadersNowMount"></section>
-  <section class="section" id="leagueSections"></section>`;
+  root.innerHTML = `${renderHomeLoadingSkeleton()}
+    <div class="home-content" id="homeContent">
+      <section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
+      <div class="px-divider"></div>
+      <section class="section" id="leadersNowMount"></section>
+      <section class="section" id="leagueSections"></section>
+    </div>`;
 
+  const lifecycle = setHomeLoadingLifecycle(root);
   const stateBox = document.getElementById('stateBox');
   const leadersNowMount = document.getElementById('leadersNowMount');
   const leagueSections = document.getElementById('leagueSections');
-  if (!stateBox || !leadersNowMount || !leagueSections) return;
+  if (!stateBox || !leadersNowMount || !leagueSections) {
+    lifecycle.destroy();
+    lifecycle.revealContent();
+    return;
+  }
+
   const renderEmptyState = () => {
     stateBox.hidden = false;
     stateBox.textContent = 'Дані тимчасово недоступні';
@@ -165,18 +273,21 @@ async function safeInitHomePage(root) {
   };
 
   const renderHome = async () => {
-    let adultsLive = null;
-    let kidsLive = null;
-    try {
-      adultsLive = await getCurrentLeagueLiveStats('sundaygames');
-    } catch (error) {
-      console.warn('[home] adult failed', error);
+    const [adultResult, kidsResult] = await Promise.allSettled([
+      getCurrentLeagueLiveStats('sundaygames'),
+      getCurrentLeagueLiveStats('kids')
+    ]);
+
+    const adultsLive = adultResult.status === 'fulfilled' ? adultResult.value : null;
+    const kidsLive = kidsResult.status === 'fulfilled' ? kidsResult.value : null;
+
+    if (adultResult.status === 'rejected') {
+      console.warn('[home] adult failed', adultResult.reason);
     }
-    try {
-      kidsLive = await getCurrentLeagueLiveStats('kids');
-    } catch (error) {
-      console.warn('[home] kids failed', error);
+    if (kidsResult.status === 'rejected') {
+      console.warn('[home] kids failed', kidsResult.reason);
     }
+
     console.log('[home] data loaded', { adultsLive, kidsLive });
     if (!adultsLive && !kidsLive) {
       console.warn('[home] no data, rendering empty state');
@@ -194,7 +305,6 @@ async function safeInitHomePage(root) {
       league,
       players: league === 'sundaygames' ? adultsPlayers : kidsPlayers
     })).join('');
-
   };
 
   try {
@@ -207,5 +317,7 @@ async function safeInitHomePage(root) {
     stateBox.textContent = msg;
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
     leagueSections.innerHTML = '';
+  } finally {
+    lifecycle.revealContent();
   }
 }

@@ -152,38 +152,40 @@ function highlightCard(player, value, label, tone, opts = {}) {
   </article>`;
 }
 
-function renderHero(root, league, data, remainingGameDays) {
+function renderHero(root, league, data) {
   root.innerHTML = `<h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
-  <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>
-  <div class="live-grid">
-    <article class="live-card card">
-      <div class="live-value">${esc(data.summary.activePlayersCount ?? 0)}</div>
-      <div class="live-label">гравців</div>
-    </article>
-    <article class="live-card card">
-      <div class="live-value">${esc(data.summary.matchesCount ?? 0)}</div>
-      <div class="live-label">матчів</div>
-    </article>
-    <article class="live-card card">
-      <div class="live-value">${esc(data.lastGameDay?.date || '—')}</div>
-      <div class="live-label">ігровий день</div>
-    </article>
-    <article class="live-card card">
-      <div class="live-value">${esc(remainingGameDays)}</div>
-      <div class="live-label">днів залишилось</div>
-    </article>
-  </div>
-  <div class="px-card__actions league-actions"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;
+  <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>`;
 }
 
-function renderInfographic(root, data) {
+function renderInfographic(root, data, remainingGameDays) {
   const totalDeltaPoints = data.activePlayers.reduce((sum, player) => sum + (Number(player.delta) || 0), 0);
   const averageWinRateValue = data.summary.activePlayersCount
     ? (data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount)
     : null;
   const averageWinRate = averageWinRateValue === null ? '—' : `${averageWinRateValue.toFixed(1)}%`;
   const averageWinRateWidth = averageWinRateValue === null ? '0%' : `${Math.max(0, Math.min(100, averageWinRateValue)).toFixed(1)}%`;
-  root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
+  root.innerHTML = `<h2 class="px-card__title league-section-title">Статистика ліги</h2>
+  <section class="league-dashboard-group league-dashboard-group--live">
+    <h3 class="league-subtitle">Поточні live дані</h3>
+    <div class="live-grid">
+      <article class="live-card card">
+        <div class="live-value">${esc(data.summary.activePlayersCount ?? 0)}</div>
+        <div class="live-label">гравців</div>
+      </article>
+      <article class="live-card card">
+        <div class="live-value">${esc(data.summary.matchesCount ?? 0)}</div>
+        <div class="live-label">матчів</div>
+      </article>
+      <article class="live-card card">
+        <div class="live-value">${esc(data.lastGameDay?.date || '—')}</div>
+        <div class="live-label">ігровий день</div>
+      </article>
+      <article class="live-card card">
+        <div class="live-value">${esc(remainingGameDays)}</div>
+        <div class="live-label">днів залишилось</div>
+      </article>
+    </div>
+  </section>
   <section class="league-dashboard-group league-dashboard-group--kpi">
     <h3 class="league-subtitle">KPI ліги</h3>
     <div class="league-kpi-grid league-kpi-grid--primary">
@@ -232,15 +234,56 @@ function resolveLeague(params = {}) {
   return normalizeLeague(params.league || qp.get('league') || 'kids') || 'kids';
 }
 
-function renderLoading(root) {
-  const loadingMarkup = `<h1 class="px-card__title league-section-title">Статистика ліги</h1><p class="px-card__text">Завантажуємо live статистику…</p><div class="league-loading-bar" aria-hidden="true"></div>`;
+function renderLoading(root, league) {
   const hero = root.querySelector('#leagueHero');
+  const tableTitle = root.querySelector('#leagueTableTitle');
+  const rankingTable = root.querySelector('#leagueTableBody');
+  const expandBtn = root.querySelector('#leagueExpandBtn');
+  const searchInput = root.querySelector('#leagueSearchInput');
+  const sortControls = root.querySelector('#leagueSortControls');
+  const infographic = root.querySelector('#leagueInfographic');
+  const lastGameDay = root.querySelector('#leagueLastGameDay');
+
   if (hero) {
-    hero.classList.add('league-loading-block');
-    hero.innerHTML = loadingMarkup;
-    return;
+    hero.classList.remove('league-loading-block');
+    hero.innerHTML = `<h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
+    <p class="px-card__text league-season-title">Поточні live дані: <strong>Завантаження…</strong></p>`;
   }
-  root.innerHTML = `<section class="px-card league-hero league-loading-block">${loadingMarkup}</section>`;
+  if (tableTitle) tableTitle.textContent = 'ТОП-10 гравців';
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.disabled = true;
+    searchInput.placeholder = 'Завантажуємо гравців…';
+  }
+  if (sortControls) {
+    sortControls.classList.add('is-loading');
+    sortControls.querySelectorAll('.league-sort-btn').forEach((btn) => {
+      btn.disabled = true;
+      btn.setAttribute('aria-disabled', 'true');
+    });
+  }
+  if (rankingTable) {
+    rankingTable.innerHTML = Array.from({ length: 8 }, () => `<tr class="league-loading-row" aria-hidden="true">
+      <td class="league-ranking-table__cell league-ranking-table__cell--place"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--player"><span class="league-loading-cell"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--points"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--num"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--num"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--num"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--num"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--num"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--num"><span class="league-loading-cell league-loading-cell--short"></span></td>
+      <td class="league-ranking-table__cell league-ranking-table__cell--num"><span class="league-loading-cell league-loading-cell--short"></span></td>
+    </tr>`).join('');
+    rankingTable.insertAdjacentHTML('beforeend', `<tr class="league-loading-note-row"><td class="league-ranking-table__empty" colspan="10">Завантажуємо live статистику…</td></tr>`);
+  }
+  if (expandBtn) {
+    expandBtn.disabled = true;
+    expandBtn.setAttribute('aria-disabled', 'true');
+    expandBtn.textContent = 'Завантаження…';
+  }
+  if (infographic) infographic.innerHTML = '';
+  if (lastGameDay) lastGameDay.innerHTML = '';
 }
 
 function sortPlayers(players, sortBy, direction = 'desc') {
@@ -286,8 +329,8 @@ export async function initPage(root, params = {}) {
 }
 
 async function safeInitLeagueStatsPage(root, params = {}) {
-  renderLoading(root);
   const league = resolveLeague(params);
+  renderLoading(root, league);
   const data = await getCurrentLeagueLiveStats(league);
   console.log('[league-stats] data loaded', data);
   if (!data) {
@@ -364,9 +407,18 @@ async function safeInitLeagueStatsPage(root, params = {}) {
     });
   };
 
-  renderHero(hero, league, safeData, remainingGameDays);
-  renderInfographic(infographic, safeData);
+  renderHero(hero, league, safeData);
+  renderInfographic(infographic, safeData, remainingGameDays);
   renderLastGameDay(lastGameDay, safeData.lastGameDay, league);
+  searchInput.disabled = false;
+  searchInput.placeholder = 'Нікнейм гравця';
+  expandBtn.disabled = false;
+  expandBtn.removeAttribute('aria-disabled');
+  sortControls.classList.remove('is-loading');
+  sortControls.querySelectorAll('.league-sort-btn').forEach((btn) => {
+    btn.disabled = false;
+    btn.removeAttribute('aria-disabled');
+  });
   setSortButtonState();
   renderTables();
 

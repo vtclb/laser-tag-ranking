@@ -4139,3 +4139,155 @@ body.theme-game .league-page .league-game-day-card {
   background: linear-gradient(180deg, rgba(14, 23, 39, .94), rgba(9, 16, 28, .95)) !important;
   box-shadow: 0 10px 24px rgba(3, 8, 18, .3), inset 0 1px 0 rgba(196, 223, 255, .08) !important;
 }
+
+/* V2 dashboard polish: league + gameday only */
+body.theme-game .league-page .league-kpi-grid,
+body.theme-game .league-page .league-highlights-grid,
+body.theme-game .league-page .live-grid,
+body.theme-game .league-page .league-game-day-grid {
+  gap: 16px;
+}
+
+body.theme-game .league-page .kpi-card,
+body.theme-game .league-page .highlight-card,
+body.theme-game .league-page .live-card,
+body.theme-game .league-page .league-game-day-card,
+body.theme-game .league-page .league-rank-tile,
+body.theme-game .gameday-v2 .gameday-hero,
+body.theme-game .gameday-v2 .gameday-day-summary,
+body.theme-game .gameday-v2 .gameday-match-card,
+body.theme-game .gameday-v2 .gameday-match-head,
+body.theme-game .gameday-v2 .gameday-match-details,
+body.theme-game .gameday-v2 .gameday-team-box,
+body.theme-game .gameday-v2 .gameday-result-box,
+body.theme-game .gameday-v2 .gameday-mvp-box,
+body.theme-game .gameday-v2 .gameday-mvp-item,
+body.theme-game .gameday-v2 .gameday-footer-item {
+  border: 0 !important;
+  border-radius: 16px;
+  box-shadow: 0 0 20px rgba(0, 150, 255, 0.05);
+  transition: 0.2s ease;
+}
+
+body.theme-game .league-page .kpi-card {
+  background: linear-gradient(180deg, #0a1f3a, #081424) !important;
+  padding: 16px;
+  box-shadow: 0 0 25px rgba(0, 200, 255, 0.06);
+}
+
+body.theme-game .league-page .kpi-label,
+body.theme-game .league-page .league-game-day-card__label,
+body.theme-game .league-page .live-label,
+body.theme-game .gameday-v2 label {
+  font-size: 12px;
+  opacity: 0.5;
+  letter-spacing: .03em;
+  font-weight: 500;
+}
+
+body.theme-game .league-page .kpi-value,
+body.theme-game .league-page .league-game-day-card__value {
+  font-size: clamp(26px, 2.5vw, 32px);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+body.theme-game .league-page .league-subtitle,
+body.theme-game .league-page .league-section-title,
+body.theme-game .gameday-v2 .px-card__title {
+  font-size: clamp(16px, 1.7vw, 20px);
+  letter-spacing: 1px;
+  text-transform: none;
+}
+
+body.theme-game .league-page .highlight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(10, 31, 58, .96), rgba(8, 20, 36, .98)) !important;
+}
+
+body.theme-game .league-page .highlight-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+body.theme-game .league-page .highlight-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+body.theme-game .league-page .highlight-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+body.theme-game .league-page .highlight-type {
+  font-size: 12px;
+  opacity: .5;
+  font-weight: 500;
+  text-transform: none;
+}
+
+body.theme-game .league-page .highlight-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+body.theme-game .league-page .highlight-value.positive {
+  color: #27ddff;
+}
+
+body.theme-game .league-page .highlight-value.negative {
+  color: #ff6b6b;
+}
+
+body.theme-game .league-page .live-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  background: linear-gradient(180deg, #0a1f3a, #081424) !important;
+}
+
+body.theme-game .league-page .live-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+body.theme-game .league-page .league-actions .button-primary {
+  width: 100%;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #00c9ff, #326bff);
+  border: 0;
+  box-shadow: 0 0 24px rgba(0, 185, 255, 0.22);
+  transition: 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.theme-game .league-page .kpi-card:hover,
+  body.theme-game .league-page .highlight-card:hover,
+  body.theme-game .league-page .live-card:hover,
+  body.theme-game .league-page .league-game-day-card:hover,
+  body.theme-game .gameday-v2 .gameday-match-card:hover,
+  body.theme-game .gameday-v2 .gameday-team-box:hover,
+  body.theme-game .gameday-v2 .gameday-result-box:hover,
+  body.theme-game .gameday-v2 .gameday-mvp-item:hover,
+  body.theme-game .league-page .league-actions .button-primary:hover {
+    transform: scale(1.02);
+  }
+}
+
+body.theme-game .league-page .league-grid-bg,
+body.theme-game .league-page .pixel-grid,
+body.theme-game .gameday-v2 .pixel-grid {
+  opacity: 0.03 !important;
+}

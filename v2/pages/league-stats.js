@@ -43,7 +43,8 @@ function rankDistributionTiles(distribution = {}) {
   return RANKS
     .map((rank) => {
       const count = distribution[rank] || 0;
-      return `<article class="league-rank-tile league-rank-tile--${rank.toLowerCase()}"><div class="league-rank-tile__rank">${rank}</div><div class="league-rank-tile__count">${count}</div><div class="league-rank-tile__label"><span class="league-rank-tile__icon" aria-hidden="true">👤</span>${playerCountText(count)}</div></article>`;
+      const rankKey = rank.toLowerCase();
+      return `<article class="league-rank-tile rank-card rank-${rankKey} card league-rank-tile--${rankKey}"><div class="league-rank-tile__rank">${rank}</div><div class="league-rank-tile__count">${count}</div><div class="league-rank-tile__label"><span class="league-rank-tile__icon" aria-hidden="true">👤</span>${playerCountText(count)}</div></article>`;
     })
     .join('');
 }
@@ -75,7 +76,7 @@ function tableRowMarkup(player, league) {
 }
 
 function statCard(label, value) {
-  return `<article class="league-kpi-card"><div class="league-kpi-card__label">${esc(label)}</div><div class="league-kpi-card__value">${esc(value)}</div></article>`;
+  return `<article class="league-kpi-card kpi-card card"><div class="kpi-title">${esc(label)}</div><div class="kpi-value">${esc(value)}</div></article>`;
 }
 
 function calculateRemainingGameDays(data, currentSeason) {
@@ -110,37 +111,54 @@ function calculateRemainingGameDays(data, currentSeason) {
 
 function highlightCard(player, value, label, tone) {
   if (!player) {
-    return `<article class="league-highlight-card league-highlight-card--${tone}">
-      <div class="league-highlight-card__meta">
+    return `<article class="league-highlight-card highlight-card card league-highlight-card--${tone}">
+      <div class="highlight-header">
         <div class="league-highlight-card__identity">
-          <span class="league-highlight-card__badge rank-f">—</span>
-          <img class="league-highlight-card__avatar league-rank-frame rank-f" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
+          <span class="league-highlight-card__badge rank-f rank-badge">—</span>
+          <img class="league-highlight-card__avatar avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
         </div>
-        <div class="league-highlight-card__category">${esc(label)}</div>
+        <div class="league-highlight-card__category highlight-type">${esc(label)}</div>
       </div>
-      <div class="league-highlight-card__name">—</div>
-      <div class="league-highlight-card__value">—</div>
+      <div class="league-highlight-card__name player-name">—</div>
+      <div class="league-highlight-card__value highlight-value">—</div>
     </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
-  return `<article class="league-highlight-card league-highlight-card--${tone}">
-    <div class="league-highlight-card__meta">
+  return `<article class="league-highlight-card highlight-card card league-highlight-card--${tone}">
+    <div class="highlight-header">
       <div class="league-highlight-card__identity">
-        <span class="league-highlight-card__badge ${rankClass(rank)}">${esc(rank)}</span>
-        <img class="league-highlight-card__avatar league-rank-frame ${rankClass(rank)}" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
+        <span class="league-highlight-card__badge ${rankClass(rank)} rank-badge">${esc(rank)}</span>
+        <img class="league-highlight-card__avatar avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
       </div>
-      <div class="league-highlight-card__category">${esc(label)}</div>
+      <div class="league-highlight-card__category highlight-type">${esc(label)}</div>
     </div>
-    <div class="league-highlight-card__name">${esc(player.nickname)}</div>
-    <div class="league-highlight-card__value">${esc(value)}</div>
+    <div class="league-highlight-card__name player-name">${esc(player.nickname)}</div>
+    <div class="league-highlight-card__value highlight-value">${esc(value)}</div>
   </article>`;
 }
 
 function renderHero(root, league, data, remainingGameDays) {
   root.innerHTML = `<h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
   <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>
-  <div class="league-summary-strip"><span>Активних гравців: ${data.summary.activePlayersCount}</span><span>Матчів: ${data.summary.matchesCount}</span><span>Ігровий день: ${esc(data.lastGameDay?.date || '—')}</span><span>Залишилось ігрових днів: ${esc(remainingGameDays)}</span></div>
-  <div class="px-card__actions league-actions"><a class="btn" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;
+  <div class="live-grid">
+    <article class="live-card card">
+      <div class="value">${esc(data.summary.activePlayersCount ?? 0)}</div>
+      <div class="label">гравців</div>
+    </article>
+    <article class="live-card card">
+      <div class="value">${esc(data.summary.matchesCount ?? 0)}</div>
+      <div class="label">матчів</div>
+    </article>
+    <article class="live-card card">
+      <div class="value">${esc(data.lastGameDay?.date || '—')}</div>
+      <div class="label">ігровий день</div>
+    </article>
+    <article class="live-card card">
+      <div class="value">${esc(remainingGameDays)}</div>
+      <div class="label">днів залишилось</div>
+    </article>
+  </div>
+  <div class="px-card__actions league-actions"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;
 }
 
 function renderInfographic(root, data) {
@@ -162,7 +180,7 @@ function renderInfographic(root, data) {
   </section>
   <section class="league-dashboard-group league-dashboard-group--ranks">
     <h3 class="league-subtitle">Розподіл за рангами</h3>
-    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta"><div class="league-rank-tile__rank">Σ Δ</div><div class="league-rank-tile__count">${esc(fmtSigned(totalDeltaPoints))}</div><div class="league-rank-tile__label">сумарна зміна</div></article></div>
+    <div class="league-rank-grid">${rankDistributionTiles(data.summary.rankDistribution || {})}<article class="league-rank-tile league-rank-tile--meta rank-card card"><div class="league-rank-tile__rank">Σ Δ</div><div class="league-rank-tile__count">${esc(fmtSigned(totalDeltaPoints))}</div><div class="league-rank-tile__label">сумарна зміна</div></article></div>
   </section>
   <section class="league-dashboard-group league-dashboard-group--moments">
     <h3 class="league-subtitle">Ключові моменти</h3>
@@ -178,12 +196,12 @@ function renderLastGameDay(root, lastGameDay, league) {
   const day = lastGameDay || { date: '', matchesCount: 0, battlesCount: 0, mvp: null };
   root.innerHTML = `<h2 class="px-card__title league-section-title">Ігровий день</h2>
   <div class="league-game-day-grid">
-    <article class="league-game-day-card"><span class="league-game-day-card__label">Дата</span><strong class="league-game-day-card__value">${esc(day.date || '—')}</strong></article>
-    <article class="league-game-day-card"><span class="league-game-day-card__label">Матчів</span><strong class="league-game-day-card__value">${esc(day.matchesCount || 0)}</strong></article>
-    <article class="league-game-day-card"><span class="league-game-day-card__label">Боїв</span><strong class="league-game-day-card__value">${esc(day.battlesCount || 0)}</strong></article>
-    <article class="league-game-day-card"><span class="league-game-day-card__label">MVP дня</span><strong class="league-game-day-card__value">${esc(day.mvp || '—')}</strong></article>
+    <article class="league-game-day-card card"><span class="league-game-day-card__label">Дата</span><strong class="league-game-day-card__value">${esc(day.date || '—')}</strong></article>
+    <article class="league-game-day-card card"><span class="league-game-day-card__label">Матчів</span><strong class="league-game-day-card__value">${esc(day.matchesCount || 0)}</strong></article>
+    <article class="league-game-day-card card"><span class="league-game-day-card__label">Боїв</span><strong class="league-game-day-card__value">${esc(day.battlesCount || 0)}</strong></article>
+    <article class="league-game-day-card card"><span class="league-game-day-card__label">MVP дня</span><strong class="league-game-day-card__value">${esc(day.mvp || '—')}</strong></article>
   </div>
-  <div class="px-card__actions league-actions league-actions--center"><a class="btn btn--secondary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>`;
+  <div class="px-card__actions league-actions league-actions--center"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>`;
 }
 
 function resolveLeague(params = {}) {

@@ -38,7 +38,7 @@ function ensureBottomNav() {
   const nav = document.createElement('div');
   nav.className = 'v2-bottom-nav';
   nav.setAttribute('aria-label', 'Нижня навігація');
-  nav.innerHTML = `<a class="v2-nav-btn" data-route="#main" href="#main"><span>🏠</span><small>Головна</small></a><a class="v2-nav-btn" data-route="#league-stats?league=sundaygames" href="#league-stats?league=sundaygames"><span>🏆</span><small>Дорослі</small></a><a class="v2-nav-btn" data-route="#league-stats?league=kids" href="#league-stats?league=kids"><span>🧒</span><small>Дитяча</small></a><a class="v2-nav-btn" data-route="#gameday?league=sundaygames" href="#gameday?league=sundaygames"><span>🎯</span><small>Ігри</small></a><a class="v2-nav-btn" data-route="#rules" href="#rules"><span>📜</span><small>Правила</small></a>`;
+  nav.innerHTML = `<a class="v2-nav-btn nav-item" data-route="#main" href="#main"><span>🏠</span><small>Головна</small></a><a class="v2-nav-btn nav-item" data-route="#league-stats?league=sundaygames" href="#league-stats?league=sundaygames"><span>🏆</span><small>Дорослі</small></a><a class="v2-nav-btn nav-item" data-route="#league-stats?league=kids" href="#league-stats?league=kids"><span>🧒</span><small>Дитяча</small></a><a class="v2-nav-btn nav-item" data-route="#gameday?league=sundaygames" href="#gameday?league=sundaygames"><span>🎯</span><small>Ігри</small></a><a class="v2-nav-btn nav-item" data-route="#rules" href="#rules"><span>📜</span><small>Правила</small></a>`;
 
   nav.querySelectorAll('.v2-nav-btn').forEach((el) => {
     el.addEventListener('click', (event) => {

@@ -117,30 +117,36 @@ function calculateRemainingGameDays(data, currentSeason) {
   return `${remaining}`;
 }
 
-function highlightCard(player, value, label, tone) {
+function highlightCard(player, value, label, tone, opts = {}) {
+  const hero = Boolean(opts.hero);
   const valueClass = tone === 'minus' ? 'negative' : 'positive';
+  const cardClass = hero ? 'highlight-card highlight-hero card' : 'highlight-card card';
   if (!player) {
-    return `<article class="highlight-card card">
-      <div class="highlight-top">
-        <span class="rank-badge rank-f">—</span>
-        <img class="avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
-        <div class="highlight-type">${esc(label)}</div>
-      </div>
-      <div class="highlight-content">
-        <div class="highlight-name">—</div>
+    return `<article class="${cardClass}">
+      <div class="highlight-main">
+        <div class="highlight-top">
+          <span class="rank-badge rank-f">—</span>
+          <img class="avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
+          <div class="highlight-meta">
+            <div class="highlight-type">${esc(label)}</div>
+            <div class="highlight-name">—</div>
+          </div>
+        </div>
         <div class="highlight-value ${valueClass}">—</div>
       </div>
     </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
-  return `<article class="highlight-card card">
-    <div class="highlight-top">
-      <span class="rank-badge ${rankClass(rank)}">${esc(rank)}</span>
-      <img class="avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
-      <div class="highlight-type">${esc(label)}</div>
-    </div>
-    <div class="highlight-content">
-      <div class="highlight-name">${esc(player.nickname)}</div>
+  return `<article class="${cardClass}">
+    <div class="highlight-main">
+      <div class="highlight-top">
+        <span class="rank-badge ${rankClass(rank)}">${esc(rank)}</span>
+        <img class="avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
+        <div class="highlight-meta">
+          <div class="highlight-type">${esc(label)}</div>
+          <div class="highlight-name">${esc(player.nickname)}</div>
+        </div>
+      </div>
       <div class="highlight-value ${valueClass}">${esc(value)}</div>
     </div>
   </article>`;
@@ -199,10 +205,12 @@ function renderInfographic(root, data) {
   </section>
   <section class="league-dashboard-group league-dashboard-group--moments">
     <h3 class="league-subtitle">Ключові моменти</h3>
-    <div class="league-highlights-grid">
-    ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'gain')}
-    ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', 'mvp')}
-    ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'minus')}
+    <div class="league-highlights-grid league-highlights-grid--moments">
+      ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'gain', { hero: true })}
+      <div class="league-highlights-grid__secondary">
+      ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', 'mvp')}
+      ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'minus')}
+      </div>
     </div>
   </section>`;
 }

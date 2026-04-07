@@ -3838,3 +3838,187 @@ body.theme-game {
     height: 90px;
   }
 }
+
+/* ===== Home V2 visual harmonization pass (mobile-first system cleanup) ===== */
+body.theme-game .home-v2 {
+  position: relative;
+}
+
+body.theme-game .home-v2::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(138, 171, 226, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(138, 171, 226, .045) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: .7;
+}
+
+body.theme-game .home-v2 > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-game .home-v2 .home-content {
+  display: grid;
+  gap: .62rem;
+}
+
+body.theme-game .home-v2 .section {
+  margin: 0;
+  padding: .58rem;
+  border: 1px solid rgba(154, 184, 239, .2);
+  background: rgba(8, 13, 24, .72);
+}
+
+body.theme-game .home-v2 .home-hero {
+  margin-bottom: 0;
+  border: 1px solid rgba(154, 184, 239, .2);
+  background: linear-gradient(180deg, rgba(15, 24, 40, .86), rgba(9, 15, 28, .88));
+}
+
+body.theme-game .home-v2 .leaders-now {
+  margin-top: 0;
+}
+
+body.theme-game .home-v2 .leaders-now .px-card__title,
+body.theme-game .home-v2 .home-league__title {
+  margin: 0 0 .52rem;
+  letter-spacing: .09em;
+  font-size: .78rem;
+}
+
+body.theme-game .home-v2 .leader-card {
+  border-width: 1px;
+  box-shadow: none;
+  background: linear-gradient(180deg, rgba(13, 22, 38, .92), rgba(8, 13, 25, .92));
+}
+
+body.theme-game .home-v2 .leader-league-label {
+  border: 0;
+  margin-bottom: .36rem;
+  padding: 0;
+  color: rgba(196, 213, 242, .84);
+  font-size: .72rem;
+  letter-spacing: .04em;
+}
+
+body.theme-game .home-v2 .leader-avatar-wrap,
+body.theme-game .home-v2 .home-ranking__avatar-wrap {
+  border: 1px solid rgba(150, 176, 220, .28) !important;
+  box-shadow: none !important;
+}
+
+body.theme-game .home-v2 .leader-name,
+body.theme-game .home-v2 .home-ranking__name {
+  color: #edf4ff;
+  font-weight: 700;
+}
+
+body.theme-game .home-v2 .leader-points {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+body.theme-game .home-v2 .leader-stats {
+  font-size: .68rem;
+  color: rgba(189, 205, 233, .84);
+  opacity: 1;
+}
+
+body.theme-game .home-v2 .home-league {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+body.theme-game .home-v2 .home-panel {
+  border: 1px solid rgba(150, 178, 224, .2);
+  background: rgba(8, 14, 26, .62);
+}
+
+body.theme-game .home-v2 .home-ranking__row {
+  border: 1px solid rgba(142, 170, 220, .18) !important;
+  box-shadow: inset 2px 0 0 transparent;
+  margin-bottom: .28rem;
+}
+
+body.theme-game .home-v2 .home-ranking__row.rank-s { box-shadow: inset 2px 0 0 var(--rank-s) !important; background: color-mix(in srgb, var(--rank-s) 7%, rgba(7, 12, 23, .72)) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-a { box-shadow: inset 2px 0 0 var(--rank-a) !important; background: color-mix(in srgb, var(--rank-a) 7%, rgba(7, 12, 23, .72)) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-b { box-shadow: inset 2px 0 0 var(--rank-b) !important; background: color-mix(in srgb, var(--rank-b) 7%, rgba(7, 12, 23, .72)) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-c { box-shadow: inset 2px 0 0 var(--rank-c) !important; background: color-mix(in srgb, var(--rank-c) 7%, rgba(7, 12, 23, .72)) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-d { box-shadow: inset 2px 0 0 var(--rank-d) !important; background: color-mix(in srgb, var(--rank-d) 7%, rgba(7, 12, 23, .72)) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-e { box-shadow: inset 2px 0 0 var(--rank-e) !important; background: color-mix(in srgb, var(--rank-e) 7%, rgba(7, 12, 23, .72)) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-f { box-shadow: inset 2px 0 0 var(--rank-f) !important; background: color-mix(in srgb, var(--rank-f) 7%, rgba(7, 12, 23, .72)) !important; }
+
+body.theme-game .home-v2 .leader-rank,
+body.theme-game .home-v2 .home-ranking__rank {
+  min-width: 30px;
+  height: 24px;
+  padding: 0 .45rem;
+  border-radius: 5px;
+  letter-spacing: .04em;
+  font-size: .7rem;
+  border-width: 1px !important;
+  box-shadow: none;
+}
+
+body.theme-game .home-v2 .home-ranking__points {
+  color: #f5f9ff;
+  font-size: .95rem;
+}
+
+body.theme-game .home-v2 .home-ranking__points small,
+body.theme-game .home-v2 .leader-points small {
+  color: rgba(190, 207, 236, .82);
+}
+
+body.theme-game .v2-bottom-nav {
+  height: 62px;
+  border: 1px solid rgba(145, 173, 235, .28);
+  border-bottom: 0;
+  background: linear-gradient(180deg, rgba(11, 18, 32, .96), rgba(8, 13, 24, .96));
+  box-shadow: 0 -8px 20px rgba(2, 8, 18, .45);
+  overflow: hidden;
+}
+
+body.theme-game .v2-bottom-nav::before {
+  background: linear-gradient(90deg, transparent, rgba(112, 194, 255, .5), transparent);
+}
+
+body.theme-game .v2-nav-btn {
+  gap: 1px;
+  min-height: 100%;
+  border-right: 1px solid rgba(145, 173, 235, .2);
+  color: rgba(175, 198, 235, .86);
+  background: transparent;
+}
+
+body.theme-game .v2-nav-btn:last-child {
+  border-right: 0;
+}
+
+body.theme-game .v2-nav-btn.active,
+body.theme-game .v2-nav-btn[aria-current='page'] {
+  background: rgba(98, 163, 255, .12);
+  color: #dff0ff;
+}
+
+body.theme-game .home-loader {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(67, 224, 255, .1), transparent 46%),
+    radial-gradient(circle at 92% 6%, rgba(106, 173, 255, .07), transparent 40%),
+    linear-gradient(180deg, rgba(8, 13, 24, .98), rgba(7, 12, 23, .98));
+}
+
+body.theme-game .home-loader__panel,
+body.theme-game .home-loader__console,
+body.theme-game .home-loader__progress,
+body.theme-game .home-loader__preview,
+body.theme-game .home-loader__slow {
+  border-color: rgba(143, 172, 226, .2);
+  background: linear-gradient(180deg, rgba(14, 24, 43, .7), rgba(8, 14, 28, .8));
+}

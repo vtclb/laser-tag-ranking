@@ -3066,8 +3066,9 @@ body.theme-game main.page {
 .card {
   background: rgba(10, 20, 40, 0.85);
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.04);
+  border: none;
   padding: 16px;
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.05);
 }
 
 .league-page .league-dashboard-group {
@@ -3075,7 +3076,8 @@ body.theme-game main.page {
   border: 0;
   padding: 0;
   display: grid;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 28px;
 }
 
 .league-page .league-kpi-grid,
@@ -3084,7 +3086,7 @@ body.theme-game main.page {
 .league-page .live-grid,
 .league-page .league-game-day-grid {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .league-page .league-kpi-grid,
@@ -3103,28 +3105,37 @@ body.theme-game main.page {
 
 .league-page .kpi-card {
   background: linear-gradient(180deg, #0a1a33, #081224);
-  border-radius: 14px;
-  padding: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.05);
 }
 
 .league-page .kpi-label {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.5;
   margin-bottom: 6px;
 }
 
 .league-page .kpi-value {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
 }
 
 .league-page .highlight-card {
   background: linear-gradient(145deg, #0a1c3a, #08162c);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.league-page .highlight-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 .league-page .highlight-top {
@@ -3139,8 +3150,9 @@ body.theme-game main.page {
 }
 
 .league-page .highlight-value {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .league-page .highlight-value.positive {
@@ -3153,7 +3165,7 @@ body.theme-game main.page {
 
 .league-page .highlight-type {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .league-page .rank-badge {
@@ -3173,38 +3185,50 @@ body.theme-game main.page {
 .league-page .live-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .league-page .live-card {
   background: linear-gradient(180deg, #0a1a33, #081224);
-  padding: 14px;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
   text-align: center;
 }
 
 .league-page .live-value {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .league-page .live-label {
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .button-primary {
-  background: linear-gradient(90deg, #1e90ff, #00c6ff);
-  border-radius: 999px;
-  padding: 12px;
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  border-radius: 14px;
+  padding: 14px;
   font-weight: 600;
   border: none;
-  box-shadow: 0 0 20px rgba(0,150,255,0.4);
+  box-shadow: 0 8px 20px rgba(0, 150, 255, 0.3);
   color: #fff;
   text-decoration: none;
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.button-primary:active {
+  transform: scale(0.97);
 }
 
 .nav-item.active {

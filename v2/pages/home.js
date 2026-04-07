@@ -127,60 +127,41 @@ function renderLeagueSection({ league, players }) {
 
 function renderHomeLoadingSkeleton() {
   return `
-    <section class="home-loading" id="homeLoading" aria-live="polite" aria-busy="true">
-      <div class="home-loading__copy">
-        <p class="home-loading__title">Завантажуємо рейтинг сезону…</p>
-        <p class="home-loading__sub" id="homeLoadingSub" hidden>Отримуємо дані ліг та статистику</p>
-        <p class="home-loading__slow" id="homeLoadingSlow" hidden>
-          <span>Завантаження триває довше, ніж зазвичай</span>
-          <small>Можна зачекати ще кілька секунд або оновити сторінку</small>
-        </p>
+    <section class="home-loader" id="homeLoading" aria-live="polite" aria-busy="true">
+      <div class="home-loader__panel">
+        <p class="home-loader__title">ІНІЦІАЛІЗАЦІЯ РЕЙТИНГУ</p>
+        <p class="home-loader__subtitle">System boot / VTCLB ranking node</p>
       </div>
 
-      <div class="home-loading__hero skeleton-shimmer">
-        <div class="skeleton-line skeleton-line--hero"></div>
-        <div class="skeleton-line skeleton-line--subtitle"></div>
-        <div class="skeleton-block skeleton-line--cta"></div>
-      </div>
+      <div class="home-loader__console" id="homeLoaderConsole"></div>
 
-      <div class="home-loading__leaders">
-        <article class="home-loading__leader-card skeleton-shimmer">
-          <div class="skeleton-avatar"></div>
-          <div class="home-loading__leader-lines">
-            <div class="skeleton-line skeleton-line--md"></div>
-            <div class="skeleton-line skeleton-line--sm"></div>
-            <div class="skeleton-line skeleton-line--sm"></div>
-          </div>
-          <div class="skeleton-block home-loading__leader-points"></div>
-        </article>
-        <article class="home-loading__leader-card skeleton-shimmer">
-          <div class="skeleton-avatar"></div>
-          <div class="home-loading__leader-lines">
-            <div class="skeleton-line skeleton-line--md"></div>
-            <div class="skeleton-line skeleton-line--sm"></div>
-            <div class="skeleton-line skeleton-line--sm"></div>
-          </div>
-          <div class="skeleton-block home-loading__leader-points"></div>
-        </article>
-      </div>
-
-      <section class="home-loading__top10 skeleton-shimmer">
-        <div class="skeleton-line skeleton-line--section"></div>
-        <div class="skeleton-block skeleton-line--search"></div>
-        <div class="home-loading__rows">
-          <div class="home-loading__row skeleton-block"></div>
-          <div class="home-loading__row skeleton-block"></div>
-          <div class="home-loading__row skeleton-block"></div>
-          <div class="home-loading__row skeleton-block"></div>
-          <div class="home-loading__row skeleton-block"></div>
-          <div class="home-loading__row skeleton-block"></div>
+      <section class="home-loader__progress" aria-label="Стан завантаження">
+        <div class="home-loader__progress-head">
+          <span class="home-loader__progress-label">SYNC IN PROGRESS</span>
+          <span class="home-loader__progress-percent" id="homeLoaderPercent">08%</span>
+        </div>
+        <div class="home-loader__progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8" id="homeLoaderBar">
+          <div class="home-loader__progress-fill" id="homeLoaderFill"></div>
         </div>
       </section>
 
-      <div class="home-loading__lower">
-        <div class="skeleton-block home-loading__lower-card skeleton-shimmer"></div>
-        <div class="skeleton-block home-loading__lower-card skeleton-shimmer"></div>
-      </div>
+      <section class="home-loader__preview" aria-hidden="true">
+        <div class="home-loader__hero skeleton-shimmer"></div>
+        <div class="home-loader__leaders">
+          <article class="home-loader__leader-card skeleton-shimmer"></article>
+          <article class="home-loader__leader-card skeleton-shimmer"></article>
+        </div>
+        <div class="home-loader__rows">
+          <div class="home-loader__row skeleton-shimmer"></div>
+          <div class="home-loader__row skeleton-shimmer"></div>
+          <div class="home-loader__row skeleton-shimmer"></div>
+          <div class="home-loader__row skeleton-shimmer"></div>
+          <div class="home-loader__row skeleton-shimmer"></div>
+          <div class="home-loader__row skeleton-shimmer"></div>
+        </div>
+      </section>
+
+      <p class="home-loader__slow" id="homeLoadingSlow" hidden>Триває синхронізація даних, зачекайте ще кілька секунд</p>
     </section>
   `;
 }
@@ -188,8 +169,11 @@ function renderHomeLoadingSkeleton() {
 function setHomeLoadingLifecycle(root) {
   const loadingRoot = root.querySelector('#homeLoading');
   const contentRoot = root.querySelector('#homeContent');
-  const loadingSub = root.querySelector('#homeLoadingSub');
   const loadingSlow = root.querySelector('#homeLoadingSlow');
+  const loaderConsole = root.querySelector('#homeLoaderConsole');
+  const progressFill = root.querySelector('#homeLoaderFill');
+  const progressBar = root.querySelector('#homeLoaderBar');
+  const progressPercent = root.querySelector('#homeLoaderPercent');
 
   if (!loadingRoot || !contentRoot) {
     return {
@@ -198,27 +182,104 @@ function setHomeLoadingLifecycle(root) {
     };
   }
 
+  const logLines = [
+    { status: 'boot', text: '[BOOT] VTCLB ranking node' },
+    { status: 'ok', text: '[ OK ] Ініціалізація ядра' },
+    { status: 'ok', text: '[ OK ] Підключення сезону Весна 2026' },
+    { status: 'load', text: '[ ... ] Завантаження дорослої ліги' },
+    { status: 'load', text: '[ ... ] Завантаження дитячої ліги' },
+    { status: 'wait', text: '[ WAIT ] Синхронізація таблиці лідерів' },
+    { status: 'load', text: '[ ... ] Формування статистики' },
+    { status: 'ok', text: '[ OK ] Підготовка інтерфейсу' }
+  ];
+
   contentRoot.classList.add('home-content--hidden');
 
-  const delayedSubTimer = window.setTimeout(() => {
-    if (loadingSub) loadingSub.hidden = false;
-  }, 1500);
+  let nextLine = 0;
+  let progressValue = 8;
+  const timerIds = [];
+  let progressIntervalId = null;
+
+  const pushLogLine = () => {
+    if (!loaderConsole || nextLine >= logLines.length) return;
+    const { status, text } = logLines[nextLine++];
+    const line = document.createElement('p');
+    line.className = `home-loader__line home-loader__line--${status === 'boot' ? 'load' : status}`;
+    line.textContent = text;
+    loaderConsole.append(line);
+    loaderConsole.scrollTop = loaderConsole.scrollHeight;
+
+    if (!loaderConsole.querySelector('.home-loader__cursor')) {
+      const cursor = document.createElement('span');
+      cursor.className = 'home-loader__cursor';
+      cursor.setAttribute('aria-hidden', 'true');
+      loaderConsole.append(cursor);
+    } else {
+      loaderConsole.append(loaderConsole.querySelector('.home-loader__cursor'));
+    }
+  };
+
+  const setProgress = (nextValue) => {
+    progressValue = Math.min(100, Math.max(progressValue, nextValue));
+    if (progressFill) {
+      progressFill.style.width = `${progressValue}%`;
+    }
+    if (progressPercent) {
+      progressPercent.textContent = `${String(progressValue).padStart(2, '0')}%`;
+    }
+    if (progressBar) {
+      progressBar.setAttribute('aria-valuenow', String(progressValue));
+    }
+  };
+
+  pushLogLine();
+
+  timerIds.push(window.setTimeout(() => {
+    const stageInterval = window.setInterval(() => {
+      pushLogLine();
+      setProgress(progressValue + 7);
+      if (nextLine >= logLines.length) {
+        window.clearInterval(stageInterval);
+      }
+    }, 420);
+    timerIds.push(stageInterval);
+  }, 450));
+
+  progressIntervalId = window.setInterval(() => {
+    if (progressValue < 92) {
+      setProgress(progressValue + 2);
+    }
+  }, 700);
 
   const delayedSlowTimer = window.setTimeout(() => {
     if (loadingSlow) loadingSlow.hidden = false;
-  }, 6500);
+  }, 6800);
 
   const destroy = () => {
-    window.clearTimeout(delayedSubTimer);
+    timerIds.forEach((timerId) => window.clearTimeout(timerId));
     window.clearTimeout(delayedSlowTimer);
+    if (progressIntervalId) {
+      window.clearInterval(progressIntervalId);
+      progressIntervalId = null;
+    }
   };
 
   const revealContent = () => {
     destroy();
+    setProgress(100);
+    if (nextLine < logLines.length) {
+      pushLogLine();
+    }
+    if (loaderConsole) {
+      const readyLine = document.createElement('p');
+      readyLine.className = 'home-loader__line home-loader__line--ok';
+      readyLine.textContent = '[READY] Система готова';
+      loaderConsole.append(readyLine);
+    }
     contentRoot.classList.remove('home-content--hidden');
     loadingRoot.classList.add('is-complete');
     loadingRoot.setAttribute('aria-busy', 'false');
-    window.setTimeout(() => loadingRoot.remove(), 220);
+    window.setTimeout(() => loadingRoot.remove(), 260);
   };
 
   return { revealContent, destroy };

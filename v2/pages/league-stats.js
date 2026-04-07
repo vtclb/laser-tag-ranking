@@ -76,7 +76,7 @@ function tableRowMarkup(player, league) {
 }
 
 function statCard(label, value) {
-  return `<article class="league-kpi-card kpi-card card"><div class="kpi-title">${esc(label)}</div><div class="kpi-value">${esc(value)}</div></article>`;
+  return `<article class="kpi-card card"><div class="kpi-label">${esc(label)}</div><div class="kpi-value">${esc(value)}</div></article>`;
 }
 
 function calculateRemainingGameDays(data, currentSeason) {
@@ -110,30 +110,27 @@ function calculateRemainingGameDays(data, currentSeason) {
 }
 
 function highlightCard(player, value, label, tone) {
+  const valueClass = tone === 'minus' ? 'negative' : 'positive';
   if (!player) {
-    return `<article class="league-highlight-card highlight-card card league-highlight-card--${tone}">
-      <div class="highlight-header">
-        <div class="league-highlight-card__identity">
-          <span class="league-highlight-card__badge rank-f rank-badge">—</span>
-          <img class="league-highlight-card__avatar avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
-        </div>
-        <div class="league-highlight-card__category highlight-type">${esc(label)}</div>
+    return `<article class="highlight-card card">
+      <div class="highlight-top">
+        <span class="rank-badge rank-f">—</span>
+        <img class="avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
+        <div class="highlight-type">${esc(label)}</div>
       </div>
-      <div class="league-highlight-card__name player-name">—</div>
-      <div class="league-highlight-card__value highlight-value">—</div>
+      <div class="highlight-name">—</div>
+      <div class="highlight-value ${valueClass}">—</div>
     </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
-  return `<article class="league-highlight-card highlight-card card league-highlight-card--${tone}">
-    <div class="highlight-header">
-      <div class="league-highlight-card__identity">
-        <span class="league-highlight-card__badge ${rankClass(rank)} rank-badge">${esc(rank)}</span>
-        <img class="league-highlight-card__avatar avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
-      </div>
-      <div class="league-highlight-card__category highlight-type">${esc(label)}</div>
+  return `<article class="highlight-card card">
+    <div class="highlight-top">
+      <span class="rank-badge ${rankClass(rank)}">${esc(rank)}</span>
+      <img class="avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
+      <div class="highlight-type">${esc(label)}</div>
     </div>
-    <div class="league-highlight-card__name player-name">${esc(player.nickname)}</div>
-    <div class="league-highlight-card__value highlight-value">${esc(value)}</div>
+    <div class="highlight-name">${esc(player.nickname)}</div>
+    <div class="highlight-value ${valueClass}">${esc(value)}</div>
   </article>`;
 }
 
@@ -142,20 +139,20 @@ function renderHero(root, league, data, remainingGameDays) {
   <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>
   <div class="live-grid">
     <article class="live-card card">
-      <div class="value">${esc(data.summary.activePlayersCount ?? 0)}</div>
-      <div class="label">гравців</div>
+      <div class="live-value">${esc(data.summary.activePlayersCount ?? 0)}</div>
+      <div class="live-label">гравців</div>
     </article>
     <article class="live-card card">
-      <div class="value">${esc(data.summary.matchesCount ?? 0)}</div>
-      <div class="label">матчів</div>
+      <div class="live-value">${esc(data.summary.matchesCount ?? 0)}</div>
+      <div class="live-label">матчів</div>
     </article>
     <article class="live-card card">
-      <div class="value">${esc(data.lastGameDay?.date || '—')}</div>
-      <div class="label">ігровий день</div>
+      <div class="live-value">${esc(data.lastGameDay?.date || '—')}</div>
+      <div class="live-label">ігровий день</div>
     </article>
     <article class="live-card card">
-      <div class="value">${esc(remainingGameDays)}</div>
-      <div class="label">днів залишилось</div>
+      <div class="live-value">${esc(remainingGameDays)}</div>
+      <div class="live-label">днів залишилось</div>
     </article>
   </div>
   <div class="px-card__actions league-actions"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">Ігровий день</a></div>`;

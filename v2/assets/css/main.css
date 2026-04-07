@@ -3187,14 +3187,35 @@ body.theme-game main.page {
 
 .league-page .highlight-card {
   background: linear-gradient(145deg, #0a1c3a, #08162c);
-  border-radius: 16px;
+  border-radius: 14px;
   padding: 16px;
-  display: flex;
-  flex-direction: column;
+}
+
+.league-page .highlight-hero {
+  padding: 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(0, 255, 200, 0.1), transparent);
+}
+
+.league-page .league-highlights-grid--moments {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
-.league-page .highlight-content {
+.league-page .league-highlights-grid__secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .league-page .league-highlights-grid__secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+.league-page .highlight-main {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3205,25 +3226,42 @@ body.theme-game main.page {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.league-page .highlight-meta {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
 }
 
 .league-page .highlight-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .league-page .highlight-value {
   font-size: 26px;
   font-weight: 700;
   line-height: 1;
+  color: cyan;
+  flex-shrink: 0;
+}
+
+.league-page .highlight-hero .highlight-value {
+  font-size: 36px;
+  color: cyan;
 }
 
 .league-page .highlight-value.positive {
-  color: #00ffcc;
+  color: cyan;
 }
 
 .league-page .highlight-value.negative {
-  color: #ff5c5c;
+  color: #ff4b4b;
 }
 
 .league-page .highlight-type {
@@ -4274,11 +4312,14 @@ body.theme-game .gameday-v2 .px-card__title {
 }
 
 body.theme-game .league-page .highlight-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   padding: 16px;
   background: linear-gradient(180deg, rgba(10, 31, 58, .96), rgba(8, 20, 36, .98)) !important;
+}
+
+body.theme-game .league-page .highlight-hero {
+  padding: 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(0, 255, 200, 0.1), transparent) !important;
 }
 
 body.theme-game .league-page .highlight-top {
@@ -4287,7 +4328,7 @@ body.theme-game .league-page .highlight-top {
   gap: 10px;
 }
 
-body.theme-game .league-page .highlight-content {
+body.theme-game .league-page .highlight-main {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -4310,14 +4351,20 @@ body.theme-game .league-page .highlight-value {
   font-size: 28px;
   font-weight: 700;
   line-height: 1;
+  color: cyan;
+}
+
+body.theme-game .league-page .highlight-hero .highlight-value {
+  font-size: 36px;
+  color: cyan;
 }
 
 body.theme-game .league-page .highlight-value.positive {
-  color: #27ddff;
+  color: cyan;
 }
 
 body.theme-game .league-page .highlight-value.negative {
-  color: #ff6b6b;
+  color: #ff4b4b;
 }
 
 body.theme-game .league-page .live-card {

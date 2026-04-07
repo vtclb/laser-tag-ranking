@@ -4406,6 +4406,90 @@ body.theme-game .league-page .league-actions .button-primary {
   }
 }
 
+/* League stats layout/loader cleanup (v2 only). */
+.league-page > .px-card {
+  margin-block: 0 14px;
+}
+
+.league-page .league-top10 .px-card__actions {
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+.league-page .league-dashboard-group {
+  margin-bottom: 18px;
+}
+
+.league-page .league-dashboard-group:last-child {
+  margin-bottom: 0;
+}
+
+.league-page .league-sort-controls.is-loading .league-sort-btn {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.league-page .league-loading-row {
+  pointer-events: none;
+}
+
+.league-page .league-loading-cell {
+  display: block;
+  width: 100%;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(130, 171, 215, .14), rgba(130, 171, 215, .3), rgba(130, 171, 215, .14));
+  background-size: 220% 100%;
+  animation: league-loading-shimmer 1.15s linear infinite;
+}
+
+.league-page .league-loading-cell--short {
+  width: min(42px, 100%);
+}
+
+.league-page .league-loading-note-row .league-ranking-table__empty {
+  text-align: center;
+  color: rgba(183, 210, 237, .9);
+}
+
+.league-page .league-game-day-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 88px;
+}
+
+.league-page .league-game-day-card__label {
+  display: block;
+  font-size: 11px;
+  opacity: .68;
+}
+
+.league-page .league-game-day-card__value {
+  display: block;
+  font-size: clamp(15px, 4vw, 20px);
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.league-page .league-last-day .league-actions--center {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.league-page .league-last-day .league-actions--center .button-primary {
+  width: min(320px, 100%);
+}
+
+@keyframes league-loading-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 body.theme-game .league-page .league-grid-bg,
 body.theme-game .league-page .pixel-grid,
 body.theme-game .gameday-v2 .pixel-grid {

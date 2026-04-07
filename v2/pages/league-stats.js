@@ -118,8 +118,10 @@ function highlightCard(player, value, label, tone) {
         <img class="avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
         <div class="highlight-type">${esc(label)}</div>
       </div>
-      <div class="highlight-name">—</div>
-      <div class="highlight-value ${valueClass}">—</div>
+      <div class="highlight-content">
+        <div class="highlight-name">—</div>
+        <div class="highlight-value ${valueClass}">—</div>
+      </div>
     </article>`;
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
@@ -129,8 +131,10 @@ function highlightCard(player, value, label, tone) {
       <img class="avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
       <div class="highlight-type">${esc(label)}</div>
     </div>
-    <div class="highlight-name">${esc(player.nickname)}</div>
-    <div class="highlight-value ${valueClass}">${esc(value)}</div>
+    <div class="highlight-content">
+      <div class="highlight-name">${esc(player.nickname)}</div>
+      <div class="highlight-value ${valueClass}">${esc(value)}</div>
+    </div>
   </article>`;
 }
 

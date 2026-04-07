@@ -4022,3 +4022,169 @@ body.theme-game .home-loader__slow {
   border-color: rgba(143, 172, 226, .2);
   background: linear-gradient(180deg, rgba(14, 24, 43, .7), rgba(8, 14, 28, .8));
 }
+
+/* ===== Home hierarchy cleanup (critical reduction pass) ===== */
+body.theme-game .home-v2 .home-content {
+  gap: .5rem;
+}
+
+body.theme-game .home-v2 .section {
+  border: 1px solid rgba(154, 184, 239, .14);
+  background: rgba(8, 13, 24, .62);
+  padding: .5rem;
+}
+
+body.theme-game .home-v2 .home-hero,
+body.theme-game .home-v2 .leaders-now,
+body.theme-game .home-v2 .home-league,
+body.theme-game .home-v2 .home-panel,
+body.theme-game .home-v2 .leader-card,
+body.theme-game .home-v2 .home-ranking__row,
+body.theme-game .home-v2 .home-ranking__avatar-wrap,
+body.theme-game .home-v2 .leader-avatar-wrap,
+body.theme-game .home-v2 .home-ranking__avatar,
+body.theme-game .home-v2 .leader-avatar {
+  border-radius: 0 !important;
+}
+
+/* Keep only section/card borders, remove nested row/card internals. */
+body.theme-game .home-v2 .home-league {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+body.theme-game .home-v2 .home-panel {
+  border: 1px solid rgba(150, 178, 224, .22);
+  background: rgba(8, 14, 26, .64);
+}
+
+body.theme-game .home-v2 .leader-card {
+  border-width: 1px;
+  box-shadow: none;
+  background: linear-gradient(180deg, rgba(14, 22, 36, .94), rgba(9, 14, 25, .96));
+}
+
+body.theme-game .home-v2 .leader-card.rank-s { border-color: color-mix(in srgb, var(--rank-s) 58%, rgba(147, 175, 233, .22)) !important; }
+body.theme-game .home-v2 .leader-card.rank-a { border-color: color-mix(in srgb, var(--rank-a) 58%, rgba(147, 175, 233, .22)) !important; }
+body.theme-game .home-v2 .leader-card.rank-b { border-color: color-mix(in srgb, var(--rank-b) 58%, rgba(147, 175, 233, .22)) !important; }
+body.theme-game .home-v2 .leader-card.rank-c { border-color: color-mix(in srgb, var(--rank-c) 58%, rgba(147, 175, 233, .22)) !important; }
+body.theme-game .home-v2 .leader-card.rank-d { border-color: color-mix(in srgb, var(--rank-d) 58%, rgba(147, 175, 233, .22)) !important; }
+body.theme-game .home-v2 .leader-card.rank-e { border-color: color-mix(in srgb, var(--rank-e) 58%, rgba(147, 175, 233, .22)) !important; }
+body.theme-game .home-v2 .leader-card.rank-f { border-color: color-mix(in srgb, var(--rank-f) 58%, rgba(147, 175, 233, .22)) !important; }
+
+body.theme-game .home-v2 .leader-avatar-wrap,
+body.theme-game .home-v2 .home-ranking__avatar-wrap,
+body.theme-game .home-v2 .home-ranking__avatar {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Top-10 rows: neutral surface + thin left accent, no full color blocks/borders. */
+body.theme-game .home-v2 .home-ranking {
+  gap: .34rem;
+}
+
+body.theme-game .home-v2 .home-ranking__row {
+  border: 0 !important;
+  margin-bottom: 0;
+  box-shadow: inset 3px 0 0 rgba(144, 169, 214, .22) !important;
+  background: rgba(8, 14, 26, .9) !important;
+  transition: background .16s ease, box-shadow .16s ease;
+}
+
+body.theme-game .home-v2 .home-ranking__row:hover,
+body.theme-game .home-v2 .home-ranking__row:focus-within {
+  background: rgba(12, 20, 35, .95) !important;
+  box-shadow: inset 3px 0 0 rgba(168, 198, 245, .28), 0 0 0 1px rgba(125, 167, 232, .12) !important;
+}
+
+body.theme-game .home-v2 .home-ranking__row.rank-s { box-shadow: inset 4px 0 0 var(--rank-s) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-a { box-shadow: inset 4px 0 0 var(--rank-a) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-b { box-shadow: inset 4px 0 0 var(--rank-b) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-c { box-shadow: inset 4px 0 0 var(--rank-c) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-d { box-shadow: inset 4px 0 0 var(--rank-d) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-e { box-shadow: inset 4px 0 0 var(--rank-e) !important; }
+body.theme-game .home-v2 .home-ranking__row.rank-f { box-shadow: inset 4px 0 0 var(--rank-f) !important; }
+
+/* Compact rank badges: readable + high contrast, not oversized. */
+body.theme-game .home-v2 .leader-rank,
+body.theme-game .home-v2 .home-ranking__rank {
+  min-width: 24px;
+  height: 20px;
+  padding: 0 .35rem;
+  font-size: .66rem;
+  font-weight: 800;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+body.theme-game .home-v2 .leader-rank,
+body.theme-game .home-v2 .home-ranking__rank,
+body.theme-game .home-v2 .leader-rank.rank-s,
+body.theme-game .home-v2 .leader-rank.rank-a,
+body.theme-game .home-v2 .leader-rank.rank-b,
+body.theme-game .home-v2 .leader-rank.rank-c,
+body.theme-game .home-v2 .leader-rank.rank-d,
+body.theme-game .home-v2 .leader-rank.rank-e,
+body.theme-game .home-v2 .leader-rank.rank-f,
+body.theme-game .home-v2 .home-ranking__rank.rank-s,
+body.theme-game .home-v2 .home-ranking__rank.rank-a,
+body.theme-game .home-v2 .home-ranking__rank.rank-b,
+body.theme-game .home-v2 .home-ranking__rank.rank-c,
+body.theme-game .home-v2 .home-ranking__rank.rank-d,
+body.theme-game .home-v2 .home-ranking__rank.rank-e,
+body.theme-game .home-v2 .home-ranking__rank.rank-f {
+  color: #fff !important;
+}
+
+/* Leader cards: lighter structure + compact content rhythm. */
+body.theme-game .home-v2 .leader-card {
+  padding: .52rem;
+  gap: .45rem;
+}
+
+body.theme-game .home-v2 .leader-league-label {
+  margin-bottom: .22rem;
+}
+
+body.theme-game .home-v2 .leader-top {
+  gap: .42rem;
+}
+
+body.theme-game .home-v2 .leader-points {
+  font-size: 1.1rem;
+  line-height: 1.05;
+}
+
+body.theme-game .home-v2 .leader-stats {
+  font-size: .64rem;
+  gap: .3rem;
+}
+
+/* Background texture tuning (keep grid, reduce visual pressure). */
+body.theme-game::before {
+  opacity: 0.2;
+}
+
+body.theme-game::after {
+  opacity: 0.15;
+}
+
+/* Bottom nav as one continuous bar, not separate capsules. */
+body.theme-game .v2-bottom-nav {
+  border: 1px solid rgba(145, 173, 235, .2);
+  border-bottom: 0;
+  background: linear-gradient(180deg, rgba(9, 14, 25, .98), rgba(7, 12, 22, .98));
+  box-shadow: 0 -6px 16px rgba(2, 8, 18, .4);
+}
+
+body.theme-game .v2-nav-btn {
+  border-right: 0;
+  background: transparent;
+}
+
+body.theme-game .v2-nav-btn.active,
+body.theme-game .v2-nav-btn[aria-current='page'] {
+  background: rgba(90, 150, 240, .1);
+}

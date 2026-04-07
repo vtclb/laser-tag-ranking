@@ -30,6 +30,11 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
   const loadBtn   = document.getElementById('loadBtn');
   const playersTb = document.getElementById('players');
   const matchesTb = document.getElementById('matches');
+  const liveDateEl = document.getElementById('liveDate');
+  const liveMatchesEl = document.getElementById('liveMatches');
+  const liveBattlesEl = document.getElementById('liveBattles');
+  const liveMvpNameEl = document.getElementById('liveMvpName');
+  const liveMvpMetaEl = document.getElementById('liveMvpMeta');
   const fullscreenBtn = document.getElementById('fullscreen');
 
   leagueSel.addEventListener('change', loadData);
@@ -437,6 +442,17 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
     return String(v || '').toLowerCase() === 'kids' ? 'kids' : 'sundaygames';
   }
 
+  function formatLiveDate(isoDate){
+    if(!isoDate) return '--';
+    const parsed = new Date(`${isoDate}T00:00:00`);
+    if(isNaN(parsed)) return isoDate;
+    return parsed.toLocaleDateString('uk-UA', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).replace(/\s+/g, ' ');
+  }
+
   async function loadData(){
     if(!dateInput.value) return; // require date
     const leagueKey = normalizeLeague(leagueSel.value);
@@ -668,6 +684,34 @@ import { renderAllAvatars, reloadAvatars } from './avatars.client.js';
       }, 0);
       return daySum + matchSum;
     }, 0);
+    const battlesCount = preparedMatches.reduce((sum, match) => {
+      const teamKeys = match.teamOrder.length ? match.teamOrder : Object.keys(match.teams);
+      const participants = teamKeys.reduce((teamSum, teamKey) => {
+        const players = match.teams[teamKey]?.players || [];
+        return teamSum + players.length;
+      }, 0);
+      return sum + participants;
+    }, 0);
+
+    const mvpLeaders = playersList
+      .slice()
+      .sort((a,b) => {
+        const aScore = (a.mvp1 * 3) + (a.mvp2 * 2) + a.mvp3;
+        const bScore = (b.mvp1 * 3) + (b.mvp2 * 2) + b.mvp3;
+        if(aScore !== bScore) return bScore - aScore;
+        return b.delta - a.delta;
+      });
+    const topMvp = mvpLeaders[0] || null;
+
+    if(liveDateEl) liveDateEl.textContent = formatLiveDate(selectedDate);
+    if(liveMatchesEl) liveMatchesEl.textContent = String(preparedMatches.length);
+    if(liveBattlesEl) liveBattlesEl.textContent = String(battlesCount);
+    if(liveMvpNameEl) liveMvpNameEl.textContent = topMvp ? topMvp.nick : '—';
+    if(liveMvpMetaEl){
+      liveMvpMetaEl.textContent = topMvp
+        ? `🏅 ${topMvp.mvp1} | 🥈 ${topMvp.mvp2} | 🥉 ${topMvp.mvp3}`
+        : 'Чекаємо на результати';
+    }
 
     preparedMatches.forEach(match => {
       const tr=document.createElement('tr');

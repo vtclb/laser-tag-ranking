@@ -58,21 +58,90 @@
       margin: 1rem auto;
       padding: 0 1rem;
     }
+    .dashboard-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+      margin-bottom: 1rem;
+    }
     .section-wrap {
       display: grid;
       gap: 1rem;
     }
     @media (min-width: 900px) {
+      .dashboard-grid {
+        grid-template-columns: 1.2fr 1fr;
+      }
       .section-wrap {
         grid-template-columns: 1fr 1fr;
       }
     }
-    .filters { display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center; margin-bottom:1rem; }
+    .live-card {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: linear-gradient(145deg, rgba(14,14,18,0.94), rgba(24,24,28,0.88));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 18px rgba(0,0,0,0.45);
+      border-radius: 10px;
+      padding: 1rem;
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.7rem;
+    }
+    .live-title {
+      color: #9ed4ff;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .live-value {
+      font-size: 1.35rem;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255,255,255,0.25);
+    }
+    .live-date {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffd700;
+      text-shadow: 0 0 18px rgba(255, 215, 0, 0.55);
+    }
+    .live-mvp-name {
+      font-size: 1.7rem;
+      color: #ffe082;
+      text-shadow: 0 0 10px rgba(255, 187, 51, 0.9), 0 0 24px rgba(255, 130, 0, 0.55);
+    }
+    .live-mvp-meta {
+      font-size: 0.72rem;
+      color: #ffd79b;
+    }
+    .filters {
+      display:flex;
+      flex-wrap:wrap;
+      gap:0.5rem;
+      align-items:stretch;
+      margin-bottom:1rem;
+    }
     select, input[type=date], .filters button {
-      padding:0.5rem; font-size:1rem; border:2px solid #555;
-      background:rgba(0,0,0,0.5); color:#fff; border-radius:4px;
+      padding:0.7rem;
+      font-size:0.85rem;
+      background:rgba(4,10,20,0.85);
+      color:#fff;
+      border-radius:8px;
       font-family: 'Press Start 2P', monospace;
       cursor:pointer;
+      border: none;
+      box-shadow: 0 0 10px rgba(0,0,0,0.35);
+    }
+    .filters select, .filters input[type=date] {
+      flex: 1 1 220px;
+    }
+    .filters button {
+      flex: 1 1 100%;
+      background: linear-gradient(90deg, #ff6a00 0%, #ffd700 52%, #ffe66d 100%);
+      color: #1a1200;
+      font-weight: 700;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+      box-shadow: 0 0 14px rgba(255, 166, 0, 0.65), inset 0 -2px 0 rgba(0,0,0,0.15);
     }
     .table-container { overflow-x:auto; margin-bottom:1rem; }
     table {
@@ -177,6 +246,25 @@
     <button id="fullscreen">⛶</button>
   </nav>
   <div class="container">
+    <div class="dashboard-grid">
+      <section class="live-card">
+        <div class="live-title">DATE</div>
+        <div id="liveDate" class="live-date">--</div>
+      </section>
+      <section class="live-card">
+        <div class="live-title">MATCHES</div>
+        <div id="liveMatches" class="live-value">0</div>
+      </section>
+      <section class="live-card">
+        <div class="live-title">BATTLES</div>
+        <div id="liveBattles" class="live-value">0</div>
+      </section>
+      <section class="live-card">
+        <div class="live-title">MVP</div>
+        <div id="liveMvpName" class="live-mvp-name">—</div>
+        <div id="liveMvpMeta" class="live-mvp-meta">Чекаємо на результати</div>
+      </section>
+    </div>
     <div class="filters">
         <select id="league">
           <option value="kids">Молодша ліга</option>

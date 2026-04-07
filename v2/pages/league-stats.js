@@ -28,13 +28,23 @@ const SORTERS = {
   delta: (a, b) => (Number(b.delta) || 0) - (Number(a.delta) || 0)
 };
 
+function playerCountText(count) {
+  const n = Number(count) || 0;
+  if (n % 10 === 1 && n % 100 !== 11) return `${n} гравець`;
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return `${n} гравці`;
+  return `${n} гравців`;
+}
+
 function playerProfileHash(league, nickname) {
   return `#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(nickname)}`;
 }
 
 function rankDistributionTiles(distribution = {}) {
   return RANKS
-    .map((rank) => `<article class="league-rank-tile league-rank-tile--${rank.toLowerCase()}"><div class="league-rank-tile__rank">${rank}</div><div class="league-rank-tile__count">${distribution[rank] || 0}</div><div class="league-rank-tile__label">гравців</div></article>`)
+    .map((rank) => {
+      const count = distribution[rank] || 0;
+      return `<article class="league-rank-tile league-rank-tile--${rank.toLowerCase()}"><div class="league-rank-tile__rank">${rank}</div><div class="league-rank-tile__count">${count}</div><div class="league-rank-tile__label"><span class="league-rank-tile__icon" aria-hidden="true">👤</span>${playerCountText(count)}</div></article>`;
+    })
     .join('');
 }
 

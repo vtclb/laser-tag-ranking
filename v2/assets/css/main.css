@@ -4412,12 +4412,12 @@ body.theme-game .league-page .league-actions .button-primary {
 }
 
 .league-page .league-top10 .px-card__actions {
-  margin-top: 14px;
-  margin-bottom: 4px;
+  margin-top: 16px;
+  margin-bottom: 0;
 }
 
 .league-page .league-dashboard-group {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .league-page .league-dashboard-group:last-child {
@@ -4452,36 +4452,48 @@ body.theme-game .league-page .league-actions .button-primary {
   color: rgba(183, 210, 237, .9);
 }
 
+.league-page .league-infographic {
+  margin-top: 16px;
+}
+
 .league-page .league-game-day-card {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
   align-content: start;
-  min-height: 88px;
+  min-height: 96px;
+  padding: 16px 14px;
 }
 
 .league-page .league-game-day-card__label {
   display: block;
   font-size: 11px;
-  opacity: .68;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  opacity: .7;
+  text-transform: uppercase;
 }
 
 .league-page .league-game-day-card__value {
   display: block;
-  font-size: clamp(15px, 4vw, 20px);
+  font-size: clamp(16px, 4.2vw, 22px);
+  font-weight: 700;
   line-height: 1.2;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
+  text-wrap: balance;
 }
 
-.league-page .league-last-day .league-actions--center {
+.league-page .league-infographic .league-actions--center {
   display: flex;
   justify-content: center;
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin-top: 18px;
+  margin-bottom: 4px;
 }
 
-.league-page .league-last-day .league-actions--center .button-primary {
+.league-page .league-infographic .league-actions--center .button-primary {
   width: min(320px, 100%);
 }
 

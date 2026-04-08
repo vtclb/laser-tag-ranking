@@ -157,14 +157,28 @@ function renderHero(root, league, data) {
   <p class="px-card__text league-season-title">Поточні live дані: <strong>${esc(data.seasonLabel)}</strong></p>`;
 }
 
-function renderInfographic(root, data, remainingGameDays) {
+function renderGameDaySection(lastGameDay, league) {
+  const day = lastGameDay || { date: '', matchesCount: 0, battlesCount: 0, mvp: null };
+  return `<section class="league-dashboard-group league-dashboard-group--gameday">
+    <h3 class="league-subtitle">Ігровий день</h3>
+    <div class="league-game-day-grid">
+      <article class="league-game-day-card card"><span class="league-game-day-card__label">Дата</span><strong class="league-game-day-card__value">${esc(day.date || '—')}</strong></article>
+      <article class="league-game-day-card card"><span class="league-game-day-card__label">Матчів</span><strong class="league-game-day-card__value">${esc(day.matchesCount || 0)}</strong></article>
+      <article class="league-game-day-card card"><span class="league-game-day-card__label">Боїв</span><strong class="league-game-day-card__value">${esc(day.battlesCount || 0)}</strong></article>
+      <article class="league-game-day-card card"><span class="league-game-day-card__label">MVP дня</span><strong class="league-game-day-card__value">${esc(day.mvp || '—')}</strong></article>
+    </div>
+    <div class="px-card__actions league-actions league-actions--center"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>
+  </section>`;
+}
+
+function renderInfographic(root, data, remainingGameDays, league) {
   const totalDeltaPoints = data.activePlayers.reduce((sum, player) => sum + (Number(player.delta) || 0), 0);
   const averageWinRateValue = data.summary.activePlayersCount
     ? (data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount)
     : null;
   const averageWinRate = averageWinRateValue === null ? '—' : `${averageWinRateValue.toFixed(1)}%`;
   const averageWinRateWidth = averageWinRateValue === null ? '0%' : `${Math.max(0, Math.min(100, averageWinRateValue)).toFixed(1)}%`;
-  root.innerHTML = `<h2 class="px-card__title league-section-title">Статистика ліги</h2>
+  root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-dashboard-group league-dashboard-group--live">
     <h3 class="league-subtitle">Поточні live дані</h3>
     <div class="live-grid">
@@ -214,19 +228,8 @@ function renderInfographic(root, data, remainingGameDays) {
       ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'minus')}
       </div>
     </div>
-  </section>`;
-}
-
-function renderLastGameDay(root, lastGameDay, league) {
-  const day = lastGameDay || { date: '', matchesCount: 0, battlesCount: 0, mvp: null };
-  root.innerHTML = `<h2 class="px-card__title league-section-title">Ігровий день</h2>
-  <div class="league-game-day-grid">
-    <article class="league-game-day-card card"><span class="league-game-day-card__label">Дата</span><strong class="league-game-day-card__value">${esc(day.date || '—')}</strong></article>
-    <article class="league-game-day-card card"><span class="league-game-day-card__label">Матчів</span><strong class="league-game-day-card__value">${esc(day.matchesCount || 0)}</strong></article>
-    <article class="league-game-day-card card"><span class="league-game-day-card__label">Боїв</span><strong class="league-game-day-card__value">${esc(day.battlesCount || 0)}</strong></article>
-    <article class="league-game-day-card card"><span class="league-game-day-card__label">MVP дня</span><strong class="league-game-day-card__value">${esc(day.mvp || '—')}</strong></article>
-  </div>
-  <div class="px-card__actions league-actions league-actions--center"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>`;
+  </section>
+  ${renderGameDaySection(data.lastGameDay, league)}`;
 }
 
 function resolveLeague(params = {}) {
@@ -242,7 +245,6 @@ function renderLoading(root, league) {
   const searchInput = root.querySelector('#leagueSearchInput');
   const sortControls = root.querySelector('#leagueSortControls');
   const infographic = root.querySelector('#leagueInfographic');
-  const lastGameDay = root.querySelector('#leagueLastGameDay');
 
   if (hero) {
     hero.classList.remove('league-loading-block');
@@ -283,7 +285,6 @@ function renderLoading(root, league) {
     expandBtn.textContent = 'Завантаження…';
   }
   if (infographic) infographic.innerHTML = '';
-  if (lastGameDay) lastGameDay.innerHTML = '';
 }
 
 function sortPlayers(players, sortBy, direction = 'desc') {
@@ -357,11 +358,10 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   const tableTitle = root.querySelector('#leagueTableTitle');
   const expandBtn = root.querySelector('#leagueExpandBtn');
   const infographic = root.querySelector('#leagueInfographic');
-  const lastGameDay = root.querySelector('#leagueLastGameDay');
   const searchInput = root.querySelector('#leagueSearchInput');
   const sortControls = root.querySelector('#leagueSortControls');
 
-  if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !lastGameDay || !searchInput || !sortControls) {
+  if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !searchInput || !sortControls) {
     console.warn('[league-stats] template nodes missing, rendering empty state');
     root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">Статистика ліги</h1><p class="px-card__text">Немає даних для відображення.</p></section>`;
     return;
@@ -408,8 +408,7 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   };
 
   renderHero(hero, league, safeData);
-  renderInfographic(infographic, safeData, remainingGameDays);
-  renderLastGameDay(lastGameDay, safeData.lastGameDay, league);
+  renderInfographic(infographic, safeData, remainingGameDays, league);
   searchInput.disabled = false;
   searchInput.placeholder = 'Нікнейм гравця';
   expandBtn.disabled = false;

@@ -202,17 +202,13 @@ function renderInfographic(root, data, remainingGameDays, league) {
   </section>
   <section class="league-dashboard-group league-dashboard-group--kpi">
     <h3 class="league-subtitle">KPI ліги</h3>
-    <div class="league-kpi-grid league-kpi-grid--primary">
-    ${statCard({ label: 'Активні гравці', value: data.summary.activePlayersCount, level: 'primary', icon: '👤' })}
-    ${statCard({ label: 'Матчі', value: data.summary.matchesCount, level: 'primary', divider: true })}
-    </div>
     <div class="league-kpi-grid league-kpi-grid--secondary">
     ${statCard({ label: 'Бої', value: data.summary.battlesCount, level: 'secondary' })}
     ${statCard({ label: 'Сер. рейтинг', value: data.summary.avgRating, level: 'secondary' })}
     </div>
     <div class="league-kpi-grid league-kpi-grid--tertiary">
     ${statCard({ label: 'Total MVP', value: data.summary.totalMvp, level: 'tertiary' })}
-    ${statCard({ label: 'Winrate', value: averageWinRate, level: 'tertiary', progress: { width: averageWinRateWidth } })}
+    ${statCard({ label: 'Середній WR', value: averageWinRate, level: 'tertiary', progress: { width: averageWinRateWidth } })}
     </div>
   </section>
   <section class="league-dashboard-group league-dashboard-group--ranks">

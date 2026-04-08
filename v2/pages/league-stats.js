@@ -125,7 +125,7 @@ function highlightCard(player, value, label, tone, opts = {}) {
     return `<article class="${cardClass}">
       <div class="highlight-main">
         <div class="highlight-top">
-          <span class="rank-badge rank-f">—</span>
+          <span class="rank-badge league-highlight-card__badge rank-f">—</span>
           <img class="avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
           <div class="highlight-meta">
             <div class="highlight-type">${esc(label)}</div>
@@ -140,7 +140,7 @@ function highlightCard(player, value, label, tone, opts = {}) {
   return `<article class="${cardClass}">
     <div class="highlight-main">
       <div class="highlight-top">
-        <span class="rank-badge ${rankClass(rank)}">${esc(rank)}</span>
+        <span class="rank-badge league-highlight-card__badge ${rankClass(rank)}">${esc(rank)}</span>
         <img class="avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
         <div class="highlight-meta">
           <div class="highlight-type">${esc(label)}</div>
@@ -167,7 +167,7 @@ function renderGameDaySection(lastGameDay, league) {
       <article class="league-game-day-card card"><span class="league-game-day-card__label">Боїв</span><strong class="league-game-day-card__value">${esc(day.battlesCount || 0)}</strong></article>
       <article class="league-game-day-card card"><span class="league-game-day-card__label">MVP дня</span><strong class="league-game-day-card__value">${esc(day.mvp || '—')}</strong></article>
     </div>
-    <div class="px-card__actions league-actions league-actions--center"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>
+    <div class="px-card__actions league-actions league-actions--center league-game-day-cta"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>
   </section>`;
 }
 

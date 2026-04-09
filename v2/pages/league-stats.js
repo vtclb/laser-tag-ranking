@@ -24,6 +24,9 @@ const SORTERS = {
   matches: (a, b) => (Number(b.matches) || 0) - (Number(a.matches) || 0),
   battles: (a, b) => (Number(b.battles) || 0) - (Number(a.battles) || 0),
   winRate: (a, b) => (Number(b.winRate) || 0) - (Number(a.winRate) || 0),
+  mvp1: (a, b) => (Number(b.mvp1) || 0) - (Number(a.mvp1) || 0),
+  mvp2: (a, b) => (Number(b.mvp2) || 0) - (Number(a.mvp2) || 0),
+  mvp3: (a, b) => (Number(b.mvp3) || 0) - (Number(a.mvp3) || 0),
   mvpTotal: (a, b) => (Number(b.mvpTotal) || 0) - (Number(a.mvpTotal) || 0),
   delta: (a, b) => (Number(b.delta) || 0) - (Number(a.delta) || 0)
 };
@@ -296,6 +299,20 @@ function filterPlayers(players, searchTerm) {
   return players.filter((player) => String(player.nickname || '').toLowerCase().includes(term));
 }
 
+function ensureMvpSortHeaders(tableHead) {
+  if (!tableHead) return;
+  const mvpSortMap = [
+    ['MVP1', 'mvp1', 'Сортувати за MVP1'],
+    ['MVP2', 'mvp2', 'Сортувати за MVP2'],
+    ['MVP3', 'mvp3', 'Сортувати за MVP3']
+  ];
+  mvpSortMap.forEach(([label, sortKey, ariaLabel]) => {
+    const header = Array.from(tableHead.querySelectorAll('th')).find((th) => th.textContent.trim() === label);
+    if (!header || header.querySelector('.league-sort-header[data-sort]')) return;
+    header.innerHTML = `<button class="league-sort-header" type="button" data-sort="${sortKey}" aria-label="${ariaLabel}" aria-sort="none">${label}</button>`;
+  });
+}
+
 export async function initLeagueStatsPage(params = {}) {
   const root = document.getElementById('view');
   if (!root) return;
@@ -347,6 +364,8 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   const expandBtn = root.querySelector('#leagueExpandBtn');
   const infographic = root.querySelector('#leagueInfographic');
   const searchInput = root.querySelector('#leagueSearchInput');
+  const tableHead = root.querySelector('.league-ranking-table__head');
+  ensureMvpSortHeaders(tableHead);
   const sortHeaders = root.querySelectorAll('.league-sort-header[data-sort]');
 
   if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !searchInput || !sortHeaders.length) {

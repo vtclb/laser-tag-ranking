@@ -11,13 +11,13 @@ body.theme-game #app :is(.topnav, .page, .container, .hero, .px-card, .section, 
   --accent: #31d0ff;
   --accent-2: #7cff72;
   /* Canonical rank palette (synced with original/main site). */
-  --rank-s: #9c27b0;
-  --rank-a: #e91e63;
-  --rank-b: #ffb300;
-  --rank-c: #4fc3f7;
-  --rank-d: #b6c2d4;
-  --rank-e: #7f8fa8;
-  --rank-f: #4f5d78;
+  --rank-s: #a44dff;
+  --rank-a: #ff4fa3;
+  --rank-b: #ffbf3c;
+  --rank-c: #45c7ff;
+  --rank-d: #c5d0de;
+  --rank-e: #7f91ab;
+  --rank-f: #3f4a5e;
   --grid-opacity: 0.05;
 }
 * { box-sizing: border-box; }
@@ -991,28 +991,28 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   filter: saturate(.75);
 }
 
-.league-page .league-ranking-table__row--rank-s { box-shadow: inset 2px 0 0 #e2bf6a; background: rgba(226,191,106,.08); }
-.league-page .league-ranking-table__row--rank-a { box-shadow: inset 2px 0 0 #f3a44e; background: rgba(243,164,78,.07); }
-.league-page .league-ranking-table__row--rank-b { box-shadow: inset 2px 0 0 #47a8ff; background: rgba(71,168,255,.07); }
-.league-page .league-ranking-table__row--rank-c { box-shadow: inset 2px 0 0 #3bcfbf; background: rgba(59,207,191,.07); }
-.league-page .league-ranking-table__row--rank-d { box-shadow: inset 2px 0 0 #9164da; background: rgba(145,100,218,.07); }
-.league-page .league-ranking-table__row--rank-e { box-shadow: inset 2px 0 0 #73859f; background: rgba(115,133,159,.07); }
-.league-page .league-ranking-table__row--rank-f { box-shadow: inset 2px 0 0 #a65d61; background: rgba(166,93,97,.07); }
+.league-page .league-ranking-table__row--rank-s { box-shadow: inset 2px 0 0 var(--rank-s); background: color-mix(in srgb, var(--rank-s) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-a { box-shadow: inset 2px 0 0 var(--rank-a); background: color-mix(in srgb, var(--rank-a) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-b { box-shadow: inset 2px 0 0 var(--rank-b); background: color-mix(in srgb, var(--rank-b) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-c { box-shadow: inset 2px 0 0 var(--rank-c); background: color-mix(in srgb, var(--rank-c) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-d { box-shadow: inset 2px 0 0 var(--rank-d); background: color-mix(in srgb, var(--rank-d) 11%, transparent); }
+.league-page .league-ranking-table__row--rank-e { box-shadow: inset 2px 0 0 var(--rank-e); background: color-mix(in srgb, var(--rank-e) 12%, transparent); }
+.league-page .league-ranking-table__row--rank-f { box-shadow: inset 2px 0 0 var(--rank-f); background: color-mix(in srgb, var(--rank-f) 16%, transparent); }
 
 .league-page .league-rank-badge.rank-s,
-.league-page .league-rank-frame.rank-s { border-color: #e2bf6a; }
+.league-page .league-rank-frame.rank-s { border-color: var(--rank-s); }
 .league-page .league-rank-badge.rank-a,
-.league-page .league-rank-frame.rank-a { border-color: #f3a44e; }
+.league-page .league-rank-frame.rank-a { border-color: var(--rank-a); }
 .league-page .league-rank-badge.rank-b,
-.league-page .league-rank-frame.rank-b { border-color: #47a8ff; }
+.league-page .league-rank-frame.rank-b { border-color: var(--rank-b); }
 .league-page .league-rank-badge.rank-c,
-.league-page .league-rank-frame.rank-c { border-color: #3bcfbf; }
+.league-page .league-rank-frame.rank-c { border-color: var(--rank-c); }
 .league-page .league-rank-badge.rank-d,
-.league-page .league-rank-frame.rank-d { border-color: #9164da; }
+.league-page .league-rank-frame.rank-d { border-color: var(--rank-d); }
 .league-page .league-rank-badge.rank-e,
-.league-page .league-rank-frame.rank-e { border-color: #73859f; }
+.league-page .league-rank-frame.rank-e { border-color: var(--rank-e); }
 .league-page .league-rank-badge.rank-f,
-.league-page .league-rank-frame.rank-f { border-color: #a65d61; }
+.league-page .league-rank-frame.rank-f { border-color: var(--rank-f); }
 
 .league-page .league-ranking-table__empty {
   text-align: center;
@@ -1073,13 +1073,13 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   font-size: 1rem;
 }
 
-.league-page .league-rank-tile--s { border-color: #e2bf6a; }
-.league-page .league-rank-tile--a { border-color: #f3a44e; }
-.league-page .league-rank-tile--b { border-color: #47a8ff; }
-.league-page .league-rank-tile--c { border-color: #3bcfbf; }
-.league-page .league-rank-tile--d { border-color: #9164da; }
-.league-page .league-rank-tile--e { border-color: #73859f; }
-.league-page .league-rank-tile--f { border-color: #a65d61; }
+.league-page .league-rank-tile--s { border-color: var(--rank-s); }
+.league-page .league-rank-tile--a { border-color: var(--rank-a); }
+.league-page .league-rank-tile--b { border-color: var(--rank-b); }
+.league-page .league-rank-tile--c { border-color: var(--rank-c); }
+.league-page .league-rank-tile--d { border-color: var(--rank-d); }
+.league-page .league-rank-tile--e { border-color: var(--rank-e); }
+.league-page .league-rank-tile--f { border-color: var(--rank-f); }
 
 .league-page .league-highlights-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2707,13 +2707,13 @@ body.theme-game #view.route-enter.route-enter-active {
 
 /* ===== V2 final anti-oval + symmetry + canonical rank palette ===== */
 body.theme-game {
-  --rank-s: #9c27b0;
-  --rank-a: #e91e63;
-  --rank-b: #ffb300;
-  --rank-c: #4fc3f7;
-  --rank-d: #b6c2d4;
-  --rank-e: #7f8fa8;
-  --rank-f: #4f5d78;
+  --rank-s: #a44dff;
+  --rank-a: #ff4fa3;
+  --rank-b: #ffbf3c;
+  --rank-c: #45c7ff;
+  --rank-d: #c5d0de;
+  --rank-e: #7f91ab;
+  --rank-f: #3f4a5e;
 }
 
 body.theme-game .topnav {
@@ -2846,9 +2846,24 @@ body.theme-game .league-page .league-search-input {
 .league-page .league-ranking-table__row--rank-a { box-shadow: inset 2px 0 0 var(--rank-a); background: color-mix(in srgb, var(--rank-a) 9%, transparent); }
 .league-page .league-ranking-table__row--rank-b { box-shadow: inset 2px 0 0 var(--rank-b); background: color-mix(in srgb, var(--rank-b) 9%, transparent); }
 .league-page .league-ranking-table__row--rank-c { box-shadow: inset 2px 0 0 var(--rank-c); background: color-mix(in srgb, var(--rank-c) 9%, transparent); }
-.league-page .league-ranking-table__row--rank-d { box-shadow: inset 2px 0 0 var(--rank-d); background: color-mix(in srgb, var(--rank-d) 9%, transparent); }
-.league-page .league-ranking-table__row--rank-e { box-shadow: inset 2px 0 0 var(--rank-e); background: color-mix(in srgb, var(--rank-e) 9%, transparent); }
-.league-page .league-ranking-table__row--rank-f { box-shadow: inset 2px 0 0 var(--rank-f); background: color-mix(in srgb, var(--rank-f) 9%, transparent); }
+.league-page .league-ranking-table__row--rank-d { box-shadow: inset 2px 0 0 var(--rank-d); background: color-mix(in srgb, var(--rank-d) 11%, transparent); }
+.league-page .league-ranking-table__row--rank-e { box-shadow: inset 2px 0 0 var(--rank-e); background: color-mix(in srgb, var(--rank-e) 12%, transparent); }
+.league-page .league-ranking-table__row--rank-f { box-shadow: inset 2px 0 0 var(--rank-f); background: color-mix(in srgb, var(--rank-f) 16%, transparent); }
+
+.league-page .league-rank-badge.rank-s,
+.league-page .league-rank-frame.rank-s { color: #ecd9ff; background: color-mix(in srgb, var(--rank-s) 20%, rgba(5, 8, 14, .94)); }
+.league-page .league-rank-badge.rank-a,
+.league-page .league-rank-frame.rank-a { color: #ffd6ea; background: color-mix(in srgb, var(--rank-a) 19%, rgba(5, 8, 14, .94)); }
+.league-page .league-rank-badge.rank-b,
+.league-page .league-rank-frame.rank-b { color: #ffe8b6; background: color-mix(in srgb, var(--rank-b) 20%, rgba(5, 8, 14, .94)); }
+.league-page .league-rank-badge.rank-c,
+.league-page .league-rank-frame.rank-c { color: #d5f1ff; background: color-mix(in srgb, var(--rank-c) 18%, rgba(5, 8, 14, .94)); }
+.league-page .league-rank-badge.rank-d,
+.league-page .league-rank-frame.rank-d { color: #e6edf6; background: color-mix(in srgb, var(--rank-d) 16%, rgba(5, 8, 14, .95)); }
+.league-page .league-rank-badge.rank-e,
+.league-page .league-rank-frame.rank-e { color: #d0d9e8; background: color-mix(in srgb, var(--rank-e) 18%, rgba(5, 8, 14, .95)); }
+.league-page .league-rank-badge.rank-f,
+.league-page .league-rank-frame.rank-f { color: #c0c9d8; background: color-mix(in srgb, var(--rank-f) 24%, rgba(5, 8, 14, .95)); }
 
 .league-page .league-kpi-grid,
 .league-page .league-highlights-grid {

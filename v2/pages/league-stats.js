@@ -187,8 +187,7 @@ function renderInfographic(root, data, remainingGameDays, league) {
   const smallestGrowth = getSmallestPositiveGrowth(data.activePlayers);
   const smallestGrowthValue = smallestGrowth ? fmtSigned(smallestGrowth.delta) : 'немає валідних приростів';
 
-  root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
-  <section class="league-dashboard-group league-dashboard-group--live">
+  root.innerHTML = `<section class="league-dashboard-group league-dashboard-group--live">
     <h3 class="league-subtitle">Поточні live дані</h3>
     <div class="live-grid">
       <article class="live-card card">

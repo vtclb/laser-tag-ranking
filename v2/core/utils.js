@@ -37,7 +37,14 @@ export function decodeParam(value = '') {
 }
 
 export function normalizeNickname(value = '') {
-  return decodeParam(value).toLocaleLowerCase('uk').trim();
+  return normalizePlayerKey(decodeParam(value));
+}
+
+export function normalizePlayerKey(value = '') {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase('uk');
 }
 
 export function jsonp(url, params = {}, timeoutMs = 12_000) {

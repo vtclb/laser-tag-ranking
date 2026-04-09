@@ -56,7 +56,8 @@ const SEASON_MASTER_API_URL = 'https://script.google.com/macros/s/AKfycbyDdfnyXW
 const seasonCache = {};
 
 
-function normalizeHeader(value = '') { return String(value || '').trim().toLowerCase(); }
+function normalizePlayerKey(value = '') { return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
+function normalizeHeader(value = '') { return normalizePlayerKey(value); }
 function normalizeLeague(league = '') {
   return normalizeLeagueName(league);
 }
@@ -1914,51 +1915,127 @@ export async function getPlayerAllTimeProfile(nick) {
   seasonBundles.forEach(({ season, kids, adults }) => {
     const pKids = (kids.table || []).find((player) => normalizeHeader(player.nick) === nickname) || null;
     const pAdults = (adults.table || []).find((player) => normalizeHeader(player.nick) === nickname) || null;
-    const p = pKids || pAdults;
-    if (!p) return;
+    const seasonPlayers = [
+      pKids ? { player: pKids, league: 'kids', source: kids } : null,
+      pAdults ? { player: pAdults, league: 'sundaygames', source: adults } : null
+    ].filter(Boolean);
+    if (!seasonPlayers.length) return;
 
-    const leagueId = pKids ? 'kids' : 'sundaygames';
-    const seasonMatches = (pKids ? kids.matches : adults.matches).filter((entry) => [...(entry.team1 || []), ...(entry.team2 || []), ...(entry.team3 || []), ...(entry.team4 || [])].some((name) => normalizeHeader(name) === nickname));
+    const leagueId = seasonPlayers.length > 1 ? 'mixed' : seasonPlayers[0].league;
+    const seasonMatchesRaw = seasonPlayers.flatMap((entry) => (entry.source?.matches || []).filter((match) => [...(match.team1 || []), ...(match.team2 || []), ...(match.team3 || []), ...(match.team4 || [])].some((name) => normalizeHeader(name) === nickname)));
+    const uniqueMatchSignatures = new Set();
+    const seasonMatches = seasonMatchesRaw.filter((match) => {
+      const signature = [
+        String(match.day || ''),
+        [...(match.team1 || [])].map(normalizeHeader).join('|'),
+        [...(match.team2 || [])].map(normalizeHeader).join('|'),
+        [...(match.team3 || [])].map(normalizeHeader).join('|'),
+        [...(match.team4 || [])].map(normalizeHeader).join('|'),
+        String(match.winner || ''),
+        String(match.rawSeries || '')
+      ].join('::');
+      if (uniqueMatchSignatures.has(signature)) return false;
+      uniqueMatchSignatures.add(signature);
+      return true;
+    });
     const seasonRounds = seasonMatches.reduce((sum, entry) => sum + safeRoundCount(entry.roundsCount ?? entry.rounds ?? entry.rawSeries), 0);
-    const mvp1 = toNumber(p.mvp, 0) || 0;
-    const mvp2 = toNumber(p.mvp2, 0) || 0;
-    const mvp3 = toNumber(p.mvp3, 0) || 0;
-    const mvpTotal = toNumber(p.mvpTotal, null) ?? (mvp1 + mvp2 + mvp3);
-    const points = toNumber(p.points, null);
-    const ratingEnd = toNumber(p.rating_end, null) ?? points;
-    const ratingStart = toNumber(p.rating_start, null);
-    const ratingDelta = toNumber(p.delta, null) ?? toNumber(p.rating_delta, 0) ?? 0;
+
+    const seasonTotals = seasonPlayers.reduce((acc, entry) => {
+      const p = entry.player || {};
+      const localMvp1 = toNumber(p.mvp, 0) || 0;
+      const localMvp2 = toNumber(p.mvp2, 0) || 0;
+      const localMvp3 = toNumber(p.mvp3, 0) || 0;
+      const localMvpTotal = toNumber(p.mvpTotal, null) ?? (localMvp1 + localMvp2 + localMvp3);
+      const localPoints = toNumber(p.points, null);
+      const localRatingEnd = toNumber(p.rating_end, null) ?? localPoints;
+      const localRatingStart = toNumber(p.rating_start, null);
+      const localRatingDelta = toNumber(p.delta, null) ?? toNumber(p.rating_delta, 0) ?? 0;
+      const localRank = String(p.rankLetter || p.rankText || p.rank || rankFromPoints(localPoints || 0)).toUpperCase();
+
+      acc.games += toNumber(p.games, 0) || 0;
+      acc.matches += toNumber(p.matches, null) ?? (toNumber(p.games, 0) || 0);
+      acc.battles += toNumber(p.battles, 0) || 0;
+      acc.wins += toNumber(p.wins, 0) || 0;
+      acc.losses += toNumber(p.losses, 0) || 0;
+      acc.draws += toNumber(p.draws, 0) || 0;
+      acc.top1 += localMvp1;
+      acc.top2 += localMvp2;
+      acc.top3 += localMvp3;
+      acc.mvpTotal += localMvpTotal;
+      acc.ratingDelta += localRatingDelta;
+      if (Number.isFinite(localRatingEnd) && (acc.ratingEnd === null || localRatingEnd > acc.ratingEnd)) acc.ratingEnd = localRatingEnd;
+      if (Number.isFinite(localPoints) && (acc.points === null || localPoints > acc.points)) acc.points = localPoints;
+      if (Number.isFinite(localRatingStart)) acc.ratingStart = Number.isFinite(acc.ratingStart) ? Math.min(acc.ratingStart, localRatingStart) : localRatingStart;
+      if (Number.isFinite(toNumber(p.penalties_total, null) ?? toNumber(p.penalties, null))) acc.penalties += (toNumber(p.penalties_total, null) ?? toNumber(p.penalties, null));
+      if (Number.isFinite(toNumber(p.avg_rating, null) ?? toNumber(p.avgRating, null))) acc.avgRating.push(toNumber(p.avg_rating, null) ?? toNumber(p.avgRating, null));
+      if (Number.isFinite(toNumber(p.matches_per_week, null) ?? toNumber(p.matchesPerWeek, null))) acc.matchesPerWeek.push(toNumber(p.matches_per_week, null) ?? toNumber(p.matchesPerWeek, null));
+      if (Number.isFinite(toNumber(p.season_activity_pct, null) ?? toNumber(p.activityPct, null))) acc.activityPct.push(toNumber(p.season_activity_pct, null) ?? toNumber(p.activityPct, null));
+      const place = toNumber(p.rank_final, null) ?? toNumber(p.place, null);
+      if (Number.isFinite(place) && (!Number.isFinite(acc.finalPlace) || place < acc.finalPlace)) acc.finalPlace = place;
+      if ((rankWeight[localRank] || 0) > (rankWeight[acc.rank] || 0)) acc.rank = localRank;
+      return acc;
+    }, {
+      games: 0,
+      matches: 0,
+      battles: 0,
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      top1: 0,
+      top2: 0,
+      top3: 0,
+      mvpTotal: 0,
+      ratingDelta: 0,
+      ratingStart: null,
+      ratingEnd: null,
+      points: null,
+      penalties: 0,
+      avgRating: [],
+      matchesPerWeek: [],
+      activityPct: [],
+      finalPlace: null,
+      rank: 'F'
+    });
+
+    const winrate = seasonTotals.games ? Number(((seasonTotals.wins / seasonTotals.games) * 100).toFixed(1)) : null;
     const seasonRow = {
       seasonId: season.id,
       seasonTitle: season.title,
       league: leagueId,
-      games: toNumber(p.games, 0) || 0,
-      matches: toNumber(p.matches, null) ?? (toNumber(p.games, 0) || 0),
-      battles: toNumber(p.battles, null),
+      games: seasonTotals.games,
+      matches: seasonTotals.matches,
+      battles: seasonTotals.battles,
       rounds: seasonRounds,
-      wins: toNumber(p.wins, 0) || 0,
-      losses: toNumber(p.losses, 0) || 0,
-      draws: toNumber(p.draws, 0) || 0,
-      winrate: toNumber(p.winRate, null) ?? toNumber(p.winrate, null),
-      top1: mvp1,
-      top2: mvp2,
-      top3: mvp3,
-      mvpTotal,
-      penalties: toNumber(p.penalties_total, null) ?? toNumber(p.penalties, null),
-      ratingStart,
-      ratingEnd,
-      ratingDelta,
-      avgRating: toNumber(p.avg_rating, null) ?? toNumber(p.avgRating, null),
-      matchesPerWeek: toNumber(p.matches_per_week, null) ?? toNumber(p.matchesPerWeek, null),
-      activityPct: toNumber(p.season_activity_pct, null) ?? toNumber(p.activityPct, null),
-      points,
-      rank: String(p.rankLetter || p.rankText || p.rank || rankFromPoints(points || 0)).toUpperCase(),
-      finalPlace: toNumber(p.rank_final, null) ?? toNumber(p.place, null)
+      wins: seasonTotals.wins,
+      losses: seasonTotals.losses,
+      draws: seasonTotals.draws,
+      winrate,
+      top1: seasonTotals.top1,
+      top2: seasonTotals.top2,
+      top3: seasonTotals.top3,
+      mvpTotal: seasonTotals.mvpTotal,
+      penalties: seasonTotals.penalties || null,
+      ratingStart: seasonTotals.ratingStart,
+      ratingEnd: seasonTotals.ratingEnd,
+      ratingDelta: seasonTotals.ratingDelta,
+      avgRating: seasonTotals.avgRating.length ? Number((seasonTotals.avgRating.reduce((sum, item) => sum + item, 0) / seasonTotals.avgRating.length).toFixed(1)) : null,
+      matchesPerWeek: seasonTotals.matchesPerWeek.length ? Number((seasonTotals.matchesPerWeek.reduce((sum, item) => sum + item, 0) / seasonTotals.matchesPerWeek.length).toFixed(2)) : null,
+      activityPct: seasonTotals.activityPct.length ? Number((seasonTotals.activityPct.reduce((sum, item) => sum + item, 0) / seasonTotals.activityPct.length).toFixed(1)) : null,
+      points: seasonTotals.points,
+      rank: seasonTotals.rank,
+      finalPlace: seasonTotals.finalPlace
     };
 
     seasonSet.add(season.id);
-    leagueGames[leagueId] += seasonRow.games;
-    addWins[leagueId] += seasonRow.wins;
+    if (leagueId === 'kids' || leagueId === 'sundaygames') {
+      leagueGames[leagueId] += seasonRow.games;
+      addWins[leagueId] += seasonRow.wins;
+    } else {
+      leagueGames.kids += seasonRow.games / 2;
+      leagueGames.sundaygames += seasonRow.games / 2;
+      addWins.kids += seasonRow.wins / 2;
+      addWins.sundaygames += seasonRow.wins / 2;
+    }
     playedSeasons.push(seasonRow);
 
     total.games += seasonRow.games;
@@ -1974,7 +2051,7 @@ export async function getPlayerAllTimeProfile(nick) {
     total.mvpTotal += seasonRow.mvpTotal;
     total.cumulativeDelta += seasonRow.ratingDelta || 0;
 
-    if (Number.isFinite(seasonRow.points) && (total.peakPoints === null || seasonRow.points > total.peakPoints)) total.peakPoints = seasonRow.points;
+    if (Number.isFinite(seasonRow.ratingEnd) && (total.peakPoints === null || seasonRow.ratingEnd > total.peakPoints)) total.peakPoints = seasonRow.ratingEnd;
     if ((rankWeight[seasonRow.rank] || 0) > (rankWeight[total.bestRank] || 0)) total.bestRank = seasonRow.rank;
   });
 
@@ -1983,10 +2060,19 @@ export async function getPlayerAllTimeProfile(nick) {
   playedSeasons.sort((a, b) => seasons.findIndex((s) => s.id === b.seasonId) - seasons.findIndex((s) => s.id === a.seasonId));
   total.seasonsPlayed = seasonSet.size;
   total.winrate = total.games ? Number(((total.wins / total.games) * 100).toFixed(1)) : 0;
+  total.totalMatches = total.matches;
+  total.totalRounds = total.rounds;
+  total.totalWins = total.wins;
+  total.totalLosses = total.losses;
+  total.totalDraws = total.draws;
+  total.totalMvp = total.mvpTotal;
+  total.careerWR = total.winrate;
+  total.peakRating = total.peakPoints;
 
-  const bestSeasonByPoints = [...playedSeasons].filter((row) => Number.isFinite(row.points)).sort((a, b) => (b.points || 0) - (a.points || 0))[0] || null;
+  const bestSeasonByPoints = [...playedSeasons].filter((row) => Number.isFinite(row.ratingEnd)).sort((a, b) => (b.ratingEnd || 0) - (a.ratingEnd || 0))[0] || null;
   const bestSeasonByDelta = [...playedSeasons].filter((row) => Number.isFinite(row.ratingDelta)).sort((a, b) => (b.ratingDelta || 0) - (a.ratingDelta || 0))[0] || null;
-  const mostActiveSeason = [...playedSeasons].sort((a, b) => (b.games || 0) - (a.games || 0))[0] || null;
+  const bestWinrateSeason = [...playedSeasons].filter((row) => Number.isFinite(row.winrate)).sort((a, b) => (b.winrate || 0) - (a.winrate || 0))[0] || null;
+  const mostActiveSeason = [...playedSeasons].sort((a, b) => (b.matches || 0) - (a.matches || 0))[0] || null;
   const bestMvpSeason = [...playedSeasons].sort((a, b) => (b.mvpTotal || 0) - (a.mvpTotal || 0))[0] || null;
   const averageSeasonWinrate = playedSeasons.length
     ? Number((playedSeasons.reduce((sum, season) => sum + (Number.isFinite(season.winrate) ? season.winrate : 0), 0) / playedSeasons.length).toFixed(1))
@@ -2005,6 +2091,7 @@ export async function getPlayerAllTimeProfile(nick) {
     highlights: {
       bestSeasonByPoints,
       bestSeasonByDelta,
+      bestWinrateSeason,
       mostActiveSeason,
       bestMvpSeason,
       averageSeasonWinrate,

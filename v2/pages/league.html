@@ -9,34 +9,21 @@
         <input class="search-input league-search-input" id="leagueSearchInput" type="search" placeholder="Нікнейм гравця" autocomplete="off">
       </label>
     </div>
-    <div class="league-table-toolbar" role="toolbar" aria-label="Сортування таблиці рейтингу">
-      <div class="league-sort-controls" id="leagueSortControls" aria-label="Сортування">
-        <span class="league-sort-controls__label">Сортування</span>
-        <div class="league-sort-controls__buttons">
-          <button class="league-sort-btn is-active" type="button" data-sort="default" title="Рейтинг" aria-label="Сортувати за рейтингом">Рейтинг</button>
-          <button class="league-sort-btn" type="button" data-sort="matches" title="Ігри" aria-label="Сортувати за кількістю ігор">Ігри</button>
-          <button class="league-sort-btn" type="button" data-sort="battles" title="Бої" aria-label="Сортувати за кількістю боїв">Бої</button>
-          <button class="league-sort-btn" type="button" data-sort="winRate" title="Відсоток перемог" aria-label="Сортувати за відсотком перемог">WR %</button>
-          <button class="league-sort-btn" type="button" data-sort="mvpTotal" title="Кількість MVP" aria-label="Сортувати за кількістю MVP">MVP</button>
-          <button class="league-sort-btn" type="button" data-sort="delta" title="Зміна рейтингу" aria-label="Сортувати за зміною рейтингу">Δ рейтинг</button>
-        </div>
-      </div>
-    </div>
 
     <div class="league-table-shell">
       <table class="league-ranking-table" aria-label="Рейтинг гравців ліги">
         <thead class="league-ranking-table__head">
           <tr>
-            <th class="league-ranking-table__cell league-ranking-table__cell--place" scope="col">#</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--place" scope="col"><button class="league-sort-header is-active" type="button" data-sort="default" aria-label="Сортувати за рейтингом" aria-sort="descending">#</button></th>
             <th class="league-ranking-table__cell league-ranking-table__cell--player" scope="col">Гравець</th>
-            <th class="league-ranking-table__cell league-ranking-table__cell--points" scope="col">Очки</th>
-            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Ігри</th>
-            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Бої</th>
-            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">WR</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--points" scope="col"><button class="league-sort-header" type="button" data-sort="points" aria-label="Сортувати за очками" aria-sort="none">Очки</button></th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col"><button class="league-sort-header" type="button" data-sort="matches" aria-label="Сортувати за кількістю ігор" aria-sort="none">Ігри</button></th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col"><button class="league-sort-header" type="button" data-sort="battles" aria-label="Сортувати за кількістю боїв" aria-sort="none">Бої</button></th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col"><button class="league-sort-header" type="button" data-sort="winRate" aria-label="Сортувати за відсотком перемог" aria-sort="none">WR %</button></th>
             <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP1</th>
             <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP2</th>
             <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">MVP3</th>
-            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col">Δ</th>
+            <th class="league-ranking-table__cell league-ranking-table__cell--num" scope="col"><button class="league-sort-header" type="button" data-sort="delta" aria-label="Сортувати за зміною рейтингу" aria-sort="none">Δ рейтинг</button></th>
           </tr>
         </thead>
         <tbody class="league-ranking-table__body" id="leagueTableBody"></tbody>

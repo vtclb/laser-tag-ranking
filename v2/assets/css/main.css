@@ -15,9 +15,9 @@ body.theme-game #app :is(.topnav, .page, .container, .hero, .px-card, .section, 
   --rank-a: #e91e63;
   --rank-b: #ffb300;
   --rank-c: #4fc3f7;
-  --rank-d: #777;
-  --rank-e: #666;
-  --rank-f: #444;
+  --rank-d: #b6c2d4;
+  --rank-e: #7f8fa8;
+  --rank-f: #4f5d78;
   --grid-opacity: 0.05;
 }
 * { box-sizing: border-box; }
@@ -2711,9 +2711,9 @@ body.theme-game {
   --rank-a: #e91e63;
   --rank-b: #ffb300;
   --rank-c: #4fc3f7;
-  --rank-d: #777;
-  --rank-e: #666;
-  --rank-f: #444;
+  --rank-d: #b6c2d4;
+  --rank-e: #7f8fa8;
+  --rank-f: #4f5d78;
 }
 
 body.theme-game .topnav {
@@ -3382,9 +3382,9 @@ body.theme-game {
   --rank-a: #e91e63;
   --rank-b: #ffb300;
   --rank-c: #4fc3f7;
-  --rank-d: #777;
-  --rank-e: #666;
-  --rank-f: #444;
+  --rank-d: #b6c2d4;
+  --rank-e: #7f8fa8;
+  --rank-f: #4f5d78;
 }
 
 .home-v2 .leader-rank.rank-s, .home-v2 .home-ranking__rank.rank-s, .league-page .league-rank-badge.rank-s { color: var(--rank-s) !important; }
@@ -4787,5 +4787,78 @@ body.theme-game .league-page .league-ranking-table__head th {
 @media (max-width: 760px) {
   body.theme-game .league-page .league-sort-controls__buttons {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+/* League stats: table-header sorting + cleaned rank distribution labels */
+.league-page .league-table-toolbar,
+.league-page .league-sort-controls {
+  display: none;
+}
+
+.league-page .league-sort-header {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .22rem;
+  border: 0;
+  padding: .14rem .1rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.league-page .league-sort-header::after {
+  content: '↕';
+  opacity: .5;
+  font-size: .62rem;
+}
+
+.league-page .league-sort-header:hover {
+  color: #dff7ff;
+}
+
+.league-page .league-sort-header:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 1px;
+}
+
+.league-page .league-sort-header.is-active {
+  color: #dff7ff;
+}
+
+.league-page .league-sort-header.is-active[data-sort-dir='desc']::after {
+  content: '↓';
+  opacity: 1;
+}
+
+.league-page .league-sort-header.is-active[data-sort-dir='asc']::after {
+  content: '↑';
+  opacity: 1;
+}
+
+.league-page .league-ranking-table__head th[aria-sort='ascending'],
+.league-page .league-ranking-table__head th[aria-sort='descending'] {
+  background: color-mix(in srgb, var(--accent) 16%, rgba(7, 13, 24, .96));
+  color: #dff7ff;
+}
+
+.league-page .league-rank-tile__label {
+  font-size: .72rem;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
+@media (max-width: 640px) {
+  .league-page .league-sort-header {
+    padding: .1rem 0;
+    letter-spacing: .03em;
+    font-size: .58rem;
   }
 }

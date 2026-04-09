@@ -120,6 +120,14 @@ function calculateRemainingGameDays(data, currentSeason) {
   return `${remaining}`;
 }
 
+
+function getSmallestPositiveGrowth(players = []) {
+  const candidates = (Array.isArray(players) ? players : [])
+    .filter((player) => Number.isFinite(Number(player?.delta)) && Number(player.delta) > 0)
+    .sort((a, b) => Number(a.delta) - Number(b.delta));
+  return candidates[0] || null;
+}
+
 function highlightCard(player, value, label, tone) {
   const valueClass = tone === 'minus' ? 'negative' : 'positive';
   const cardClass = 'highlight-card card';
@@ -176,6 +184,9 @@ function renderInfographic(root, data, remainingGameDays, league) {
     : null;
   const averageWinRate = averageWinRateValue === null ? '—' : `${averageWinRateValue.toFixed(1)}%`;
   const averageWinRateWidth = averageWinRateValue === null ? '0%' : `${Math.max(0, Math.min(100, averageWinRateValue)).toFixed(1)}%`;
+  const smallestGrowth = getSmallestPositiveGrowth(data.activePlayers);
+  const smallestGrowthValue = smallestGrowth ? fmtSigned(smallestGrowth.delta) : 'немає валідних приростів';
+
   root.innerHTML = `<h2 class="px-card__title league-section-title">Інфографіка ліги</h2>
   <section class="league-dashboard-group league-dashboard-group--live">
     <h3 class="league-subtitle">Поточні live дані</h3>
@@ -218,7 +229,7 @@ function renderInfographic(root, data, remainingGameDays, league) {
     <div class="league-highlights-grid league-highlights-grid--moments">
       ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'gain')}
       ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', 'mvp')}
-      ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'minus')}
+      ${highlightCard(smallestGrowth, smallestGrowthValue, 'Найменший приріст', 'gain')}
     </div>
   </section>
   ${renderGameDaySection(data.lastGameDay, league)}`;

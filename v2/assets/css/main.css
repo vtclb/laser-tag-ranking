@@ -4877,3 +4877,61 @@ body.theme-game .league-page .league-ranking-table__head th {
     font-size: .58rem;
   }
 }
+
+/* ===== 2026-04-09 v2 league stats targeted fixes (rules-canonical ranks + no capsule overlap) ===== */
+:root,
+body.theme-game {
+  /* Rules page canonical order: F⚪ E🟢 D🔵 C🟡 B🟠 A🔴 S🟣 */
+  --rank-s: #a44dff;
+  --rank-a: #ff4d4f;
+  --rank-b: #ff9f1a;
+  --rank-c: #ffd84d;
+  --rank-d: #3d8bff;
+  --rank-e: #33c36b;
+  --rank-f: #d6dde9;
+}
+
+body.theme-game .league-page .league-ranking-table__row--rank-s { box-shadow: inset 3px 0 0 var(--rank-s) !important; background: color-mix(in srgb, var(--rank-s) 12%, rgba(8, 14, 24, .9)) !important; }
+body.theme-game .league-page .league-ranking-table__row--rank-a { box-shadow: inset 3px 0 0 var(--rank-a) !important; background: color-mix(in srgb, var(--rank-a) 12%, rgba(8, 14, 24, .9)) !important; }
+body.theme-game .league-page .league-ranking-table__row--rank-b { box-shadow: inset 3px 0 0 var(--rank-b) !important; background: color-mix(in srgb, var(--rank-b) 12%, rgba(8, 14, 24, .9)) !important; }
+body.theme-game .league-page .league-ranking-table__row--rank-c { box-shadow: inset 3px 0 0 var(--rank-c) !important; background: color-mix(in srgb, var(--rank-c) 13%, rgba(8, 14, 24, .9)) !important; }
+body.theme-game .league-page .league-ranking-table__row--rank-d { box-shadow: inset 3px 0 0 var(--rank-d) !important; background: color-mix(in srgb, var(--rank-d) 12%, rgba(8, 14, 24, .9)) !important; }
+body.theme-game .league-page .league-ranking-table__row--rank-e { box-shadow: inset 3px 0 0 var(--rank-e) !important; background: color-mix(in srgb, var(--rank-e) 13%, rgba(8, 14, 24, .9)) !important; }
+body.theme-game .league-page .league-ranking-table__row--rank-f { box-shadow: inset 3px 0 0 var(--rank-f) !important; background: color-mix(in srgb, var(--rank-f) 16%, rgba(8, 14, 24, .9)) !important; }
+
+body.theme-game .league-page .league-rank-badge,
+body.theme-game .league-page #leagueInfographic .league-highlight-card__badge,
+body.theme-game .home-v2 .home-ranking__rank,
+body.theme-game .home-v2 .leader-rank {
+  border-radius: 8px !important;
+}
+
+body.theme-game .league-page .league-game-day-card,
+body.theme-game .league-page .league-game-day-card::before,
+body.theme-game .league-page .league-game-day-card::after,
+body.theme-game .league-page .highlight-card,
+body.theme-game .league-page .highlight-card::before,
+body.theme-game .league-page .highlight-card::after {
+  border-radius: 12px !important;
+}
+
+body.theme-game .league-page .league-game-day-card__label {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+body.theme-game .league-page .league-game-day-card__value {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.theme-game .league-page .league-game-day-cta-button,
+body.theme-game .league-page .league-actions .button-primary,
+body.theme-game .league-page #leagueExpandBtn.button-primary {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 16px rgba(14, 76, 159, .24) !important;
+  transform: none !important;
+}

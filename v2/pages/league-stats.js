@@ -117,20 +117,17 @@ function calculateRemainingGameDays(data, currentSeason) {
   return `${remaining}`;
 }
 
-function highlightCard(player, value, label, tone, opts = {}) {
-  const hero = Boolean(opts.hero);
+function highlightCard(player, value, label, tone) {
   const valueClass = tone === 'minus' ? 'negative' : 'positive';
-  const cardClass = hero ? 'highlight-card highlight-hero card' : 'highlight-card card';
+  const cardClass = 'highlight-card card';
   if (!player) {
     return `<article class="${cardClass}">
-      <div class="highlight-main">
-        <div class="highlight-top">
-          <span class="rank-badge league-highlight-card__badge rank-f">—</span>
-          <img class="avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
-          <div class="highlight-meta">
-            <div class="highlight-type">${esc(label)}</div>
-            <div class="highlight-name">—</div>
-          </div>
+      <div class="highlight-main highlight-main--row">
+        <span class="rank-badge league-highlight-card__badge rank-f">—</span>
+        <img class="avatar" src="${esc(FALLBACK_AVATAR)}" alt="Аватар">
+        <div class="highlight-meta">
+          <div class="highlight-name">—</div>
+          <div class="highlight-type">${esc(label)}</div>
         </div>
         <div class="highlight-value ${valueClass}">—</div>
       </div>
@@ -138,14 +135,12 @@ function highlightCard(player, value, label, tone, opts = {}) {
   }
   const rank = String(player.rankLetter || 'F').toUpperCase();
   return `<article class="${cardClass}">
-    <div class="highlight-main">
-      <div class="highlight-top">
-        <span class="rank-badge league-highlight-card__badge ${rankClass(rank)}">${esc(rank)}</span>
-        <img class="avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
-        <div class="highlight-meta">
-          <div class="highlight-type">${esc(label)}</div>
-          <div class="highlight-name">${esc(player.nickname)}</div>
-        </div>
+    <div class="highlight-main highlight-main--row">
+      <span class="rank-badge league-highlight-card__badge ${rankClass(rank)}">${esc(rank)}</span>
+      <img class="avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}">
+      <div class="highlight-meta">
+        <div class="highlight-name">${esc(player.nickname)}</div>
+        <div class="highlight-type">${esc(label)}</div>
       </div>
       <div class="highlight-value ${valueClass}">${esc(value)}</div>
     </div>
@@ -167,7 +162,7 @@ function renderGameDaySection(lastGameDay, league) {
       <article class="league-game-day-card card"><span class="league-game-day-card__label">Боїв</span><strong class="league-game-day-card__value">${esc(day.battlesCount || 0)}</strong></article>
       <article class="league-game-day-card card"><span class="league-game-day-card__label">MVP дня</span><strong class="league-game-day-card__value">${esc(day.mvp || '—')}</strong></article>
     </div>
-    <div class="px-card__actions league-actions league-actions--center league-game-day-cta"><a class="button-primary" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a></div>
+    <a class="button-primary league-game-day-cta-button" href="#gameday?league=${encodeURIComponent(league)}">ВІДКРИТИ ІГРОВИЙ ДЕНЬ</a>
   </section>`;
 }
 
@@ -218,11 +213,9 @@ function renderInfographic(root, data, remainingGameDays, league) {
   <section class="league-dashboard-group league-dashboard-group--moments">
     <h3 class="league-subtitle">Ключові моменти</h3>
     <div class="league-highlights-grid league-highlights-grid--moments">
-      ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'gain', { hero: true })}
-      <div class="league-highlights-grid__secondary">
+      ${highlightCard(data.progress?.bestGrowth, fmtSigned(data.progress?.bestGrowth?.delta), 'Найкращий приріст', 'gain')}
       ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'Найбільше MVP', 'mvp')}
       ${highlightCard(data.progress?.biggestMinus, fmtSigned(data.progress?.biggestMinus?.delta), 'Найбільший мінус', 'minus')}
-      </div>
     </div>
   </section>
   ${renderGameDaySection(data.lastGameDay, league)}`;

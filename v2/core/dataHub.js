@@ -1880,61 +1880,216 @@ export async function getPlayerAllTimeProfile(nick) {
   if (cached) return cached;
 
   const [avatars, seasons] = await Promise.all([getAvatarsMap(), getSeasonsList()]);
-  const bundles = await Promise.all(seasons.map(async (season) => ({ season, kids: await getLeagueSnapshot('kids', season.id), adults: await getLeagueSnapshot('sundaygames', season.id) })));
-  const total = { games: 0, rounds: 0, wins: 0, losses: 0, draws: 0, winrate: 0, top1: 0, top2: 0, top3: 0 };
-  const playedSeasons = [];
   const nickname = normalizeHeader(nick);
-  let primaryLeague = 'kids';
-  let leagueGames = { kids: 0, sundaygames: 0 };
+  const seasonBundles = await Promise.all(seasons.map(async (season) => {
+    const [kids, adults] = await Promise.all([getLeagueSnapshot('kids', season.id), getLeagueSnapshot('sundaygames', season.id)]);
+    return { season, kids, adults };
+  }));
 
-  bundles.forEach(({ season, kids, adults }) => {
-    const pKids = kids.table.find((p) => normalizeHeader(p.nick) === nickname);
-    const pAdults = adults.table.find((p) => normalizeHeader(p.nick) === nickname);
+  const total = {
+    games: 0,
+    matches: 0,
+    battles: 0,
+    rounds: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    winrate: 0,
+    top1: 0,
+    top2: 0,
+    top3: 0,
+    mvpTotal: 0,
+    peakPoints: null,
+    cumulativeDelta: 0,
+    bestRank: 'F',
+    seasonsPlayed: 0
+  };
+
+  const rankWeight = { S: 7, A: 6, B: 5, C: 4, D: 3, E: 2, F: 1 };
+  const playedSeasons = [];
+  const seasonSet = new Set();
+  const leagueGames = { kids: 0, sundaygames: 0 };
+  const addWins = { kids: 0, sundaygames: 0 };
+
+  seasonBundles.forEach(({ season, kids, adults }) => {
+    const pKids = (kids.table || []).find((player) => normalizeHeader(player.nick) === nickname) || null;
+    const pAdults = (adults.table || []).find((player) => normalizeHeader(player.nick) === nickname) || null;
     const p = pKids || pAdults;
     if (!p) return;
-    const lg = pKids ? 'kids' : 'sundaygames';
-    leagueGames[lg] += p.games;
-    playedSeasons.push({ seasonId: season.id, seasonTitle: season.title, league: lg, games: p.games, wins: p.wins, losses: p.losses, draws: p.draws, winrate: p.winRate, top1: p.mvp, top2: p.mvp2, top3: p.mvp3, points: p.points, rank: p.rankLetter });
-    total.games += p.games; total.wins += p.wins; total.losses += p.losses; total.draws += p.draws; total.top1 += p.mvp; total.top2 += p.mvp2; total.top3 += p.mvp3;
-    const matchSet = (pKids ? kids.matches : adults.matches).filter((m) => [...m.team1, ...m.team2].some((n) => normalizeHeader(n) === nickname));
-    total.rounds += matchSet.reduce((sum, m) => sum + safeRoundCount(m.roundsCount ?? m.rounds ?? m.rawSeries), 0);
+
+    const leagueId = pKids ? 'kids' : 'sundaygames';
+    const seasonMatches = (pKids ? kids.matches : adults.matches).filter((entry) => [...(entry.team1 || []), ...(entry.team2 || []), ...(entry.team3 || []), ...(entry.team4 || [])].some((name) => normalizeHeader(name) === nickname));
+    const seasonRounds = seasonMatches.reduce((sum, entry) => sum + safeRoundCount(entry.roundsCount ?? entry.rounds ?? entry.rawSeries), 0);
+    const mvp1 = toNumber(p.mvp, 0) || 0;
+    const mvp2 = toNumber(p.mvp2, 0) || 0;
+    const mvp3 = toNumber(p.mvp3, 0) || 0;
+    const mvpTotal = toNumber(p.mvpTotal, null) ?? (mvp1 + mvp2 + mvp3);
+    const points = toNumber(p.points, null);
+    const ratingEnd = toNumber(p.rating_end, null) ?? points;
+    const ratingStart = toNumber(p.rating_start, null);
+    const ratingDelta = toNumber(p.delta, null) ?? toNumber(p.rating_delta, 0) ?? 0;
+    const seasonRow = {
+      seasonId: season.id,
+      seasonTitle: season.title,
+      league: leagueId,
+      games: toNumber(p.games, 0) || 0,
+      matches: toNumber(p.matches, null) ?? (toNumber(p.games, 0) || 0),
+      battles: toNumber(p.battles, null),
+      rounds: seasonRounds,
+      wins: toNumber(p.wins, 0) || 0,
+      losses: toNumber(p.losses, 0) || 0,
+      draws: toNumber(p.draws, 0) || 0,
+      winrate: toNumber(p.winRate, null) ?? toNumber(p.winrate, null),
+      top1: mvp1,
+      top2: mvp2,
+      top3: mvp3,
+      mvpTotal,
+      penalties: toNumber(p.penalties_total, null) ?? toNumber(p.penalties, null),
+      ratingStart,
+      ratingEnd,
+      ratingDelta,
+      avgRating: toNumber(p.avg_rating, null) ?? toNumber(p.avgRating, null),
+      matchesPerWeek: toNumber(p.matches_per_week, null) ?? toNumber(p.matchesPerWeek, null),
+      activityPct: toNumber(p.season_activity_pct, null) ?? toNumber(p.activityPct, null),
+      points,
+      rank: String(p.rankLetter || p.rankText || p.rank || rankFromPoints(points || 0)).toUpperCase(),
+      finalPlace: toNumber(p.rank_final, null) ?? toNumber(p.place, null)
+    };
+
+    seasonSet.add(season.id);
+    leagueGames[leagueId] += seasonRow.games;
+    addWins[leagueId] += seasonRow.wins;
+    playedSeasons.push(seasonRow);
+
+    total.games += seasonRow.games;
+    total.matches += seasonRow.matches;
+    total.battles += seasonRow.battles || 0;
+    total.rounds += seasonRow.rounds;
+    total.wins += seasonRow.wins;
+    total.losses += seasonRow.losses;
+    total.draws += seasonRow.draws;
+    total.top1 += seasonRow.top1;
+    total.top2 += seasonRow.top2;
+    total.top3 += seasonRow.top3;
+    total.mvpTotal += seasonRow.mvpTotal;
+    total.cumulativeDelta += seasonRow.ratingDelta || 0;
+
+    if (Number.isFinite(seasonRow.points) && (total.peakPoints === null || seasonRow.points > total.peakPoints)) total.peakPoints = seasonRow.points;
+    if ((rankWeight[seasonRow.rank] || 0) > (rankWeight[total.bestRank] || 0)) total.bestRank = seasonRow.rank;
   });
 
-  if (!total.games) return null;
-  total.winrate = Math.round((total.wins / total.games) * 100);
-  primaryLeague = leagueGames.sundaygames > leagueGames.kids ? 'sundaygames' : 'kids';
-  return writeCache(key, { nick, avatar: avatars.get(nickname) || '', league: primaryLeague, allTime: total, seasons: playedSeasons });
+  if (!playedSeasons.length) return null;
+
+  playedSeasons.sort((a, b) => seasons.findIndex((s) => s.id === b.seasonId) - seasons.findIndex((s) => s.id === a.seasonId));
+  total.seasonsPlayed = seasonSet.size;
+  total.winrate = total.games ? Number(((total.wins / total.games) * 100).toFixed(1)) : 0;
+
+  const bestSeasonByPoints = [...playedSeasons].filter((row) => Number.isFinite(row.points)).sort((a, b) => (b.points || 0) - (a.points || 0))[0] || null;
+  const bestSeasonByDelta = [...playedSeasons].filter((row) => Number.isFinite(row.ratingDelta)).sort((a, b) => (b.ratingDelta || 0) - (a.ratingDelta || 0))[0] || null;
+  const mostActiveSeason = [...playedSeasons].sort((a, b) => (b.games || 0) - (a.games || 0))[0] || null;
+  const bestMvpSeason = [...playedSeasons].sort((a, b) => (b.mvpTotal || 0) - (a.mvpTotal || 0))[0] || null;
+  const averageSeasonWinrate = playedSeasons.length
+    ? Number((playedSeasons.reduce((sum, season) => sum + (Number.isFinite(season.winrate) ? season.winrate : 0), 0) / playedSeasons.length).toFixed(1))
+    : null;
+
+  const primaryLeague = (leagueGames.sundaygames > leagueGames.kids)
+    ? 'sundaygames'
+    : (leagueGames.sundaygames === leagueGames.kids && addWins.sundaygames > addWins.kids ? 'sundaygames' : 'kids');
+
+  return writeCache(key, {
+    nick,
+    avatar: avatars.get(nickname) || '',
+    league: primaryLeague,
+    allTime: total,
+    seasons: playedSeasons,
+    highlights: {
+      bestSeasonByPoints,
+      bestSeasonByDelta,
+      mostActiveSeason,
+      bestMvpSeason,
+      averageSeasonWinrate,
+      highestRank: total.bestRank
+    }
+  });
 }
 
 export async function getPlayerSeasonLogs({ nick, seasonId } = {}) {
-  if (!nick || !seasonId) return { groups: [] };
+  if (!nick || !seasonId) return { groups: [], metrics: {} };
   const config = await loadSeasonsConfig();
   const season = getSeasonById(config, seasonId);
   const bundle = await getSeasonBundle(season);
   const nickname = normalizeHeader(nick);
-  const matchLogs = bundle.matches.filter((m) => [...m.team1, ...m.team2].some((n) => normalizeHeader(n) === nickname));
+  const matchLogs = bundle.matches.filter((entry) => [...(entry.team1 || []), ...(entry.team2 || []), ...(entry.team3 || []), ...(entry.team4 || [])].some((name) => normalizeHeader(name) === nickname));
   const playerLogs = (bundle.logEntries || []).filter((entry) => normalizeHeader(entry.nick) === nickname);
   const sortedByTime = [...playerLogs].sort((a, b) => (a.tsMs || 0) - (b.tsMs || 0));
-  const seasonGain = sortedByTime.length ? (sortedByTime[sortedByTime.length - 1].newPoints ?? 0) - (sortedByTime[0].newPoints ?? 0) : 0;
-  const maxPoints = sortedByTime.reduce((max, entry) => (entry.newPoints !== null && entry.newPoints > max ? entry.newPoints : max), Number.NEGATIVE_INFINITY);
+  const firstPoints = sortedByTime.find((entry) => Number.isFinite(entry.newPoints))?.newPoints;
+  const lastPoints = [...sortedByTime].reverse().find((entry) => Number.isFinite(entry.newPoints))?.newPoints;
+  const seasonGain = Number.isFinite(firstPoints) && Number.isFinite(lastPoints) ? lastPoints - firstPoints : 0;
+  const maxPoints = sortedByTime.reduce((max, entry) => (Number.isFinite(entry.newPoints) && entry.newPoints > max ? entry.newPoints : max), Number.NEGATIVE_INFINITY);
   const playedDays = new Set(sortedByTime.map((entry) => entry.date).filter(Boolean));
   const avgPerDay = playedDays.size ? seasonGain / playedDays.size : 0;
-  const grouped = new Map();
+
+  const logsByDate = new Map();
+  sortedByTime.forEach((entry) => {
+    const day = entry.date || 'unknown';
+    if (!logsByDate.has(day)) logsByDate.set(day, []);
+    logsByDate.get(day).push(entry);
+  });
+
+  const groupedMatches = new Map();
   matchLogs.forEach((entry) => {
     const day = entry.date || 'unknown';
-    if (!grouped.has(day)) grouped.set(day, []);
-    grouped.get(day).push(entry);
+    if (!groupedMatches.has(day)) groupedMatches.set(day, []);
+    groupedMatches.get(day).push(entry);
   });
-  const groups = [...grouped.entries()].sort((a, b) => String(b[0]).localeCompare(String(a[0]))).map(([date, entries]) => ({ date, entries }));
+
+  const allDates = [...new Set([...logsByDate.keys(), ...groupedMatches.keys()])]
+    .sort((a, b) => String(b).localeCompare(String(a)));
+
+  const groups = allDates.map((date) => {
+    const dayLogs = logsByDate.get(date) || [];
+    const dayMatches = groupedMatches.get(date) || [];
+    const closingPoints = [...dayLogs].reverse().find((entry) => Number.isFinite(entry.newPoints))?.newPoints ?? null;
+    const dayDelta = dayLogs.reduce((sum, entry) => sum + (Number.isFinite(entry.delta) ? entry.delta : 0), 0);
+    const matches = dayMatches.map((entry, index) => {
+      const teams = [entry.team1, entry.team2, entry.team3, entry.team4].filter((team) => Array.isArray(team) && team.length);
+      const winner = normalizeWinnerToken(entry.winner);
+      const winnerIndex = winner.startsWith('team') ? Number(winner.replace('team', '')) - 1 : null;
+      const winnerTeam = Number.isInteger(winnerIndex) && teams[winnerIndex] ? teams[winnerIndex].join(', ') : null;
+      return {
+        id: `${date}-${index}`,
+        timestamp: entry.timestamp,
+        rounds: safeRoundCount(entry.roundsCount ?? entry.rounds ?? entry.rawSeries),
+        rawSeries: entry.rawSeries || '',
+        winner,
+        winnerLabel: winner === 'tie' ? 'Нічия' : (winnerTeam || `Переміг ${winner.toUpperCase()}`),
+        teams,
+        mvp1: entry.mvp1 || '',
+        mvp2: entry.mvp2 || '',
+        mvp3: entry.mvp3 || ''
+      };
+    });
+
+    return {
+      date,
+      delta: dayDelta,
+      closingPoints,
+      entries: matches,
+      logEntriesCount: dayLogs.length
+    };
+  });
+
   return {
     seasonId,
     nick,
     groups,
     metrics: {
       seasonGain,
-      maxPoints: Number.isFinite(maxPoints) ? maxPoints : 0,
+      maxPoints: Number.isFinite(maxPoints) ? maxPoints : null,
       avgPerDay: Number(avgPerDay.toFixed(2)),
-      playedDaysCount: playedDays.size
+      playedDaysCount: playedDays.size,
+      matchesCount: matchLogs.length,
+      logsCount: sortedByTime.length
     }
   };
 }

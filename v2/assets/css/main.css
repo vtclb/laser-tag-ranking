@@ -5032,3 +5032,39 @@ body.theme-game .league-page #leagueExpandBtn.button-primary {
   border: 1px solid rgba(148, 208, 255, .34) !important;
   box-shadow: 0 8px 16px rgba(14, 76, 159, .2) !important;
 }
+
+/* ===== 2026-04-09 v2 league stats UI cleanup (table action + infographic flow) ===== */
+.league-page .league-top10 .px-card__actions {
+  margin-top: 12px;
+}
+
+.league-page .league-infographic {
+  margin-top: 12px;
+}
+
+.league-page .league-dashboard-group {
+  margin-bottom: 16px;
+}
+
+body.theme-game .league-page .league-actions {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+body.theme-game .league-page #leagueExpandBtn.button-primary {
+  min-height: 40px;
+  margin-top: 0 !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(147, 206, 255, .32) !important;
+  background: linear-gradient(180deg, rgba(63, 146, 238, .9), rgba(43, 104, 201, .92)) !important;
+  box-shadow: 0 6px 14px rgba(8, 29, 61, .34) !important;
+}
+
+body.theme-game .league-page #leagueExpandBtn.button-primary:disabled,
+body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true'] {
+  opacity: .72;
+  filter: saturate(.78);
+  cursor: not-allowed;
+}

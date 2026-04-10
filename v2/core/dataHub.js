@@ -1,7 +1,7 @@
 // Changelog (Codex): safe rounds parsing, home snapshot top5/stats normalization, and battles/rounds consistency for Home/GameDay summaries.
 import seasonsConfig from './seasons.config.js';
 import { jsonp } from './utils.js';
-import { normalizeLeague as normalizeLeagueName } from './naming.js';
+import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueKey } from './naming.js';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -65,6 +65,21 @@ function normalizePlayerKey(value = '') {
 function normalizeHeader(value = '') { return normalizePlayerKey(value); }
 function normalizeLeague(league = '') {
   return normalizeLeagueName(league);
+}
+
+function selectPlayerRowByLeague(players = [], targetNick = '', profileLeagueContext = '') {
+  const normalizedNick = normalizePlayerKey(targetNick);
+  const targetLeague = normalizeLeagueKey(profileLeagueContext);
+  const sameNick = (Array.isArray(players) ? players : [])
+    .filter((player) => normalizePlayerKey(player?.nickname || player?.Nickname || player?.nick || player?.Player) === normalizedNick);
+  if (!sameNick.length) return null;
+
+  const sameLeague = sameNick.filter((player) => normalizeLeagueKey(player?.League || player?.league || player?.league_id || player?.lg) === targetLeague);
+  if (sameLeague.length) return sameLeague[0];
+
+  const unknownLeague = sameNick.filter((player) => !normalizeLeagueKey(player?.League || player?.league || player?.league_id || player?.lg));
+  if (unknownLeague.length && sameNick.length === 1) return unknownLeague[0];
+  return null;
 }
 function toNumber(value, fallback = null) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -1879,10 +1894,11 @@ export async function getSeasonPlayerQuickCard({ seasonId, league, nick } = {}) 
   };
 }
 
-export async function buildPlayerCareer(nick) {
+export async function buildPlayerCareer(nick, options = {}) {
   if (!nick) return null;
   const normalizedTargetNick = normalizePlayerKey(nick);
-  const key = `profile-all:${normalizedTargetNick}`;
+  const profileLeagueContext = normalizeLeague(typeof options === 'string' ? options : (options?.league || options?.profileLeagueContext || ''));
+  const key = `profile-all:${normalizedTargetNick}:${profileLeagueContext || 'all'}`;
   const cached = readCache(key, TTL.profile);
   if (cached) return cached;
 
@@ -1923,7 +1939,10 @@ export async function buildPlayerCareer(nick) {
     const players = Array.isArray(seasonMaster?.sections?.players) ? seasonMaster.sections.players : [];
     if (!players.length) continue;
 
-    const playerRow = players.find((player) => normalizePlayerKey(player?.nickname || player?.Nickname || player?.nick || player?.Player) === normalizedTargetNick);
+    const playerRow = selectPlayerRowByLeague(players, nick, profileLeagueContext)
+      || (!profileLeagueContext
+        ? players.find((player) => normalizePlayerKey(player?.nickname || player?.Nickname || player?.nick || player?.Player) === normalizedTargetNick)
+        : null);
     if (!playerRow) continue;
 
     const mvp1 = toNumber(playerRow?.MVP1 ?? playerRow?.mvp1, 0) || 0;
@@ -1940,10 +1959,14 @@ export async function buildPlayerCareer(nick) {
     const finalPlace = toNumber(playerRow?.Rank_final ?? playerRow?.rank_final, null);
     const winrate = matches ? Number(((wins / matches) * 100).toFixed(1)) : null;
 
+    const seasonLeague = normalizeLeague(playerRow?.League || playerRow?.league || '');
+    if (profileLeagueContext && seasonLeague !== profileLeagueContext) continue;
+
     const seasonRow = {
       seasonId,
       seasonTitle: seasonId,
-      league: normalizeLeague(playerRow?.League || playerRow?.league || '') || 'kids',
+      league: seasonLeague || profileLeagueContext || 'kids',
+      leagueLabel: leagueLabelUA(seasonLeague || profileLeagueContext || 'kids'),
       games: matches,
       matches,
       rounds: null,
@@ -2023,7 +2046,8 @@ export async function buildPlayerCareer(nick) {
   return writeCache(key, {
     nick,
     avatar: avatars.get(normalizedTargetNick) || '',
-    league: primaryLeague,
+    league: profileLeagueContext || primaryLeague,
+    profileLeagueContext: profileLeagueContext || primaryLeague,
     allTime: total,
     seasons: playedSeasons,
     highlights: {
@@ -2038,8 +2062,10 @@ export async function buildPlayerCareer(nick) {
   });
 }
 
-export async function getPlayerAllTimeProfile(nick) {
-  return buildPlayerCareer(nick);
+export async function getPlayerAllTimeProfile(nickOrOptions = {}) {
+  const nick = typeof nickOrOptions === 'object' ? nickOrOptions.nick : nickOrOptions;
+  const league = typeof nickOrOptions === 'object' ? nickOrOptions.league : undefined;
+  return buildPlayerCareer(nick, { league });
 }
 
 export async function getPlayerSeasonLogs({ nick, seasonId } = {}) {
@@ -2140,9 +2166,10 @@ export async function getSeasonOverview(seasonIdOrOptions = {}) {
 
 export async function getPlayerProfile(nickOrOptions = {}, leagueArg = 'kids') {
   const nick = typeof nickOrOptions === 'object' ? nickOrOptions.nick : nickOrOptions;
-  const profile = await getPlayerAllTimeProfile(nick);
+  const requestedLeague = normalizeLeague(typeof nickOrOptions === 'object' ? (nickOrOptions.league || leagueArg) : leagueArg) || 'kids';
+  const profile = await getPlayerAllTimeProfile({ nick, league: requestedLeague });
   if (!profile) return null;
-  const league = typeof nickOrOptions === 'object' ? (nickOrOptions.league || profile.league) : leagueArg;
+  const league = requestedLeague;
   const currentSeason = await getCurrentSeason();
   const snap = await getLeagueSnapshot(league, currentSeason.id);
   const current = snap.table.find((p) => normalizeHeader(p.nick) === normalizeHeader(nick));

@@ -1,7 +1,15 @@
+export function normalizeLeagueKey(value) {
+  const s = String(value || '').trim().toLowerCase();
+  if (s === 'olds') return 'sundaygames';
+  if (s === 'sunday') return 'sundaygames';
+  if (s === 'adult') return 'sundaygames';
+  return s;
+}
+
 export function normalizeLeague(input) {
-  const value = String(input || '').trim().toLowerCase();
+  const value = normalizeLeagueKey(input);
   if (['kids', 'kid', 'child', 'діти', 'дитяча'].includes(value)) return 'kids';
-  if (['sundaygames', 'sunday', 'olds', 'old', 'adults', 'adult', 'дорослі', 'доросла'].includes(value)) return 'sundaygames';
+  if (['sundaygames', 'old', 'adults', 'дорослі', 'доросла'].includes(value)) return 'sundaygames';
   return '';
 }
 

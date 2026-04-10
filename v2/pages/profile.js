@@ -1,5 +1,5 @@
 import { buildPlayerCareer, getCurrentLeagueLiveStats, getCurrentSeason, getPlayerSeasonLogs, safeErrorMessage } from '../core/dataHub.js';
-import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
+import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
 
 const placeholder = '../assets/default-avatar.svg';
@@ -39,8 +39,10 @@ function buildHash(route, params = {}) {
 function resolveParams(params = {}) {
   const { query: qp } = getRouteState();
   const rawNick = params.nick ?? qp.get('nick') ?? '';
+  const profileLeagueContext = normalizeLeague(params.league || qp.get('league') || 'kids') || 'kids';
   return {
-    league: normalizeLeague(params.league || qp.get('league') || 'kids') || 'kids',
+    league: profileLeagueContext,
+    profileLeagueContext,
     nick: decodeParam(rawNick)
   };
 }
@@ -203,7 +205,7 @@ export async function initProfilePage(params = {}) {
   const root = document.getElementById('profileRoot') || document.getElementById('view');
   if (!root) return;
 
-  const { nick, league } = resolveParams(params);
+  const { nick, league, profileLeagueContext: routeLeagueContext } = resolveParams(params);
   if (!nick) {
     root.innerHTML = `<section class="px-card"><h1 class="px-card__title">Профіль гравця</h1><p class="px-card__text">Не вказано нікнейм гравця.</p><div class="px-card__actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Назад до ліги</a></div></section>`;
     return;
@@ -213,7 +215,7 @@ export async function initProfilePage(params = {}) {
 
   try {
     const [profile, liveStats, currentSeason] = await Promise.all([
-      buildPlayerCareer(nick),
+      buildPlayerCareer(nick, { profileLeagueContext: routeLeagueContext }),
       getCurrentLeagueLiveStats(league),
       getCurrentSeason()
     ]);
@@ -226,6 +228,13 @@ export async function initProfilePage(params = {}) {
       return;
     }
 
+    const profileLeagueContext = normalizeLeague(
+      routeLeagueContext
+      || livePlayer?.league
+      || profile?.profileLeagueContext
+      || profile?.league
+      || league
+    ) || 'kids';
     const displayNick = livePlayer?.nickname || profile?.nick || nick;
     const seasonRows = profile?.seasons || [];
     const seasonRowsById = new Map(seasonRows.map((row) => [row.seasonId, row]));
@@ -233,7 +242,7 @@ export async function initProfilePage(params = {}) {
     const statusLine = [
       livePlayer?.place ? `#${livePlayer.place}` : '—',
       currentSeason?.uiLabel || 'Поточний сезон',
-      leagueLabelUA(league)
+      leagueLabelUA(profileLeagueContext)
     ].join(' • ');
 
     root.innerHTML = `
@@ -260,11 +269,11 @@ export async function initProfilePage(params = {}) {
     ], 'is-hero')}
           </div>
           <div class="profile-hero__actions">
-            <a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Назад до ліги</a>
+            <a class="btn btn--secondary" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">Назад до ліги</a>
           </div>
         </article>
 
-        ${renderCurrentSummary({ league, livePlayer: livePlayer || {}, currentSeason })}
+        ${renderCurrentSummary({ league: profileLeagueContext, livePlayer: livePlayer || {}, currentSeason })}
         ${renderCareerSummary(profile || { allTime: {} })}
         ${renderCareerHighlights(profile?.highlights || {})}
 

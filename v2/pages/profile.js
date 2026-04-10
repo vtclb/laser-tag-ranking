@@ -39,7 +39,7 @@ function buildHash(route, params = {}) {
 function resolveParams(params = {}) {
   const { query: qp } = getRouteState();
   const rawNick = params.nick ?? qp.get('nick') ?? '';
-  const profileLeagueContext = normalizeLeague(params.league || qp.get('league') || 'kids') || 'kids';
+  const profileLeagueContext = normalizeLeagueKey(normalizeLeague(params.league || qp.get('league') || 'kids') || 'kids') || 'kids';
   return {
     league: profileLeagueContext,
     profileLeagueContext,
@@ -89,7 +89,7 @@ function renderCurrentSummary({ league, livePlayer, currentSeason }) {
       ${metricsGrid([
     { label: 'POINTS', value: val(livePlayer?.points), accent: true, mono: true },
     { label: 'RANK', value: currentRank, accent: true },
-    { label: 'PLACE', value: livePlayer?.place ? `#${livePlayer.place}` : '—', mono: true },
+    { label: 'PLACE', value: Number.isFinite(Number(livePlayer?.place)) ? `#${livePlayer.place}` : '—', mono: true },
     { label: 'WR', value: pct(livePlayer?.winRate), accent: true, mono: true },
     { label: 'MVP', value: val(livePlayer?.mvpTotal), accent: true, mono: true },
     { label: 'DELTA', value: signed(livePlayer?.delta), accent: true, mono: true },
@@ -158,12 +158,12 @@ function renderSeasonSummary(season, allTime) {
       ${metricsGrid([
     { label: 'RATING START', value: val(season.ratingStart), mono: true },
     { label: 'RATING END', value: val(season.ratingEnd ?? season.points), accent: true, mono: true },
-    { label: 'DELTA', value: signed(season.ratingDelta), accent: true, mono: true },
+    { label: 'DELTA', value: signed(season.delta ?? season.ratingDelta), accent: true, mono: true },
     { label: 'MATCHES', value: val(season.matches ?? season.games), mono: true },
-    { label: 'WR', value: pct(season.winrate), accent: true, mono: true },
+    { label: 'WR', value: pct(season.winRate ?? season.winrate), accent: true, mono: true },
     { label: 'MVP', value: val(season.mvpTotal), accent: true, mono: true },
-    { label: 'PLACE', value: season.finalPlace ? `#${season.finalPlace}` : '—', mono: true },
-    { label: 'RANK', value: val(season.rank), accent: true },
+    { label: 'PLACE', value: Number.isFinite(Number(season.place ?? season.finalPlace)) ? `#${season.place ?? season.finalPlace}` : '—', mono: true },
+    { label: 'RANK', value: val(season.rank), accent: true, mono: true },
     { label: 'ROUNDS', value: val(season.rounds), mono: true },
     { label: 'W/L/D', value: `${val(season.wins)} / ${val(season.losses)} / ${val(season.draws)}`, mono: true }
   ])}
@@ -263,9 +263,9 @@ export async function initProfilePage(params = {}) {
             ${metricsGrid([
       { label: 'POINTS', value: val(livePlayer?.points ?? seasonRows[0]?.ratingEnd ?? seasonRows[0]?.points), accent: true, mono: true },
       { label: 'RANK', value: currentRank, accent: true },
-      { label: 'WR', value: pct(livePlayer?.winRate ?? seasonRows[0]?.winrate), accent: true, mono: true },
+      { label: 'WR', value: pct(livePlayer?.winRate ?? seasonRows[0]?.winRate ?? seasonRows[0]?.winrate), accent: true, mono: true },
       { label: 'MVP', value: val(livePlayer?.mvpTotal ?? seasonRows[0]?.mvpTotal), accent: true, mono: true },
-      { label: 'DELTA', value: signed(livePlayer?.delta ?? seasonRows[0]?.ratingDelta), accent: true, mono: true }
+      { label: 'DELTA', value: signed(livePlayer?.delta ?? seasonRows[0]?.delta ?? seasonRows[0]?.ratingDelta), accent: true, mono: true }
     ], 'is-hero')}
           </div>
           <div class="profile-hero__actions">

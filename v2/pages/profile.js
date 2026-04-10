@@ -1,4 +1,4 @@
-import { getCurrentLeagueLiveStats, getCurrentSeason, getPlayerAllTimeProfile, getPlayerSeasonLogs, getSeasonsList, safeErrorMessage } from '../core/dataHub.js';
+import { buildPlayerCareer, getCurrentLeagueLiveStats, getCurrentSeason, getPlayerSeasonLogs, safeErrorMessage } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
 
@@ -212,9 +212,8 @@ export async function initProfilePage(params = {}) {
   renderSkeleton(root);
 
   try {
-    const [profile, seasons, liveStats, currentSeason] = await Promise.all([
-      getPlayerAllTimeProfile(nick),
-      getSeasonsList(),
+    const [profile, liveStats, currentSeason] = await Promise.all([
+      buildPlayerCareer(nick),
       getCurrentLeagueLiveStats(league),
       getCurrentSeason()
     ]);
@@ -282,9 +281,10 @@ export async function initProfilePage(params = {}) {
     const summaryEl = root.querySelector('#seasonSummaryHost');
     const logsEl = root.querySelector('#seasonLogsHost');
     const tabs = [{ id: 'all', label: 'ALL', current: false }]
-      .concat(seasons
-        .filter((season) => seasonRowsById.has(season.id))
-        .map((season) => ({ id: season.id, label: seasonTabLabel(season.title), current: season.id === currentSeason?.id })));
+      .concat(
+        seasonRows
+          .map((season) => ({ id: season.seasonId, label: seasonTabLabel(season.seasonTitle || season.seasonId), current: season.seasonId === currentSeason?.id }))
+      );
 
     const state = { seasonId: 'all' };
 

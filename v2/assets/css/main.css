@@ -5073,6 +5073,16 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-page-v2 {
   display: grid;
   gap: .9rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  box-sizing: border-box;
+}
+
+.profile-page-v2 * {
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .profile-page-v2 .px-card,
@@ -5083,7 +5093,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 
 .profile-hero {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr;
   gap: .8rem;
   align-items: start;
   border: 1px solid rgba(132, 198, 255, .32);
@@ -5095,6 +5105,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   display: grid;
   gap: .42rem;
   justify-items: start;
+  width: 100%;
 }
 
 .profile-avatar-frame {
@@ -5135,6 +5146,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   align-items: baseline;
   gap: .5rem;
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .profile-hero__head h1 {
@@ -5164,7 +5176,12 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-hero__actions {
   align-self: end;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.profile-hero__actions .btn {
+  max-width: 100%;
 }
 
 .profile-section {
@@ -5183,12 +5200,13 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 
 .profile-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: .46rem;
+  width: 100%;
 }
 
 .profile-metrics-grid.is-hero {
-  grid-template-columns: repeat(5, minmax(88px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .profile-metric-card {
@@ -5225,7 +5243,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 
 .profile-highlight-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: .42rem;
 }
 
@@ -5251,8 +5269,21 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   display: flex;
   gap: .38rem;
   overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  width: 100%;
   padding-bottom: .42rem;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.profile-season-tabs::after {
+  content: "";
+  flex: 0 0 .1px;
+}
+
+.profile-season-tabs > * {
+  flex: 0 0 auto;
 }
 
 .profile-season-tab {
@@ -5377,19 +5408,29 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-page-v2 .rank-f,
 .profile-page-v2 .rank-F { color: #c8cfda; }
 
-@media (max-width: 820px) {
+@media (min-width: 821px) {
   .profile-hero {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr auto;
   }
 
   .profile-hero__actions {
-    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .profile-metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
   }
 
   .profile-metrics-grid.is-hero {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(88px, 1fr));
   }
 
+  .profile-highlight-grid {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
   .profile-metric-card__value {
     font-size: 1.08rem;
   }

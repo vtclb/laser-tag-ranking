@@ -131,19 +131,41 @@ function pickFirst(...values) {
 
 function normalizeSeasonPlayerRow(row = {}) {
   const source = (row && typeof row === 'object') ? row : {};
-  const league = normalizeLeague(pickFirst(source.league, source.League, source.league_id, source.lg));
-  const nickname = String(pickFirst(source.nickname, source.Nickname, source.nick, source.Player, source.player) || '').trim();
+  const normalizedMap = Object.entries(source).reduce((acc, [key, value]) => {
+    acc[normalizeHeader(key)] = value;
+    return acc;
+  }, {});
+  const getField = (...aliases) => pickFirst(...aliases.map((alias) => normalizedMap[normalizeHeader(alias)]));
+
+  const league = normalizeLeague(pickFirst(getField('league', 'league_id', 'lg'), source.league, source.League, source.league_id, source.lg));
+  const nickname = String(pickFirst(getField('nickname', 'nick', 'player'), source.nickname, source.Nickname, source.nick, source.Player, source.player) || '').trim();
+  const wins = toNumber(pickFirst(getField('wins'), source.wins, source.Wins), null);
+  const losses = toNumber(pickFirst(getField('losses'), source.losses, source.Losses), null);
+  const draws = toNumber(pickFirst(getField('draws'), source.draws, source.Draws), null);
+  const mvp1 = toNumber(pickFirst(getField('mvp1'), source.mvp1, source.MVP1), null);
+  const mvp2 = toNumber(pickFirst(getField('mvp2'), source.mvp2, source.MVP2), null);
+  const mvp3 = toNumber(pickFirst(getField('mvp3'), source.mvp3, source.MVP3), null);
+  const mvpTotal = toNumber(pickFirst(getField('mvp_total', 'mvp'), source.mvp_total, source.MVP_total, source.MVP, source.mvp), null);
+
   return {
+    ...source,
     league,
     nickname,
-    matches: toNumber(pickFirst(source.matches, source.Matches), 0) || 0,
-    wins: toNumber(pickFirst(source.wins, source.Wins), 0) || 0,
-    draws: toNumber(pickFirst(source.draws, source.Draws), 0) || 0,
-    losses: toNumber(pickFirst(source.losses, source.Losses), 0) || 0,
-    mvp_total: toNumber(pickFirst(source.mvp_total, source.MVP_total, source.MVP, source.mvp), 0) || 0,
-    rating_end: toNumber(pickFirst(source.rating_end, source.Rating_end, source.rating, source.Rating), null),
-    rating_delta: toNumber(pickFirst(source.rating_delta, source.Rating_delta), 0) || 0,
-    rank_final: toNumber(pickFirst(source.rank_final, source.Rank_final, source.rank, source.Rank, source.place), null)
+    matches: toNumber(pickFirst(getField('matches'), source.matches, source.Matches), null),
+    wins,
+    draws,
+    losses,
+    win_rate: toNumber(pickFirst(getField('winrate_%', 'winrate', 'win_rate'), source.winrate, source.win_rate, source.Winrate), null),
+    mvp1,
+    mvp2,
+    mvp3,
+    mvp_total: Number.isFinite(mvpTotal) ? mvpTotal : [mvp1, mvp2, mvp3].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0),
+    rounds: toNumber(pickFirst(getField('rounds'), source.rounds, source.Rounds), null),
+    rating_start: toNumber(pickFirst(getField('rating_start'), source.rating_start, source.Rating_start), null),
+    rating_end: toNumber(pickFirst(getField('rating_end', 'rating'), source.rating_end, source.Rating_end, source.rating, source.Rating), null),
+    rating_delta: toNumber(pickFirst(getField('rating_delta'), source.rating_delta, source.Rating_delta), null),
+    place: toNumber(pickFirst(getField('place', 'place_final', 'final_place'), source.place, source.Place, source.finalPlace), null),
+    rank_final: toNumber(pickFirst(getField('rank_final', 'rank'), source.rank_final, source.Rank_final, source.rank, source.Rank), null)
   };
 }
 
@@ -176,6 +198,115 @@ function mapRowsByLeague(rows = [], mapper = (value) => value) {
     grouped[league].push(mapper(row));
   });
   return grouped;
+}
+
+
+function parseNullableNumber(value) {
+  return toNumber(value, null);
+}
+
+function firstNumberFromAliases(row = {}, aliases = []) {
+  const source = (row && typeof row === 'object') ? row : {};
+  const normalizedMap = Object.entries(source).reduce((acc, [key, value]) => {
+    acc[normalizeHeader(key)] = value;
+    return acc;
+  }, {});
+
+  for (const alias of aliases) {
+    const parsed = parseNullableNumber(normalizedMap[normalizeHeader(alias)]);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+function resolveSeasonTitle(seasonMaster = {}, seasonId = '') {
+  const meta = seasonMaster?.sections?.season_meta || {};
+  return String(
+    pickFirst(
+      meta.title,
+      meta.Title,
+      meta.season_title,
+      meta.Season_title,
+      meta.season_name,
+      meta.Season,
+      meta.season,
+      seasonMaster?.seasonTitle,
+      seasonMaster?.seasonId,
+      seasonId
+    ) || seasonId
+  ).trim();
+}
+
+function hasMeaningfulSeasonStats(entry = {}) {
+  const values = [
+    entry.matches,
+    entry.ratingEnd,
+    entry.wins,
+    entry.losses,
+    entry.draws,
+    entry.mvpTotal,
+    entry.place,
+    entry.rank
+  ];
+  return values.some((value) => Number.isFinite(value));
+}
+
+function buildSeasonEntry(row = {}, { seasonId = '', seasonTitle = '', nickname = '', profileLeagueContext = '' } = {}) {
+  const league = normalizeLeague(pickFirst(row.league, row.League, row.league_id, row.lg, profileLeagueContext));
+  const ratingStart = firstNumberFromAliases(row, ['Rating_start', 'rating_start']);
+  const ratingEnd = firstNumberFromAliases(row, ['Rating_end', 'rating_end', 'Rating', 'rating']);
+  const delta = firstNumberFromAliases(row, ['Rating_delta', 'rating_delta']);
+  const matches = firstNumberFromAliases(row, ['Matches', 'matches']);
+  const wins = firstNumberFromAliases(row, ['Wins', 'wins']);
+  const losses = firstNumberFromAliases(row, ['Losses', 'losses']);
+  const draws = firstNumberFromAliases(row, ['Draws', 'draws']);
+  const winRate = firstNumberFromAliases(row, ['Winrate_%', 'winrate_%', 'Winrate', 'winrate', 'win_rate']);
+  const mvp1 = firstNumberFromAliases(row, ['MVP1', 'mvp1']);
+  const mvp2 = firstNumberFromAliases(row, ['MVP2', 'mvp2']);
+  const mvp3 = firstNumberFromAliases(row, ['MVP3', 'mvp3']);
+  const mvpTotalRaw = firstNumberFromAliases(row, ['MVP_total', 'mvp_total', 'MVP', 'mvp']);
+  const mvpTotal = mvpTotalRaw ?? [mvp1, mvp2, mvp3].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+  const rounds = firstNumberFromAliases(row, ['Rounds', 'rounds']);
+  const place = firstNumberFromAliases(row, ['Place', 'place', 'Place_final', 'final_place']);
+  const rank = firstNumberFromAliases(row, ['Rank_final', 'rank_final', 'Rank', 'rank']);
+  const normalizedNick = String(pickFirst(row.nickname, row.Nickname, row.nick, row.Player, row.player, nickname) || '').trim();
+
+  return {
+    seasonId,
+    seasonTitle: seasonTitle || seasonId,
+    league: league || profileLeagueContext || 'kids',
+    leagueLabel: leagueLabelUA(league || profileLeagueContext || 'kids'),
+    nickname: normalizedNick,
+    ratingStart,
+    ratingEnd,
+    delta,
+    matches,
+    wins,
+    losses,
+    draws,
+    winRate: winRate ?? (Number.isFinite(matches) && matches > 0 && Number.isFinite(wins) ? Number(((wins / matches) * 100).toFixed(1)) : null),
+    mvp1,
+    mvp2,
+    mvp3,
+    mvpTotal,
+    rounds,
+    place,
+    rank,
+    games: matches,
+    top1: mvp1,
+    top2: mvp2,
+    top3: mvp3,
+    ratingDelta: delta,
+    winrate: winRate ?? (Number.isFinite(matches) && matches > 0 && Number.isFinite(wins) ? Number(((wins / matches) * 100).toFixed(1)) : null),
+    finalPlace: place,
+    points: ratingEnd
+  };
+}
+
+function isValidSeasonEntry(entry = {}, { targetNick = '', profileLeagueContext = '' } = {}) {
+  const nickMatches = normalizePlayerKey(entry.nickname) === normalizePlayerKey(targetNick);
+  const leagueMatches = !profileLeagueContext || normalizeLeagueKey(entry.league) === normalizeLeagueKey(profileLeagueContext);
+  return nickMatches && leagueMatches && hasMeaningfulSeasonStats(entry);
 }
 
 function collapseMeta(metaSection) {
@@ -1897,7 +2028,8 @@ export async function getSeasonPlayerQuickCard({ seasonId, league, nick } = {}) 
 export async function buildPlayerCareer(nick, options = {}) {
   if (!nick) return null;
   const normalizedTargetNick = normalizePlayerKey(nick);
-  const profileLeagueContext = normalizeLeague(typeof options === 'string' ? options : (options?.league || options?.profileLeagueContext || ''));
+  const normalizedContext = normalizeLeague(typeof options === 'string' ? options : (options?.league || options?.profileLeagueContext || ''));
+  const profileLeagueContext = normalizeLeagueKey(normalizedContext || '');
   const key = `profile-all:${normalizedTargetNick}:${profileLeagueContext || 'all'}`;
   const cached = readCache(key, TTL.profile);
   if (cached) return cached;
@@ -1911,7 +2043,7 @@ export async function buildPlayerCareer(nick, options = {}) {
     wins: 0,
     losses: 0,
     draws: 0,
-    winrate: 0,
+    winrate: null,
     top1: 0,
     top2: 0,
     top3: 0,
@@ -1939,89 +2071,49 @@ export async function buildPlayerCareer(nick, options = {}) {
     const players = Array.isArray(seasonMaster?.sections?.players) ? seasonMaster.sections.players : [];
     if (!players.length) continue;
 
-    const playerRow = selectPlayerRowByLeague(players, nick, profileLeagueContext)
-      || (!profileLeagueContext
-        ? players.find((player) => normalizePlayerKey(player?.nickname || player?.Nickname || player?.nick || player?.Player) === normalizedTargetNick)
-        : null);
+    const playerRow = selectPlayerRowByLeague(players, nick, profileLeagueContext);
     if (!playerRow) continue;
 
-    const mvp1 = toNumber(playerRow?.MVP1 ?? playerRow?.mvp1, 0) || 0;
-    const mvp2 = toNumber(playerRow?.MVP2 ?? playerRow?.mvp2, 0) || 0;
-    const mvp3 = toNumber(playerRow?.MVP3 ?? playerRow?.mvp3, 0) || 0;
-    const mvpTotal = mvp1 + mvp2 + mvp3;
-    const matches = toNumber(playerRow?.Matches ?? playerRow?.matches, 0) || 0;
-    const wins = toNumber(playerRow?.Wins ?? playerRow?.wins, 0) || 0;
-    const losses = toNumber(playerRow?.Losses ?? playerRow?.losses, 0) || 0;
-    const draws = toNumber(playerRow?.Draws ?? playerRow?.draws, 0) || 0;
-    const ratingEnd = toNumber(playerRow?.Rating_end ?? playerRow?.rating_end, null);
-    const ratingDelta = toNumber(playerRow?.Rating_delta ?? playerRow?.rating_delta, 0) || 0;
-    const ratingStart = Number.isFinite(ratingEnd) ? ratingEnd - ratingDelta : null;
-    const finalPlace = toNumber(playerRow?.Rank_final ?? playerRow?.rank_final, null);
-    const winrate = matches ? Number(((wins / matches) * 100).toFixed(1)) : null;
-
-    const seasonLeague = normalizeLeague(playerRow?.League || playerRow?.league || '');
-    if (profileLeagueContext && seasonLeague !== profileLeagueContext) continue;
-
-    const seasonRow = {
+    const seasonEntry = buildSeasonEntry(playerRow, {
       seasonId,
-      seasonTitle: seasonId,
-      league: seasonLeague || profileLeagueContext || 'kids',
-      leagueLabel: leagueLabelUA(seasonLeague || profileLeagueContext || 'kids'),
-      games: matches,
-      matches,
-      rounds: null,
-      wins,
-      losses,
-      draws,
-      winrate,
-      top1: mvp1,
-      top2: mvp2,
-      top3: mvp3,
-      mvpTotal,
-      penalties: null,
-      ratingStart,
-      ratingEnd,
-      ratingDelta,
-      avgRating: null,
-      matchesPerWeek: null,
-      activityPct: null,
-      points: ratingEnd,
-      rank: finalPlace,
-      finalPlace
-    };
+      seasonTitle: resolveSeasonTitle(seasonMaster, seasonId),
+      nickname: nick,
+      profileLeagueContext
+    });
+
+    if (!isValidSeasonEntry(seasonEntry, { targetNick: nick, profileLeagueContext })) {
+      console.debug('[dataHub] buildPlayerCareer skip invalid season entry', seasonId, { nick, league: profileLeagueContext });
+      continue;
+    }
 
     seasonSet.add(seasonId);
-    if (seasonRow.league === 'kids' || seasonRow.league === 'sundaygames') {
-      leagueGames[seasonRow.league] += seasonRow.games;
-      addWins[seasonRow.league] += seasonRow.wins;
-    } else {
-      leagueGames.kids += seasonRow.games / 2;
-      leagueGames.sundaygames += seasonRow.games / 2;
-      addWins.kids += seasonRow.wins / 2;
-      addWins.sundaygames += seasonRow.wins / 2;
+    playedSeasons.push(seasonEntry);
+
+    if (seasonEntry.league === 'kids' || seasonEntry.league === 'sundaygames') {
+      leagueGames[seasonEntry.league] += seasonEntry.matches || 0;
+      addWins[seasonEntry.league] += seasonEntry.wins || 0;
     }
-    playedSeasons.push(seasonRow);
 
-    total.games += seasonRow.games;
-    total.matches += seasonRow.matches;
-    total.wins += seasonRow.wins;
-    total.losses += seasonRow.losses;
-    total.draws += seasonRow.draws;
-    total.top1 += seasonRow.top1;
-    total.top2 += seasonRow.top2;
-    total.top3 += seasonRow.top3;
-    total.mvpTotal += seasonRow.mvpTotal;
-    total.cumulativeDelta += seasonRow.ratingDelta || 0;
+    total.games += seasonEntry.matches || 0;
+    total.matches += seasonEntry.matches || 0;
+    total.wins += seasonEntry.wins || 0;
+    total.losses += seasonEntry.losses || 0;
+    total.draws += seasonEntry.draws || 0;
+    total.top1 += seasonEntry.mvp1 || 0;
+    total.top2 += seasonEntry.mvp2 || 0;
+    total.top3 += seasonEntry.mvp3 || 0;
+    total.mvpTotal += seasonEntry.mvpTotal || 0;
+    total.cumulativeDelta += seasonEntry.delta || 0;
 
-    if (Number.isFinite(seasonRow.ratingEnd) && (total.peakPoints === null || seasonRow.ratingEnd > total.peakPoints)) total.peakPoints = seasonRow.ratingEnd;
-    if (Number.isFinite(seasonRow.finalPlace) && (total.bestRank === null || seasonRow.finalPlace < total.bestRank)) total.bestRank = seasonRow.finalPlace;
+    if (Number.isFinite(seasonEntry.ratingEnd) && (total.peakPoints === null || seasonEntry.ratingEnd > total.peakPoints)) total.peakPoints = seasonEntry.ratingEnd;
+    if (Number.isFinite(seasonEntry.rank) && (total.bestRank === null || seasonEntry.rank < total.bestRank)) total.bestRank = seasonEntry.rank;
   }
 
   if (!playedSeasons.length) return null;
 
   playedSeasons.sort((a, b) => String(b.seasonId).localeCompare(String(a.seasonId)));
   total.seasonsPlayed = seasonSet.size;
-  total.winrate = total.games ? Number(((total.wins / total.games) * 100).toFixed(1)) : 0;
+  total.winrate = total.matches ? Number(((total.wins / total.matches) * 100).toFixed(1)) : null;
   total.totalMatches = total.matches;
   total.totalWins = total.wins;
   total.totalLosses = total.losses;
@@ -2031,12 +2123,12 @@ export async function buildPlayerCareer(nick, options = {}) {
   total.peakRating = total.peakPoints;
 
   const bestSeasonByPoints = [...playedSeasons].filter((row) => Number.isFinite(row.ratingEnd)).sort((a, b) => (b.ratingEnd || 0) - (a.ratingEnd || 0))[0] || null;
-  const bestSeasonByDelta = [...playedSeasons].filter((row) => Number.isFinite(row.ratingDelta)).sort((a, b) => (b.ratingDelta || 0) - (a.ratingDelta || 0))[0] || null;
-  const bestWinrateSeason = [...playedSeasons].filter((row) => Number.isFinite(row.winrate)).sort((a, b) => (b.winrate || 0) - (a.winrate || 0))[0] || null;
+  const bestSeasonByDelta = [...playedSeasons].filter((row) => Number.isFinite(row.delta)).sort((a, b) => (b.delta || 0) - (a.delta || 0))[0] || null;
+  const bestWinrateSeason = [...playedSeasons].filter((row) => Number.isFinite(row.winRate)).sort((a, b) => (b.winRate || 0) - (a.winRate || 0))[0] || null;
   const mostActiveSeason = [...playedSeasons].sort((a, b) => (b.matches || 0) - (a.matches || 0))[0] || null;
   const bestMvpSeason = [...playedSeasons].sort((a, b) => (b.mvpTotal || 0) - (a.mvpTotal || 0))[0] || null;
   const averageSeasonWinrate = playedSeasons.length
-    ? Number((playedSeasons.reduce((sum, season) => sum + (Number.isFinite(season.winrate) ? season.winrate : 0), 0) / playedSeasons.length).toFixed(1))
+    ? Number((playedSeasons.reduce((sum, season) => sum + (Number.isFinite(season.winRate) ? season.winRate : 0), 0) / playedSeasons.length).toFixed(1))
     : null;
 
   const primaryLeague = (leagueGames.sundaygames > leagueGames.kids)

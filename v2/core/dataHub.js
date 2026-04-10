@@ -1,6 +1,6 @@
 // Changelog (Codex): safe rounds parsing, home snapshot top5/stats normalization, and battles/rounds consistency for Home/GameDay summaries.
 import seasonsConfig from './seasons.config.js';
-import { jsonp, normalizePlayerKey as normalizePlayerIdentity } from './utils.js';
+import { jsonp } from './utils.js';
 import { normalizeLeague as normalizeLeagueName } from './naming.js';
 
 const cache = new Map();
@@ -57,7 +57,10 @@ const seasonCache = {};
 
 
 function normalizePlayerKey(value = '') {
-  return normalizePlayerIdentity(value);
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 }
 function normalizeHeader(value = '') { return normalizePlayerKey(value); }
 function normalizeLeague(league = '') {
@@ -1876,20 +1879,19 @@ export async function getSeasonPlayerQuickCard({ seasonId, league, nick } = {}) 
   };
 }
 
-export async function getPlayerAllTimeProfile(nick) {
+export async function buildPlayerCareer(nick) {
   if (!nick) return null;
-  const key = `profile-all:${normalizeHeader(nick)}`;
+  const normalizedTargetNick = normalizePlayerKey(nick);
+  const key = `profile-all:${normalizedTargetNick}`;
   const cached = readCache(key, TTL.profile);
   if (cached) return cached;
 
-  const [avatars, seasons] = await Promise.all([getAvatarsMap(), getSeasonsList()]);
-  const nickname = normalizePlayerIdentity(nick);
+  const avatars = await getAvatarsMap();
+  const seasonIds = await listSeasonMasters();
 
   const total = {
     games: 0,
     matches: 0,
-    battles: 0,
-    rounds: 0,
     wins: 0,
     losses: 0,
     draws: 0,
@@ -1900,59 +1902,50 @@ export async function getPlayerAllTimeProfile(nick) {
     mvpTotal: 0,
     peakPoints: null,
     cumulativeDelta: 0,
-    bestRank: 'F',
+    bestRank: null,
     seasonsPlayed: 0
   };
 
-  const rankWeight = { S: 7, A: 6, B: 5, C: 4, D: 3, E: 2, F: 1 };
   const playedSeasons = [];
   const seasonSet = new Set();
   const leagueGames = { kids: 0, sundaygames: 0 };
   const addWins = { kids: 0, sundaygames: 0 };
-  const normalizedRank = (value) => {
-    const token = String(value ?? '').trim().toUpperCase();
-    if (rankWeight[token]) return token;
-    if (!Number.isFinite(toNumber(value, null))) return 'F';
-    return rankFromPoints(toNumber(value, 0) || 0);
-  };
 
-  for (const season of seasons) {
+  for (const seasonId of seasonIds) {
     let seasonMaster;
     try {
-      seasonMaster = await getSeasonMaster(season.id);
+      seasonMaster = await getSeasonMaster(seasonId);
     } catch (error) {
-      console.debug('[dataHub] getPlayerAllTimeProfile skip season (master unavailable)', season.id, String(error?.message || error));
+      console.debug('[dataHub] buildPlayerCareer skip season (master unavailable)', seasonId, String(error?.message || error));
       continue;
     }
 
     const players = Array.isArray(seasonMaster?.sections?.players) ? seasonMaster.sections.players : [];
     if (!players.length) continue;
 
-    const playerRow = players.find((player) => normalizePlayerIdentity(player?.Nickname) === nickname);
+    const playerRow = players.find((player) => normalizePlayerKey(player?.nickname || player?.Nickname || player?.nick || player?.Player) === normalizedTargetNick);
     if (!playerRow) continue;
 
-    const mvp1 = toNumber(playerRow?.MVP1, 0) || 0;
-    const mvp2 = toNumber(playerRow?.MVP2, 0) || 0;
-    const mvp3 = toNumber(playerRow?.MVP3, 0) || 0;
+    const mvp1 = toNumber(playerRow?.MVP1 ?? playerRow?.mvp1, 0) || 0;
+    const mvp2 = toNumber(playerRow?.MVP2 ?? playerRow?.mvp2, 0) || 0;
+    const mvp3 = toNumber(playerRow?.MVP3 ?? playerRow?.mvp3, 0) || 0;
     const mvpTotal = mvp1 + mvp2 + mvp3;
-    const matches = toNumber(playerRow?.Matches, 0) || 0;
-    const wins = toNumber(playerRow?.Wins, 0) || 0;
-    const losses = toNumber(playerRow?.Losses, 0) || 0;
-    const draws = toNumber(playerRow?.Draws, 0) || 0;
-    const ratingEnd = toNumber(playerRow?.Rating_end, null);
-    const ratingDelta = toNumber(playerRow?.Rating_delta, 0) || 0;
+    const matches = toNumber(playerRow?.Matches ?? playerRow?.matches, 0) || 0;
+    const wins = toNumber(playerRow?.Wins ?? playerRow?.wins, 0) || 0;
+    const losses = toNumber(playerRow?.Losses ?? playerRow?.losses, 0) || 0;
+    const draws = toNumber(playerRow?.Draws ?? playerRow?.draws, 0) || 0;
+    const ratingEnd = toNumber(playerRow?.Rating_end ?? playerRow?.rating_end, null);
+    const ratingDelta = toNumber(playerRow?.Rating_delta ?? playerRow?.rating_delta, 0) || 0;
     const ratingStart = Number.isFinite(ratingEnd) ? ratingEnd - ratingDelta : null;
-    const rankFromSeason = normalizedRank(playerRow?.Rank || playerRow?.Rank_final);
-    const finalPlace = toNumber(playerRow?.Rank_final, null);
+    const finalPlace = toNumber(playerRow?.Rank_final ?? playerRow?.rank_final, null);
     const winrate = matches ? Number(((wins / matches) * 100).toFixed(1)) : null;
 
     const seasonRow = {
-      seasonId: season.id,
-      seasonTitle: season.title,
+      seasonId,
+      seasonTitle: seasonId,
       league: normalizeLeague(playerRow?.League || playerRow?.league || '') || 'kids',
       games: matches,
       matches,
-      battles: matches,
       rounds: null,
       wins,
       losses,
@@ -1970,11 +1963,11 @@ export async function getPlayerAllTimeProfile(nick) {
       matchesPerWeek: null,
       activityPct: null,
       points: ratingEnd,
-      rank: rankFromSeason,
+      rank: finalPlace,
       finalPlace
     };
 
-    seasonSet.add(season.id);
+    seasonSet.add(seasonId);
     if (seasonRow.league === 'kids' || seasonRow.league === 'sundaygames') {
       leagueGames[seasonRow.league] += seasonRow.games;
       addWins[seasonRow.league] += seasonRow.wins;
@@ -1988,8 +1981,6 @@ export async function getPlayerAllTimeProfile(nick) {
 
     total.games += seasonRow.games;
     total.matches += seasonRow.matches;
-    total.battles += seasonRow.battles || 0;
-    total.rounds += seasonRow.rounds;
     total.wins += seasonRow.wins;
     total.losses += seasonRow.losses;
     total.draws += seasonRow.draws;
@@ -2000,16 +1991,15 @@ export async function getPlayerAllTimeProfile(nick) {
     total.cumulativeDelta += seasonRow.ratingDelta || 0;
 
     if (Number.isFinite(seasonRow.ratingEnd) && (total.peakPoints === null || seasonRow.ratingEnd > total.peakPoints)) total.peakPoints = seasonRow.ratingEnd;
-    if ((rankWeight[seasonRow.rank] || 0) > (rankWeight[total.bestRank] || 0)) total.bestRank = seasonRow.rank;
+    if (Number.isFinite(seasonRow.finalPlace) && (total.bestRank === null || seasonRow.finalPlace < total.bestRank)) total.bestRank = seasonRow.finalPlace;
   }
 
   if (!playedSeasons.length) return null;
 
-  playedSeasons.sort((a, b) => seasons.findIndex((s) => s.id === b.seasonId) - seasons.findIndex((s) => s.id === a.seasonId));
+  playedSeasons.sort((a, b) => String(b.seasonId).localeCompare(String(a.seasonId)));
   total.seasonsPlayed = seasonSet.size;
   total.winrate = total.games ? Number(((total.wins / total.games) * 100).toFixed(1)) : 0;
   total.totalMatches = total.matches;
-  total.totalRounds = total.rounds;
   total.totalWins = total.wins;
   total.totalLosses = total.losses;
   total.totalDraws = total.draws;
@@ -2032,7 +2022,7 @@ export async function getPlayerAllTimeProfile(nick) {
 
   return writeCache(key, {
     nick,
-    avatar: avatars.get(nickname) || '',
+    avatar: avatars.get(normalizedTargetNick) || '',
     league: primaryLeague,
     allTime: total,
     seasons: playedSeasons,
@@ -2046,6 +2036,10 @@ export async function getPlayerAllTimeProfile(nick) {
       highestRank: total.bestRank
     }
   });
+}
+
+export async function getPlayerAllTimeProfile(nick) {
+  return buildPlayerCareer(nick);
 }
 
 export async function getPlayerSeasonLogs({ nick, seasonId } = {}) {

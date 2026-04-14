@@ -1380,22 +1380,21 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
   const gamesByDay = new Map();
   liveGames.forEach((game) => {
     if (!game.date) return;
-    const day = gamesByDay.get(game.date) || { date: game.date, matchesCount: 0, battlesCount: 0, mvpCounter: new Map() };
+    const day = gamesByDay.get(game.date) || { date: game.date, matchesCount: 0, battlesCount: 0, matches: [] };
     day.matchesCount += 1;
     day.battlesCount += safeRoundCount(game.rawSeries) || 1;
-    const mvpKey = normalizeHeader(game.mvp1);
-    if (mvpKey) day.mvpCounter.set(mvpKey, (day.mvpCounter.get(mvpKey) || 0) + 1);
+    day.matches.push(game);
     gamesByDay.set(game.date, day);
   });
 
   const latestDay = [...gamesByDay.values()].sort((a, b) => b.date.localeCompare(a.date))[0] || null;
   const nicknameByKey = new Map(players.map((player) => [normalizeHeader(player.nickname), player.nickname]));
-  const topDayMvpKey = latestDay ? ([...latestDay.mvpCounter.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null) : null;
+  const latestDaySummary = latestDay ? getGameDaySummaryFromMatches(latestDay.matches, nicknameByKey) : null;
   const lastGameDay = latestDay ? {
     date: latestDay.date,
     matchesCount: latestDay.matchesCount,
     battlesCount: latestDay.battlesCount,
-    mvp: nicknameByKey.get(topDayMvpKey) || topDayMvpKey || null
+    mvp: latestDaySummary?.mvp || null
   } : { date: '', matchesCount: 0, battlesCount: 0, mvp: null };
 
   const result = {
@@ -1849,6 +1848,32 @@ export async function getHomeFast() {
     rankDistKids: getRankDistribution(kidsTable),
     rankDistAdults: getRankDistribution(adultsTable)
   });
+}
+
+function getGameDaySummaryFromMatches(matches = [], nicknameByKey = new Map()) {
+  const mvpRows = new Map();
+  const registerMvp = (nick, scoreValue = 0, mvp1Value = 0) => {
+    const key = normalizeHeader(nick);
+    if (!key) return;
+    const row = mvpRows.get(key) || { key, score: 0, mvp1: 0 };
+    row.score += scoreValue;
+    row.mvp1 += mvp1Value;
+    mvpRows.set(key, row);
+  };
+
+  (Array.isArray(matches) ? matches : []).forEach((match) => {
+    registerMvp(match?.mvp1, 3, 1);
+    registerMvp(match?.mvp2, 2, 0);
+    registerMvp(match?.mvp3, 1, 0);
+  });
+
+  const leader = [...mvpRows.values()].sort((a, b) => b.score - a.score || b.mvp1 - a.mvp1 || a.key.localeCompare(b.key, 'uk'))[0] || null;
+  if (!leader) return { mvp: null, mvpKey: null, mvpScore: 0 };
+  return {
+    mvp: nicknameByKey.get(leader.key) || leader.key,
+    mvpKey: leader.key,
+    mvpScore: leader.score
+  };
 }
 
 export async function getGameDayView({ dateYMD, league } = {}) {
@@ -2393,7 +2418,8 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     .sort((a, b) => (a.placeAfter || 9999) - (b.placeAfter || 9999) || (b.delta || 0) - (a.delta || 0));
   const pointsPlayed = players.reduce((sum, p) => sum + Math.max(0, Number(p.delta) || 0), 0);
   const topGain = [...players].sort((a, b) => (b.delta || 0) - (a.delta || 0))[0] || null;
-  const mvpLeader = [...players].sort((a, b) => ((b.mvp1 * 3 + b.mvp2 * 2 + b.mvp3) - (a.mvp1 * 3 + a.mvp2 * 2 + a.mvp3)))[0] || null;
+  const nicknameByKey = new Map(players.map((player) => [normalizeHeader(player.nick), player.nick]));
+  const daySummary = getGameDaySummaryFromMatches(dayMatches, nicknameByKey);
   const winrateLeader = [...players]
     .filter((p) => p.matches > 0)
     .sort((a, b) => ((b.wins / b.matches) - (a.wins / a.matches)) || b.matches - a.matches)[0] || null;
@@ -2413,7 +2439,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       participants: players.length,
       totalPointsPlayed: pointsPlayed,
       bestGain: topGain ? { nick: topGain.nick, delta: topGain.delta } : null,
-      mvpDay: mvpLeader ? { nick: mvpLeader.nick, score: mvpLeader.mvp1 * 3 + mvpLeader.mvp2 * 2 + mvpLeader.mvp3 } : null,
+      mvpDay: daySummary?.mvp ? { nick: daySummary.mvp, score: daySummary.mvpScore } : null,
       bestWinRate: winrateLeader ? { nick: winrateLeader.nick, winRate: Math.round((winrateLeader.wins / winrateLeader.matches) * 100), matches: winrateLeader.matches } : null
     }
   };

@@ -185,25 +185,6 @@ function getSmallestPositiveGrowth(players = []) {
   return candidates[0] || null;
 }
 
-function highlightCard(player, value, label, tone) {
-  const cardClass = 'highlight-card card';
-  const theme = tone === 'mvp' ? 'is-mvp' : tone === 'gain' ? 'is-gain' : 'is-neutral';
-  if (!player) {
-    return `<article class="${cardClass} ${theme}">
-      <div class="highlight-type">${esc(label)}</div>
-      <div class="highlight-name">—</div>
-      <div class="highlight-value">—</div>
-      <div class="highlight-meta">Ще недостатньо даних</div>
-    </article>`;
-  }
-  return `<article class="${cardClass} ${theme}">
-    <div class="highlight-type">${esc(label)}</div>
-    <div class="highlight-name">${esc(player.nickname)}</div>
-    <div class="highlight-value">${esc(value)}</div>
-    <div class="highlight-meta">${esc(player.matches || 0)} ігор · ${esc(player.points || 0)} pts</div>
-  </article>`;
-}
-
 function renderHero(root, league, data) {
   root.innerHTML = `<div class="league-hero__eyebrow">\u0416\u0438\u0432\u0438\u0439 \u0441\u0435\u0437\u043e\u043d</div>
   <h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
@@ -212,6 +193,7 @@ function renderHero(root, league, data) {
 
 function renderGameDaySection(lastGameDay, league) {
   const day = lastGameDay || { date: '', matchesCount: 0, battlesCount: 0, mvp: null };
+  const gameDayHref = `#gameday?league=${encodeURIComponent(league)}${day.date ? `&date=${encodeURIComponent(day.date)}` : ''}`;
   return `<section class="league-dashboard-group league-dashboard-group--gameday">
     <h3 class="league-subtitle">\u041e\u0441\u0442\u0430\u043d\u043d\u0456\u0439 \u0456\u0433\u0440\u043e\u0432\u0438\u0439 \u0434\u0435\u043d\u044c</h3>
     <article class="league-game-day-card card league-game-day-card--summary">
@@ -229,10 +211,13 @@ function renderGameDaySection(lastGameDay, league) {
             <span class="league-game-day-stat__value">${esc(day.battlesCount || 0)}</span>
           </div>
         </div>
-        <div class="league-game-day-card__meta">${day.mvp ? `MVP \u0434\u043d\u044f: ${esc(day.mvp)}` : 'MVP \u0434\u043d\u044f \u0449\u0435 \u043d\u0435 \u0432\u0438\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0439'}</div>
+        <div class="league-game-day-card__mvp">
+          <span class="league-game-day-card__mvp-label">MVP дня</span>
+          <strong class="league-game-day-card__mvp-value">${esc(day.mvp || '\u2014')}</strong>
+        </div>
       </div>
     </article>
-    <a class="button-primary league-game-day-cta-button" href="#gameday?league=${encodeURIComponent(league)}">\u0412\u0456\u0434\u043a\u0440\u0438\u0442\u0438 \u0434\u0435\u043d\u044c</a>
+    <a class="button-primary league-game-day-cta-button" href="${gameDayHref}">\u0412\u0456\u0434\u043a\u0440\u0438\u0442\u0438 \u0434\u0435\u043d\u044c</a>
   </section>`;
 }
 
@@ -307,14 +292,6 @@ function renderInfographic(root, data, remainingGameDays, league) {
   <section class="league-dashboard-group league-dashboard-group--ranks">
     <h3 class="league-subtitle">Розподіл за рангами</h3>
     <div class="league-rank-list">${rankDistributionBlock(data.summary.rankDistribution || {}, playersCount)}</div>
-  </section>
-  <section class="league-dashboard-group league-dashboard-group--moments">
-    <h3 class="league-subtitle">Ключові моменти</h3>
-    <div class="league-highlights-grid league-highlights-grid--moments">
-      ${highlightCard(bestGrowth, bestGrowth ? fmtSigned(bestGrowth.delta) : '—', 'Прорив сезону', 'gain')}
-      ${highlightCard(data.progress?.mostMvp, data.progress?.mostMvp ? `${data.progress.mostMvp.mvpTotal || 0} MVP` : '—', 'MVP-лідер', 'mvp')}
-      ${highlightCard(mostActive, mostActive ? `${mostActive.matches || 0} ігор` : '—', 'Найактивніший гравець', 'neutral')}
-    </div>
   </section>
   ${renderGameDaySection(data.lastGameDay, league)}`;
 }
@@ -554,5 +531,3 @@ async function safeInitLeagueStatsPage(root, params = {}) {
     renderTables();
   });
 }
-
-

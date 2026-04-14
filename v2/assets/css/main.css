@@ -7013,3 +7013,128 @@ body.theme-game .gameday-v2 .neu { color: #b8c6dd; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== 2026-04-14 systemic mobile overflow fixes (V2 only) ===== */
+body.theme-game,
+body.theme-game #app,
+body.theme-game main.page,
+body.theme-game .container,
+body.theme-game #view,
+body.theme-game .section,
+body.theme-game .px-card,
+body.theme-game .hero {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+body.theme-game *,
+body.theme-game *::before,
+body.theme-game *::after {
+  box-sizing: border-box;
+}
+
+body.theme-game img,
+body.theme-game svg,
+body.theme-game canvas,
+body.theme-game video {
+  max-width: 100%;
+  height: auto;
+}
+
+body.theme-game .topnav,
+body.theme-game .topnav__row,
+body.theme-game .topnav__actions,
+body.theme-game .home-v2 .home-hero,
+body.theme-game .home-v2 .home-hero-buttons,
+body.theme-game .home-v2 .home-cta-row,
+body.theme-game .home-v2 .home-league__head,
+body.theme-game .league-page .league-table-toolbar,
+body.theme-game .league-page .league-search-toolbar,
+body.theme-game .league-page .league-search-wrap,
+body.theme-game .league-page .league-sort-controls,
+body.theme-game .rules-v2__rank-item,
+body.theme-game .gameday-v2 .gameday-toolbar,
+body.theme-game .gameday-v2 .gameday-filters,
+body.theme-game .profile-page .profile-header,
+body.theme-game .profile-page .profile-toolbar {
+  min-width: 0;
+}
+
+body.theme-game .home-v2 .home-hero-buttons,
+body.theme-game .home-v2 .home-cta-row,
+body.theme-game .home-v2 .home-footer-actions,
+body.theme-game .league-page .league-actions {
+  flex-wrap: wrap;
+}
+
+body.theme-game .league-page .league-table-shell,
+body.theme-game .gameday-v2 .gameday-table-wrap,
+body.theme-game .rules-v2 .rules-v2__table-wrap,
+body.theme-game .season-page .season-table-wrap,
+body.theme-game .table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+body.theme-game .league-page .league-ranking-table,
+body.theme-game .gameday-v2 .gameday-table,
+body.theme-game .rules-v2 .rules-v2__points-table,
+body.theme-game .season-page .season-table,
+body.theme-game .table-wrap > table {
+  max-width: none;
+}
+
+@media (max-width: 760px) {
+  body.theme-game .league-page .league-sort-controls__buttons {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  body.theme-game .league-page .league-sort-btn {
+    min-width: 0;
+    padding-inline: .12rem;
+  }
+
+  body.theme-game .rules-v2 .rules-v2__rank-grid,
+  body.theme-game .league-page .league-rank-grid,
+  body.theme-game .league-page .league-kpi-grid,
+  body.theme-game .league-page .league-highlights-grid,
+  body.theme-game .home-v2 .home-progress-grid,
+  body.theme-game .home-v2 .home-stats-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.theme-game .gameday-v2 .gameday-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  body.theme-game .v2-bottom-nav {
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    width: min(100%, 460px) !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 420px) {
+  body.theme-game .container {
+    width: calc(100% - 12px);
+  }
+
+  body.theme-game .v2-bottom-nav {
+    padding: 4px !important;
+    gap: 4px !important;
+  }
+
+  body.theme-game .v2-nav-btn {
+    min-width: 0;
+    min-height: 56px !important;
+    padding: 6px 2px 8px !important;
+  }
+}

@@ -1,12 +1,22 @@
-import { getGameDay } from '../core/dataHub.js';
+﻿import { getGameDay } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
 
-function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
-function fmtDelta(v) { const n = Number(v) || 0; return `${n > 0 ? '+' : ''}${n}`; }
-function fmtShift(v) {
-  if (!Number.isFinite(v) || v === 0) return '→ 0';
-  return v > 0 ? `↑ ${v}` : `↓ ${Math.abs(v)}`;
+function esc(v) {
+  return String(v ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function fmtDelta(v) {
+  const n = Number(v) || 0;
+  return `${n > 0 ? '+' : ''}${n}`;
+}
+
+function fmtRank(value = '') {
+  return String(value || '—').trim() || '—';
 }
 
 function resolveParams(params = {}) {
@@ -34,7 +44,7 @@ function teamLabel(teamKey = 'team1') {
 function prettyWinner(winner = '') {
   if (winner === 'tie') return 'Нічия';
   if (/^team\d$/.test(String(winner))) return `${teamLabel(winner)} перемогла`;
-  return 'Переможець не визначений';
+  return 'Переможця не визначено';
 }
 
 function parseSeries(series = '') {
@@ -63,97 +73,111 @@ function computeTeamStats(team = [], pointsChanges = [], roster = new Map()) {
   return { totalRating, totalDelta };
 }
 
-function buildPlayersTable(players = []) {
+function buildPlayersTable(players = [], league = 'sundaygames') {
+  if (!players.length) {
+    return '<p class="px-card__text">Немає гравців для цієї дати.</p>';
+  }
+
   return `
     <div class="gameday-table-wrap">
-      <table class="gameday-table">
+      <table class="gameday-table gameday-table--players">
         <thead>
           <tr>
-            <th>ΔPlace</th><th>ΔRank</th><th>Avatar</th><th>Nick</th><th>Before</th><th>After</th><th>Δ</th><th>M</th><th>W</th><th>L</th><th>MVP1</th><th>MVP2</th><th>MVP3</th>
+            <th>#</th>
+            <th>Гравець</th>
+            <th>Ранг</th>
+            <th>Очки</th>
+            <th>Δ</th>
+            <th>Матчі</th>
+            <th>MVP</th>
           </tr>
         </thead>
         <tbody>
-          ${players.map((p) => {
-            const placeShift = (p.placeBefore && p.placeAfter) ? (p.placeBefore - p.placeAfter) : 0;
-            const rankShift = String(p.rankBefore || '') === String(p.rankAfter || '') ? 0 : ((String(p.rankAfter || '') < String(p.rankBefore || '')) ? 1 : -1);
-            return `<tr>
-              <td class="${placeShift > 0 ? 'pos' : placeShift < 0 ? 'neg' : 'neu'}">${esc(fmtShift(placeShift))}</td>
-              <td class="${rankShift > 0 ? 'pos' : rankShift < 0 ? 'neg' : 'neu'}">${esc(String(p.rankBefore || '—'))} → ${esc(String(p.rankAfter || '—'))}</td>
-              <td><img class="gameday-avatar" src="${esc(p.avatarUrl || '../assets/default-avatar.svg')}" alt="${esc(p.nick)}"></td>
-              <td>${esc(p.nick)}</td>
-              <td>${p.pointsBefore ?? 0}</td>
-              <td>${p.pointsAfter ?? 0}</td>
-              <td class="${(Number(p.delta) || 0) > 0 ? 'pos' : (Number(p.delta) || 0) < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(p.delta))}</td>
-              <td>${p.matches ?? 0}</td><td>${p.wins ?? 0}</td><td>${p.losses ?? 0}</td>
-              <td>${p.mvp1 ?? 0}</td><td>${p.mvp2 ?? 0}</td><td>${p.mvp3 ?? 0}</td>
-            </tr>`;
-          }).join('') || '<tr><td colspan="13">Немає даних за обрану дату.</td></tr>'}
+          ${players.map((p, idx) => `
+            <tr>
+              <td>#${idx + 1}</td>
+              <td>
+                <a class="gameday-table__player-link" href="#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(p.nick || '')}">
+                  <img class="gameday-avatar" src="${esc(p.avatarUrl || '../assets/default-avatar.svg')}" alt="${esc(p.nick || '')}">
+                  <span>${esc(p.nick || 'Гравець')}</span>
+                </a>
+              </td>
+              <td>${esc(fmtRank(p.rankAfter || p.rankLetter))}</td>
+              <td>${esc(String(p.pointsAfter ?? 0))}</td>
+              <td class="${Number(p.delta || 0) > 0 ? 'pos' : Number(p.delta || 0) < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(p.delta))}</td>
+              <td>${esc(String(p.matches ?? 0))}</td>
+              <td>${esc(String((p.mvp1 || 0) + (p.mvp2 || 0) + (p.mvp3 || 0)))}</td>
+            </tr>
+          `).join('')}
         </tbody>
       </table>
     </div>`;
 }
 
 function buildMatchCard(match = {}, roster = new Map()) {
-  const teams = Object.entries({ team1: match.teams?.sideA || [], team2: match.teams?.sideB || [] }).filter(([, members]) => members.length);
+  const rawTeams = {
+    team1: match.teams?.sideA || [],
+    team2: match.teams?.sideB || [],
+    team3: match.teams?.sideC || [],
+    team4: match.teams?.sideD || []
+  };
+  const teams = Object.entries(rawTeams).filter(([, members]) => Array.isArray(members) && members.length);
   const series = parseSeries(match.series);
-  const scoreboard = teams.map(([key]) => Number(series[key] || 0));
-  const scoreLabel = scoreboard.length >= 2 ? `${scoreboard[0]}:${scoreboard[1]}` : (match.seriesSummary || '—');
-  const winnerKey = match.winner === 'team1' || match.winner === 'team2' ? match.winner : '';
-  const loserKey = winnerKey === 'team1' ? 'team2' : winnerKey === 'team2' ? 'team1' : '';
-  const winnerLabel = prettyWinner(match.winner);
-  const teamsPreview = teams.map(([, members]) => members.join(', ')).filter(Boolean).join(' vs ');
+  const scoreParts = teams.map(([key]) => Number(series[key] || 0));
+  const scoreLabel = scoreParts.length ? scoreParts.join(' : ') : (match.seriesSummary || '—');
+  const winnerKey = /^team\d$/.test(String(match.winner || '')) ? String(match.winner) : '';
   const matchId = `gamedayMatch${match.index}`;
+  const summaryLine = [match.date, match.timestamp].filter(Boolean).join(' · ');
+  const winnerLine = prettyWinner(match.winner);
+  const versusLine = teams.map(([key]) => teamLabel(key)).join(' vs ');
   const mvpRows = [
-    { label: 'MVP 1', nick: match.mvp1 },
-    { label: 'MVP 2', nick: match.mvp2 },
-    { label: 'MVP 3', nick: match.mvp3 }
-  ];
+    { label: 'MVP 1', nick: match.mvp1, tone: 'gold' },
+    { label: 'MVP 2', nick: match.mvp2, tone: 'silver' },
+    { label: 'MVP 3', nick: match.mvp3, tone: 'bronze' }
+  ].filter((item) => item.nick);
 
   return `
     <article class="gameday-match-card ${winnerKey ? `gameday-match-card--winner-${winnerKey}` : ''}" data-match-id="${matchId}">
       <button class="gameday-match-head" type="button" aria-expanded="false" aria-controls="${matchId}Details" id="${matchId}Trigger">
-        <div class="gameday-match-head__row">
-          <div class="gameday-match-head__title">Матч #${match.index}</div>
-          <div class="gameday-match-head__score">${esc(scoreLabel)}</div>
+        <div class="gameday-match-head__top">
+          <span class="gameday-match-head__eyebrow">Матч #${match.index}</span>
+          <span class="gameday-match-head__score">${esc(scoreLabel)}</span>
         </div>
-        <div class="gameday-match-head__meta">${esc(match.date || '')} ${esc(match.timestamp || '')}</div>
-        <div class="gameday-match-head__sub">${esc(winnerLabel)} · ${esc(teamsPreview || match.seriesSummary || 'Склад команд недоступний')}</div>
+        <div class="gameday-match-head__title">${esc(versusLine || 'Склади команд')}</div>
+        <div class="gameday-match-head__subline">${esc(winnerLine)}</div>
+        <div class="gameday-match-head__meta">${esc(summaryLine || 'Ігровий лог')}</div>
       </button>
 
       <div class="gameday-match-details" id="${matchId}Details" role="region" aria-labelledby="${matchId}Trigger" hidden>
-      <div class="gameday-match-layout">
-        ${teams.map(([key, members]) => {
-          const stats = computeTeamStats(members, match.pointsChanges || [], roster);
-          const winnerClass = key === winnerKey ? ' is-winner' : '';
-          const loserClass = key === loserKey ? ' is-loser' : '';
-          const teamClass = `${winnerClass}${loserClass}`;
-          return `<section class="gameday-team-box${teamClass}">
-            <h3>${teamLabel(key)} ${key === winnerKey ? '<span class="winner-tag">WINNER</span>' : ''}</h3>
-            <ul>${members.map((nick) => `<li class="${key === winnerKey ? 'is-winner-player' : key === loserKey ? 'is-loser-player' : ''}">${esc(nick)}</li>`).join('')}</ul>
-            <div class="gameday-team-box__stat">Σ рейтинг: <b>${stats.totalRating || 0}</b></div>
-            <div class="gameday-team-box__stat">Σ Δ очок: <b class="${stats.totalDelta > 0 ? 'pos' : stats.totalDelta < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(stats.totalDelta))}</b></div>
-          </section>`;
-        }).join('')}
-
-        <section class="gameday-result-box">
-          <div class="gameday-result-box__score">${esc(scoreLabel)}</div>
-          <div class="gameday-result-box__draws">Нічиї: ${series.draws}</div>
-          <div class="gameday-result-box__winner">${esc(prettyWinner(match.winner))}</div>
-        </section>
-      </div>
-
-      <section class="gameday-mvp-box">
-        <h4>MVP матчу</h4>
-        <div class="gameday-mvp-box__grid">
-          ${mvpRows.map((row) => `<div class="gameday-mvp-item"><span>${row.label}</span><b>${esc(row.nick || '—')}</b></div>`).join('')}
+        <div class="gameday-match-teams">
+          ${teams.map(([key, members]) => {
+            const stats = computeTeamStats(members, match.pointsChanges || [], roster);
+            const isWinner = key === winnerKey;
+            return `
+              <section class="gameday-team-box ${isWinner ? 'is-winner' : ''}">
+                <div class="gameday-team-box__head">
+                  <h3>${teamLabel(key)}</h3>
+                  <span class="gameday-team-box__delta ${stats.totalDelta > 0 ? 'pos' : stats.totalDelta < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(stats.totalDelta))}</span>
+                </div>
+                <ul>
+                  ${members.map((nick) => `<li>${esc(nick)}</li>`).join('')}
+                </ul>
+                <div class="gameday-team-box__foot">${stats.totalRating || 0} pts сумарно</div>
+              </section>`;
+          }).join('')}
         </div>
-      </section>
 
-      <section class="gameday-delta-list">
-        ${(match.pointsChanges || []).map((c) => `<span class="${(Number(c.delta) || 0) > 0 ? 'pos' : (Number(c.delta) || 0) < 0 ? 'neg' : 'neu'}">${esc(c.nick)} ${esc(fmtDelta(c.delta))}</span>`).join('') || '<span class="neu">Δ недоступний</span>'}
-      </section>
+        ${mvpRows.length ? `
+          <section class="gameday-match-awards">
+            ${mvpRows.map((row) => `<div class="gameday-award-chip gameday-award-chip--${row.tone}"><span>${row.label}</span><b>${esc(row.nick)}</b></div>`).join('')}
+          </section>` : ''}
 
-      ${match.link ? `<a class="btn btn--secondary" href="${esc(match.link)}" target="_blank" rel="noopener">PDF / Log</a>` : ''}
+        ${(match.pointsChanges || []).length ? `
+          <section class="gameday-delta-list">
+            ${(match.pointsChanges || []).map((c) => `<span class="${Number(c.delta || 0) > 0 ? 'pos' : Number(c.delta || 0) < 0 ? 'neg' : 'neu'}">${esc(c.nick)} ${esc(fmtDelta(c.delta))}</span>`).join('')}
+          </section>` : ''}
+
+        ${match.link ? `<a class="btn btn--secondary gameday-log-link" href="${esc(match.link)}" target="_blank" rel="noopener">Відкрити лог / PDF</a>` : ''}
       </div>
     </article>`;
 }
@@ -166,12 +190,14 @@ function render(root, payload, filters) {
   const rosterMap = new Map(players.map((p) => [String(p.nick || '').trim().toLowerCase(), p]));
   const partialNote = payload.hasLeagueSnapshot
     ? ''
-    : '<p class="px-card__text">Частковий режим: таблиця ліги недоступна, показані базові матчі дня.</p>';
+    : '<p class="px-card__text">Таблиця ліги зараз недоступна, тому показуємо лише базовий лог ігрового дня.</p>';
 
   root.classList.add('gameday-v2');
   root.innerHTML = `
     <section class="px-card gameday-hero">
-      <h1 class="px-card__title">Ігровий день</h1>
+      <div class="gameday-hero__eyebrow">Ігровий день</div>
+      <h1 class="px-card__title">${esc(leagueLabelUA(payload.league))}</h1>
+      <div class="gameday-hero__date">${esc(payload.date || '—')}</div>
       <div class="gameday-toolbar">
         <label>Ліга
           <select id="gamedayLeague" class="search-input">
@@ -184,38 +210,30 @@ function render(root, payload, filters) {
             ${dates.map((d) => `<option value="${esc(d)}" ${d === payload.date ? 'selected' : ''}>${esc(d)}</option>`).join('')}
           </select>
         </label>
-        <button id="gamedayLoad" class="btn">Завантажити</button>
+        <button id="gamedayLoad" class="btn">Оновити</button>
       </div>
-      <div class="league-summary-strip gameday-hero-strip">
-        <span>${esc(leagueLabelUA(payload.league))}</span>
-        <span>Матчів: ${payload.gamesCount ?? 0}</span>
-        <span>Раундів: ${payload.roundsCount ?? 0}</span>
-        <span>Гравців: ${players.length}</span>
+      <div class="gameday-summary-grid">
+        <div class="gameday-summary-card"><span>Матчів</span><b>${summary.matches ?? payload.gamesCount ?? 0}</b></div>
+        <div class="gameday-summary-card"><span>Раундів</span><b>${payload.roundsCount ?? 0}</b></div>
+        <div class="gameday-summary-card"><span>Гравців</span><b>${summary.participants ?? players.length}</b></div>
+        <div class="gameday-summary-card"><span>MVP дня</span><b>${esc(summary.mvpDay?.nick || '—')}</b></div>
       </div>
       ${partialNote}
     </section>
 
-    <section class="px-card gameday-day-summary">
-      <h2 class="px-card__title">Короткий підсумок дня</h2>
-      <div class="gameday-footer-grid">
-        <div class="gameday-footer-item"><span>Дата</span><b>${esc(payload.date || '—')}</b></div>
-        <div class="gameday-footer-item"><span>Матчів</span><b>${summary.matches ?? payload.gamesCount ?? 0}</b></div>
-        <div class="gameday-footer-item"><span>Учасників</span><b>${summary.participants ?? players.length}</b></div>
-        <div class="gameday-footer-item"><span>Раундів</span><b>${payload.roundsCount ?? 0}</b></div>
-        <div class="gameday-footer-item"><span>Топ приріст</span><b>${esc(summary.bestGain?.nick || '—')} (${esc(fmtDelta(summary.bestGain?.delta || 0))})</b></div>
-        <div class="gameday-footer-item"><span>MVP дня</span><b>${esc(summary.mvpDay?.nick || '—')}</b></div>
-        <div class="gameday-footer-item"><span>Кращий winrate</span><b>${esc(summary.bestWinRate?.nick || '—')} (${summary.bestWinRate?.winRate ?? 0}%)</b></div>
-        <div class="gameday-footer-item"><span>Розіграно балів</span><b>${summary.totalPointsPlayed ?? 0}</b></div>
+    <section class="px-card gameday-players-block">
+      <div class="gameday-section-head">
+        <h2 class="px-card__title">Таблиця гравців дня</h2>
+        <p class="px-card__text">Усі гравці дня в одному компактному рейтингу.</p>
       </div>
+      ${buildPlayersTable(players, payload.league)}
     </section>
 
-    <section class="px-card">
-      <h2 class="px-card__title">Гравці ігрового дня</h2>
-      ${buildPlayersTable(players)}
-    </section>
-
-    <section class="px-card">
-      <h2 class="px-card__title">Матчі ігрового дня</h2>
+    <section class="px-card gameday-matches-block">
+      <div class="gameday-section-head">
+        <h2 class="px-card__title">Лог матчів</h2>
+        <p class="px-card__text">Кожен матч згорнутий. Відкривай тільки той, який хочеш переглянути детально.</p>
+      </div>
       <div class="gameday-match-list">
         ${(matches || []).map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Немає матчів за цей день.</p>'}
       </div>
@@ -250,13 +268,14 @@ function render(root, payload, filters) {
     trigger?.setAttribute('aria-expanded', 'true');
   };
 
-  matchCards.forEach((card) => {
+  matchCards.forEach((card, index) => {
     const trigger = card.querySelector('.gameday-match-head');
     trigger?.addEventListener('click', () => {
       const isOpen = card.classList.contains('is-open');
       matchCards.forEach((item) => closeCard(item));
       if (!isOpen) openCard(card);
     });
+    if (index === 0) openCard(card);
   });
 }
 

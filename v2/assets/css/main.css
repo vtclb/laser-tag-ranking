@@ -6602,6 +6602,55 @@ body.theme-game .league-page .league-dashboard-group--gameday .league-game-day-c
   content: none !important;
 }
 
+body.theme-game .league-page .league-dashboard-group--gameday .league-game-day-card--summary {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 20px 18px;
+  border-radius: 12px;
+  gap: 14px;
+}
+
+body.theme-game .league-page .league-dashboard-group--gameday .league-game-day-card__headline {
+  margin-top: -2px !important;
+}
+
+body.theme-game .league-page .league-dashboard-group--gameday .league-game-day-stats {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.theme-game .league-page .league-dashboard-group--gameday .league-game-day-stat {
+  min-height: 76px;
+  align-content: center;
+}
+
+body.theme-game .league-page .league-game-day-card__mvp {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(136, 167, 222, 0.18);
+}
+
+body.theme-game .league-page .league-game-day-card__mvp-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7fb7ff;
+}
+
+body.theme-game .league-page .league-game-day-card__mvp-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #f4f7ff;
+}
+
+body.theme-game .league-page .league-game-day-cta-button {
+  width: min(100%, 420px);
+}
+
 /* Final scoped polish: GameDay V2 */
 body.theme-game .gameday-v2 {
   display: grid;

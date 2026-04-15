@@ -118,6 +118,16 @@ function insightCard({ eyebrow = '', title = '', value = '', meta = '', footer =
   </article>`;
 }
 
+function insightCardRich({ eyebrow = '', title = '', value = '', meta = '', footerHtml = '', tone = 'neutral' }) {
+  return `<article class="live-card card live-card--${esc(tone)}">
+    <div class="live-card__kicker">${esc(eyebrow)}</div>
+    <div class="live-card__label live-card__label--story">${esc(title)}</div>
+    <div class="live-card__value">${esc(value)}</div>
+    <div class="live-card__meta">${esc(meta)}</div>
+    ${footerHtml ? `<div class="live-card__footer">${footerHtml}</div>` : ''}
+  </article>`;
+}
+
 function seasonStatCard({ label, value, meta = '', width = '0%' }) {
   return `<article class="kpi-card card">
     <div class="kpi-label">${esc(label)}</div>
@@ -222,24 +232,47 @@ function renderGameDaySection(lastGameDay, league) {
 }
 
 function renderInfographic(root, data, remainingGameDays, league) {
-  const playersCount = Number(data.summary.activePlayersCount || 0);
+  const activePlayers = Array.isArray(data.activePlayers) ? [...data.activePlayers] : [];
+  const playersCount = Number(data.summary.activePlayersCount || activePlayers.length || 0);
   const matchesCount = Number(data.summary.matchesCount || 0);
   const battlesCount = Number(data.summary.battlesCount || 0);
-  const totalMvp = Number(data.summary.totalMvp || 0);
   const avgRating = Number(data.summary.avgRating || 0);
-  const leader = [...data.activePlayers].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0))[0] || null;
-  const runnerUp = [...data.activePlayers].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0))[1] || null;
-  const averageWinRateValue = data.summary.activePlayersCount
-    ? (data.activePlayers.reduce((sum, player) => sum + (Number(player.winRate) || 0), 0) / data.summary.activePlayersCount)
-    : null;
-  const averageWinRate = averageWinRateValue === null ? '—' : `${averageWinRateValue.toFixed(1)}%`;
-  const averageWinRateWidth = averageWinRateValue === null ? '0%' : `${Math.max(0, Math.min(100, averageWinRateValue)).toFixed(1)}%`;
+  const totalLeaguePoints = activePlayers.reduce((sum, player) => sum + (Number(player.points) || 0), 0);
+  const leaderBoardByPoints = [...activePlayers].sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0));
+  const leader = leaderBoardByPoints[0] || null;
+  const runnerUp = leaderBoardByPoints[1] || null;
   const leaderGap = leader && runnerUp ? Number(leader.points || 0) - Number(runnerUp.points || 0) : null;
   const battlesPerMatch = matchesCount ? (battlesCount / matchesCount).toFixed(1) : '0.0';
+  const bestGrowth = data.progress?.bestGrowth || null;
   const mvpLeader = data.progress?.mostMvp || null;
   const topRank = leader ? String(leader.rankLetter || 'F').toUpperCase() : '—';
-  const bestGrowth = data.progress?.bestGrowth || null;
-  const mostActive = [...data.activePlayers].sort((a, b) => (Number(b.matches) || 0) - (Number(a.matches) || 0))[0] || null;
+  const matchLeaders = [...activePlayers].sort((a, b) => (Number(b.matches) || 0) - (Number(a.matches) || 0));
+  const mostActive = matchLeaders[0] || null;
+  const secondMostActive = matchLeaders[1] || null;
+  const activityLead = mostActive && secondMostActive ? Math.max(0, Number(mostActive.matches || 0) - Number(secondMostActive.matches || 0)) : null;
+  const bestWinrateTop10 = [...leaderBoardByPoints]
+    .slice(0, 10)
+    .filter((player) => Number(player.matches || 0) > 0)
+    .sort((a, b) => (Number(b.winRate) || 0) - (Number(a.winRate) || 0))[0] || null;
+  const bestWinrateTop10Value = bestWinrateTop10 ? `${Number(bestWinrateTop10.winRate || 0).toFixed(1)}%` : '—';
+  const bestWinrateTop10Width = bestWinrateTop10 ? `${Math.max(0, Math.min(100, Number(bestWinrateTop10.winRate || 0))).toFixed(1)}%` : '0%';
+  const averageDeltaPerMatchValue = matchesCount
+    ? (activePlayers.reduce((sum, player) => sum + (Number(player.delta) || 0), 0) / matchesCount)
+    : null;
+  const averageDeltaPerMatch = averageDeltaPerMatchValue === null ? '—' : fmtSigned(averageDeltaPerMatchValue.toFixed(1));
+  const averageDeltaPerMatchWidth = averageDeltaPerMatchValue === null ? '0%' : clampPercent(Math.min(Math.abs(Number(averageDeltaPerMatchValue || 0)) * 6, 100));
+  const mvpBreakdown = mvpLeader
+    ? `MVP1 ${mvpLeader.mvp1 || 0} · MVP2 ${mvpLeader.mvp2 || 0} · MVP3 ${mvpLeader.mvp3 || 0}`
+    : 'Нагороди ще не зібрали чітку трійку';
+  const leaderWins = Number(leader?.wins || 0);
+  const activityFooter = mostActive
+    ? (activityLead !== null && activityLead > 0
+      ? `Відрив від #2: ${activityLead} ігор`
+      : 'Ділить лідерство за кількістю ігор')
+    : '';
+  const growthFooterHtml = bestGrowth
+    ? `Ранг зараз: <span class="live-rank-inline ${rankClass(bestGrowth.rankLetter || 'F')}">${esc(bestGrowth.rankLetter || '—')}</span>`
+    : '';
 
   root.innerHTML = `<section class="league-dashboard-group league-dashboard-group--live">
     <h3 class="league-subtitle">\u0412\u0456\u0434\u0437\u043d\u0430\u043a\u0438 \u0441\u0435\u0437\u043e\u043d\u0443</h3>
@@ -248,32 +281,32 @@ function renderInfographic(root, data, remainingGameDays, league) {
         eyebrow: '\u0427\u0435\u043c\u043f\u0456\u043e\u043d',
         title: leader ? leader.nickname : 'Немає даних',
         value: leader ? `${leader.points || 0} pts` : '—',
-        meta: leader ? `${leader.matches || 0} \u0456\u0433\u043e\u0440, WR ${winRateText(leader.winRate)}` : '\u0420\u0435\u0439\u0442\u0438\u043d\u0433 \u0449\u0435 \u043d\u0435 \u0437\u0430\u043f\u043e\u0432\u043d\u0435\u043d\u0438\u0439',
+        meta: leader ? `${leader.matches || 0} ігор · ${leaderWins} перемог` : '\u0420\u0435\u0439\u0442\u0438\u043d\u0433 \u0449\u0435 \u043d\u0435 \u0437\u0430\u043f\u043e\u0432\u043d\u0435\u043d\u0438\u0439',
         footer: leaderGap === null ? '\u041f\u043e\u043a\u0438 \u0431\u0435\u0437 \u0449\u0456\u043b\u044c\u043d\u043e\u0433\u043e \u0442\u0438\u0441\u043a\u0443 \u0437\u043d\u0438\u0437\u0443' : `\u0412\u0456\u0434\u0440\u0438\u0432 \u0432\u0456\u0434 #2: ${fmtSigned(leaderGap)} pts`,
         tone: 'accent'
       })}
-      ${insightCard({
+      ${insightCardRich({
         eyebrow: '\u0420\u0438\u0432\u043e\u043a',
         title: bestGrowth?.nickname || '\u0429\u0435 \u0431\u0435\u0437 \u044f\u0441\u043a\u0440\u0430\u0432\u043e\u0433\u043e \u0440\u0438\u0432\u043a\u0430',
-        value: bestGrowth ? fmtSigned(bestGrowth.delta) : '—',
-        meta: bestGrowth ? `${bestGrowth.points || 0} pts \u0437\u0430 ${bestGrowth.matches || 0} \u0456\u0433\u043e\u0440` : '\u041d\u0435\u043c\u0430\u0454 \u0433\u0440\u0430\u0432\u0446\u044f \u0437 \u043f\u043e\u043c\u0456\u0442\u043d\u0438\u043c \u043f\u0456\u0434\u0439\u043e\u043c\u043e\u043c',
-        footer: bestGrowth ? `\u041f\u043e\u0442\u043e\u0447\u043d\u0438\u0439 \u0440\u0430\u043d\u0433: ${bestGrowth.rankLetter || '\u2014'}` : '',
+        value: bestGrowth ? `${fmtSigned(bestGrowth.delta)} за ${bestGrowth.matches || 0} ігор` : '—',
+        meta: bestGrowth ? `${bestGrowth.points || 0} pts на даний момент` : '\u041d\u0435\u043c\u0430\u0454 \u0433\u0440\u0430\u0432\u0446\u044f \u0437 \u043f\u043e\u043c\u0456\u0442\u043d\u0438\u043c \u043f\u0456\u0434\u0439\u043e\u043c\u043e\u043c',
+        footerHtml: growthFooterHtml,
         tone: 'cool'
       })}
       ${insightCard({
         eyebrow: 'MVP',
         title: mvpLeader ? mvpLeader.nickname : '\u041f\u043e\u043a\u0438 \u0431\u0435\u0437 \u043b\u0456\u0434\u0435\u0440\u0430',
         value: mvpLeader ? `${mvpLeader.mvpTotal || 0} MVP` : '—',
-        meta: mvpLeader ? `${mvpLeader.matches || 0} \u0456\u0433\u043e\u0440 \u0443 \u0441\u0435\u0437\u043e\u043d\u0456` : '\u0412\u0456\u0434\u0437\u043d\u0430\u043a\u0438 \u0449\u0435 \u043d\u0435 \u0441\u043a\u043b\u0430\u043b\u0438 \u0447\u0456\u0442\u043a\u0443 \u0433\u043e\u043d\u043a\u0443',
-        footer: totalMvp ? `\u0423\u0441\u044c\u043e\u0433\u043e \u0443 \u0441\u0435\u0437\u043e\u043d\u0456 \u0432\u0436\u0435 ${totalMvp} MVP` : '\u0421\u0435\u0437\u043e\u043d \u0442\u0456\u043b\u044c\u043a\u0438 \u0440\u043e\u0437\u043a\u0440\u0443\u0447\u0443\u0454\u0442\u044c\u0441\u044f',
+        meta: mvpBreakdown,
+        footer: mvpLeader ? `${mvpLeader.matches || 0} ігор у сезоні` : '\u0421\u0435\u0437\u043e\u043d \u0442\u0456\u043b\u044c\u043a\u0438 \u0440\u043e\u0437\u043a\u0440\u0443\u0447\u0443\u0454\u0442\u044c\u0441\u044f',
         tone: 'neutral'
       })}
       ${insightCard({
         eyebrow: '\u0410\u043a\u0442\u0438\u0432\u043d\u0456\u0441\u0442\u044c',
         title: mostActive ? mostActive.nickname : '\u041d\u0435\u043c\u0430\u0454 \u0434\u0430\u043d\u0438\u0445',
-        value: mostActive ? `${mostActive.matches || 0} \u0456\u0433\u043e\u0440` : '\u2014',
-        meta: mostActive ? `${mostActive.battles || 0} \u0431\u043e\u0457\u0432 \u00b7 ${mostActive.points || 0} pts` : '\u0410\u043a\u0442\u0438\u0432\u043d\u0430 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0449\u0435 \u043d\u0435 \u0437\u0456\u0431\u0440\u0430\u043d\u0430',
-        footer: mostActive ? `\u0420\u0430\u043d\u0433 \u0437\u0430\u0440\u0430\u0437: ${mostActive.rankLetter || '\u2014'}` : '',
+        value: mostActive ? `${mostActive.battles || 0} боїв` : '\u2014',
+        meta: mostActive ? `${mostActive.matches || 0} ігор у сезоні` : '\u0410\u043a\u0442\u0438\u0432\u043d\u0430 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0449\u0435 \u043d\u0435 \u0437\u0456\u0431\u0440\u0430\u043d\u0430',
+        footer: activityFooter,
         tone: 'warm'
       })}
     </div>
@@ -281,12 +314,12 @@ function renderInfographic(root, data, remainingGameDays, league) {
   <section class="league-dashboard-group league-dashboard-group--kpi">
     <h3 class="league-subtitle">Зріз сезону</h3>
     <div class="league-kpi-grid league-kpi-grid--secondary">
-    ${seasonStatCard({ label: 'Середній рейтинг ліги', value: avgRating, meta: `Лідер зараз у ранзі ${topRank}`, width: clampPercent(avgRating / 14) })}
-    ${seasonStatCard({ label: 'Середній WR у лізі', value: averageWinRate, meta: `У середньому ${battlesPerMatch} бою за матч`, width: averageWinRateWidth })}
+    ${seasonStatCard({ label: 'Середній рейтинг ліги', value: avgRating, meta: `Сумарно ${totalLeaguePoints} pts зараз`, width: clampPercent(avgRating / 14) })}
+    ${seasonStatCard({ label: 'Кращий WR у топ-10', value: bestWinrateTop10Value, meta: bestWinrateTop10 ? `${bestWinrateTop10.nickname} · ${bestWinrateTop10.matches || 0} ігор` : 'Топ-10 ще формується', width: bestWinrateTop10Width })}
     </div>
     <div class="league-kpi-grid league-kpi-grid--tertiary">
-    ${seasonStatCard({ label: 'Активних гравців', value: playersCount, meta: `${matchesCount} матчів уже зіграно`, width: clampPercent(playersCount * 4) })}
-    ${seasonStatCard({ label: 'Усього MVP у сезоні', value: totalMvp, meta: mvpLeader ? `${mvpLeader.nickname} веде гонку` : 'MVP-гонка ще формується', width: clampPercent(totalMvp / Math.max(playersCount || 1, 1) * 4) })}
+    ${seasonStatCard({ label: 'Матчі / середні бої', value: `${matchesCount} / ${battlesPerMatch}`, meta: `${playersCount} активних гравців`, width: clampPercent(matchesCount * 3) })}
+    ${seasonStatCard({ label: 'Середній приріст за матч', value: averageDeltaPerMatch, meta: leader ? `Лідер ліги зараз у ранзі ${topRank}` : 'Дані ще збираються', width: averageDeltaPerMatchWidth })}
     </div>
   </section>
   <section class="league-dashboard-group league-dashboard-group--ranks">

@@ -56,11 +56,11 @@ function rankClass(rank = 'F') {
 }
 
 function metricCard({ label, value, accent = false, mono = false }) {
-  return `<article class="profile-kpi ${accent ? 'is-accent' : ''} ${mono ? 'is-mono' : ''}"><strong class="profile-kpi__value">${esc(value)}</strong><span class="profile-kpi__label">${esc(label)}</span></article>`;
+  return `<article class="profile-metric-card ${accent ? 'is-accent' : ''} ${mono ? 'is-mono' : ''}"><strong class="profile-metric-card__value">${esc(value)}</strong><span class="profile-metric-card__label">${esc(label)}</span></article>`;
 }
 
 function metricsGrid(items = [], classes = '') {
-  return `<div class="profile-kpi-grid ${classes}">${items.map(metricCard).join('')}</div>`;
+  return `<div class="profile-metrics-grid ${classes}">${items.map(metricCard).join('')}</div>`;
 }
 
 function renderCareerHighlights(highlights = {}) {
@@ -78,7 +78,7 @@ function renderCareerHighlights(highlights = {}) {
   if (mvpRecord?.seasonTitle && Number.isFinite(mvpRecord.mvpTotal)) cards.push({ label: 'MVP RECORD', value: `${mvpRecord.seasonTitle} • ${mvpRecord.mvpTotal}` });
 
   if (!cards.length) return '';
-  return `<section class="px-card profile-section"><h2 class="profile-section__title">Відзнаки кар'єри</h2><div class="profile-award-grid">${cards.map((item) => `<article class="profile-award-card"><span class="profile-award-card__label">${esc(item.label)}</span><strong class="profile-award-card__value">${esc(item.value)}</strong></article>`).join('')}</div></section>`;
+  return `<section class="px-card profile-section"><h2 class="profile-section__title">Відзнаки кар'єри</h2><div class="profile-highlight-grid">${cards.map((item) => `<article class="profile-highlight-card"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></article>`).join('')}</div></section>`;
 }
 
 function renderCurrentSummary({ league, livePlayer, currentSeason }) {
@@ -126,7 +126,7 @@ function renderCareerSummary(profile) {
 
 function renderSeasonTabs(container, tabs, selectedId) {
   container.innerHTML = tabs.map((tab) => `
-    <button type="button" class="profile-filter-tab ${tab.id === selectedId ? 'is-active' : ''}" data-season-id="${esc(tab.id)}">
+    <button type="button" class="profile-season-tab ${tab.id === selectedId ? 'is-active' : ''}" data-season-id="${esc(tab.id)}">
       <span>${esc(tab.label)}</span>
       ${tab.current ? '<em>CURRENT</em>' : ''}
     </button>
@@ -136,7 +136,7 @@ function renderSeasonTabs(container, tabs, selectedId) {
 function renderSeasonSummary(season, allTime) {
   if (!season || season.id === 'all') {
     return `
-      <section class="profile-season-panel">
+      <section class="profile-season-summary">
         <h3>Усі сезони</h3>
         <p class="profile-muted">Повний зріз карʼєри по всіх сезонах.</p>
         ${metricsGrid([
@@ -152,7 +152,7 @@ function renderSeasonSummary(season, allTime) {
   }
 
   return `
-      <section class="profile-season-panel">
+      <section class="profile-season-summary">
         <h3>${esc(season.seasonTitle || season.id)}</h3>
       <p class="profile-muted">${esc(leagueLabelUA(season.league || 'kids'))}</p>
       ${metricsGrid([
@@ -278,7 +278,7 @@ export async function initProfilePage(params = {}) {
 
         <section class="px-card profile-section">
           <h2 class="profile-section__title">Вибір сезону</h2>
-          <div class="profile-filter-tabs" id="seasonTabs"></div>
+          <div class="profile-season-tabs" id="seasonTabs"></div>
           <div id="seasonSummaryHost"></div>
           <div id="seasonLogsHost"></div>
         </section>

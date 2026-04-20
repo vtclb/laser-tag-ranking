@@ -534,16 +534,24 @@ body::before, body::after { z-index: 0; }
 /* RULES V2 */
 .rules-v2 {
   display: grid;
-  gap: .9rem;
+  gap: .85rem;
   width: 100%;
   max-width: 100%;
   min-width: 0;
 }
 
+.rules-v2,
+.rules-v2 * {
+  box-sizing: border-box;
+}
+
 .rules-v2 > .px-card {
-  gap: .72rem;
+  width: 100%;
+  gap: .62rem;
   min-width: 0;
+  max-width: 100%;
   border-color: rgba(143, 217, 255, 0.24);
+  padding: .85rem;
 }
 
 .rules-v2__hero {
@@ -570,8 +578,9 @@ body::before, body::after { z-index: 0; }
 .rules-v2__subtitle {
   margin: 0;
   max-width: 54ch;
-  line-height: 1.5;
+  line-height: 1.45;
   color: rgba(227, 247, 255, 0.84);
+  word-break: break-word;
 }
 
 .rules-v2__alert {
@@ -604,20 +613,7 @@ body::before, body::after { z-index: 0; }
 }
 
 .rules-v2__section {
-  gap: .68rem;
-}
-
-.rules-v2__section-head {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-}
-
-.rules-v2__section-icon {
-  width: 1.4rem;
-  text-align: center;
-  flex: 0 0 auto;
-  opacity: .92;
+  gap: .56rem;
 }
 
 .rules-v2__section .px-card__title {
@@ -628,8 +624,9 @@ body::before, body::after { z-index: 0; }
 .rules-v2__section-intro {
   margin: 0;
   max-width: 58ch;
-  line-height: 1.5;
+  line-height: 1.4;
   color: rgba(227, 247, 255, 0.8);
+  word-break: break-word;
 }
 
 .rules-v2__list,
@@ -642,14 +639,15 @@ body::before, body::after { z-index: 0; }
 }
 
 .rules-v2__list {
-  gap: .34rem;
+  gap: 0;
 }
 
 .rules-v2__list li {
   position: relative;
   border-bottom: 1px solid rgba(143, 217, 255, 0.14);
-  padding: .42rem 0 .42rem 1rem;
+  padding: .48rem 0 .48rem 1rem;
   line-height: 1.45;
+  word-break: break-word;
 }
 
 .rules-v2__list li::before {
@@ -665,23 +663,33 @@ body::before, body::after { z-index: 0; }
 }
 
 .rules-v2__score-list {
-  gap: .4rem;
+  gap: 0;
 }
 
 .rules-v2__score-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: .62rem;
+  gap: .5rem;
   align-items: center;
-  border: 1px solid rgba(143, 217, 255, 0.18);
-  background: rgba(7, 12, 22, 0.78);
-  border-radius: 8px;
-  padding: .44rem .56rem;
+  border-bottom: 1px solid rgba(143, 217, 255, 0.14);
+  padding: .5rem 0;
 }
 
 .rules-v2__score-event {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
   min-width: 0;
   line-height: 1.38;
+  word-break: break-word;
+}
+
+.rules-v2__score-event::after {
+  content: '';
+  flex: 1 1 auto;
+  min-width: .8rem;
+  border-bottom: 1px dotted rgba(143, 217, 255, 0.25);
+  transform: translateY(0.1rem);
 }
 
 .rules-v2__score-value {
@@ -689,8 +697,8 @@ body::before, body::after { z-index: 0; }
   font-size: .84rem;
   letter-spacing: .02em;
   color: #b8ff2f;
-  border: 1px solid rgba(183, 255, 42, 0.5);
-  border-radius: 999px;
+  border: 1px solid rgba(183, 255, 42, 0.42);
+  border-radius: 10px;
   padding: .08rem .44rem;
   background: rgba(113, 154, 33, 0.16);
   white-space: nowrap;
@@ -709,7 +717,7 @@ body::before, body::after { z-index: 0; }
 }
 
 .rules-v2__rank-list {
-  gap: .42rem;
+  gap: 0;
 }
 
 .rules-v2__rank-item {
@@ -718,10 +726,8 @@ body::before, body::after { z-index: 0; }
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: .5rem;
-  border: 1px solid rgba(143, 217, 255, 0.2);
-  background: rgba(7, 12, 22, 0.78);
-  border-radius: 8px;
-  padding: .46rem .56rem;
+  border-bottom: 1px solid rgba(143, 217, 255, 0.14);
+  padding: .5rem 0;
 }
 
 .rules-v2__rank-dot {
@@ -740,6 +746,7 @@ body::before, body::after { z-index: 0; }
 
 .rules-v2__rank-name {
   line-height: 1.35;
+  word-break: break-word;
 }
 
 .rules-v2__rank-range {
@@ -749,7 +756,7 @@ body::before, body::after { z-index: 0; }
 
 .rules-v2__rank-penalty {
   border: 1px solid rgba(255, 138, 113, 0.45);
-  border-radius: 999px;
+  border-radius: 10px;
   padding: 0 .38rem;
   font-family: var(--font-mono);
   font-size: .72rem;
@@ -771,7 +778,7 @@ body::before, body::after { z-index: 0; }
   }
 
   .rules-v2 > .px-card {
-    padding: .72rem;
+    padding: .8rem;
   }
 }
 
@@ -792,6 +799,20 @@ body::before, body::after { z-index: 0; }
   .rules-v2__list li,
   .rules-v2__rank-name {
     font-size: .92rem;
+  }
+
+  .rules-v2__score-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: .3rem;
+  }
+
+  .rules-v2__score-event::after {
+    display: none;
+  }
+
+  .rules-v2__score-value {
+    justify-self: start;
   }
 
   .rules-v2__score-value {

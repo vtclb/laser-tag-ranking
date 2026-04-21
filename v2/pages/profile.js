@@ -1,8 +1,17 @@
-import { buildPlayerCareer, getCurrentLeagueLiveStats, getCurrentSeason, getPlayerSeasonLogs, safeErrorMessage } from '../core/dataHub.js';
+import {
+  buildPlayerCareer,
+  getCurrentLeagueLiveStats,
+  getCurrentSeason,
+  getPlayerSeasonLogs,
+  getSeasonsList,
+  safeErrorMessage
+} from '../core/dataHub.js';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
 
 const placeholder = '../assets/default-avatar.svg';
+const RANK_ORDER = ['F', 'E', 'D', 'C', 'B', 'A', 'S'];
+const RANK_MIN_POINTS = { F: 0, E: 200, D: 400, C: 600, B: 800, A: 1000, S: 1200 };
 
 function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
 function val(v, fallback = '—') {
@@ -21,10 +30,6 @@ function winnerText(winner = '') {
   if (winner === 'tie') return 'Нічия';
   if (!winner) return '—';
   return winner;
-}
-
-function seasonTabLabel(label = '') {
-  return String(label || '').toUpperCase();
 }
 
 function buildHash(route, params = {}) {
@@ -55,12 +60,89 @@ function rankClass(rank = 'F') {
   return `rank-${String(rank || 'F').toLowerCase()}`;
 }
 
-function metricCard({ label, value, accent = false, mono = false }) {
-  return `<article class="profile-metric-card ${accent ? 'is-accent' : ''} ${mono ? 'is-mono' : ''}"><strong class="profile-metric-card__value">${esc(value)}</strong><span class="profile-metric-card__label">${esc(label)}</span></article>`;
+function wrTone(winRate) {
+  const wr = Number(winRate);
+  if (!Number.isFinite(wr)) return 'is-neutral';
+  if (wr > 60) return 'is-good';
+  if (wr >= 45) return 'is-mid';
+  return 'is-bad';
 }
 
-function metricsGrid(items = [], classes = '') {
-  return `<div class="profile-metrics-grid ${classes}">${items.map(metricCard).join('')}</div>`;
+function deltaTone(delta) {
+  const n = Number(delta);
+  if (!Number.isFinite(n) || n === 0) return 'is-neutral';
+  return n > 0 ? 'is-positive' : 'is-negative';
+}
+
+function formatSeasonTitleUA(raw = '') {
+  const value = String(raw || '').trim();
+  if (!value) return '—';
+
+  const known = {
+    spring: 'Весна',
+    summer: 'Літо',
+    autumn: 'Осінь',
+    fall: 'Осінь',
+    winter: 'Зима'
+  };
+
+  const lower = value.toLowerCase().replace(/[–—]/g, '-').replace(/\//g, '-').replace(/\s+/g, '_');
+  const direct = Object.keys(known).find((key) => lower.startsWith(key));
+  if (direct) {
+    const years = lower.match(/(20\d{2})(?:[-_](20\d{2}|\d{2}))?/);
+    if (years) {
+      const y1 = years[1];
+      const y2 = years[2];
+      if (y2) {
+        const fullY2 = y2.length === 2 ? `${String(y1).slice(0, 2)}${y2}` : y2;
+        return `${known[direct]} ${y1}–${fullY2}`;
+      }
+      return `${known[direct]} ${y1}`;
+    }
+  }
+
+  return value
+    .replace(/summer/ig, 'Літо')
+    .replace(/autumn/ig, 'Осінь')
+    .replace(/fall/ig, 'Осінь')
+    .replace(/winter/ig, 'Зима')
+    .replace(/spring/ig, 'Весна')
+    .replace(/[_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getRankProgress(points, rankLetter) {
+  const rank = String(rankLetter || 'F').toUpperCase();
+  const index = RANK_ORDER.indexOf(rank);
+  const currentMin = RANK_MIN_POINTS[rank] ?? 0;
+
+  if (!Number.isFinite(Number(points))) {
+    return { percent: 0, currentMin, nextMin: null, remain: null, nextRank: null, isMax: rank === 'S' };
+  }
+
+  if (index === -1 || rank === 'S') {
+    return { percent: 100, currentMin, nextMin: null, remain: 0, nextRank: null, isMax: true };
+  }
+
+  const nextRank = RANK_ORDER[index + 1];
+  const nextMin = RANK_MIN_POINTS[nextRank];
+  const value = Number(points);
+  const span = Math.max(1, nextMin - currentMin);
+  const percent = Math.max(0, Math.min(100, ((value - currentMin) / span) * 100));
+
+  return {
+    percent,
+    currentMin,
+    nextMin,
+    remain: Math.max(0, nextMin - value),
+    nextRank,
+    isMax: false
+  };
+}
+
+function metricMini({ label, value, tone = '' }) {
+  return `<article class="profile-mini-card ${tone}"><strong>${esc(value)}</strong><span>${esc(label)}</span></article>`;
 }
 
 function renderCareerHighlights(highlights = {}) {
@@ -71,55 +153,94 @@ function renderCareerHighlights(highlights = {}) {
   const mostActive = highlights.mostActiveSeason;
   const mvpRecord = highlights.bestMvpSeason;
 
-  if (bestPoints?.seasonTitle && Number.isFinite(bestPoints.ratingEnd)) cards.push({ label: 'BEST SEASON', value: `${bestPoints.seasonTitle} • ${bestPoints.ratingEnd}` });
-  if (biggestDelta?.seasonTitle && Number.isFinite(biggestDelta.ratingDelta)) cards.push({ label: 'BIGGEST GROWTH', value: `${biggestDelta.seasonTitle} • ${signed(biggestDelta.ratingDelta)}` });
-  if (bestWr?.seasonTitle && Number.isFinite(bestWr.winrate)) cards.push({ label: 'BEST WR', value: `${bestWr.seasonTitle} • ${bestWr.winrate.toFixed(1)}%` });
-  if (mostActive?.seasonTitle && Number.isFinite(mostActive.matches)) cards.push({ label: 'MOST ACTIVE', value: `${mostActive.seasonTitle} • ${mostActive.matches}` });
-  if (mvpRecord?.seasonTitle && Number.isFinite(mvpRecord.mvpTotal)) cards.push({ label: 'MVP RECORD', value: `${mvpRecord.seasonTitle} • ${mvpRecord.mvpTotal}` });
+  if (bestPoints?.seasonTitle && Number.isFinite(bestPoints.ratingEnd)) cards.push({ icon: '🏆', label: 'Найкращий сезон', value: `${formatSeasonTitleUA(bestPoints.seasonTitle)} • ${bestPoints.ratingEnd}` });
+  if (biggestDelta?.seasonTitle && Number.isFinite(biggestDelta.ratingDelta)) cards.push({ icon: '📈', label: 'Найбільший прогрес', value: `${formatSeasonTitleUA(biggestDelta.seasonTitle)} • ${signed(biggestDelta.ratingDelta)}` });
+  if (bestWr?.seasonTitle && Number.isFinite(bestWr.winrate)) cards.push({ icon: '🎯', label: 'Найкращий WR', value: `${formatSeasonTitleUA(bestWr.seasonTitle)} • ${bestWr.winrate.toFixed(1)}%` });
+  if (mostActive?.seasonTitle && Number.isFinite(mostActive.matches)) cards.push({ icon: '🔥', label: 'Найбільша активність', value: `${formatSeasonTitleUA(mostActive.seasonTitle)} • ${mostActive.matches} ігор` });
+  if (mvpRecord?.seasonTitle && Number.isFinite(mvpRecord.mvpTotal)) cards.push({ icon: '⭐', label: 'Рекорд MVP', value: `${formatSeasonTitleUA(mvpRecord.seasonTitle)} • ${mvpRecord.mvpTotal}` });
 
   if (!cards.length) return '';
-  return `<section class="px-card profile-section"><h2 class="profile-section__title">Відзнаки кар'єри</h2><div class="profile-highlight-grid">${cards.map((item) => `<article class="profile-highlight-card"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></article>`).join('')}</div></section>`;
+  return `<section class="px-card profile-section profile-achievements"><h2 class="profile-section__title">Відзнаки кар'єри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement-card"><div class="profile-achievement-card__head"><span class="profile-achievement-card__icon">${item.icon}</span><strong>${esc(item.label)}</strong></div><p>${esc(item.value)}</p></article>`).join('')}</div></section>`;
 }
 
-function renderCurrentSummary({ league, livePlayer, currentSeason }) {
-  const currentRank = String(livePlayer?.rankLetter || livePlayer?.rankText || 'F').toUpperCase();
+function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNick, currentRank, topSeason }) {
+  const points = Number(livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points);
+  const place = Number(livePlayer?.place ?? topSeason?.place ?? topSeason?.finalPlace);
+  const progress = getRankProgress(points, currentRank);
+  const seasonLabel = formatSeasonTitleUA(currentSeason?.uiLabel || topSeason?.seasonTitle || 'Поточний сезон');
+  const leagueLabel = leagueLabelUA(profileLeagueContext);
+
+  return `
+    <article class="px-card profile-hero ${rankClass(currentRank)}">
+      <div class="profile-avatar-frame ${rankClass(currentRank)}">
+        <img src="${esc(topSeason?.avatar || livePlayer?.avatarUrl || placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
+      </div>
+      <div class="profile-hero__main">
+        <div class="profile-hero__head">
+          <h1>${esc(displayNick)}</h1>
+          <span class="profile-rank-badge ${rankClass(currentRank)}">${esc(currentRank)}</span>
+        </div>
+        <p class="profile-hero__meta">${esc(leagueLabel)} • ${esc(seasonLabel)}</p>
+        <div class="profile-hero__badges">
+          <span class="profile-place-badge">${Number.isFinite(place) ? `#${place}` : '—'}</span>
+          <span class="profile-subtle-badge">Ранг ${esc(currentRank)}</span>
+        </div>
+        <div class="profile-rank-progress-wrap">
+          <div class="profile-rank-progress__labels">
+            <span>Прогрес рангу</span>
+            <strong>${progress.isMax ? 'Максимальний ранг' : `${progress.percent.toFixed(0)}% до ${progress.nextRank}`}</strong>
+          </div>
+          <div class="profile-rank-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.percent)}">
+            <span style="width:${progress.percent.toFixed(1)}%"></span>
+          </div>
+          <p class="profile-note">${progress.isMax ? 'Досягнуто найвищий ранг S.' : `Залишилось ${val(progress.remain, '—')} очок до рангу ${val(progress.nextRank, '—')}.`}</p>
+        </div>
+      </div>
+      <div class="profile-hero__actions">
+        <a class="btn btn--secondary" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">Назад до ліги</a>
+      </div>
+    </article>
+  `;
+}
+
+function renderCompactStats({ livePlayer, topSeason }) {
+  const wr = livePlayer?.winRate ?? topSeason?.winRate ?? topSeason?.winrate;
+  const delta = livePlayer?.delta ?? topSeason?.delta ?? topSeason?.ratingDelta;
   return `
     <section class="px-card profile-section">
-      <h2 class="profile-section__title">Поточний стан</h2>
-      ${metricsGrid([
-    { label: 'POINTS', value: val(livePlayer?.points), accent: true, mono: true },
-    { label: 'RANK', value: currentRank, accent: true },
-    { label: 'PLACE', value: Number.isFinite(Number(livePlayer?.place)) ? `#${livePlayer.place}` : '—', mono: true },
-    { label: 'WR', value: pct(livePlayer?.winRate), accent: true, mono: true },
-    { label: 'MVP', value: val(livePlayer?.mvpTotal), accent: true, mono: true },
-    { label: 'DELTA', value: signed(livePlayer?.delta), accent: true, mono: true },
-    { label: 'MATCHES', value: val(livePlayer?.matches), mono: true },
-    { label: 'BATTLES', value: val(livePlayer?.battles), mono: true },
-    { label: 'LEAGUE', value: leagueLabelUA(league) },
-    { label: 'SEASON', value: currentSeason?.uiLabel || '—' }
-  ])}
+      <h2 class="profile-section__title">Ключові метрики</h2>
+      <div class="profile-mini-grid">
+        ${metricMini({ label: 'Очки', value: val(livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points), tone: 'is-accent' })}
+        ${metricMini({ label: 'WR', value: pct(wr), tone: wrTone(wr) })}
+        ${metricMini({ label: 'MVP', value: val(livePlayer?.mvpTotal ?? topSeason?.mvpTotal) })}
+        ${metricMini({ label: 'Δ рейтингу', value: signed(delta), tone: deltaTone(delta) })}
+      </div>
     </section>
   `;
 }
 
-function renderCareerSummary(profile) {
-  const allTime = profile?.allTime || {};
+function renderGameAnalysis({ livePlayer, topSeason }) {
+  const wins = Number(livePlayer?.wins ?? topSeason?.wins);
+  const losses = Number(livePlayer?.losses ?? topSeason?.losses);
+  const draws = Number(livePlayer?.draws ?? topSeason?.draws);
+  const wr = Number(livePlayer?.winRate ?? topSeason?.winRate ?? topSeason?.winrate);
+  const total = [wins, losses, draws].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+
   return `
-    <section class="px-card profile-section">
-      <h2 class="profile-section__title">Загальна статистика</h2>
-      ${metricsGrid([
-    { label: 'SEASONS', value: val(allTime.seasonsPlayed), mono: true },
-    { label: 'MATCHES', value: val(allTime.totalMatches ?? allTime.matches), accent: true, mono: true },
-    { label: 'ROUNDS', value: val(allTime.totalRounds ?? allTime.rounds), mono: true },
-    { label: 'TOTAL MVP', value: val(allTime.totalMvp ?? allTime.mvpTotal), accent: true, mono: true },
-    { label: 'CAREER WR', value: pct(allTime.careerWR ?? allTime.winrate), accent: true, mono: true },
-    { label: 'PEAK RATING', value: val(allTime.peakRating ?? allTime.peakPoints), accent: true, mono: true },
-    { label: 'CUMULATIVE Δ', value: signed(allTime.cumulativeDelta), accent: true, mono: true },
-    { label: 'BEST RANK', value: val(allTime.bestRank), accent: true },
-    { label: 'WINS', value: val(allTime.totalWins ?? allTime.wins), mono: true },
-    { label: 'LOSSES', value: val(allTime.totalLosses ?? allTime.losses), mono: true },
-    { label: 'DRAWS', value: val(allTime.totalDraws ?? allTime.draws), mono: true }
-  ])}
+    <section class="px-card profile-section profile-analysis">
+      <h2 class="profile-section__title">Аналіз гри</h2>
+      <div class="profile-analysis__row">
+        <div>
+          <p class="profile-analysis__label">Winrate</p>
+          <div class="profile-wr-bar ${wrTone(wr)}"><span style="width:${Number.isFinite(wr) ? Math.max(0, Math.min(100, wr)) : 0}%"></span></div>
+          <strong class="profile-analysis__value">${pct(wr)}</strong>
+        </div>
+        <div class="profile-analysis__compact">
+          <p><span>W / L / D</span><strong>${val(wins)} / ${val(losses)} / ${val(draws)}</strong></p>
+          <p><span>Ігри</span><strong>${val(livePlayer?.matches ?? topSeason?.matches ?? total)}</strong></p>
+          <p><span>Бої</span><strong>${val(livePlayer?.battles ?? topSeason?.rounds)}</strong></p>
+        </div>
+      </div>
     </section>
   `;
 }
@@ -128,7 +249,7 @@ function renderSeasonTabs(container, tabs, selectedId) {
   container.innerHTML = tabs.map((tab) => `
     <button type="button" class="profile-season-tab ${tab.id === selectedId ? 'is-active' : ''}" data-season-id="${esc(tab.id)}">
       <span>${esc(tab.label)}</span>
-      ${tab.current ? '<em>CURRENT</em>' : ''}
+      ${tab.current ? '<em>поточний</em>' : ''}
     </button>
   `).join('');
 }
@@ -137,37 +258,37 @@ function renderSeasonSummary(season, allTime) {
   if (!season || season.id === 'all') {
     return `
       <section class="profile-season-summary">
-        <h3>Усі сезони</h3>
-        <p class="profile-muted">Повний зріз карʼєри по всіх сезонах.</p>
-        ${metricsGrid([
-      { label: 'MATCHES', value: val(allTime.totalMatches ?? allTime.matches), mono: true },
-      { label: 'ROUNDS', value: val(allTime.totalRounds ?? allTime.rounds), mono: true },
-      { label: 'WR', value: pct(allTime.careerWR ?? allTime.winrate), accent: true, mono: true },
-      { label: 'MVP', value: val(allTime.totalMvp ?? allTime.mvpTotal), accent: true, mono: true },
-      { label: 'PEAK', value: val(allTime.peakRating ?? allTime.peakPoints), accent: true, mono: true },
-      { label: 'BEST RANK', value: val(allTime.bestRank), accent: true }
-    ])}
+        <h3>Уся карʼєра</h3>
+        <p class="profile-muted">Зведені показники за всі сезони.</p>
+        <div class="profile-mini-grid">
+          ${metricMini({ label: 'Ігри', value: val(allTime.totalMatches ?? allTime.matches) })}
+          ${metricMini({ label: 'Раунди', value: val(allTime.totalRounds ?? allTime.rounds) })}
+          ${metricMini({ label: 'WR', value: pct(allTime.careerWR ?? allTime.winrate), tone: wrTone(allTime.careerWR ?? allTime.winrate) })}
+          ${metricMini({ label: 'MVP', value: val(allTime.totalMvp ?? allTime.mvpTotal) })}
+          ${metricMini({ label: 'Пік рейтингу', value: val(allTime.peakRating ?? allTime.peakPoints), tone: 'is-accent' })}
+          ${metricMini({ label: 'Найкращий ранг', value: val(allTime.bestRank), tone: 'is-accent' })}
+        </div>
       </section>
     `;
   }
 
+  const seasonWr = season.winRate ?? season.winrate;
+  const seasonDelta = season.delta ?? season.ratingDelta;
+
   return `
       <section class="profile-season-summary">
-        <h3>${esc(season.seasonTitle || season.id)}</h3>
-      <p class="profile-muted">${esc(leagueLabelUA(season.league || 'kids'))}</p>
-      ${metricsGrid([
-    { label: 'RATING START', value: val(season.ratingStart), mono: true },
-    { label: 'RATING END', value: val(season.ratingEnd ?? season.points), accent: true, mono: true },
-    { label: 'DELTA', value: signed(season.delta ?? season.ratingDelta), accent: true, mono: true },
-    { label: 'MATCHES', value: val(season.matches ?? season.games), mono: true },
-    { label: 'WR', value: pct(season.winRate ?? season.winrate), accent: true, mono: true },
-    { label: 'MVP', value: val(season.mvpTotal), accent: true, mono: true },
-    { label: 'PLACE', value: Number.isFinite(Number(season.place ?? season.finalPlace)) ? `#${season.place ?? season.finalPlace}` : '—', mono: true },
-    { label: 'RANK', value: val(season.rank), accent: true, mono: true },
-    { label: 'ROUNDS', value: val(season.rounds), mono: true },
-    { label: 'W/L/D', value: `${val(season.wins)} / ${val(season.losses)} / ${val(season.draws)}`, mono: true }
-  ])}
-    </section>
+        <h3>${esc(formatSeasonTitleUA(season.seasonTitle || season.id))}</h3>
+        <p class="profile-muted">${esc(leagueLabelUA(season.league || 'kids'))}</p>
+        <div class="profile-mini-grid">
+          ${metricMini({ label: 'Старт', value: val(season.ratingStart) })}
+          ${metricMini({ label: 'Фініш', value: val(season.ratingEnd ?? season.points), tone: 'is-accent' })}
+          ${metricMini({ label: 'Δ', value: signed(seasonDelta), tone: deltaTone(seasonDelta) })}
+          ${metricMini({ label: 'WR', value: pct(seasonWr), tone: wrTone(seasonWr) })}
+          ${metricMini({ label: 'Ігри', value: val(season.matches ?? season.games) })}
+          ${metricMini({ label: 'MVP', value: val(season.mvpTotal) })}
+        </div>
+        <div class="profile-wld-pill">W / L / D: <strong>${val(season.wins)} / ${val(season.losses)} / ${val(season.draws)}</strong></div>
+      </section>
   `;
 }
 
@@ -177,7 +298,7 @@ function renderLogs(logData) {
   }
 
   return `<details class="profile-logs-wrap">
-    <summary>Match logs (${logData.groups.length} днів)</summary>
+    <summary>Матч-логи (${logData.groups.length} днів)</summary>
     ${logData.groups.map((group) => `
       <article class="profile-log-day">
         <header class="profile-log-day__head">
@@ -189,9 +310,9 @@ function renderLogs(logData) {
               <li class="profile-log-item">
                 <div class="profile-log-item__teams">${entry.teams.map((team, idx) => `<span>К${idx + 1}: ${esc(team.join(', ') || '—')}</span>`).join('')}</div>
                 <div class="profile-log-item__meta">
-                  <span>Winner: ${esc(winnerText(entry.winnerLabel))}</span>
+                  <span>Переможець: ${esc(winnerText(entry.winnerLabel))}</span>
                   <span>MVP: ${esc(entry.mvp1 || '—')} / ${esc(entry.mvp2 || '—')} / ${esc(entry.mvp3 || '—')}</span>
-                  <span>Rounds: ${esc(val(entry.rounds))}</span>
+                  <span>Раунди: ${esc(val(entry.rounds))}</span>
                 </div>
               </li>
             `).join('')}</ul>`
@@ -199,6 +320,14 @@ function renderLogs(logData) {
       </article>
     `).join('')}
   </details>`;
+}
+
+function sortTabsByChronology(tabs = []) {
+  return [...tabs].sort((a, b) => {
+    const aTime = Number.isFinite(Date.parse(a.dateFrom || '')) ? Date.parse(a.dateFrom) : 0;
+    const bTime = Number.isFinite(Date.parse(b.dateFrom || '')) ? Date.parse(b.dateFrom) : 0;
+    return aTime - bTime;
+  });
 }
 
 export async function initProfilePage(params = {}) {
@@ -214,10 +343,11 @@ export async function initProfilePage(params = {}) {
   renderSkeleton(root);
 
   try {
-    const [profile, liveStats, currentSeason] = await Promise.all([
+    const [profile, liveStats, currentSeason, seasonOptions] = await Promise.all([
       buildPlayerCareer(nick, { profileLeagueContext: routeLeagueContext }),
       getCurrentLeagueLiveStats(league),
-      getCurrentSeason()
+      getCurrentSeason(),
+      getSeasonsList()
     ]);
 
     const normalizedNick = normalizePlayerKey(nick);
@@ -238,46 +368,18 @@ export async function initProfilePage(params = {}) {
     const displayNick = livePlayer?.nickname || profile?.nick || nick;
     const seasonRows = profile?.seasons || [];
     const seasonRowsById = new Map(seasonRows.map((row) => [row.seasonId, row]));
-    const currentRank = String(livePlayer?.rankLetter || seasonRows[0]?.rank || profile?.allTime?.bestRank || 'F').toUpperCase();
-    const statusLine = [
-      livePlayer?.place ? `#${livePlayer.place}` : '—',
-      currentSeason?.uiLabel || 'Поточний сезон',
-      leagueLabelUA(profileLeagueContext)
-    ].join(' • ');
+    const topSeason = seasonRows[0] || {};
+    const currentRank = String(livePlayer?.rankLetter || topSeason?.rank || profile?.allTime?.bestRank || 'F').toUpperCase();
 
     root.innerHTML = `
       <section class="profile-page-v2">
-        <article class="px-card profile-hero ${rankClass(currentRank)}">
-          <div class="profile-hero__left">
-            <div class="profile-avatar-frame ${rankClass(currentRank)}">
-              <img src="${esc(profile?.avatar || livePlayer?.avatarUrl || placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
-            </div>
-            <span class="profile-rank-badge ${rankClass(currentRank)}">${esc(currentRank)}</span>
-          </div>
-          <div class="profile-hero__main">
-            <div class="profile-hero__head">
-              <h1>${esc(displayNick)}</h1>
-            </div>
-            <p class="profile-hero__meta">${esc(statusLine)}</p>
-            ${metricsGrid([
-      { label: 'POINTS', value: val(livePlayer?.points ?? seasonRows[0]?.ratingEnd ?? seasonRows[0]?.points), accent: true, mono: true },
-      { label: 'RANK', value: currentRank, accent: true },
-      { label: 'WR', value: pct(livePlayer?.winRate ?? seasonRows[0]?.winRate ?? seasonRows[0]?.winrate), accent: true, mono: true },
-      { label: 'MVP', value: val(livePlayer?.mvpTotal ?? seasonRows[0]?.mvpTotal), accent: true, mono: true },
-      { label: 'DELTA', value: signed(livePlayer?.delta ?? seasonRows[0]?.delta ?? seasonRows[0]?.ratingDelta), accent: true, mono: true }
-    ], 'is-hero')}
-          </div>
-          <div class="profile-hero__actions">
-            <a class="btn btn--secondary" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">Назад до ліги</a>
-          </div>
-        </article>
-
-        ${renderCurrentSummary({ league: profileLeagueContext, livePlayer: livePlayer || {}, currentSeason })}
-        ${renderCareerSummary(profile || { allTime: {} })}
+        ${renderHero({ profileLeagueContext, livePlayer: livePlayer || {}, currentSeason, displayNick, currentRank, topSeason })}
+        ${renderCompactStats({ livePlayer: livePlayer || {}, topSeason })}
+        ${renderGameAnalysis({ livePlayer: livePlayer || {}, topSeason })}
         ${renderCareerHighlights(profile?.highlights || {})}
 
         <section class="px-card profile-section">
-          <h2 class="profile-section__title">Вибір сезону</h2>
+          <h2 class="profile-section__title">Сезони</h2>
           <div class="profile-season-tabs" id="seasonTabs"></div>
           <div id="seasonSummaryHost"></div>
           <div id="seasonLogsHost"></div>
@@ -288,13 +390,21 @@ export async function initProfilePage(params = {}) {
     const seasonTabsEl = root.querySelector('#seasonTabs');
     const summaryEl = root.querySelector('#seasonSummaryHost');
     const logsEl = root.querySelector('#seasonLogsHost');
-    const tabs = [{ id: 'all', label: 'ALL', current: false }]
-      .concat(
-        seasonRows
-          .map((season) => ({ id: season.seasonId, label: seasonTabLabel(season.seasonTitle || season.seasonId), current: season.seasonId === currentSeason?.id }))
-      );
 
-    const state = { seasonId: 'all' };
+    const available = seasonRows
+      .map((season) => {
+        const meta = (seasonOptions || []).find((item) => item.id === season.seasonId);
+        return {
+          id: season.seasonId,
+          label: formatSeasonTitleUA(meta?.title || season.seasonTitle || season.seasonId),
+          current: season.seasonId === currentSeason?.id,
+          dateFrom: meta?.dateFrom
+        };
+      });
+
+    const tabs = [{ id: 'all', label: 'Усі сезони', current: false }].concat(sortTabsByChronology(available));
+
+    const state = { seasonId: currentSeason?.id && seasonRowsById.has(currentSeason.id) ? currentSeason.id : 'all' };
 
     const renderState = async () => {
       renderSeasonTabs(seasonTabsEl, tabs, state.seasonId);

@@ -7523,3 +7523,227 @@ body.theme-game .table-wrap > table {
     padding: 6px 2px 8px !important;
   }
 }
+
+/* Rules V2 clean layout: isolate from decorative/pill global overrides */
+body.theme-game .rules-v2.rules-v2--clean,
+.rules-v2.rules-v2--clean {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  display: grid;
+  gap: .75rem;
+}
+
+body.theme-game .rules-v2.rules-v2--clean > .px-card,
+.rules-v2.rules-v2--clean > .px-card {
+  margin: 0;
+  padding: .9rem;
+  border: 1px solid rgba(146, 176, 223, .24);
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, rgba(11, 18, 31, .92), rgba(8, 14, 25, .9));
+  box-shadow: none;
+}
+
+body.theme-game .rules-v2.rules-v2--clean > .px-card::before,
+body.theme-game .rules-v2.rules-v2--clean > .px-card::after,
+.rules-v2.rules-v2--clean > .px-card::before,
+.rules-v2.rules-v2--clean > .px-card::after {
+  content: none !important;
+}
+
+.rules-v2.rules-v2--clean :is(.px-card__title, .px-card__text) {
+  margin: 0;
+  text-align: left !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.rules-v2--clean .rules-v2__title {
+  margin: 0;
+  font-size: clamp(1.28rem, 3.2vw, 1.62rem);
+  font-weight: 800;
+  letter-spacing: .01em;
+  line-height: 1.2;
+}
+
+.rules-v2--clean .rules-v2__intro {
+  margin: .38rem 0 0;
+  color: var(--muted);
+  line-height: 1.48;
+}
+
+.rules-v2--clean .rules-v2__alert {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .58rem;
+  align-items: start;
+}
+
+.rules-v2--clean .rules-v2__alert-icon {
+  width: 1.35rem;
+  text-align: center;
+  line-height: 1.35rem;
+}
+
+.rules-v2--clean .rules-v2__alert-label {
+  margin: 0;
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #ffd98a;
+}
+
+.rules-v2--clean .rules-v2__alert-text {
+  margin: .12rem 0 0;
+  line-height: 1.45;
+}
+
+.rules-v2--clean .rules-v2__section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.28;
+}
+
+.rules-v2--clean .rules-v2__section-intro {
+  margin: .34rem 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.rules-v2--clean .rules-v2__list,
+.rules-v2--clean .rules-v2__score-list,
+.rules-v2--clean .rules-v2__rank-list {
+  list-style: none;
+  margin: .62rem 0 0;
+  padding: 0;
+}
+
+.rules-v2--clean .rules-v2__list-item {
+  margin: 0;
+  padding: .5rem 0 .5rem 1.15rem;
+  position: relative;
+  line-height: 1.5;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.rules-v2--clean .rules-v2__list-item::before {
+  content: '';
+  position: absolute;
+  left: .16rem;
+  top: 1.04rem;
+  width: .36rem;
+  height: .36rem;
+  border-radius: 50%;
+  background: rgba(49, 208, 255, .9);
+}
+
+.rules-v2--clean .rules-v2__score-row,
+.rules-v2--clean .rules-v2__rank-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .6rem;
+  padding: .5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.rules-v2--clean .rules-v2__score-event {
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.rules-v2--clean .rules-v2__score-badge,
+.rules-v2--clean .rules-v2__rank-value {
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, .2);
+  padding: .17rem .48rem;
+  font-size: .82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rules-v2--clean .rules-v2__score-badge--plus {
+  color: #7cff72;
+  border-color: rgba(124, 255, 114, .48);
+  background: rgba(124, 255, 114, .12);
+}
+
+.rules-v2--clean .rules-v2__score-badge--minus,
+.rules-v2--clean .rules-v2__rank-value {
+  color: #ff8f8f;
+  border-color: rgba(255, 143, 143, .46);
+  background: rgba(255, 143, 143, .12);
+}
+
+.rules-v2--clean .rules-v2__score-badge--neutral {
+  color: #d7e4ff;
+  border-color: rgba(180, 196, 230, .45);
+  background: rgba(180, 196, 230, .12);
+}
+
+.rules-v2--clean .rules-v2__rank-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.rules-v2--clean .rules-v2__rank-dot {
+  width: .62rem;
+  height: .62rem;
+  margin-top: .38rem;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .16);
+}
+
+.rules-v2--clean .rules-v2__rank-main {
+  min-width: 0;
+}
+
+.rules-v2--clean .rules-v2__rank-name {
+  display: block;
+  line-height: 1.35;
+}
+
+.rules-v2--clean .rules-v2__rank-meta {
+  margin: .18rem 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.42;
+}
+
+.rules-v2--clean .rules-v2__rank-row--F { color: var(--rank-f); }
+.rules-v2--clean .rules-v2__rank-row--E { color: var(--rank-e); }
+.rules-v2--clean .rules-v2__rank-row--D { color: var(--rank-d); }
+.rules-v2--clean .rules-v2__rank-row--C { color: var(--rank-c); }
+.rules-v2--clean .rules-v2__rank-row--B { color: var(--rank-b); }
+.rules-v2--clean .rules-v2__rank-row--A { color: var(--rank-a); }
+.rules-v2--clean .rules-v2__rank-row--S { color: var(--rank-s); }
+
+@media (max-width: 640px) {
+  body.theme-game .rules-v2.rules-v2--clean > .px-card,
+  .rules-v2.rules-v2--clean > .px-card {
+    padding: .78rem;
+  }
+
+  .rules-v2--clean .rules-v2__title {
+    font-size: 1.2rem;
+  }
+
+  .rules-v2--clean .rules-v2__section-title {
+    font-size: .98rem;
+  }
+
+  .rules-v2--clean .rules-v2__rank-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .5rem;
+  }
+
+  .rules-v2--clean .rules-v2__rank-value {
+    margin-left: 1.12rem;
+    margin-top: .2rem;
+    justify-self: start;
+  }
+}

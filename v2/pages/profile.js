@@ -245,32 +245,39 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
 
   return `
     <article class="px-card profile-hero ${rankClass(currentRank)}">
-      <div class="profile-avatar-frame ${rankClass(currentRank)}">
-        <img src="${esc(topSeason?.avatar || livePlayer?.avatarUrl || placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
-      </div>
-      <div class="profile-hero__main">
-        <div class="profile-hero__head">
-          <h1>${esc(displayNick)}</h1>
-          <span class="profile-rank-badge ${rankClass(currentRank)}">${esc(currentRank)}</span>
-        </div>
-        <p class="profile-hero__meta">${esc(leagueLabel)} • ${esc(seasonLabel)}</p>
-        <div class="profile-hero__badges">
-          <span class="profile-place-badge">${Number.isFinite(place) ? `Місце #${place}` : 'Місце —'}</span>
-          <span class="profile-subtle-badge">Ліга: ${esc(leagueLabel)}</span>
-        </div>
-        <div class="profile-rank-progress-wrap">
-          <div class="profile-rank-progress__labels">
-            <span>Прогрес рангу</span>
-            <strong>${progress.isMax ? 'Максимальний ранг' : `${progress.percent.toFixed(0)}% до ${progress.nextRank}`}</strong>
-          </div>
-          <div class="profile-rank-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.percent)}">
-            <span style="width:${progress.percent.toFixed(1)}%"></span>
-          </div>
-          <p class="profile-note">${progress.isMax ? 'Максимальний ранг досягнуто' : `Залишилось ${val(progress.remain, '—')} очок до рангу ${val(progress.nextRank, '—')}.`}</p>
+      <div class="profile-hero__avatar-card">
+        <div class="profile-avatar-frame ${rankClass(currentRank)}">
+          <img src="${esc(topSeason?.avatar || livePlayer?.avatarUrl || placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
         </div>
       </div>
-      <div class="profile-hero__actions">
-        <a class="btn btn--secondary" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">Назад до ліги</a>
+      <div class="profile-hero__info-card">
+        <div class="profile-hero__main">
+          <div class="profile-hero__head">
+            <h1>${esc(displayNick)}</h1>
+          </div>
+          <p class="profile-hero__meta">${esc(leagueLabel)} • ${esc(seasonLabel)}</p>
+          <div class="profile-hero__badges">
+            <span class="profile-place-badge">${Number.isFinite(place) ? `Місце #${place}` : 'Місце —'}</span>
+            <span class="profile-subtle-badge">Ліга: ${esc(leagueLabel)}</span>
+          </div>
+          <div class="profile-hero__actions">
+            <a class="btn btn--secondary" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">Назад до ліги</a>
+          </div>
+        </div>
+      </div>
+      <div class="profile-rank-card ${rankClass(currentRank)}">
+        <p class="profile-rank-card__label">Ранг</p>
+        <strong class="profile-rank-card__value">${esc(currentRank)}</strong>
+      </div>
+      <div class="profile-rank-progress-wrap">
+        <div class="profile-rank-progress__labels">
+          <span>Прогрес рангу</span>
+          <strong>${progress.isMax ? 'Максимальний ранг' : `${progress.percent.toFixed(0)}% до ${progress.nextRank}`}</strong>
+        </div>
+        <div class="profile-rank-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.percent)}">
+          <span style="width:${progress.percent.toFixed(1)}%"></span>
+        </div>
+        <p class="profile-note">${progress.isMax ? 'Максимальний ранг досягнуто' : `Залишилось ${val(progress.remain, '—')} очок до рангу ${val(progress.nextRank, '—')}.`}</p>
       </div>
     </article>
   `;
@@ -533,17 +540,28 @@ export async function initProfilePage(params = {}) {
         };
       });
 
-    const tabs = [{ id: 'all', label: 'Усі сезони', current: false }].concat(sortTabsByChronology(available));
+    const labelOrder = new Map([
+      ['Літо 2025', 0],
+      ['Осінь 2025', 1],
+      ['Зима 2025–2026', 2],
+      ['Весна 2026', 3]
+    ]);
 
-    const state = { seasonId: currentSeason?.id && seasonRowsById.has(currentSeason.id) ? currentSeason.id : 'all' };
+    const tabs = sortTabsByChronology(available).sort((a, b) => (labelOrder.get(a.label) ?? 99) - (labelOrder.get(b.label) ?? 99));
+    const fallbackSeasonId = tabs[0]?.id || null;
+    const state = {
+      seasonId: currentSeason?.id && seasonRowsById.has(currentSeason.id)
+        ? currentSeason.id
+        : fallbackSeasonId
+    };
 
     const renderState = async () => {
       renderSeasonTabs(seasonTabsEl, tabs, state.seasonId);
-      const selectedSeason = state.seasonId === 'all' ? { id: 'all' } : seasonRowsById.get(state.seasonId);
+      const selectedSeason = seasonRowsById.get(state.seasonId);
       summaryEl.innerHTML = renderSeasonSummary(selectedSeason, profile?.allTime || {});
 
-      if (state.seasonId === 'all') {
-        logsEl.innerHTML = '<section class="profile-log-empty"><h3>Логи сезону</h3><p>Оберіть сезон у селекторі, щоб подивитися детальні матчі.</p></section>';
+      if (!state.seasonId) {
+        logsEl.innerHTML = '<section class="profile-log-empty"><h3>Логи сезону</h3><p>Немає доступних сезонів для цього гравця.</p></section>';
         return;
       }
 

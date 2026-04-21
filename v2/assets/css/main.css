@@ -5090,67 +5090,62 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 
 /* Player Profile */
 .profile-page {
-  --radius: 12px;
-  display: grid;
-  gap: .75rem;
+  --profile-radius: 14px;
+  --profile-border: rgba(152, 208, 255, .2);
+  --profile-card-bg: linear-gradient(180deg, rgba(11, 18, 34, .92), rgba(7, 11, 23, .94));
+  --profile-soft-bg: rgba(10, 16, 30, .84);
+  --profile-accent: #8fd5ff;
+  --profile-success: #78ea8c;
+  --profile-danger: #ff8c8c;
+  --profile-warning: #ffd879;
   width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: clip;
-  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
+.profile-page,
 .profile-page * {
   box-sizing: border-box;
   min-width: 0;
-  border-radius: 0 !important;
 }
 
-.profile-page .btn,
-.profile-page button {
-  border-radius: var(--radius) !important;
-}
-
-.profile-page .px-badge::before {
-  display: none;
+.profile-shell {
+  width: min(100%, 940px);
+  margin: 0 auto;
+  display: grid;
+  gap: .8rem;
 }
 
 .profile-page .px-card,
+.profile-page .chip,
 .profile-page .px-badge {
-  background-image: none !important;
+  border-radius: 12px;
+  box-shadow: none;
+  background-image: none;
 }
 
-.profile-panel {
-  background: rgba(17, 25, 42, .9);
-  border: 1px solid rgba(255, 255, 255, .08);
-  padding: 14px;
-  border-radius: 12px !important;
+.profile-page .px-badge::before {
+  display: none !important;
+}
+
+.profile-section {
+  background: var(--profile-card-bg);
+  border: 1px solid var(--profile-border);
+  border-radius: var(--profile-radius);
+  padding: .9rem;
+  display: grid;
+  gap: .55rem;
 }
 
 .profile-hero,
-.profile-section,
-.profile-season-summary,
-.profile-logs-wrap,
-.profile-log-empty {
-  padding: .75rem !important;
-}
-
-.profile-metric,
-.profile-achievement-card {
-  border-radius: 10px !important;
-}
-
-.profile-hero {
-  border: 1px solid rgba(132, 198, 255, .28);
-  background: linear-gradient(150deg, rgba(16, 28, 44, .96), rgba(8, 14, 26, .96));
-  display: grid;
-  gap: .58rem;
+.profile-season-panel,
+.profile-logs {
+  padding: .9rem;
 }
 
 .profile-hero__back {
   justify-self: start;
-  padding: .32rem .54rem;
-  min-height: 32px;
+  min-height: 34px;
+  border-radius: 10px !important;
 }
 
 .profile-actions {
@@ -5159,19 +5154,20 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 
 .profile-hero__top {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: .55rem;
+  grid-template-columns: 72px minmax(0, 1fr) 88px;
+  gap: .62rem;
   align-items: center;
 }
 
 .profile-avatar-frame {
   width: 72px;
   height: 72px;
-  border: 1px solid rgba(160, 220, 255, .34);
-  background: rgba(7, 13, 25, .9);
+  border: 1px solid rgba(160, 220, 255, .38);
+  background: rgba(7, 13, 25, .92);
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .profile-avatar-frame img {
@@ -5180,9 +5176,9 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   object-fit: cover;
 }
 
-.profile-hero__identity h1 {
+.profile-meta h1 {
   margin: 0;
-  font-size: clamp(1.08rem, 3.5vw, 1.38rem);
+  font-size: clamp(1.08rem, 4vw, 1.45rem);
 }
 
 .profile-hero__meta,
@@ -5190,62 +5186,63 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-note {
   margin: 0;
   color: var(--muted);
-  font-size: .73rem;
+  font-size: .76rem;
 }
 
 .profile-hero__status {
-  margin-top: .32rem;
+  margin-top: .38rem;
   display: flex;
   flex-wrap: wrap;
-  gap: .34rem;
+  gap: .4rem;
 }
 
 .profile-status-badge {
-  border: 1px solid rgba(162, 218, 255, .28);
-  background: rgba(10, 17, 30, .84);
-  font-size: .65rem;
+  border: 1px solid rgba(162, 218, 255, .32);
+  background: rgba(10, 17, 30, .9);
+  font-size: .68rem;
   text-transform: uppercase;
-  letter-spacing: .05em;
-  padding: .2rem .44rem;
+  letter-spacing: .04em;
+  padding: .22rem .5rem;
   color: #c9e8ff;
-  font-family: var(--font-mono);
+  border-radius: 8px;
 }
 
 .profile-status-badge--place {
-  border-color: rgba(189, 255, 72, .5);
-  color: #ddff9c;
+  border-color: rgba(155, 234, 139, .55);
+  color: #bff4af;
 }
 
 .profile-rank-card {
-  border: 1px solid rgba(175, 225, 255, .26);
-  background: rgba(8, 14, 26, .82);
+  border: 1px solid rgba(175, 225, 255, .3);
+  background: rgba(8, 14, 26, .88);
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: .14rem;
-  padding: .44rem;
+  gap: .16rem;
+  padding: .56rem;
+  border-radius: 12px;
 }
 
 .profile-rank-card__label {
   margin: 0;
-  font-size: .62rem;
+  font-size: .6rem;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .profile-rank-card__value {
-  font-size: 1.8rem;
+  font-size: 1.9rem;
   line-height: 1;
   font-family: var(--font-mono);
 }
 
-.profile-rank-progress-wrap {
-  border: 1px solid rgba(166, 220, 255, .22);
-  background: rgba(8, 14, 24, .72);
-  padding: .5rem;
+.profile-progress {
+  background: var(--profile-soft-bg);
+  padding: .62rem;
   display: grid;
-  gap: .3rem;
+  gap: .35rem;
+  border-radius: 12px;
 }
 
 .profile-rank-progress__labels {
@@ -5258,9 +5255,9 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 
 .profile-rank-progress {
   height: 10px;
-  border: 1px solid rgba(174, 225, 255, .24);
   background: rgba(4, 9, 19, .92);
   overflow: hidden;
+  border-radius: 999px;
 }
 
 .profile-rank-progress span {
@@ -5275,8 +5272,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 .profile-section {
-  border: 1px solid rgba(170, 228, 255, .18);
-  background: linear-gradient(180deg, rgba(10, 18, 34, .86), rgba(7, 12, 24, .92));
+  border-color: rgba(170, 228, 255, .18);
 }
 
 .profile-priority-main { border-color: rgba(186, 255, 80, .28); }
@@ -5291,39 +5287,33 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   color: #9fdfff;
 }
 
-.profile-key-grid,
-.profile-stats-grid,
-.profile-mini-grid,
-.profile-season-kpis {
+.profile-metrics-grid,
+.profile-season-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .38rem;
+  gap: .48rem;
 }
 
 .profile-metric {
-  border: 1px solid rgba(152, 212, 255, .14);
-  background: rgba(10, 17, 30, .78);
-  padding: .52rem;
+  border: 1px solid rgba(152, 212, 255, .16);
+  background: rgba(10, 17, 30, .82);
+  padding: .6rem;
   min-height: 62px;
   display: grid;
   align-content: center;
-  gap: .14rem;
-  border-radius: 10px !important;
-}
-
-.profile-metric * {
-  border: none !important;
+  gap: .2rem;
+  border-radius: 12px;
 }
 
 .profile-metric span {
-  font-size: .62rem;
+  font-size: .64rem;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: rgba(187, 206, 225, .86);
 }
 
 .profile-metric strong {
-  font-size: 1.08rem;
+  font-size: 1.16rem;
   line-height: 1.08;
   font-family: var(--font-mono);
 }
@@ -5339,11 +5329,11 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-metric.is-negative strong { color: #ff7f7f; }
 
 .profile-wr-panel {
-  border: 1px solid rgba(161, 220, 255, .24);
-  background: rgba(8, 14, 25, .72);
-  padding: .48rem;
+  background: var(--profile-soft-bg);
+  padding: .62rem;
   display: grid;
-  gap: .28rem;
+  gap: .35rem;
+  border-radius: 12px;
 }
 
 .profile-wr-panel__head {
@@ -5367,10 +5357,10 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 .profile-wr-bar {
-  height: 10px;
-  border: 1px solid rgba(168, 224, 255, .2);
+  height: 12px;
   background: rgba(8, 13, 22, .86);
   overflow: hidden;
+  border-radius: 999px;
 }
 
 .profile-wr-bar span { display: block; height: 100%; }
@@ -5379,29 +5369,26 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-wr-bar.is-bad span { background: linear-gradient(90deg, #ff6d6d, #ff9797); }
 .profile-wr-bar.is-neutral span { background: rgba(145, 208, 246, .45); }
 
-.profile-analysis-row3,
+.profile-analytics-grid,
 .profile-player-type__grid,
-.profile-season-wld-grid,
 .profile-season-career-row {
-  margin-top: .4rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .35rem;
+  gap: .45rem;
 }
 
 .profile-indicator-grid {
-  margin-top: .42rem;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .35rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .45rem;
 }
 
 .profile-indicator-card {
-  border: 1px solid rgba(154, 216, 255, .2);
-  background: rgba(8, 14, 26, .8);
-  padding: .44rem .5rem;
+  background: var(--profile-soft-bg);
+  padding: .54rem .6rem;
   display: grid;
-  gap: .22rem;
+  gap: .3rem;
+  border-radius: 12px;
 }
 
 .profile-indicator-card p {
@@ -5412,12 +5399,17 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 .profile-indicator-card strong { font-size: .9rem; }
-.profile-indicator-card--form strong { color: #d9f3ff; }
+.profile-indicator-card--form {
+  grid-column: span 2;
+}
+
+.profile-indicator-card--form strong { color: #d9f3ff; font-size: 1rem; }
 
 .profile-meter {
-  height: 8px;
+  height: 9px;
   background: rgba(255, 255, 255, .1);
   overflow: hidden;
+  border-radius: 999px;
 }
 
 .profile-meter span { display: block; height: 100%; }
@@ -5425,25 +5417,23 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-meter.medium span { background: linear-gradient(90deg, #ffd45a, #ffe87f); }
 .profile-meter.high span { background: linear-gradient(90deg, #72e28b, #95f7ad); }
 
-.profile-insights-grid {
-  margin-top: .42rem;
+.profile-insights {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .35rem;
+  gap: .45rem;
 }
 
-.profile-insights-card,
-.profile-player-type,
-.profile-season-trend {
-  border: 1px solid rgba(156, 218, 255, .2);
-  background: rgba(8, 13, 22, .78);
-  padding: .46rem .5rem;
+.profile-insight,
+.profile-season-progress {
+  background: var(--profile-soft-bg);
+  padding: .58rem .62rem;
+  border-radius: 12px;
 }
 
-.profile-player-type { margin-top: .42rem; }
+.profile-profile-card { margin-top: .08rem; }
 
 .profile-player-type h3,
-.profile-insights-card h3,
+.profile-insight h3,
 .profile-season-trend__head span {
   margin: 0;
   font-size: .68rem;
@@ -5452,7 +5442,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   color: #9fdfff;
 }
 
-.profile-insights-card ul {
+.profile-insight ul {
   margin: .3rem 0 0;
   padding-left: 1rem;
   display: grid;
@@ -5463,24 +5453,20 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-achievement-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .35rem;
+  gap: .45rem;
 }
 
-.profile-achievement-card {
-  border: 1px solid rgba(182, 255, 75, .24);
+.profile-achievement {
+  border: 1px solid rgba(182, 255, 75, .2);
   background: linear-gradient(165deg, rgba(19, 36, 26, .78), rgba(10, 18, 30, .9));
-  padding: .55rem;
+  padding: .68rem;
   display: grid;
-  gap: .2rem;
+  gap: .25rem;
+  border-radius: 12px;
 }
 
-.profile-achievement-card * {
-  border: none !important;
-  background: none !important;
-}
-
-.profile-achievement-card__icon { font-size: 1rem; }
-.profile-achievement-card__label {
+.profile-achievement__icon { font-size: 1rem; }
+.profile-achievement__label {
   margin: 0;
   font-size: .66rem;
   text-transform: uppercase;
@@ -5488,13 +5474,13 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   color: #d8efc0;
 }
 
-.profile-achievement-card__value {
+.profile-achievement__value {
   margin: 0;
-  font-size: 1.14rem;
+  font-size: 1.2rem;
   font-family: var(--font-mono);
 }
 
-.profile-achievement-card__season {
+.profile-achievement__season {
   margin: 0;
   font-size: .68rem;
   color: var(--muted);
@@ -5503,10 +5489,10 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-season-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .35rem;
+  gap: .45rem;
 }
 
-.profile-tab {
+.profile-season-tab {
   border: 1px solid rgba(255,255,255,0.1);
   background: rgba(9, 15, 26, .82);
   color: var(--text);
@@ -5517,36 +5503,36 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   gap: .1rem;
   font-family: var(--font-mono);
   font-size: .69rem;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
 }
 
-.profile-tab em {
+.profile-season-tab em {
   font-style: normal;
   font-size: .58rem;
   color: #91e1ff;
   text-transform: uppercase;
 }
 
-.profile-tab.is-active {
+.profile-season-tab.is-active {
   border-color: rgba(183, 255, 42, .68);
   color: #ecffcd;
   background: linear-gradient(120deg, rgba(57, 89, 24, .54), rgba(23, 39, 55, .82));
 }
 
-.profile-season-summary {
-  border: 1px solid rgba(170, 228, 255, .2);
-  background: rgba(8, 13, 24, .72);
+.profile-season-panel {
+  border: 1px solid rgba(170, 228, 255, .16);
+  background: rgba(8, 13, 24, .76);
   margin-top: .4rem;
+  border-radius: var(--profile-radius);
 }
 
-.profile-season-summary h3,
-.profile-logs-wrap h3,
-.profile-log-empty h3 {
+.profile-season-panel h3,
+.profile-logs h3 {
   margin: 0 0 .3rem;
   font-size: .84rem;
 }
 
-.profile-season-trend { margin-top: .4rem; display: grid; gap: .26rem; }
+.profile-season-progress { margin-top: .4rem; display: grid; gap: .26rem; }
 
 .profile-season-trend__head {
   display: flex;
@@ -5564,6 +5550,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   height: 8px;
   overflow: hidden;
   background: rgba(255, 255, 255, .1);
+  border-radius: 999px;
 }
 
 .profile-season-trend__bar span { display: block; height: 100%; }
@@ -5571,15 +5558,16 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 .profile-season-trend__bar.is-negative span { background: linear-gradient(90deg, #ff7c7c, #ff9f9f); }
 .profile-season-trend__bar.is-neutral span { background: linear-gradient(90deg, #9ec3db, #b4d5e8); }
 
-.profile-logs-wrap {
+.profile-logs {
   margin-top: .42rem;
   display: grid;
   gap: .45rem;
-  border: 1px solid rgba(145, 208, 246, .2);
+  border: 1px solid rgba(145, 208, 246, .16);
   background: rgba(6, 11, 20, .72);
+  border-radius: 12px;
 }
 
-.profile-logs-wrap > summary {
+.profile-logs > summary {
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: .76rem;
@@ -5587,9 +5575,10 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 .profile-log-day {
-  border: 1px solid rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .1);
   background: rgba(255, 255, 255, .02);
   overflow: hidden;
+  border-radius: 10px;
 }
 
 .profile-log-day__head {
@@ -5620,12 +5609,6 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   font-size: .72rem;
 }
 
-.profile-log-empty {
-  margin-top: .42rem;
-  border: 1px dashed rgba(255, 255, 255, .22);
-  color: var(--muted);
-}
-
 .profile-page .rank-s,
 .profile-page .rank-S { color: #d38aff; }
 .profile-page .rank-a,
@@ -5654,13 +5637,37 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 @media (max-width: 520px) {
-  .profile-analysis-row3,
+  .profile-hero__top {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .profile-rank-card {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .profile-rank-card__label {
+    justify-self: start;
+  }
+
+  .profile-rank-card__value {
+    justify-self: end;
+  }
+
+  .profile-analytics-grid,
   .profile-player-type__grid,
-  .profile-season-wld-grid,
   .profile-season-career-row,
   .profile-indicator-grid,
-  .profile-insights-grid {
+  .profile-insights {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-season-grid,
+  .profile-achievement-grid,
+  .profile-season-tabs {
+    grid-template-columns: 1fr;
   }
 }
 

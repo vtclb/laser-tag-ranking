@@ -72,7 +72,7 @@ function resolveParams(params = {}) {
 }
 
 function renderSkeleton(root) {
-  root.innerHTML = '<section class="profile-panel profile-loading-shell"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Завантаження профілю…</p><div class="profile-loading-bar" aria-hidden="true"></div></section>';
+  root.innerHTML = '<section class="profile-page"><div class="profile-shell"><section class="profile-section profile-loading-shell"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Завантаження профілю…</p><div class="profile-loading-bar" aria-hidden="true"></div></section></div></section>';
 }
 
 function rankClass(rank = 'F') {
@@ -188,7 +188,7 @@ function renderCareerHighlights(highlights = {}) {
   if (mvpRecord?.seasonTitle && num(mvpRecord.mvpTotal) !== null) cards.push({ icon: '⭐', label: 'Рекорд MVP', value: String(mvpRecord.mvpTotal), season: formatSeasonTitleUA(mvpRecord.seasonTitle) });
 
   if (!cards.length) return '';
-  return `<section class="profile-panel profile-section profile-achievements"><h2 class="profile-section__title">Досягнення карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement-card"><div class="profile-achievement-card__icon icon">${item.icon}</div><div class="profile-achievement-card__value value">${esc(item.value)}</div><div class="profile-achievement-card__label label">${esc(item.label)}</div><div class="profile-achievement-card__season meta">${esc(item.season)}</div></article>`).join('')}</div></section>`;
+  return `<section class="profile-section profile-achievements"><h2 class="profile-section__title">Досягнення карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement"><div class="profile-achievement__icon">${item.icon}</div><div class="profile-achievement__value">${esc(item.value)}</div><div class="profile-achievement__label">${esc(item.label)}</div><div class="profile-achievement__season">${esc(item.season)}</div></article>`).join('')}</div></section>`;
 }
 
 function resolveGameplayInsights({ wins, losses, draws, wr, mvp, delta, place, games }) {
@@ -273,26 +273,26 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
   const leagueLabel = leagueLabelUA(profileLeagueContext);
 
   return `
-    <article class="profile-panel profile-hero ${rankClass(currentRank)}">
+    <article class="profile-section profile-hero ${rankClass(currentRank)}">
       <a class="btn btn--secondary profile-hero__back" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">← До ліги</a>
       <div class="profile-hero__top">
         <div class="profile-avatar-frame ${rankClass(currentRank)}">
           <img class="avatar" src="${esc(topSeason?.avatar ?? livePlayer?.avatarUrl ?? placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
         </div>
-        <div class="profile-hero__identity">
+        <div class="profile-meta">
           <h1 class="name">${esc(displayNick)}</h1>
           <p class="profile-hero__meta">${esc(leagueLabel)} · ${esc(seasonLabel)}</p>
-          <div class="profile-hero__status badges">
+          <div class="profile-hero__status">
             <span class="profile-status-badge profile-status-badge--place">${num(place) !== null ? `#${place} місце` : 'Місце —'}</span>
             <span class="profile-status-badge profile-status-badge--rank">Ранг ${esc(val(currentRank))}</span>
           </div>
         </div>
-        <div class="profile-rank-card rank-big ${rankClass(currentRank)}">
+        <div class="profile-rank-card ${rankClass(currentRank)}">
           <p class="profile-rank-card__label">Поточний ранг</p>
           <strong class="profile-rank-card__value">${esc(val(currentRank))}</strong>
         </div>
       </div>
-      <div class="profile-rank-progress-wrap">
+      <div class="profile-progress">
         <div class="profile-rank-progress__labels">
           <span>Прогрес до наступного рангу</span>
           <strong>${progress.isMax ? 'Максимальний ранг досягнуто' : `${progress.percent.toFixed(0)}% до ${progress.nextRank}`}</strong>
@@ -310,9 +310,9 @@ function renderCompactStats({ livePlayer, topSeason }) {
   const wr = livePlayer?.winRate ?? topSeason?.winRate ?? topSeason?.winrate;
   const delta = livePlayer?.delta ?? topSeason?.delta ?? topSeason?.ratingDelta;
   return `
-    <section class="profile-panel profile-section profile-priority-main">
+    <section class="profile-section profile-priority-main">
       <h2 class="profile-section__title">Ключові метрики</h2>
-      <div class="profile-stats-grid">
+      <div class="profile-metrics-grid">
         ${metricMini({ label: 'Очки', value: livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points, tone: 'is-accent' })}
         ${metricMini({ label: 'WR', value: pct(wr), tone: wrTone(wr) })}
         ${metricMini({ label: 'MVP', value: livePlayer?.mvpTotal ?? topSeason?.mvpTotal })}
@@ -341,7 +341,7 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
   });
 
   return `
-    <section class="profile-panel profile-section profile-priority-analytics">
+    <section class="profile-section profile-analytics profile-priority-analytics">
       <h2 class="profile-section__title">Аналіз гри</h2>
       <article class="profile-wr-panel">
         <div class="profile-wr-panel__head">
@@ -351,13 +351,13 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
         <div class="profile-wr-bar ${wrTone(wr)}"><span style="width:${Math.max(0, Math.min(100, num(wr) ?? 0))}%"></span></div>
       </article>
 
-      <div class="profile-analysis-row3">
+      <div class="profile-analytics-grid">
         ${metricMini({ label: 'Перемоги', value: wins, tone: 'is-good' })}
         ${metricMini({ label: 'Поразки', value: losses, tone: 'is-bad' })}
         ${metricMini({ label: 'Нічиї', value: draws, tone: 'is-mid' })}
       </div>
 
-      <div class="profile-analysis-row3">
+      <div class="profile-analytics-grid">
         ${metricMini({ label: 'Ігри', value: games ?? insights.totalMatches })}
         ${metricMini({ label: 'Бої', value: livePlayer?.battles ?? topSeason?.rounds })}
         ${metricMini({ label: 'MVP', value: livePlayer?.mvpTotal ?? topSeason?.mvpTotal })}
@@ -380,18 +380,18 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
         </article>
       </div>
 
-      <div class="profile-insights-grid">
-        <article class="profile-insights-card">
+      <div class="profile-insights">
+        <article class="profile-insight">
           <h3>Сильні сторони</h3>
           <ul>${(insights.strengths.length ? insights.strengths : ['Стабільна база для подальшого росту']).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
         </article>
-        <article class="profile-insights-card">
+        <article class="profile-insight">
           <h3>Зони росту</h3>
           <ul>${(insights.growth.length ? insights.growth : ['Підтримувати поточний темп гри']).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
         </article>
       </div>
 
-      <article class="profile-player-type">
+      <article class="profile-insight profile-profile-card">
         <h3>Профіль гравця</h3>
         <div class="profile-player-type__grid">
           ${metricMini({ label: 'Стиль гри', value: `🎮 ${insights.playStyle}` })}
@@ -405,7 +405,7 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
 
 function renderSeasonTabs(container, tabs, selectedId) {
   container.innerHTML = tabs.map((tab) => `
-    <button type="button" class="profile-tab ${tab.id === selectedId ? 'is-active' : ''}" data-season-id="${esc(tab.id)}">
+    <button type="button" class="profile-season-tab ${tab.id === selectedId ? 'is-active' : ''}" data-season-id="${esc(tab.id)}">
       <span>${esc(tab.label)}</span>
       ${tab.current ? '<em>поточний</em>' : ''}
     </button>
@@ -414,7 +414,7 @@ function renderSeasonTabs(container, tabs, selectedId) {
 
 function renderSeasonSummary(season, allTime) {
   if (!season) {
-    return '<section class="profile-season-summary"><h3>Сезон</h3><p class="profile-muted">Немає даних сезону.</p></section>';
+    return '<section class="profile-season-panel"><h3>Сезон</h3><p class="profile-muted">Немає даних сезону.</p></section>';
   }
 
   const seasonWr = season.winRate ?? season.winrate;
@@ -424,11 +424,11 @@ function renderSeasonSummary(season, allTime) {
   const trendWidth = Math.min(100, Math.max(8, num(seasonDelta) === null ? 8 : Math.abs(Number(seasonDelta)) / 2));
 
   return `
-      <section class="profile-season-summary">
+      <section class="profile-season-panel">
         <h3>${esc(formatSeasonTitleUA(season.seasonTitle ?? season.id))}</h3>
         <p class="profile-muted">${esc(leagueLabelUA(season.league ?? 'kids'))}</p>
 
-        <div class="profile-season-kpis">
+        <div class="profile-season-grid">
           ${metricMini({ label: 'Старт', value: start })}
           ${metricMini({ label: 'Фініш', value: finish, tone: 'is-accent' })}
           ${metricMini({ label: 'Δ', value: signed(seasonDelta), tone: deltaTone(seasonDelta) })}
@@ -439,13 +439,13 @@ function renderSeasonSummary(season, allTime) {
           ${metricMini({ label: 'Місце', value: num(season.place ?? season.finalPlace) !== null ? `#${season.place ?? season.finalPlace}` : '—' })}
         </div>
 
-        <div class="profile-season-wld-grid">
+        <div class="profile-season-grid profile-season-grid--compact">
           ${metricMini({ label: 'Перемоги', value: season.wins, tone: 'is-good' })}
           ${metricMini({ label: 'Поразки', value: season.losses, tone: 'is-bad' })}
           ${metricMini({ label: 'Нічиї', value: season.draws, tone: 'is-mid' })}
         </div>
 
-        <div class="profile-season-trend">
+        <div class="profile-season-progress">
           <div class="profile-season-trend__head"><span>Прогрес сезону</span><strong>${esc(val(start))} → ${esc(val(finish))}</strong></div>
           <div class="profile-season-trend__bar ${deltaTone(seasonDelta)}"><span style="width:${trendWidth}%"></span></div>
           <p class="profile-note">${num(seasonDelta) > 0 ? 'Рейтинг росте стабільно.' : num(seasonDelta) < 0 ? 'Є просідання, варто підсилити гру.' : 'Рейтинг без помітних змін.'}</p>
@@ -461,10 +461,10 @@ function renderSeasonSummary(season, allTime) {
 
 function renderLogs(logData) {
   if (!logData?.groups?.length) {
-    return '<section class="profile-log-empty"><h3>Логи сезону</h3><p>Для цього сезону немає записів матчів або логів рейтингу.</p></section>';
+    return '<section class="profile-logs"><h3>Логи сезону</h3><p>Для цього сезону поки немає записів.</p></section>';
   }
 
-  return `<details class="profile-logs-wrap">
+  return `<details class="profile-logs">
     <summary>Логи сезону (${logData.groups.length} днів)</summary>
     ${logData.groups.map((group) => `
       <article class="profile-log-day">
@@ -507,7 +507,7 @@ export async function initProfilePage(params = {}) {
 
   const { nick, league, profileLeagueContext: routeLeagueContext } = resolveParams(params);
   if (!nick) {
-    root.innerHTML = `<section class="profile-panel"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Не вказано нікнейм гравця.</p><div class="profile-actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Назад до ліги</a></div></section>`;
+    root.innerHTML = `<section class="profile-page"><div class="profile-shell"><section class="profile-section"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Не вказано нікнейм гравця.</p><div class="profile-actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Назад до ліги</a></div></section></div></section>`;
     return;
   }
 
@@ -525,7 +525,7 @@ export async function initProfilePage(params = {}) {
     const livePlayer = (liveStats?.players || []).find((player) => normalizePlayerKey(player.nickname) === normalizedNick) || null;
 
     if (!profile && !livePlayer) {
-      root.innerHTML = `<section class="profile-panel"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Гравця не знайдено.</p><div class="profile-actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Назад до ліги</a></div></section>`;
+      root.innerHTML = `<section class="profile-page"><div class="profile-shell"><section class="profile-section"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Гравця не знайдено.</p><div class="profile-actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Назад до ліги</a></div></section></div></section>`;
       return;
     }
 
@@ -545,17 +545,19 @@ export async function initProfilePage(params = {}) {
 
     root.innerHTML = `
       <section class="profile-page">
+        <div class="profile-shell">
         ${renderHero({ profileLeagueContext, livePlayer: livePlayer || {}, currentSeason, displayNick, currentRank, topSeason })}
         ${renderCompactStats({ livePlayer: livePlayer || {}, topSeason })}
         ${renderGameAnalysis({ livePlayer: livePlayer || {}, topSeason })}
         ${renderCareerHighlights(profile?.highlights || {})}
 
-        <section class="profile-panel profile-section profile-priority-history">
+        <section class="profile-section profile-priority-history">
           <h2 class="profile-section__title">Сезони</h2>
           <div class="profile-season-tabs" id="seasonTabs"></div>
           <div id="seasonSummaryHost"></div>
           <div id="seasonLogsHost"></div>
         </section>
+        </div>
       </section>
     `;
 
@@ -589,7 +591,7 @@ export async function initProfilePage(params = {}) {
       summaryEl.innerHTML = renderSeasonSummary(selectedSeason, profile?.allTime || {});
 
       if (!state.seasonId) {
-        logsEl.innerHTML = '<section class="profile-log-empty"><h3>Логи сезону</h3><p>Немає доступних сезонів для цього гравця.</p></section>';
+        logsEl.innerHTML = '<section class="profile-logs"><h3>Логи сезону</h3><p>Немає доступних сезонів для цього гравця.</p></section>';
         return;
       }
 
@@ -607,6 +609,6 @@ export async function initProfilePage(params = {}) {
 
     await renderState();
   } catch (error) {
-    root.innerHTML = `<section class="profile-panel"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">${esc(safeErrorMessage(error, 'Дані тимчасово недоступні'))}</p></section>`;
+    root.innerHTML = `<section class="profile-page"><div class="profile-shell"><section class="profile-section"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">${esc(safeErrorMessage(error, 'Дані тимчасово недоступні'))}</p></section></div></section>`;
   }
 }

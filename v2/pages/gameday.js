@@ -61,6 +61,15 @@ function prettyWinner(winner = '') {
   return 'Переможця не визначено';
 }
 
+function cleanDateLabel(date = '', timestamp = '') {
+  const fromDate = String(date || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fromDate)) return fromDate;
+  const fromTimestamp = String(timestamp || '').trim();
+  const match = fromTimestamp.match(/\d{4}-\d{2}-\d{2}/);
+  if (match) return match[0];
+  return fromDate || fromTimestamp || '—';
+}
+
 function parseSeries(series = '') {
   const res = { team1: 0, team2: 0, team3: 0, team4: 0, draws: 0 };
   (String(series || '').match(/[0-4]/g) || []).forEach((token) => {
@@ -141,7 +150,7 @@ function buildMatchCard(match = {}, roster = new Map()) {
   const scoreLabel = scoreParts.length ? scoreParts.join(' : ') : (match.seriesSummary || '—');
   const winnerKey = /^team\d$/.test(String(match.winner || '')) ? String(match.winner) : '';
   const matchId = `gamedayMatch${match.index}`;
-  const summaryLine = [match.date, match.timestamp].filter(Boolean).join(' · ');
+  const summaryLine = cleanDateLabel(match.date, match.timestamp);
   const versusLine = teams.map(([, members]) => compactTeamPreview(members)).join(' vs ');
   const teamsLine = teams.map(([key]) => {
     const isWinner = key === winnerKey;
@@ -157,7 +166,7 @@ function buildMatchCard(match = {}, roster = new Map()) {
     <article class="gameday-match-card ${winnerKey ? `gameday-match-card--winner-${winnerKey}` : ''}" data-match-id="${matchId}">
       <button class="gameday-match-head" type="button" aria-expanded="false" aria-controls="${matchId}Details" id="${matchId}Trigger">
         <div class="gameday-match-head__top">
-          <span class="gameday-match-head__eyebrow">Матч #${match.index}</span>
+          <span class="gameday-match-head__eyebrow">Гра #${match.index}</span>
           <span class="gameday-match-head__score">${esc(scoreLabel)}</span>
         </div>
         <div class="gameday-match-head__title">${teamsLine || 'Склади команд'}</div>
@@ -235,8 +244,8 @@ function render(root, payload, filters) {
         <button id="gamedayLoad" class="btn">Оновити</button>
       </div>
       <div class="gameday-summary-grid">
-        <div class="gameday-summary-card"><span>Матчів</span><b>${summary.matches ?? payload.gamesCount ?? 0}</b></div>
-        <div class="gameday-summary-card"><span>Найбільший приріст</span><b>${esc(summary.bestDelta?.nick ? `${summary.bestDelta.nick} ${fmtDelta(summary.bestDelta.delta)}` : '—')}</b></div>
+        <div class="gameday-summary-card"><span>Ігор</span><b>${summary.matches ?? payload.gamesCount ?? 0}</b></div>
+        <div class="gameday-summary-card"><span>Найбільший приріст</span><b>${esc((summary.bestDelta?.nick || summary.bestGain?.nick) ? `${summary.bestDelta?.nick || summary.bestGain?.nick} ${fmtDelta(summary.bestDelta?.delta ?? summary.bestGain?.delta)}` : '—')}</b></div>
         <div class="gameday-summary-card"><span>Гравців</span><b>${summary.participants ?? players.length}</b></div>
         <div class="gameday-summary-card"><span>MVP дня</span><b>${esc(summary.mvpDay?.nick || '—')}</b></div>
       </div>
@@ -246,18 +255,18 @@ function render(root, payload, filters) {
     <section class="px-card gameday-players-block">
       <div class="gameday-section-head">
         <h2 class="px-card__title">Таблиця гравців дня</h2>
-        <p class="px-card__text">Компактна зведена таблиця за день: очки, приріст, матчі, перемоги та MVP.</p>
+        <p class="px-card__text">Компактна зведена таблиця за день: очки, приріст, ігри, перемоги та MVP.</p>
       </div>
       ${buildPlayersTable(players, payload.league)}
     </section>
 
     <section class="px-card gameday-matches-block">
       <div class="gameday-section-head">
-        <h2 class="px-card__title">Лог матчів</h2>
-        <p class="px-card__text">Кожен матч згорнутий. У шапці одразу видно рахунок, склади та переможця.</p>
+        <h2 class="px-card__title">Лог ігор</h2>
+        <p class="px-card__text">Кожна гра згорнута. У шапці одразу видно рахунок, склади та переможця.</p>
       </div>
       <div class="gameday-match-list">
-        ${(matches || []).map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Немає матчів за цей день.</p>'}
+        ${(matches || []).map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Немає ігор за цей день.</p>'}
       </div>
     </section>
   `;

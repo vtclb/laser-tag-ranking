@@ -8,7 +8,7 @@ function previewCard(seasonId, league, master) {
   const players = (master?.sections?.players || []).filter((p) => p.league === league);
   const top1 = [...players].sort((a, b) => (b.rating_end || 0) - (a.rating_end || 0))[0];
   const label = league === 'kids' ? 'Дитяча ліга' : 'Доросла ліга';
-  return `<article class="px-card season-list-card"><h3>${label}</h3><p>Матчі: <strong>${summary.matches ?? summary.games ?? 'Немає даних'}</strong></p><p>Гравці: <strong>${summary.players ?? players.length}</strong></p><p>Топ-1: <strong>${esc(top1?.nickname || 'Немає даних')}</strong></p><a class="btn btn--secondary" href="#season?season=${encodeURIComponent(seasonId)}&league=${league}">Відкрити лігу</a></article>`;
+  return `<article class="px-card season-list-card"><h3>${label}</h3><p>Ігри: <strong>${summary.matches ?? summary.games ?? 'Немає даних'}</strong></p><p>Гравці: <strong>${summary.players ?? players.length}</strong></p><p>Топ-1: <strong>${esc(top1?.nickname || 'Немає даних')}</strong></p><a class="btn btn--secondary" href="#season?season=${encodeURIComponent(seasonId)}&league=${league}">Відкрити лігу</a></article>`;
 }
 
 export async function initSeasonsPage() {

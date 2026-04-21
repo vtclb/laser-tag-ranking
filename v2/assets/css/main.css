@@ -7707,6 +7707,14 @@ body.theme-game .rules-v2.rules-v2--clean > .px-card::after,
   line-height: 1.35;
 }
 
+.rules-v2--clean .rank-s { color: var(--rank-s); }
+.rules-v2--clean .rank-a { color: var(--rank-a); }
+.rules-v2--clean .rank-b { color: var(--rank-b); }
+.rules-v2--clean .rank-c { color: var(--rank-c); }
+.rules-v2--clean .rank-d { color: var(--rank-d); }
+.rules-v2--clean .rank-e { color: var(--rank-e); }
+.rules-v2--clean .rank-f { color: var(--rank-f); }
+
 .rules-v2--clean .rules-v2__rank-meta {
   margin: .18rem 0 0;
   color: var(--muted);

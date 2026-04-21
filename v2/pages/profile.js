@@ -132,13 +132,12 @@ function formatSeasonTitleUA(raw = '') {
 }
 
 function seasonOrderKey(label = '') {
-  const map = {
-    'Літо 2025': 0,
-    'Осінь 2025': 1,
-    'Зима 2025–2026': 2,
-    'Весна 2026': 3
-  };
-  return map[label] ?? 100;
+  const normalized = String(label ?? '').toLowerCase();
+  if (normalized.includes('літо')) return 0;
+  if (normalized.includes('осінь')) return 1;
+  if (normalized.includes('зима')) return 2;
+  if (normalized.includes('весна')) return 3;
+  return 99;
 }
 
 function getRankProgress(points, rankLetter) {
@@ -189,7 +188,7 @@ function renderCareerHighlights(highlights = {}) {
   if (mvpRecord?.seasonTitle && num(mvpRecord.mvpTotal) !== null) cards.push({ icon: '⭐', label: 'Рекорд MVP', value: String(mvpRecord.mvpTotal), season: formatSeasonTitleUA(mvpRecord.seasonTitle) });
 
   if (!cards.length) return '';
-  return `<section class="profile-panel profile-section profile-achievements"><h2 class="profile-section__title">Досягнення карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement-card"><span class="profile-achievement-card__icon">${item.icon}</span><p class="profile-achievement-card__label">${esc(item.label)}</p><p class="profile-achievement-card__value">${esc(item.value)}</p><p class="profile-achievement-card__season">${esc(item.season)}</p></article>`).join('')}</div></section>`;
+  return `<section class="profile-panel profile-section profile-achievements"><h2 class="profile-section__title">Досягнення карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement-card"><div class="profile-achievement-card__icon icon">${item.icon}</div><div class="profile-achievement-card__value value">${esc(item.value)}</div><div class="profile-achievement-card__label label">${esc(item.label)}</div><div class="profile-achievement-card__season meta">${esc(item.season)}</div></article>`).join('')}</div></section>`;
 }
 
 function resolveGameplayInsights({ wins, losses, draws, wr, mvp, delta, place, games }) {
@@ -270,7 +269,7 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
   const points = livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points;
   const place = livePlayer?.place ?? topSeason?.place ?? topSeason?.finalPlace;
   const progress = getRankProgress(points, currentRank);
-  const seasonLabel = formatSeasonTitleUA(currentSeason?.uiLabel || topSeason?.seasonTitle || 'Поточний сезон');
+  const seasonLabel = formatSeasonTitleUA(currentSeason?.uiLabel ?? topSeason?.seasonTitle ?? 'Поточний сезон');
   const leagueLabel = leagueLabelUA(profileLeagueContext);
 
   return `
@@ -278,17 +277,17 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
       <a class="btn btn--secondary profile-hero__back" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">← До ліги</a>
       <div class="profile-hero__top">
         <div class="profile-avatar-frame ${rankClass(currentRank)}">
-          <img src="${esc(topSeason?.avatar || livePlayer?.avatarUrl || placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
+          <img class="avatar" src="${esc(topSeason?.avatar ?? livePlayer?.avatarUrl ?? placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
         </div>
         <div class="profile-hero__identity">
-          <h1>${esc(displayNick)}</h1>
+          <h1 class="name">${esc(displayNick)}</h1>
           <p class="profile-hero__meta">${esc(leagueLabel)} · ${esc(seasonLabel)}</p>
-          <div class="profile-hero__status">
+          <div class="profile-hero__status badges">
             <span class="profile-status-badge profile-status-badge--place">${num(place) !== null ? `#${place} місце` : 'Місце —'}</span>
             <span class="profile-status-badge profile-status-badge--rank">Ранг ${esc(val(currentRank))}</span>
           </div>
         </div>
-        <div class="profile-rank-card ${rankClass(currentRank)}">
+        <div class="profile-rank-card rank-big ${rankClass(currentRank)}">
           <p class="profile-rank-card__label">Поточний ранг</p>
           <strong class="profile-rank-card__value">${esc(val(currentRank))}</strong>
         </div>
@@ -298,7 +297,7 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
           <span>Прогрес до наступного рангу</span>
           <strong>${progress.isMax ? 'Максимальний ранг досягнуто' : `${progress.percent.toFixed(0)}% до ${progress.nextRank}`}</strong>
         </div>
-        <div class="profile-rank-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.percent)}">
+        <div class="profile-rank-progress progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.percent)}">
           <span style="width:${progress.percent.toFixed(1)}%"></span>
         </div>
         <p class="profile-note">${progress.isMax ? 'Максимальний ранг досягнуто' : `Ще ${val(progress.remain)} очок до рангу ${val(progress.nextRank)}.`}</p>
@@ -313,7 +312,7 @@ function renderCompactStats({ livePlayer, topSeason }) {
   return `
     <section class="profile-panel profile-section profile-priority-main">
       <h2 class="profile-section__title">Ключові метрики</h2>
-      <div class="profile-key-grid">
+      <div class="profile-stats-grid">
         ${metricMini({ label: 'Очки', value: livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points, tone: 'is-accent' })}
         ${metricMini({ label: 'WR', value: pct(wr), tone: wrTone(wr) })}
         ${metricMini({ label: 'MVP', value: livePlayer?.mvpTotal ?? topSeason?.mvpTotal })}
@@ -426,8 +425,8 @@ function renderSeasonSummary(season, allTime) {
 
   return `
       <section class="profile-season-summary">
-        <h3>${esc(formatSeasonTitleUA(season.seasonTitle || season.id))}</h3>
-        <p class="profile-muted">${esc(leagueLabelUA(season.league || 'kids'))}</p>
+        <h3>${esc(formatSeasonTitleUA(season.seasonTitle ?? season.id))}</h3>
+        <p class="profile-muted">${esc(leagueLabelUA(season.league ?? 'kids'))}</p>
 
         <div class="profile-season-kpis">
           ${metricMini({ label: 'Старт', value: start })}
@@ -476,7 +475,7 @@ function renderLogs(logData) {
         ${group.entries.length
     ? `<ul class="profile-log-list">${group.entries.map((entry) => `
               <li class="profile-log-item">
-                <div class="profile-log-item__teams">${entry.teams.map((team, idx) => `<span>К${idx + 1}: ${esc(team.join(', ') || '—')}</span>`).join('')}</div>
+                <div class="profile-log-item__teams">${entry.teams.map((team, idx) => `<span>К${idx + 1}: ${esc(team.join(', ') ?? '—')}</span>`).join('')}</div>
                 <div class="profile-log-item__meta">
                   <span>Переможець: ${esc(winnerText(entry.winnerLabel))}</span>
                   <span>MVP: ${esc(val(entry.mvp1))} / ${esc(val(entry.mvp2))} / ${esc(val(entry.mvp3))}</span>

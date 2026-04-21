@@ -5124,7 +5124,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   background: rgba(17, 25, 42, .9);
   border: 1px solid rgba(255, 255, 255, .08);
   padding: 14px;
-  border-radius: var(--radius) !important;
+  border-radius: 12px !important;
 }
 
 .profile-hero,
@@ -5137,7 +5137,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 
 .profile-metric,
 .profile-achievement-card {
-  border-radius: var(--radius) !important;
+  border-radius: 10px !important;
 }
 
 .profile-hero {
@@ -5292,6 +5292,7 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 .profile-key-grid,
+.profile-stats-grid,
 .profile-mini-grid,
 .profile-season-kpis {
   display: grid;
@@ -5307,7 +5308,11 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   display: grid;
   align-content: center;
   gap: .14rem;
-  border-radius: var(--radius) !important;
+  border-radius: 10px !important;
+}
+
+.profile-metric * {
+  border: none !important;
 }
 
 .profile-metric span {
@@ -5502,17 +5507,17 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 .profile-tab {
-  border: 1px solid rgba(160, 219, 255, .26);
+  border: 1px solid rgba(255,255,255,0.1);
   background: rgba(9, 15, 26, .82);
   color: var(--text);
-  padding: 8px 12px;
+  padding: 8px;
   min-height: 40px;
   display: grid;
   justify-items: start;
   gap: .1rem;
   font-family: var(--font-mono);
   font-size: .69rem;
-  border-radius: 10px !important;
+  border-radius: 8px !important;
 }
 
 .profile-tab em {

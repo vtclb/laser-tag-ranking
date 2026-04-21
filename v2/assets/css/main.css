@@ -5212,30 +5212,53 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   color: #bff4af;
 }
 
-.profile-rank-card {
-  border: 1px solid rgba(175, 225, 255, .3);
-  background: rgba(8, 14, 26, .88);
+.profile-rank-badge {
+  --rank-tone: #c8cfda;
+  --rank-soft: rgba(200, 207, 218, .22);
+  border: 1px solid color-mix(in srgb, var(--rank-tone) 58%, rgba(190, 228, 255, .35));
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--rank-tone) 20%, rgba(8, 14, 26, .96)), rgba(8, 14, 26, .92));
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: .16rem;
-  padding: .56rem;
+  gap: .2rem;
+  min-height: 88px;
+  padding: .58rem .62rem;
   border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05), 0 10px 24px rgba(2, 8, 20, .34);
 }
 
-.profile-rank-card__label {
+.profile-rank-label {
   margin: 0;
-  font-size: .6rem;
-  letter-spacing: .08em;
+  font-size: .58rem;
+  letter-spacing: .11em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--rank-tone) 34%, #d6e6f6);
 }
 
-.profile-rank-card__value {
-  font-size: 1.9rem;
-  line-height: 1;
+.profile-rank-value {
+  font-size: clamp(2.15rem, 5vw, 2.65rem);
+  line-height: .92;
   font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--rank-tone);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--rank-tone) 38%, transparent);
 }
+
+.profile-rank-badge.rank-s,
+.profile-rank-badge.rank-S { --rank-tone: #b674ff; --rank-soft: rgba(182, 116, 255, .26); }
+.profile-rank-badge.rank-a,
+.profile-rank-badge.rank-A { --rank-tone: #ff5f72; --rank-soft: rgba(255, 95, 114, .24); }
+.profile-rank-badge.rank-b,
+.profile-rank-badge.rank-B { --rank-tone: #ffbe4d; --rank-soft: rgba(255, 190, 77, .24); }
+.profile-rank-badge.rank-c,
+.profile-rank-badge.rank-C { --rank-tone: #ffd84d; --rank-soft: rgba(255, 216, 77, .22); }
+.profile-rank-badge.rank-d,
+.profile-rank-badge.rank-D { --rank-tone: #59c9ff; --rank-soft: rgba(89, 201, 255, .24); }
+.profile-rank-badge.rank-e,
+.profile-rank-badge.rank-E { --rank-tone: #76df82; --rank-soft: rgba(118, 223, 130, .24); }
+.profile-rank-badge.rank-f,
+.profile-rank-badge.rank-F { --rank-tone: #d7deeb; --rank-soft: rgba(215, 222, 235, .22); }
 
 .profile-progress {
   background: var(--profile-soft-bg);
@@ -5487,36 +5510,71 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
 }
 
 .profile-season-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .45rem;
+  margin-top: .08rem;
+  border: 1px solid rgba(144, 206, 245, .24);
+  background: rgba(8, 14, 25, .72);
+  border-radius: 12px;
+  padding: .38rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(160, 228, 255, .45) transparent;
+}
+
+.profile-season-tabs__track {
+  display: flex;
+  align-items: stretch;
+  gap: .34rem;
+  min-width: max-content;
 }
 
 .profile-season-tab {
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(9, 15, 26, .82);
-  color: var(--text);
-  padding: 8px;
-  min-height: 40px;
+  flex: 1 1 0;
+  min-width: 122px;
+  min-height: 44px;
+  border: 1px solid rgba(176, 216, 248, .2);
+  background: rgba(12, 20, 34, .9);
+  color: #d9e7f9;
+  padding: .5rem .62rem;
   display: grid;
   justify-items: start;
-  gap: .1rem;
+  align-content: center;
+  gap: .16rem;
   font-family: var(--font-mono);
-  font-size: .69rem;
-  border-radius: 10px !important;
+  font-size: .72rem;
+  line-height: 1.15;
+  border-radius: 9px !important;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
 }
 
-.profile-season-tab em {
+.profile-season-tab__title {
+  font-weight: 650;
+  letter-spacing: .015em;
+}
+
+.profile-season-tab__meta {
   font-style: normal;
-  font-size: .58rem;
-  color: #91e1ff;
+  font-size: .56rem;
+  color: #95dfff;
   text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.profile-season-tab:hover,
+.profile-season-tab:focus-visible {
+  border-color: rgba(174, 230, 255, .42);
+  background: rgba(20, 33, 53, .94);
+  outline: none;
 }
 
 .profile-season-tab.is-active {
-  border-color: rgba(183, 255, 42, .68);
-  color: #ecffcd;
-  background: linear-gradient(120deg, rgba(57, 89, 24, .54), rgba(23, 39, 55, .82));
+  border-color: rgba(189, 255, 72, .74);
+  color: #efffcf;
+  background: linear-gradient(130deg, rgba(63, 98, 30, .6), rgba(25, 44, 62, .92));
+  box-shadow: 0 0 0 1px rgba(189, 255, 72, .24), 0 0 18px rgba(170, 255, 102, .2);
+}
+
+.profile-season-tab.is-active .profile-season-tab__meta {
+  color: #cdfcb1;
 }
 
 .profile-season-panel {
@@ -5641,18 +5699,18 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
     grid-template-columns: 64px minmax(0, 1fr);
   }
 
-  .profile-rank-card {
+  .profile-rank-badge {
     grid-column: 1 / -1;
     justify-self: stretch;
     grid-template-columns: 1fr auto;
     align-items: center;
   }
 
-  .profile-rank-card__label {
+  .profile-rank-label {
     justify-self: start;
   }
 
-  .profile-rank-card__value {
+  .profile-rank-value {
     justify-self: end;
   }
 
@@ -5665,9 +5723,16 @@ body.theme-game .league-page #leagueExpandBtn.button-primary[aria-disabled='true
   }
 
   .profile-season-grid,
-  .profile-achievement-grid,
-  .profile-season-tabs {
+  .profile-achievement-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-season-tabs {
+    padding: .34rem;
+  }
+
+  .profile-season-tab {
+    min-width: 116px;
   }
 }
 

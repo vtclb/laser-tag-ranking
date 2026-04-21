@@ -287,9 +287,9 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
             <span class="profile-status-badge profile-status-badge--rank">Ранг ${esc(val(currentRank))}</span>
           </div>
         </div>
-        <div class="profile-rank-card ${rankClass(currentRank)}">
-          <p class="profile-rank-card__label">Поточний ранг</p>
-          <strong class="profile-rank-card__value">${esc(val(currentRank))}</strong>
+        <div class="profile-rank-badge ${rankClass(currentRank)}" data-rank="${esc(String(currentRank || 'F').toLowerCase())}">
+          <p class="profile-rank-label">Поточний ранг</p>
+          <strong class="profile-rank-value">${esc(val(currentRank))}</strong>
         </div>
       </div>
       <div class="profile-progress">
@@ -404,12 +404,23 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
 }
 
 function renderSeasonTabs(container, tabs, selectedId) {
-  container.innerHTML = tabs.map((tab) => `
-    <button type="button" class="profile-season-tab ${tab.id === selectedId ? 'is-active' : ''}" data-season-id="${esc(tab.id)}">
-      <span>${esc(tab.label)}</span>
-      ${tab.current ? '<em>поточний</em>' : ''}
+  const tabsMarkup = tabs.map((tab) => `
+    <button
+      type="button"
+      class="profile-season-tab ${tab.id === selectedId ? 'is-active' : ''}"
+      data-season-id="${esc(tab.id)}"
+      role="tab"
+      aria-selected="${tab.id === selectedId ? 'true' : 'false'}"
+    >
+      <span class="profile-season-tab__title">${esc(tab.label)}</span>
+      ${tab.current ? '<em class="profile-season-tab__meta">поточний</em>' : ''}
     </button>
   `).join('');
+
+  container.innerHTML = `<div class="profile-season-tabs__track" role="tablist" aria-label="Сезони">${tabsMarkup}</div>`;
+
+  const activeTab = container.querySelector('.profile-season-tab.is-active');
+  activeTab?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
 function renderSeasonSummary(season, allTime) {

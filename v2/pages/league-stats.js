@@ -210,10 +210,10 @@ function renderGameDaySection(lastGameDay, league) {
       <div class="league-game-day-card__stack">
         <div class="league-game-day-card__label">\u041e\u0441\u0442\u0430\u043d\u043d\u0454 \u043e\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u044f</div>
         <div class="league-game-day-card__value">${esc(day.date || '\u2014')}</div>
-        <div class="league-game-day-card__headline">${day.matchesCount || day.battlesCount ? `\u0417\u0456\u0433\u0440\u0430\u043d\u043e ${esc(day.matchesCount || 0)} \u043c\u0430\u0442\u0447\u0456\u0432` : '\u0414\u0430\u043d\u0456 \u0434\u043d\u044f \u0449\u0435 \u043d\u0435 \u0437\u0456\u0431\u0440\u0430\u043d\u0456'}</div>
+        <div class="league-game-day-card__headline">${day.matchesCount || day.battlesCount ? `\u0417\u0456\u0433\u0440\u0430\u043d\u043e ${esc(day.matchesCount || 0)} \u0456\u0433\u043e\u0440` : '\u0414\u0430\u043d\u0456 \u0434\u043d\u044f \u0449\u0435 \u043d\u0435 \u0437\u0456\u0431\u0440\u0430\u043d\u0456'}</div>
         <div class="league-game-day-stats">
           <div class="league-game-day-stat">
-            <span class="league-game-day-stat__label">\u041c\u0430\u0442\u0447\u0456</span>
+            <span class="league-game-day-stat__label">\u0406\u0433\u0440\u0438</span>
             <span class="league-game-day-stat__value">${esc(day.matchesCount || 0)}</span>
           </div>
           <div class="league-game-day-stat">
@@ -304,8 +304,8 @@ function renderInfographic(root, data, remainingGameDays, league) {
       ${insightCard({
         eyebrow: '\u0410\u043a\u0442\u0438\u0432\u043d\u0456\u0441\u0442\u044c',
         title: mostActive ? mostActive.nickname : '\u041d\u0435\u043c\u0430\u0454 \u0434\u0430\u043d\u0438\u0445',
-        value: mostActive ? `${mostActive.battles || 0} боїв` : '\u2014',
-        meta: mostActive ? `${mostActive.matches || 0} ігор у сезоні` : '\u0410\u043a\u0442\u0438\u0432\u043d\u0430 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0449\u0435 \u043d\u0435 \u0437\u0456\u0431\u0440\u0430\u043d\u0430',
+        value: mostActive ? `${mostActive.matches || 0} ігор` : '\u2014',
+        meta: mostActive ? `${mostActive.battles || 0} боїв у сезоні` : '\u0410\u043a\u0442\u0438\u0432\u043d\u0430 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u0449\u0435 \u043d\u0435 \u0437\u0456\u0431\u0440\u0430\u043d\u0430',
         footer: activityFooter,
         tone: 'warm'
       })}
@@ -318,8 +318,8 @@ function renderInfographic(root, data, remainingGameDays, league) {
     ${seasonStatCard({ label: 'Кращий WR у топ-10', value: bestWinrateTop10Value, meta: bestWinrateTop10 ? `${bestWinrateTop10.nickname} · ${bestWinrateTop10.matches || 0} ігор` : 'Топ-10 ще формується', width: bestWinrateTop10Width })}
     </div>
     <div class="league-kpi-grid league-kpi-grid--tertiary">
-    ${seasonStatCard({ label: 'Матчі / середні бої', value: `${matchesCount} / ${battlesPerMatch}`, meta: `${playersCount} активних гравців`, width: clampPercent(matchesCount * 3) })}
-    ${seasonStatCard({ label: 'Середній приріст за матч', value: averageDeltaPerMatch, meta: leader ? `Лідер ліги зараз у ранзі ${topRank}` : 'Дані ще збираються', width: averageDeltaPerMatchWidth })}
+    ${seasonStatCard({ label: 'Ігри / середні бої', value: `${matchesCount} / ${battlesPerMatch}`, meta: `${playersCount} активних гравців`, width: clampPercent(matchesCount * 3) })}
+    ${seasonStatCard({ label: 'Середній приріст за гру', value: averageDeltaPerMatch, meta: leader ? `Лідер ліги зараз у ранзі ${topRank}` : 'Дані ще збираються', width: averageDeltaPerMatchWidth })}
     </div>
   </section>
   <section class="league-dashboard-group league-dashboard-group--ranks">

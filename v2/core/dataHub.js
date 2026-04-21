@@ -311,7 +311,7 @@ function buildSeasonEntry(row = {}, { seasonId = '', seasonTitle = '', nickname 
   const matches = firstNumberFromAliases(row, ['Matches', 'matches', 'Games', 'games', 'Played', 'played']);
   const wins = firstNumberFromAliases(row, ['Wins', 'wins', 'Win', 'win']);
   const losses = firstNumberFromAliases(row, ['Losses', 'losses', 'Lose', 'lose']);
-  const draws = firstNumberFromAliases(row, ['Draws', 'draws', 'Ties', 'ties']);
+  const draws = firstNumberFromAliases(row, ['Draws', 'draws', 'Draw', 'draw', 'Ties', 'ties', 'Tie', 'tie', 'Нічиї', 'Нічия', 'ничьи', 'ничья']);
   const winRateRaw = firstNumberFromAliases(row, ['Winrate_%', 'winrate_%', 'WR%', 'wr%', 'Winrate', 'winrate', 'Win_rate', 'win_rate', 'WR', 'wr']);
   const mvp1 = firstNumberFromAliases(row, ['MVP1', 'mvp1', 'Top1', 'top1']);
   const mvp2 = firstNumberFromAliases(row, ['MVP2', 'mvp2', 'Top2', 'top2']);
@@ -773,7 +773,8 @@ function detectCols(header = []) {
   const idx = (names) => normalized.findIndex((col) => names.includes(col));
   return {
     nick: idx(['nick', 'nickname', 'player']), league: idx(['league', 'division']), points: idx(['points', 'pts', 'score', 'mmr']),
-    games: idx(['games', 'matches']), wins: idx(['wins', 'win']), losses: idx(['losses', 'lose', 'lost']), draws: idx(['draws', 'ties']),
+    games: idx(['games', 'matches']), wins: idx(['wins', 'win']), losses: idx(['losses', 'lose', 'lost']),
+    draws: idx(['draws', 'draw', 'ties', 'tie', 'нічия', 'нічиї', 'ничья', 'ничьи']),
     winRate: idx(['winrate', 'win rate', 'wr']), mvp: idx(['mvp', 'top1']), top2: idx(['top2', 'mvp2']), top3: idx(['top3', 'mvp3']), inactive: idx(['inactive', 'isinactive'])
   };
 }
@@ -2510,6 +2511,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       matches: dayMatches.length,
       participants: players.length,
       totalPointsPlayed: pointsPlayed,
+      bestDelta: topGain ? { nick: topGain.nick, delta: topGain.delta } : null,
       bestGain: topGain ? { nick: topGain.nick, delta: topGain.delta } : null,
       mvpDay: daySummary?.mvp ? { nick: daySummary.mvp, score: daySummary.mvpScore } : null,
       bestWinRate: winrateLeader ? { nick: winrateLeader.nick, winRate: Math.round((winrateLeader.wins / winrateLeader.matches) * 100), matches: winrateLeader.matches } : null

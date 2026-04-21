@@ -48,7 +48,7 @@ export async function initSeasonPage(params = {}) {
   if (!root) return;
 
   root.innerHTML = `<section class="season-header px-card px-card--accent"><h1 id="seasonPageTitle">Сезон</h1><p id="seasonPeriod" class="px-card__text">Період: —</p><p id="seasonUpdated" class="px-card__text">Оновлення: —</p></section>
-<section class="px-card"><div class="season-controls-row"><select id="seasonSelect" class="search-input"></select><div class="league-toggle"><label><input type="radio" name="leagueToggle" value="kids"> Дитяча ліга</label><label><input type="radio" name="leagueToggle" value="sundaygames"> Доросла ліга</label></div><select id="seasonSort" class="search-input"><option value="rating">Сортувати: рейтинг</option><option value="matches">Сортувати: матчі</option><option value="mvp">Сортувати: MVP</option><option value="delta">Сортувати: Δ рейтингу</option></select></div><p id="seasonState" class="px-card__text"></p></section>
+<section class="px-card"><div class="season-controls-row"><select id="seasonSelect" class="search-input"></select><div class="league-toggle"><label><input type="radio" name="leagueToggle" value="kids"> Дитяча ліга</label><label><input type="radio" name="leagueToggle" value="sundaygames"> Доросла ліга</label></div><select id="seasonSort" class="search-input"><option value="rating">Сортувати: рейтинг</option><option value="matches">Сортувати: ігри</option><option value="mvp">Сортувати: MVP</option><option value="delta">Сортувати: Δ рейтингу</option></select></div><p id="seasonState" class="px-card__text"></p></section>
 <section class="season-league-summary px-card"><h2>Summary ліги</h2><div id="seasonLeagueSummary"></div></section>
 <section class="season-awards px-card"><h2>Герої сезону</h2><div id="seasonAwards"></div></section>
 <section class="season-top10 px-card"><h2>ТОП-10 гравців сезону</h2><div id="seasonTop10"></div></section>
@@ -89,7 +89,7 @@ export async function initSeasonPage(params = {}) {
       document.getElementById('seasonPeriod').textContent = `Період: ${meta.period || meta.date_range || meta.dateRange || 'Немає даних'}`;
       document.getElementById('seasonUpdated').textContent = `Оновлення: ${meta.updated_at || meta.updated || 'Немає даних'}`;
 
-      document.getElementById('seasonLeagueSummary').innerHTML = `<div class="season-stat-card"><p>Матчі: <strong>${metrics.matches}</strong></p><p>Гравці: <strong>${metrics.activePlayers}</strong></p><p>Середній рейтинг: <strong>${metrics.avgRating ?? 'Немає даних'}</strong></p></div>`;
+      document.getElementById('seasonLeagueSummary').innerHTML = `<div class="season-stat-card"><p>Ігри: <strong>${metrics.matches}</strong></p><p>Гравці: <strong>${metrics.activePlayers}</strong></p><p>Середній рейтинг: <strong>${metrics.avgRating ?? 'Немає даних'}</strong></p></div>`;
 
       const awardsMap = { mvp: 'MVP сезону', progress: 'Найкращий прогрес', active: 'Найактивніший', stable: 'Найстабільніший' };
       document.getElementById('seasonAwards').innerHTML = awards.length
@@ -100,7 +100,7 @@ export async function initSeasonPage(params = {}) {
         }).join('')}</div>`
         : '<p class="px-card__text">Нагороди ще не сформовані</p>';
 
-      const renderTable = (rows) => `<div class="season-table-wrap"><table class="season-table"><thead><tr><th>#</th><th>Нік</th><th>Матчі</th><th>Перемоги</th><th>Нічиї</th><th>Поразки</th><th>MVP</th><th>Фін. рейтинг</th><th>Δ рейтингу</th><th>Ранг</th></tr></thead><tbody>${rows.map((p, idx) => `<tr><td>${idx + 1}</td><td>${esc(p.nickname || '—')}</td><td>${p.matches ?? '—'}</td><td>${p.wins ?? '—'}</td><td>${p.draws ?? '—'}</td><td>${p.losses ?? '—'}</td><td>${p.mvp_total ?? '—'}</td><td>${p.rating_end ?? '—'}</td><td>${(p.rating_delta > 0 ? '+' : '')}${p.rating_delta ?? 0}</td><td>${rankBadge(p.rank_final)}</td></tr>`).join('')}</tbody></table></div>`;
+      const renderTable = (rows) => `<div class="season-table-wrap"><table class="season-table"><thead><tr><th>#</th><th>Нік</th><th>Ігри</th><th>Перемоги</th><th>Нічиї</th><th>Поразки</th><th>MVP</th><th>Фін. рейтинг</th><th>Δ рейтингу</th><th>Ранг</th></tr></thead><tbody>${rows.map((p, idx) => `<tr><td>${idx + 1}</td><td>${esc(p.nickname || '—')}</td><td>${p.matches ?? '—'}</td><td>${p.wins ?? '—'}</td><td>${p.draws ?? '—'}</td><td>${p.losses ?? '—'}</td><td>${p.mvp_total ?? '—'}</td><td>${p.rating_end ?? '—'}</td><td>${(p.rating_delta > 0 ? '+' : '')}${p.rating_delta ?? 0}</td><td>${rankBadge(p.rank_final)}</td></tr>`).join('')}</tbody></table></div>`;
       document.getElementById('seasonTop10').innerHTML = top10.length ? renderTable(top10) : '<p class="px-card__text">Немає даних</p>';
       document.getElementById('seasonPlayers').innerHTML = players.length ? renderTable(sortPlayers(players, sort.value)) : '<p class="px-card__text">Немає даних</p>';
 
@@ -114,7 +114,7 @@ export async function initSeasonPage(params = {}) {
         return acc;
       }, {});
       const rankList = Object.entries(rankDist).sort(([a], [b]) => a.localeCompare(b));
-      document.getElementById('seasonChart').innerHTML = `<p>Матчі: <strong>${metrics.matches}</strong></p><p>Активні гравці: <strong>${metrics.activePlayers}</strong></p><p>Середній рейтинг: <strong>${metrics.avgRating ?? 'Немає даних'}</strong></p><p>Загальні MVP: <strong>${metrics.mvpTotal}</strong></p>${rankList.length ? `<div>${rankList.map(([rank, count]) => `<span class="tag">${rank}: ${count}</span>`).join(' ')}</div>` : '<p>Rank distribution: Немає даних</p>'}`;
+      document.getElementById('seasonChart').innerHTML = `<p>Ігри: <strong>${metrics.matches}</strong></p><p>Активні гравці: <strong>${metrics.activePlayers}</strong></p><p>Середній рейтинг: <strong>${metrics.avgRating ?? 'Немає даних'}</strong></p><p>Загальні MVP: <strong>${metrics.mvpTotal}</strong></p>${rankList.length ? `<div>${rankList.map(([rank, count]) => `<span class="tag">${rank}: ${count}</span>`).join(' ')}</div>` : '<p>Rank distribution: Немає даних</p>'}`;
 
       state.textContent = '';
     } catch (error) {

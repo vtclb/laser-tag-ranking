@@ -153,14 +153,87 @@ function renderCareerHighlights(highlights = {}) {
   const mostActive = highlights.mostActiveSeason;
   const mvpRecord = highlights.bestMvpSeason;
 
-  if (bestPoints?.seasonTitle && Number.isFinite(bestPoints.ratingEnd)) cards.push({ icon: '🏆', label: 'Найкращий сезон', value: `${formatSeasonTitleUA(bestPoints.seasonTitle)} • ${bestPoints.ratingEnd}` });
-  if (biggestDelta?.seasonTitle && Number.isFinite(biggestDelta.ratingDelta)) cards.push({ icon: '📈', label: 'Найбільший прогрес', value: `${formatSeasonTitleUA(biggestDelta.seasonTitle)} • ${signed(biggestDelta.ratingDelta)}` });
-  if (bestWr?.seasonTitle && Number.isFinite(bestWr.winrate)) cards.push({ icon: '🎯', label: 'Найкращий WR', value: `${formatSeasonTitleUA(bestWr.seasonTitle)} • ${bestWr.winrate.toFixed(1)}%` });
-  if (mostActive?.seasonTitle && Number.isFinite(mostActive.matches)) cards.push({ icon: '🔥', label: 'Найбільша активність', value: `${formatSeasonTitleUA(mostActive.seasonTitle)} • ${mostActive.matches} ігор` });
-  if (mvpRecord?.seasonTitle && Number.isFinite(mvpRecord.mvpTotal)) cards.push({ icon: '⭐', label: 'Рекорд MVP', value: `${formatSeasonTitleUA(mvpRecord.seasonTitle)} • ${mvpRecord.mvpTotal}` });
+  if (bestPoints?.seasonTitle && Number.isFinite(bestPoints.ratingEnd)) cards.push({ icon: '🏆', label: 'Найкращий сезон', value: String(bestPoints.ratingEnd), season: formatSeasonTitleUA(bestPoints.seasonTitle) });
+  if (biggestDelta?.seasonTitle && Number.isFinite(biggestDelta.ratingDelta)) cards.push({ icon: '📈', label: 'Найбільший прогрес', value: signed(biggestDelta.ratingDelta), season: formatSeasonTitleUA(biggestDelta.seasonTitle) });
+  if (bestWr?.seasonTitle && Number.isFinite(bestWr.winrate)) cards.push({ icon: '🎯', label: 'Найкращий WR', value: `${bestWr.winrate.toFixed(1)}%`, season: formatSeasonTitleUA(bestWr.seasonTitle) });
+  if (mostActive?.seasonTitle && Number.isFinite(mostActive.matches)) cards.push({ icon: '🔥', label: 'Найбільша активність', value: `${mostActive.matches} ігор`, season: formatSeasonTitleUA(mostActive.seasonTitle) });
+  if (mvpRecord?.seasonTitle && Number.isFinite(mvpRecord.mvpTotal)) cards.push({ icon: '⭐', label: 'Рекорд MVP', value: String(mvpRecord.mvpTotal), season: formatSeasonTitleUA(mvpRecord.seasonTitle) });
 
   if (!cards.length) return '';
-  return `<section class="px-card profile-section profile-achievements"><h2 class="profile-section__title">Відзнаки кар'єри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement-card"><div class="profile-achievement-card__head"><span class="profile-achievement-card__icon">${item.icon}</span><strong>${esc(item.label)}</strong></div><p>${esc(item.value)}</p></article>`).join('')}</div></section>`;
+  return `<section class="px-card profile-section profile-achievements"><h2 class="profile-section__title">Досягнення карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement-card"><div class="profile-achievement-card__head"><span class="profile-achievement-card__icon">${item.icon}</span><strong>${esc(item.label)}</strong></div><p class="profile-achievement-card__value">${esc(item.value)}</p><p class="profile-achievement-card__season">${esc(item.season)}</p></article>`).join('')}</div></section>`;
+}
+
+function resolveGameplayInsights({ wins, losses, draws, wr, mvp, delta, place, games }) {
+  const w = Number(wins);
+  const l = Number(losses);
+  const d = Number(draws);
+  const winrate = Number(wr);
+  const mvpTotal = Number(mvp);
+  const rankDelta = Number(delta);
+  const currentPlace = Number(place);
+  const matches = Number(games);
+  const totalMatches = Number.isFinite(matches)
+    ? matches
+    : [w, l, d].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+  const wlBalance = Number.isFinite(w) && Number.isFinite(l) ? w - l : 0;
+
+  let stabilityScore = 0;
+  if (winrate >= 60) stabilityScore += 2;
+  else if (winrate >= 48) stabilityScore += 1;
+  if (wlBalance >= 6) stabilityScore += 2;
+  else if (wlBalance >= 1) stabilityScore += 1;
+  if (totalMatches >= 28) stabilityScore += 1;
+  const stabilityLevel = stabilityScore >= 4 ? 'high' : stabilityScore >= 2 ? 'medium' : 'low';
+
+  let impactScore = 0;
+  if (mvpTotal >= 9) impactScore += 2;
+  else if (mvpTotal >= 4) impactScore += 1;
+  if (rankDelta >= 140) impactScore += 2;
+  else if (rankDelta >= 45) impactScore += 1;
+  if (currentPlace > 0 && currentPlace <= 5) impactScore += 1;
+  const impactLevel = impactScore >= 4 ? 'high' : impactScore >= 2 ? 'medium' : 'low';
+
+  const strengths = [];
+  const growth = [];
+  if (winrate >= 58) strengths.push('Сильна реалізація матчів');
+  if (mvpTotal >= 7) strengths.push('Часто впливає на гру');
+  if (rankDelta >= 90) strengths.push('Швидкий прогрес у сезоні');
+  if (totalMatches >= 26) strengths.push('Висока ігрова активність');
+  if (winrate < 50 && totalMatches >= 24) growth.push('Висока активність, але є простір для стабільності');
+  if (losses > wins) growth.push('Потрібно покращити стабільність гри');
+  if (mvpTotal <= 2 && totalMatches >= 18) growth.push('Можна частіше брати ключову роль у матчах');
+  if (rankDelta <= 0) growth.push('Важливо посилити прогрес за очками');
+
+  const formScore = (winrate >= 57 ? 2 : winrate >= 49 ? 1 : 0)
+    + (rankDelta >= 60 ? 2 : rankDelta >= 1 ? 1 : 0)
+    + (currentPlace > 0 && currentPlace <= 7 ? 1 : 0)
+    + (mvpTotal >= 6 ? 1 : 0)
+    + (totalMatches >= 14 ? 1 : 0);
+  const formLabel = formScore >= 5 ? 'сильна' : formScore >= 3 ? 'стабільна' : 'нестабільна';
+
+  const playStyle = mvpTotal >= 8 ? 'Агресивний' : winrate >= 57 ? 'Результативний' : stabilityLevel === 'high' ? 'Дисциплінований' : 'Стабільний';
+  const activityLevel = totalMatches >= 28 ? 'Висока' : totalMatches >= 14 ? 'Середня' : 'Низька';
+  const keyAdvantage = mvpTotal >= 8 ? 'MVP' : rankDelta >= 90 ? 'Прогрес' : winrate >= 58 ? 'WR' : 'Стабільність';
+
+  return {
+    totalMatches,
+    stabilityScore: Math.min(100, stabilityScore * 20 + 20),
+    impactScore: Math.min(100, impactScore * 20 + 20),
+    stabilityLevel,
+    impactLevel,
+    formLabel,
+    strengths: strengths.slice(0, 2),
+    growth: growth.slice(0, 2),
+    playStyle,
+    activityLevel,
+    keyAdvantage
+  };
+}
+
+function meterLabel(level) {
+  if (level === 'high') return 'Високий';
+  if (level === 'medium') return 'Середній';
+  return 'Низький';
 }
 
 function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNick, currentRank, topSeason }) {
@@ -182,8 +255,8 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
         </div>
         <p class="profile-hero__meta">${esc(leagueLabel)} • ${esc(seasonLabel)}</p>
         <div class="profile-hero__badges">
-          <span class="profile-place-badge">${Number.isFinite(place) ? `#${place}` : '—'}</span>
-          <span class="profile-subtle-badge">Ранг ${esc(currentRank)}</span>
+          <span class="profile-place-badge">${Number.isFinite(place) ? `Місце #${place}` : 'Місце —'}</span>
+          <span class="profile-subtle-badge">Ліга: ${esc(leagueLabel)}</span>
         </div>
         <div class="profile-rank-progress-wrap">
           <div class="profile-rank-progress__labels">
@@ -193,7 +266,7 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
           <div class="profile-rank-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.percent)}">
             <span style="width:${progress.percent.toFixed(1)}%"></span>
           </div>
-          <p class="profile-note">${progress.isMax ? 'Досягнуто найвищий ранг S.' : `Залишилось ${val(progress.remain, '—')} очок до рангу ${val(progress.nextRank, '—')}.`}</p>
+          <p class="profile-note">${progress.isMax ? 'Максимальний ранг досягнуто' : `Залишилось ${val(progress.remain, '—')} очок до рангу ${val(progress.nextRank, '—')}.`}</p>
         </div>
       </div>
       <div class="profile-hero__actions">
@@ -225,6 +298,16 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
   const draws = Number(livePlayer?.draws ?? topSeason?.draws);
   const wr = Number(livePlayer?.winRate ?? topSeason?.winRate ?? topSeason?.winrate);
   const total = [wins, losses, draws].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+  const insights = resolveGameplayInsights({
+    wins,
+    losses,
+    draws,
+    wr,
+    mvp: livePlayer?.mvpTotal ?? topSeason?.mvpTotal,
+    delta: livePlayer?.delta ?? topSeason?.delta ?? topSeason?.ratingDelta,
+    place: livePlayer?.place ?? topSeason?.place ?? topSeason?.finalPlace,
+    games: livePlayer?.matches ?? topSeason?.matches ?? total
+  });
 
   return `
     <section class="px-card profile-section profile-analysis">
@@ -235,12 +318,49 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
           <div class="profile-wr-bar ${wrTone(wr)}"><span style="width:${Number.isFinite(wr) ? Math.max(0, Math.min(100, wr)) : 0}%"></span></div>
           <strong class="profile-analysis__value">${pct(wr)}</strong>
         </div>
-        <div class="profile-analysis__compact">
-          <p><span>W / L / D</span><strong>${val(wins)} / ${val(losses)} / ${val(draws)}</strong></p>
-          <p><span>Ігри</span><strong>${val(livePlayer?.matches ?? topSeason?.matches ?? total)}</strong></p>
-          <p><span>Бої</span><strong>${val(livePlayer?.battles ?? topSeason?.rounds)}</strong></p>
+        <div class="profile-analysis__compact-grid">
+          ${metricMini({ label: 'Перемоги', value: val(wins), tone: 'is-good' })}
+          ${metricMini({ label: 'Поразки', value: val(losses), tone: 'is-bad' })}
+          ${metricMini({ label: 'Нічиї', value: val(draws), tone: 'is-mid' })}
+          ${metricMini({ label: 'Ігри', value: val(livePlayer?.matches ?? topSeason?.matches ?? total) })}
+          ${metricMini({ label: 'Бої', value: val(livePlayer?.battles ?? topSeason?.rounds) })}
+          ${metricMini({ label: 'MVP', value: val(livePlayer?.mvpTotal ?? topSeason?.mvpTotal) })}
         </div>
       </div>
+      <div class="profile-indicator-grid">
+        <article class="profile-indicator-card">
+          <p>Стабільність гри</p>
+          <strong>${meterLabel(insights.stabilityLevel)}</strong>
+          <div class="profile-meter ${insights.stabilityLevel}"><span style="width:${insights.stabilityScore}%"></span></div>
+        </article>
+        <article class="profile-indicator-card">
+          <p>Вплив на гру</p>
+          <strong>${meterLabel(insights.impactLevel)}</strong>
+          <div class="profile-meter ${insights.impactLevel}"><span style="width:${insights.impactScore}%"></span></div>
+        </article>
+      </div>
+      <article class="profile-form-card">
+        <p>Поточна форма</p>
+        <strong>Форма: ${esc(insights.formLabel)}</strong>
+      </article>
+      <div class="profile-insights-grid">
+        <article class="profile-insights-card">
+          <h3>Сильні сторони</h3>
+          <ul>${(insights.strengths.length ? insights.strengths : ['База для стабільного росту']).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+        </article>
+        <article class="profile-insights-card">
+          <h3>Зони росту</h3>
+          <ul>${(insights.growth.length ? insights.growth : ['Продовжувати поточний темп сезону']).map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+        </article>
+      </div>
+      <article class="profile-player-type">
+        <h3>Профіль гравця</h3>
+        <div class="profile-player-type__grid">
+          ${metricMini({ label: 'Стиль гри', value: insights.playStyle })}
+          ${metricMini({ label: 'Рівень активності', value: insights.activityLevel })}
+          ${metricMini({ label: 'Ключова перевага', value: insights.keyAdvantage, tone: 'is-accent' })}
+        </div>
+      </article>
     </section>
   `;
 }
@@ -286,8 +406,19 @@ function renderSeasonSummary(season, allTime) {
           ${metricMini({ label: 'WR', value: pct(seasonWr), tone: wrTone(seasonWr) })}
           ${metricMini({ label: 'Ігри', value: val(season.matches ?? season.games) })}
           ${metricMini({ label: 'MVP', value: val(season.mvpTotal) })}
+          ${metricMini({ label: 'Місце', value: Number.isFinite(Number(season.place ?? season.finalPlace)) ? `#${season.place ?? season.finalPlace}` : '—' })}
+          ${metricMini({ label: 'Ранг', value: val(season.rank), tone: 'is-accent' })}
         </div>
-        <div class="profile-wld-pill">W / L / D: <strong>${val(season.wins)} / ${val(season.losses)} / ${val(season.draws)}</strong></div>
+        <div class="profile-season-wld-grid">
+          ${metricMini({ label: 'Перемоги', value: val(season.wins), tone: 'is-good' })}
+          ${metricMini({ label: 'Поразки', value: val(season.losses), tone: 'is-bad' })}
+          ${metricMini({ label: 'Нічиї', value: val(season.draws), tone: 'is-mid' })}
+        </div>
+        <div class="profile-season-trend">
+          <div class="profile-season-trend__head"><span>Прогрес сезону</span><strong>${esc(val(season.ratingStart))} → ${esc(val(season.ratingEnd ?? season.points))}</strong></div>
+          <div class="profile-season-trend__bar ${deltaTone(seasonDelta)}"><span style="width:${Math.min(100, Math.max(8, Number.isFinite(Number(seasonDelta)) ? Math.min(100, Math.abs(Number(seasonDelta)) / 2) : 8))}%"></span></div>
+          <p class="profile-note">${Number(seasonDelta) > 0 ? 'Сезон із зростанням рейтингу' : Number(seasonDelta) < 0 ? 'Є просідання, є куди додати' : 'Рейтинг тримається стабільно'}</p>
+        </div>
       </section>
   `;
 }

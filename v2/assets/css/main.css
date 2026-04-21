@@ -7650,17 +7650,39 @@ body.theme-game .rules-v2.rules-v2--clean > .px-card::after,
   border-top: 1px solid rgba(255, 255, 255, .1);
 }
 
+.rules-v2--clean .rules-v2__score-row {
+  gap: .48rem;
+  padding: .38rem 0;
+}
+
 .rules-v2--clean .rules-v2__score-event {
   min-width: 0;
-  line-height: 1.4;
+  line-height: 1.3;
+  font-size: .95rem;
 }
+
+.rules-v2--clean .rules-v2__score-event--rank {
+  color: var(--muted);
+}
+
+.rules-v2--clean .rules-v2__score-event--rank .rank-letter {
+  font-weight: 700;
+}
+
+.rules-v2--clean .rules-v2__score-event--rank .rank-s { color: var(--rank-s); }
+.rules-v2--clean .rules-v2__score-event--rank .rank-a { color: var(--rank-a); }
+.rules-v2--clean .rules-v2__score-event--rank .rank-b { color: var(--rank-b); }
+.rules-v2--clean .rules-v2__score-event--rank .rank-c { color: #ffd98a; }
+.rules-v2--clean .rules-v2__score-event--rank .rank-d { color: var(--accent); }
+.rules-v2--clean .rules-v2__score-event--rank .rank-e { color: var(--accent-2); }
+.rules-v2--clean .rules-v2__score-event--rank .rank-f { color: var(--muted); }
 
 .rules-v2--clean .rules-v2__score-badge,
 .rules-v2--clean .rules-v2__rank-value {
   border-radius: 999px !important;
   border: 1px solid rgba(255, 255, 255, .2);
-  padding: .17rem .48rem;
-  font-size: .82rem;
+  padding: .16rem .45rem;
+  font-size: .8rem;
   font-weight: 700;
   white-space: nowrap;
 }

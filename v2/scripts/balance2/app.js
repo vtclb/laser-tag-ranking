@@ -23,6 +23,15 @@ const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
 const LEAGUE_KEY = 'balance2:league';
 let saveLocked = false;
 
+function escapeAttr(value = '') {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function setTournamentRequestMeta({ action = '', requestStatus = '', error = '' } = {}) {
   state.tournamentState.lastAction = action;
   state.tournamentState.lastRequestStatus = requestStatus;
@@ -425,7 +434,7 @@ function startRenameTeam(teamKey) {
   const wrap = document.querySelector(`[data-team-name-wrap="${teamKey}"]`);
   if (!wrap) return;
   const current = state.teamsState.teamNames[teamKey] || '';
-  wrap.innerHTML = `<input class="search-input" data-team-name-input="${teamKey}" value="${current}" maxlength="32" />`;
+  wrap.innerHTML = `<input class="search-input" data-team-name-input="${escapeAttr(teamKey)}" value="${escapeAttr(current)}" maxlength="32" />`;
   const input = wrap.querySelector('input');
   input?.focus();
   input?.select();

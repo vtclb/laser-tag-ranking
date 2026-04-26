@@ -14,7 +14,7 @@ import {
 } from './state.js';
 import { movePlayerToTeam } from './manual.js';
 
-function escapeHtml(value) {
+function escapeHtml(value = '') {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -23,7 +23,7 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-function escapeAttr(value) {
+function escapeAttr(value = '') {
   return escapeHtml(value);
 }
 
@@ -171,7 +171,7 @@ export function renderLobby() {
 }
 
 function teamNameControl(key) {
-  return `<div class="team-name-wrap" data-team-name-wrap="${key}"><strong class="team-name-label">${getTeamLabel(key)}</strong><button class="chip" type="button" data-rename-team="${key}">✏️ Назва</button></div>`;
+  return `<div class="team-name-wrap" data-team-name-wrap="${escapeAttr(key)}"><strong class="team-name-label">${escapeHtml(getTeamLabel(key))}</strong><button class="chip" type="button" data-rename-team="${escapeAttr(key)}">✏️ Назва</button></div>`;
 }
 
 function sumByNicks(nicks) {
@@ -215,7 +215,7 @@ export function renderMatchConfig() {
 
   const scheduleItems = state.activeMatch.schedule.map((match) => {
     const selected = match.id === state.activeMatch.selectedScheduleMatchId;
-    const status = match.played ? `<span class="tag">Зіграно ${match.resultSummary ? `· ${match.resultSummary}` : ''}</span>` : '<span class="tag">Ще не зіграно</span>';
+    const status = match.played ? `<span class="tag">Зіграно ${match.resultSummary ? `· ${escapeHtml(match.resultSummary)}` : ''}</span>` : '<span class="tag">Ще не зіграно</span>';
     return `<label class="schedule-item ${selected ? 'active' : ''}"><input type="radio" name="scheduleMatch" data-schedule-pick="${escapeAttr(match.id)}" ${selected ? 'checked' : ''}/><span>${escapeHtml(match.label)}</span>${status}</label>`;
   }).join('');
 
@@ -242,7 +242,7 @@ export function renderMatchConfig() {
         <label>Назва турніру <input class="search-input" data-tournament-name type="text" value="${escapeAttr(state.tournamentState.tournamentName || '')}" placeholder="Весняний турнір"></label>
         <label>Режим бою
           <select class="chip" data-tournament-game-mode>
-            ${['DM', 'TR', 'KT'].map((mode) => `<option value="${mode}" ${state.tournamentState.gameMode === mode ? 'selected' : ''}>${mode}</option>`).join('')}
+            ${['DM', 'TR', 'KT'].map((mode) => `<option value="${escapeAttr(mode)}" ${state.tournamentState.gameMode === mode ? 'selected' : ''}>${escapeHtml(mode)}</option>`).join('')}
           </select>
         </label>
         <div class="row-btns">
@@ -284,7 +284,7 @@ export function renderMatchTeams() {
   root.innerHTML = [teamA, teamB].map((key, idx) => {
     const items = state.teamsState.teams[key].map((nick) => `<li>${escapeHtml(nick)}</li>`).join('');
     const label = idx === 0 ? 'A' : 'B';
-    return `<div class="team-card"><h4>${label} · ${getTeamLabel(key)}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
+    return `<div class="team-card"><h4>${label} · ${escapeHtml(getTeamLabel(key))}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
   }).join('');
 }
 
@@ -363,7 +363,7 @@ export function renderLastSavedGame() {
     return;
   }
   const g = state.lastSavedGame;
-  root.innerHTML = `<div class="summary-pill">${formatSavedTime(g.savedAt)} — ${g.teamA} vs ${g.teamB}</div><div class="summary-pill">Серія: <strong>${g.summary}</strong></div><div class="summary-pill">MVP: <strong>${g.mvp}</strong></div><div class="summary-pill">Штрафи: <strong>${g.penalties}</strong></div>`;
+  root.innerHTML = `<div class="summary-pill">${escapeHtml(formatSavedTime(g.savedAt))} — ${escapeHtml(g.teamA)} vs ${escapeHtml(g.teamB)}</div><div class="summary-pill">Серія: <strong>${escapeHtml(g.summary)}</strong></div><div class="summary-pill">MVP: <strong>${escapeHtml(g.mvp)}</strong></div><div class="summary-pill">Штрафи: <strong>${escapeHtml(g.penalties)}</strong></div>`;
 }
 
 export function bindUiEvents(handlers) {

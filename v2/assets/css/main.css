@@ -8269,3 +8269,30 @@ body.theme-game .rules-v2.rules-v2--clean > .px-card::after,
     justify-self: start;
   }
 }
+
+/* v2 UI rule:
+   content cards, buttons, tabs and state blocks use sharp rectangular corners.
+   Avoid pill/oval radius in v2 content UI. */
+body.theme-game {
+  --v2-radius-xs: 2px;
+  --v2-radius-sm: 4px;
+  --v2-radius-md: 6px;
+  --v2-radius-lg: 8px;
+}
+
+body.theme-game .v2-rect-card {
+  border-radius: var(--v2-radius-md);
+}
+
+body.theme-game .v2-rect-btn,
+body.theme-game .v2-rect-tab {
+  border-radius: var(--v2-radius-sm);
+}
+
+body.theme-game :is(.home-tournaments-card, .tournaments-hero, .tournament-list, .tournament-dashboard__shell, .tournament-status, .tournaments-preview__card, .tournament-card, .tournament-team-card, .tournament-match-card, .tournament-table-wrap) {
+  border-radius: var(--v2-radius-md) !important;
+}
+
+body.theme-game :is(.home-tournaments-card__item, .tournament-meta-item, .tournament-open-btn, .home-tournaments-card__cta, .tournament-tab) {
+  border-radius: var(--v2-radius-sm) !important;
+}

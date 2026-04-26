@@ -155,7 +155,8 @@ function renderLeagueSection({ league, players }) {
 
 function formatHomeTournamentMeta(item = {}) {
   const league = escapeHtml(leagueLabelUA(item?.league) || item?.league || 'Ліга');
-  const status = escapeHtml(String(item?.status || 'ACTIVE').toUpperCase());
+  const rawStatus = String(item?.status || '').trim();
+  const status = escapeHtml(rawStatus ? rawStatus.toUpperCase() : 'ПЛАНУЄТЬСЯ');
   const dateStart = item?.dateStart ? new Date(item.dateStart) : null;
   if (dateStart && !Number.isNaN(dateStart.getTime())) {
     const dateLabel = escapeHtml(dateStart.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }));
@@ -200,7 +201,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
 }
 
 async function fetchHomeTournaments() {
-  return loadTournamentsList(7000);
+  return loadTournamentsList();
 }
 
 function renderHomeLoadingSkeleton() {

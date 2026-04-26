@@ -1,4 +1,6 @@
-const TOURNAMENTS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
+import { loadSeasonsConfig } from '../core/dataHub.js';
+import { jsonp } from '../core/utils.js';
+import { leagueLabelUA } from '../core/naming.js';
 
 function toNumber(value) {
   const n = Number(value);
@@ -10,6 +12,10 @@ function toText(value, fallback = '—') {
   return text || fallback;
 }
 
+function normalizeHeaderKey(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+}
+
 function normalizeStatusValue(value = '') {
   return String(value || '').trim().toLowerCase();
 }
@@ -17,6 +23,10 @@ function normalizeStatusValue(value = '') {
 function isActiveStatus(value = '') {
   const normalized = normalizeStatusValue(value);
   return normalized === 'active' || normalized === 'активний';
+}
+
+function isEmptyStatus(value = '') {
+  return String(value || '').trim() === '';
 }
 
 function parsePlayersList(value) {
@@ -29,124 +39,207 @@ function parsePlayersList(value) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed.map((item) => String(item || '').trim()).filter(Boolean);
     } catch {
-      // noop: fallback to comma-separated parsing
+      // noop
     }
   }
   return raw.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
-function normalizeTournamentList(data) {
-  const source = (
-    (Array.isArray(data?.tournaments) && data.tournaments)
-    || (Array.isArray(data?.rows) && data.rows)
-    || (Array.isArray(data?.items) && data.items)
-    || (Array.isArray(data?.data) && data.data)
-    || []
-  );
-
-  return source.map((item, idx) => {
-    const tournamentId = String(
-      item?.tournamentId
-      ?? item?.id
-      ?? item?.tournament_id
-      ?? item?.ID
-      ?? ''
-    ).trim();
-    return {
-      ...item,
-      tournamentId,
-      name: toText(item?.name, item?.title || (tournamentId || `Турнір ${idx + 1}`)),
-      league: toText(item?.league),
-      dateStart: toText(item?.dateStart, item?.startDate || item?.createdAt || ''),
-      dateEnd: toText(item?.dateEnd, item?.endDate || ''),
-      status: toText(item?.status, 'ACTIVE'),
-      notes: toText(item?.notes, '')
-    };
-  });
+function normalizeObjectRow(row = {}) {
+  const source = (row && typeof row === 'object') ? row : {};
+  return Object.entries(source).reduce((acc, [key, value]) => {
+    acc[normalizeHeaderKey(key)] = value;
+    return acc;
+  }, {});
 }
 
-function normalizeTournamentDetail(data) {
-  const tournament = data?.tournament || data?.data?.tournament || data || {};
-  const teamsRaw = Array.isArray(data?.teams) ? data.teams : (Array.isArray(data?.data?.teams) ? data.data.teams : []);
-  const gamesRaw = Array.isArray(data?.games) ? data.games : (Array.isArray(data?.data?.games) ? data.data.games : []);
-  const playersRaw = Array.isArray(data?.players) ? data.players : (Array.isArray(data?.data?.players) ? data.data.players : []);
-  return {
-    tournament: {
-      ...tournament,
-      tournamentId: String(tournament?.tournamentId || tournament?.id || '').trim(),
-      name: toText(tournament?.name, tournament?.tournamentId || 'Турнір'),
-      status: toText(tournament?.status, 'ACTIVE'),
-      dateStart: toText(tournament?.dateStart, tournament?.startDate || tournament?.createdAt || '')
-    },
-    teams: teamsRaw.map((team) => ({ ...team, playersList: parsePlayersList(team?.players) })),
-    games: gamesRaw.map((game) => ({ ...game })),
-    players: playersRaw.map((player) => ({ ...player })),
-    config: data?.config || data?.data?.config || {}
-  };
+function getCell(row, ...keys) {
+  const normalized = normalizeObjectRow(row);
+  for (const key of keys) {
+    const value = normalized[normalizeHeaderKey(key)];
+    if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+  }
+  return null;
 }
 
-function gasTournamentJsonp(action, params = {}, timeoutMs = 15_000) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `__tcb${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const script = document.createElement('script');
-    const requestUrl = new URL(TOURNAMENTS_ENDPOINT);
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`JSONP timeout: ${action}`));
-    }, timeoutMs);
-
-    const cleanup = () => {
-      clearTimeout(timer);
-      if (script.parentNode) script.parentNode.removeChild(script);
-      delete window[callbackName];
-    };
-
-    Object.entries({ action, mode: 'tournament', ...params }).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') requestUrl.searchParams.set(key, String(value));
-    });
-    requestUrl.searchParams.set('callback', callbackName);
-    requestUrl.searchParams.set('cb', callbackName);
-
-    window[callbackName] = (payload) => {
-      cleanup();
-      if (payload?.status === 'ERR') {
-        reject(new Error(payload?.message || 'Tournament API error'));
-        return;
-      }
-      resolve(payload || {});
-    };
-
-    script.async = true;
-    script.onerror = () => {
-      cleanup();
-      reject(new Error(`JSONP network error: ${action}`));
-    };
-    script.src = requestUrl.toString();
-    document.head.appendChild(script);
-  });
-}
-
-export async function loadTournamentsList(timeoutMs = 15_000) {
-  const activeResponse = await gasTournamentJsonp('listTournaments', { status: 'ACTIVE' }, timeoutMs);
-  console.debug('[tournaments] list response', activeResponse);
-  let tournaments = normalizeTournamentList(activeResponse);
-
-  if (!tournaments.length) {
-    const fallbackResponse = await gasTournamentJsonp('listTournaments', {}, timeoutMs);
-    console.debug('[tournaments] list response (fallback)', fallbackResponse);
-    tournaments = normalizeTournamentList(fallbackResponse);
+function normalizeRawRows(payload) {
+  if (Array.isArray(payload)) {
+    if (payload.length && Array.isArray(payload[0])) {
+      const header = payload[0].map((value) => normalizeHeaderKey(value));
+      return payload.slice(1).map((line) => {
+        const row = {};
+        header.forEach((head, idx) => {
+          if (head) row[head] = Array.isArray(line) ? line[idx] : null;
+        });
+        return row;
+      });
+    }
+    return payload.filter((item) => item && typeof item === 'object').map(normalizeObjectRow);
   }
 
-  const active = tournaments.filter((item) => isActiveStatus(item?.status));
-  const normalized = active.length ? active : tournaments;
-  console.debug('[tournaments] normalized list', normalized);
-  return normalized;
+  if (!payload || typeof payload !== 'object') return [];
+
+  const container = payload.data || payload.result || payload;
+  if (Array.isArray(container?.rows)) {
+    if (container.rows.length && Array.isArray(container.rows[0])) {
+      const header = Array.isArray(container.header)
+        ? container.header.map((value) => normalizeHeaderKey(value))
+        : [];
+      return container.rows.map((line) => {
+        const row = {};
+        header.forEach((head, idx) => {
+          if (head) row[head] = Array.isArray(line) ? line[idx] : null;
+        });
+        return row;
+      });
+    }
+    return container.rows.filter((item) => item && typeof item === 'object').map(normalizeObjectRow);
+  }
+
+  if (Array.isArray(container?.values)) {
+    return normalizeRawRows(container.values);
+  }
+
+  if (Array.isArray(container?.data)) {
+    return normalizeRawRows(container.data);
+  }
+
+  return [];
 }
 
-async function loadTournamentDetail(tournamentId, timeoutMs = 20_000) {
-  const data = await gasTournamentJsonp('getTournamentData', { tournamentId }, timeoutMs);
-  console.debug('[tournaments] detail response', data);
-  return normalizeTournamentDetail(data);
+async function getSheetRaw(sheetName, timeoutMs = 12_000) {
+  const config = await loadSeasonsConfig();
+  const gasUrl = config?.gasEndpoint || config?.endpoints?.gasUrl;
+  if (!gasUrl) throw new Error('GAS endpoint не налаштований');
+  return jsonp(gasUrl, { action: 'getSheetRaw', sheet: sheetName, limitRows: 5000 }, timeoutMs);
+}
+
+function normalizeTournamentSheets({ tournamentsRows, teamsRows, gamesRows, playersRows, configRows }) {
+  const tournaments = tournamentsRows.map((row, idx) => {
+    const tournamentId = String(getCell(row, 'tournamentid', 'tournamentId', 'id') || '').trim();
+    return {
+      tournamentId,
+      name: toText(getCell(row, 'name', 'title'), tournamentId || `Турнір ${idx + 1}`),
+      league: toText(getCell(row, 'league'), ''),
+      dateStart: toText(getCell(row, 'datestart', 'startdate', 'createdat'), ''),
+      dateEnd: toText(getCell(row, 'dateend', 'enddate'), ''),
+      status: toText(getCell(row, 'status'), ''),
+      notes: toText(getCell(row, 'notes'), '')
+    };
+  }).filter((item) => item.tournamentId || item.name);
+
+  const byId = {};
+  tournaments.forEach((tournament, index) => {
+    const fallbackId = String(tournament.tournamentId || `tournament-${index + 1}`);
+    const tid = fallbackId;
+    tournament.tournamentId = tid;
+    byId[tid] = { tournament, teams: [], games: [], players: [], config: [] };
+  });
+
+  teamsRows.forEach((row) => {
+    const tid = String(getCell(row, 'tournamentid', 'tournamentId') || '').trim();
+    if (!tid || !byId[tid]) return;
+    byId[tid].teams.push({
+      tournamentId: tid,
+      teamId: toText(getCell(row, 'teamid', 'teamId'), ''),
+      teamName: toText(getCell(row, 'teamname', 'name'), ''),
+      players: toText(getCell(row, 'players'), ''),
+      mmrStart: toNumber(getCell(row, 'mmrstart')),
+      mmrCurrent: toNumber(getCell(row, 'mmrcurrent', 'mmrCurrent')),
+      wins: toNumber(getCell(row, 'wins')),
+      losses: toNumber(getCell(row, 'losses')),
+      draws: toNumber(getCell(row, 'draws')),
+      points: toNumber(getCell(row, 'points')),
+      rank: toText(getCell(row, 'rank'), ''),
+      playersList: parsePlayersList(getCell(row, 'players'))
+    });
+  });
+
+  gamesRows.forEach((row) => {
+    const tid = String(getCell(row, 'tournamentid', 'tournamentId') || '').trim();
+    if (!tid || !byId[tid]) return;
+    byId[tid].games.push({
+      tournamentId: tid,
+      gameId: toText(getCell(row, 'gameid', 'gameId'), ''),
+      mode: toText(getCell(row, 'mode'), ''),
+      teamAId: toText(getCell(row, 'teamaid', 'teamAId'), ''),
+      teamBId: toText(getCell(row, 'teambid', 'teamBId'), ''),
+      winnerTeamId: toText(getCell(row, 'winnerteamid', 'winnerTeamId'), ''),
+      isDraw: toText(getCell(row, 'isdraw', 'draw'), ''),
+      mvpNick: toText(getCell(row, 'mvpnick', 'mvpNick'), ''),
+      secondNick: toText(getCell(row, 'secondnick', 'secondNick'), ''),
+      thirdNick: toText(getCell(row, 'thirdnick', 'thirdNick'), ''),
+      teamAMmrDelta: toNumber(getCell(row, 'teamammrdelta', 'teamAMmrDelta')),
+      teamBMmrDelta: toNumber(getCell(row, 'teambmmrdelta', 'teamBMmrDelta')),
+      timestamp: toText(getCell(row, 'timestamp', 'createdat'), '')
+    });
+  });
+
+  playersRows.forEach((row) => {
+    const tid = String(getCell(row, 'tournamentid', 'tournamentId') || '').trim();
+    if (!tid || !byId[tid]) return;
+    byId[tid].players.push({
+      tournamentId: tid,
+      playerNick: toText(getCell(row, 'playernick', 'playerNick', 'nick'), ''),
+      teamId: toText(getCell(row, 'teamid', 'teamId'), ''),
+      games: toNumber(getCell(row, 'games')),
+      wins: toNumber(getCell(row, 'wins')),
+      losses: toNumber(getCell(row, 'losses')),
+      draws: toNumber(getCell(row, 'draws')),
+      mvpCount: toNumber(getCell(row, 'mvpcount')),
+      secondCount: toNumber(getCell(row, 'secondcount')),
+      thirdCount: toNumber(getCell(row, 'thirdcount')),
+      impactPoints: toNumber(getCell(row, 'impactpoints')),
+      mmrChange: toNumber(getCell(row, 'mmrchange'))
+    });
+  });
+
+  configRows.forEach((row) => {
+    const tid = String(getCell(row, 'tournamentid', 'tournamentId') || '').trim();
+    if (!tid || !byId[tid]) return;
+    byId[tid].config.push(row);
+  });
+
+  return { tournaments, byId };
+}
+
+export async function loadTournamentSheets() {
+  const sheets = ['tournaments', 'tournament_teams', 'tournament_games', 'tournament_players', 'tournament_config'];
+  const [tournamentsRaw, teamsRaw, gamesRaw, playersRaw, configRaw] = await Promise.allSettled(
+    sheets.map((sheetName) => getSheetRaw(sheetName))
+  );
+
+  const unwrapRows = (result, sheetName, required = false) => {
+    if (result.status === 'fulfilled') return normalizeRawRows(result.value);
+    if (required) throw result.reason;
+    console.warn('[tournaments] sheet unavailable', sheetName, result.reason);
+    return [];
+  };
+
+  const tournamentsRows = unwrapRows(tournamentsRaw, 'tournaments', true);
+  const teamsRows = unwrapRows(teamsRaw, 'tournament_teams');
+  const gamesRows = unwrapRows(gamesRaw, 'tournament_games');
+  const playersRows = unwrapRows(playersRaw, 'tournament_players');
+  const configRows = unwrapRows(configRaw, 'tournament_config');
+
+  console.debug('[tournaments] raw sheets loaded', {
+    tournaments: tournamentsRows.length,
+    teams: teamsRows.length,
+    games: gamesRows.length,
+    players: playersRows.length
+  });
+
+  const model = normalizeTournamentSheets({ tournamentsRows, teamsRows, gamesRows, playersRows, configRows });
+  console.debug('[tournaments] normalized tournaments', model.tournaments);
+  return model;
+}
+
+export async function loadTournamentsList() {
+  const model = await loadTournamentSheets();
+  const active = model.tournaments.filter((item) => isActiveStatus(item.status));
+  if (active.length) return active;
+  if (model.tournaments.length === 1 && isEmptyStatus(model.tournaments[0]?.status)) return model.tournaments;
+  return model.tournaments.length ? [model.tournaments[0]] : [];
 }
 
 function createElement(tag, className, text) {
@@ -222,6 +315,7 @@ function statusLabel(status = '') {
   const normalized = String(status || '').toLowerCase();
   if (normalized.includes('active') || normalized.includes('актив')) return 'Активний';
   if (normalized.includes('finished')) return 'Завершений';
+  if (!String(status || '').trim()) return 'Планується';
   return toText(status);
 }
 
@@ -238,6 +332,14 @@ function shortTimestamp(value) {
 function renderRankBadge(rank) {
   const badge = createElement('span', 't-rank-badge', toText(rank, '—'));
   return badge;
+}
+
+function pickAutoOpenTournament(tournaments = [], selectedId = '') {
+  const selected = String(selectedId || '').trim();
+  if (selected && tournaments.some((item) => String(item.tournamentId) === selected)) return selected;
+  const firstActive = tournaments.find((item) => isActiveStatus(item.status));
+  if (firstActive) return firstActive.tournamentId;
+  return tournaments[0]?.tournamentId || '';
 }
 
 export async function initTournamentsPage(params = {}) {
@@ -262,11 +364,12 @@ export async function initTournamentsPage(params = {}) {
   );
 
   const dashboard = createElement('section', 'tournament-dashboard-shell');
-  listWrap.append(listHeading, stateCard('Завантаження турнірів...', 'Отримуємо список активних ігор', 'loading'));
+  listWrap.append(listHeading, stateCard('Завантаження турнірів...', 'Отримуємо список турнірів', 'loading'));
   root.append(hero, listWrap, dashboard);
 
   try {
-    const tournaments = await loadTournamentsList();
+    const tournamentData = await loadTournamentSheets();
+    const tournaments = tournamentData.tournaments;
 
     listWrap.replaceChildren(listHeading);
     if (!tournaments.length) {
@@ -277,46 +380,43 @@ export async function initTournamentsPage(params = {}) {
 
     const selectedId = String(params.selected || params.id || '').trim();
     const grid = createElement('div', 'tournaments-page-active__list');
-    let autoOpenId = '';
 
-    tournaments.forEach((tournament, idx) => {
+    tournaments.forEach((tournament) => {
       const card = createElement('article', 'tournament-card');
-      const tournamentId = String(tournament?.tournamentId || tournament?.id || '').trim();
-      if (!autoOpenId && selectedId && selectedId === tournamentId) autoOpenId = tournamentId;
-      if (!autoOpenId && isActiveStatus(tournament?.status)) autoOpenId = tournamentId;
-      if (!autoOpenId && idx === 0) autoOpenId = tournamentId;
+      const tournamentId = String(tournament?.tournamentId || '').trim();
 
       card.setAttribute('data-tournament-id', tournamentId);
       card.append(createElement('h3', 'tournament-card__title', toText(tournament?.name, 'Турнір')));
 
       const meta = createElement('div', 'tournament-card__meta');
       meta.append(
-        createMetaItem('Ліга', toText(tournament?.league)),
-        createMetaItem('Статус', statusLabel(tournament?.status || 'ACTIVE'), `status-${statusClass(tournament?.status)}`),
-        createMetaItem('Старт', toText(tournament?.dateStart, tournament?.startDate || tournament?.createdAt || '—'))
+        createMetaItem('Ліга', toText(leagueLabelUA(tournament?.league) || tournament?.league, '—')),
+        createMetaItem('Статус', statusLabel(tournament?.status), `status-${statusClass(tournament?.status)}`),
+        createMetaItem('Старт', toText(tournament?.dateStart, '—'))
       );
       card.append(meta);
 
       const actions = createElement('div', 'tournament-card__actions');
       const openBtn = createElement('button', 'tournament-open-btn', actionLabel(tournament?.status));
       openBtn.type = 'button';
-      openBtn.addEventListener('click', () => openTournament(tournamentId, dashboard, grid));
+      openBtn.addEventListener('click', () => openTournament(tournamentId, dashboard, grid, tournamentData.byId));
       actions.append(openBtn);
       card.append(actions);
 
       card.addEventListener('click', (event) => {
         if (event.target instanceof HTMLElement && event.target.closest('button')) return;
-        openTournament(tournamentId, dashboard, grid);
+        openTournament(tournamentId, dashboard, grid, tournamentData.byId);
       });
 
       grid.append(card);
     });
 
     listWrap.append(grid);
-    if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, true);
+    const autoOpenId = pickAutoOpenTournament(tournaments, selectedId);
+    if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, tournamentData.byId, true);
   } catch (err) {
     console.warn('[tournaments] list failed', err);
-    listWrap.replaceChildren(listHeading, stateCard('Не вдалося завантажити дані турнірів', 'Спробуй оновити сторінку пізніше', 'error'));
+    listWrap.replaceChildren(listHeading, stateCard('Не вдалося завантажити дані турнірів', sanitizeErrorMessage(), 'error'));
     dashboard.replaceChildren(createPreviewSections());
   }
 }
@@ -328,13 +428,14 @@ function activateTournamentCard(listNode, nextId) {
   });
 }
 
-async function openTournament(tournamentId, dashboardNode, listNode, silentHashUpdate = false) {
+async function openTournament(tournamentId, dashboardNode, listNode, byId, silentHashUpdate = false) {
   if (!dashboardNode || !tournamentId) return;
   activateTournamentCard(listNode, tournamentId);
   dashboardNode.replaceChildren(stateCard('Завантаження даних турніру...', 'Будь ласка, зачекай', 'loading'));
 
   try {
-    const data = await loadTournamentDetail(tournamentId);
+    const data = byId?.[tournamentId] || null;
+    if (!data) throw new Error('Tournament not found');
 
     if (!silentHashUpdate) {
       const nextHash = `#tournaments?selected=${encodeURIComponent(tournamentId)}`;
@@ -365,7 +466,7 @@ function renderTournamentDashboard(node, data) {
   head.append(createElement('h3', 'px-card__title', title));
   const meta = createElement('div', 'tournament-dashboard__meta');
   meta.append(
-    createMetaItem('Ліга', toText(tournament?.league)),
+    createMetaItem('Ліга', toText(leagueLabelUA(tournament?.league) || tournament?.league, '—')),
     createMetaItem('Статус', statusLabel(tournament?.status || 'ACTIVE'), `status-${statusClass(tournament?.status)}`),
     createMetaItem('Старт', toText(tournament?.dateStart, tournament?.startDate || tournament?.createdAt || '—'))
   );

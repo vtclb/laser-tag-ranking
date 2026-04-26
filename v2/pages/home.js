@@ -1,6 +1,6 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
-import { listActiveTournaments } from '../core/tournamentApi.js';
+import { loadTournamentsList } from './tournaments.js';
 import { formatDataUpdatedAt, makeDataStatus } from '../core/dataStatus.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
@@ -200,8 +200,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
 }
 
 async function fetchHomeTournaments() {
-  const json = await listActiveTournaments(7000);
-  return Array.isArray(json?.tournaments) ? json.tournaments : [];
+  return loadTournamentsList(7000);
 }
 
 function renderHomeLoadingSkeleton() {

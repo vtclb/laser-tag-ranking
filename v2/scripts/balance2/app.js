@@ -12,16 +12,21 @@ import {
   getActiveMatchTeams,
   getTeamLabel,
   MAX_LOBBY_PLAYERS,
+  TEAM_KEYS,
+  ensureTeamsForManualAssignment,
+  assignPlayerToTeam,
+  removePlayerFromTeam,
+  removePlayerFromAllTeams,
+  resolvePlayerByKey,
 } from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
-import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
+import { syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setTournamentStatus, clearTournamentStatus } from './ui.js';
 import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js';
 import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 
 const $ = (id) => document.getElementById(id);
-const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
 const LEAGUE_KEY = 'balance2:league';
 let saveLocked = false;
 
@@ -164,8 +169,7 @@ function syncSeriesMirror() {
 }
 
 function setTeamCount(rawValue) {
-  state.teamsState.teamCount = Math.min(6, Math.max(2, Number(rawValue) || 2));
-  TEAM_KEYS.slice(state.teamsState.teamCount).forEach((key) => { state.teamsState.teams[key] = []; });
+  ensureTeamsForManualAssignment(rawValue);
   state.matchState.seriesRounds = state.matchState.seriesRounds.map((value) => {
     const numeric = Number(value);
     if (value === null) return null;
@@ -181,9 +185,13 @@ function setTeamCount(rawValue) {
   setTournamentDirty();
 }
 
+function clearAllTeams() {
+  TEAM_KEYS.forEach((key) => { state.teamsState.teams[key] = []; });
+}
+
 function runBalance() {
   const selected = getSelectedPlayers();
-  clearTeams();
+  clearAllTeams();
   if (state.teamsState.teamCount === 2) {
     const teams = autoBalance2(selected);
     state.teamsState.teams.team1 = teams.team1.map((p) => getPlayerKey(p));
@@ -476,9 +484,7 @@ async function handleSaveRegularGame(retry = false) {
 function toggleSelectedPlayer(nick) {
   if (state.playersState.selectedMap.has(nick)) {
     state.playersState.selected = state.playersState.selected.filter((n) => n !== nick);
-    Object.keys(state.teamsState.teams).forEach((key) => {
-      state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== nick);
-    });
+    removePlayerFromAllTeams(nick);
   } else if (state.playersState.selected.length < MAX_LOBBY_PLAYERS) {
     state.playersState.selected = [...state.playersState.selected, nick];
   }
@@ -601,8 +607,8 @@ async function init() {
   });
 
   $('balanceBtn')?.addEventListener('click', () => { runBalance(); renderAndSync(); });
-  $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
-  $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearTeams(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
+  $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; ensureTeamsForManualAssignment(); syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
+  $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearAllTeams(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
 
   const debouncedSearch = (() => {
     let timer;
@@ -640,9 +646,7 @@ async function init() {
     onRemove(nick) {
       state.playersState.selected = state.playersState.selected.filter((n) => n !== nick);
       syncSelectedMap();
-      Object.keys(state.teamsState.teams).forEach((key) => {
-        state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== nick);
-      });
+      removePlayerFromAllTeams(nick);
       ensureActiveMatchState();
       setTournamentDirty();
       saveLobby();
@@ -686,6 +690,7 @@ async function init() {
     onRenameStart(teamKey) { startRenameTeam(teamKey); },
     onRenameSave(teamKey, value) { saveTeamName(teamKey, value); },
     onChanged() {
+      ensureTeamsForManualAssignment();
       syncSelectedFromTeamsAndBench();
       ensureActiveMatchState();
       setTournamentDirty();
@@ -754,6 +759,31 @@ async function init() {
         setStatus({ state: 'error', text: '❌ Команда A і Команда B не можуть бути однаковими', retryVisible: false });
       }
       cleanupTournamentMvp();
+      saveLobby();
+      renderAndSync();
+    },
+    onAssignPlayerTeam(playerKey, teamId) {
+      ensureTeamsForManualAssignment();
+      if (!playerKey) return;
+      if (!teamId) {
+        const removed = removePlayerFromAllTeams(playerKey);
+        if (!removed) return;
+        setTournamentDirty('Команди змінено — збережи їх перед матчем');
+        saveLobby();
+        renderAndSync();
+        return;
+      }
+      if (!resolvePlayerByKey(playerKey) && !state.playersState.selected.includes(playerKey)) return;
+      if (!assignPlayerToTeam(playerKey, teamId)) return;
+      setTournamentDirty(`Гравця додано в ${getTeamLabel(teamId)}`);
+      saveLobby();
+      renderAndSync();
+    },
+    onRemovePlayerFromTeam(playerKey, teamId) {
+      if (!playerKey || !teamId) return;
+      const removed = removePlayerFromTeam(playerKey, teamId);
+      if (!removed) return;
+      setTournamentDirty('Команди змінено — збережи їх перед матчем');
       saveLobby();
       renderAndSync();
     },
@@ -860,8 +890,10 @@ async function init() {
         renderAndSync();
         return;
       }
-      if (teams.some((team) => !team.players.length)) {
-        const message = 'Кожна команда має містити хоча б 1 гравця';
+      const activeTeamIds = TEAM_KEYS.slice(0, state.teamsState.teamCount);
+      const firstEmptyTeamId = activeTeamIds.find((teamId) => !(state.teamsState.teams[teamId] || []).length);
+      if (firstEmptyTeamId) {
+        const message = `${getTeamLabel(firstEmptyTeamId)} порожня`;
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
         setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });

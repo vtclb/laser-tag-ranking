@@ -113,6 +113,12 @@ export function getSelectedPlayers() {
   return state.playersState.selected.map((playerKey) => map.get(playerKey)).filter(Boolean);
 }
 
+export function resolvePlayerByKey(playerKey) {
+  const key = getPlayerKey(playerKey);
+  if (!key) return null;
+  return state.playersState.players.find((player) => getPlayerKey(player) === key) || null;
+}
+
 export function syncSelectedMap() {
   state.playersState.selectedMap = new Set(state.playersState.selected);
 }
@@ -132,6 +138,51 @@ export function getParticipants() {
 
 export function getAvailableTeamKeys() {
   return TEAM_KEYS.slice(0, normalizeTeamCount(state.teamsState.teamCount));
+}
+
+export function ensureTeamsForManualAssignment(rawTeamCount = state.teamsState.teamCount) {
+  const teamCount = normalizeTeamCount(rawTeamCount);
+  state.teamsState.teamCount = teamCount;
+  TEAM_KEYS.forEach((teamKey, idx) => {
+    if (!Array.isArray(state.teamsState.teams[teamKey])) state.teamsState.teams[teamKey] = [];
+    if (idx >= teamCount) state.teamsState.teams[teamKey] = [];
+  });
+  return TEAM_KEYS.slice(0, teamCount);
+}
+
+export function getAssignedTeamId(playerKey) {
+  const key = getPlayerKey(playerKey);
+  if (!key) return '';
+  return TEAM_KEYS.find((teamKey) => (state.teamsState.teams[teamKey] || []).includes(key)) || '';
+}
+
+export function removePlayerFromTeam(playerKey, teamId) {
+  const key = getPlayerKey(playerKey);
+  if (!key || !TEAM_KEYS.includes(teamId) || !Array.isArray(state.teamsState.teams[teamId])) return false;
+  const before = state.teamsState.teams[teamId].length;
+  state.teamsState.teams[teamId] = state.teamsState.teams[teamId].filter((id) => id !== key);
+  return state.teamsState.teams[teamId].length !== before;
+}
+
+export function removePlayerFromAllTeams(playerKey) {
+  const key = getPlayerKey(playerKey);
+  if (!key) return false;
+  let changed = false;
+  TEAM_KEYS.forEach((teamKey) => {
+    changed = removePlayerFromTeam(key, teamKey) || changed;
+  });
+  return changed;
+}
+
+export function assignPlayerToTeam(playerKey, teamId) {
+  const key = getPlayerKey(playerKey);
+  if (!key || !TEAM_KEYS.includes(teamId) || !Array.isArray(state.teamsState.teams[teamId])) return false;
+  const inLobby = state.playersState.selected.includes(key);
+  const exists = !!resolvePlayerByKey(key);
+  if (!inLobby && !exists) return false;
+  removePlayerFromAllTeams(key);
+  if (!state.teamsState.teams[teamId].includes(key)) state.teamsState.teams[teamId].push(key);
+  return true;
 }
 
 export function getActiveMatchTeams() {

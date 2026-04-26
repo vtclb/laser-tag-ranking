@@ -131,6 +131,18 @@ nav, .header, .menu, .burger, .hamburger { display: none !important; }
   background: rgba(255,255,255,.02);
 }
 
+.balance-status {
+  min-height: 36px;
+  padding: .45rem .55rem;
+  border-radius: .6rem;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.03);
+}
+.balance-status[data-status-type="loading"] { border-color: rgba(49, 208, 255, .55); }
+.balance-status[data-status-type="success"] { border-color: rgba(124, 255, 114, .55); }
+.balance-status[data-status-type="error"] { border-color: rgba(255, 90, 95, .7); }
+.balance-status[data-status-type="warning"] { border-color: rgba(255, 196, 79, .8); }
+
 .match-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .match-pick-grid select { width: 100%; }
 

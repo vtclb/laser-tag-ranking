@@ -38,7 +38,21 @@ function ensureBottomNav() {
   const nav = document.createElement('div');
   nav.className = 'v2-bottom-nav';
   nav.setAttribute('aria-label', 'Нижня навігація');
-  nav.innerHTML = `<a class="v2-nav-btn nav-item" data-route="#main" href="#main"><span>🏠</span><small>Головна</small></a><a class="v2-nav-btn nav-item" data-route="#league-stats?league=sundaygames" href="#league-stats?league=sundaygames"><span>🏆</span><small>Дорослі</small></a><a class="v2-nav-btn nav-item" data-route="#league-stats?league=kids" href="#league-stats?league=kids"><span>🧒</span><small>Дитяча</small></a><a class="v2-nav-btn nav-item" data-route="#gameday?league=sundaygames" href="#gameday?league=sundaygames"><span>🎯</span><small>Ігри</small></a><a class="v2-nav-btn nav-item" data-route="#rules" href="#rules"><span>📜</span><small>Правила</small></a>`;
+  const iconAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false"';
+  const NAV_ICONS = {
+    main: `<svg ${iconAttrs}><path d="M4.5 10.5 12 4l7.5 6.5v8.2l-2.2 1.3h-10.6l-2.2-1.3z"/><path d="M9 20v-4.2h6V20"/><path d="M8 10h8"/></svg>`,
+    adults: `<svg ${iconAttrs}><path d="M12 3.5 19 6v5.7c0 3.8-3 7.2-7 8.8-4-1.6-7-5-7-8.8V6z"/><path d="m8.4 10.1 3.6-2.3 3.6 2.3"/><path d="m8.4 13.3 3.6-2.3 3.6 2.3"/></svg>`,
+    kids: `<svg ${iconAttrs}><path d="M12 3.5 19 6v5.7c0 3.8-3 7.2-7 8.8-4-1.6-7-5-7-8.8V6z"/><path d="m12 8.5 1.3 2.5 2.8.4-2 1.9.5 2.7-2.6-1.3-2.6 1.3.5-2.7-2-1.9 2.8-.4z"/></svg>`,
+    gameday: `<svg ${iconAttrs}><path d="M12 4.5v4.2M12 15.3v4.2M4.5 12h4.2M15.3 12h4.2"/><path d="M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"/><path d="M12 10.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></svg>`,
+    rules: `<svg ${iconAttrs}><path d="M8 4.5h8l3 3V19l-2 1.5H8l-2-1.5V6z"/><path d="M16 4.5V8h3"/><path d="m10 11.2 1.2 1.2 2.3-2.3"/><path d="M10 15.5h5.2"/></svg>`
+  };
+  nav.innerHTML = `
+    <a class="v2-nav-btn nav-item" data-route="#main" href="#main"><span class="v2-nav-btn__icon">${NAV_ICONS.main}</span><small class="v2-nav-btn__label">ГОЛОВНА</small></a>
+    <a class="v2-nav-btn nav-item" data-route="#league-stats?league=sundaygames" href="#league-stats?league=sundaygames"><span class="v2-nav-btn__icon">${NAV_ICONS.adults}</span><small class="v2-nav-btn__label">ДОРОСЛІ</small></a>
+    <a class="v2-nav-btn nav-item" data-route="#league-stats?league=kids" href="#league-stats?league=kids"><span class="v2-nav-btn__icon">${NAV_ICONS.kids}</span><small class="v2-nav-btn__label">ДИТЯЧА</small></a>
+    <a class="v2-nav-btn nav-item" data-route="#gameday?league=sundaygames" href="#gameday?league=sundaygames"><span class="v2-nav-btn__icon">${NAV_ICONS.gameday}</span><small class="v2-nav-btn__label">ІГРИ</small></a>
+    <a class="v2-nav-btn nav-item" data-route="#rules" href="#rules"><span class="v2-nav-btn__icon">${NAV_ICONS.rules}</span><small class="v2-nav-btn__label">ПРАВИЛА</small></a>
+  `;
 
   nav.querySelectorAll('.v2-nav-btn').forEach((el) => {
     el.addEventListener('click', (event) => {

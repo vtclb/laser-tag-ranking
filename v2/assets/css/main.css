@@ -6680,7 +6680,7 @@ body.theme-game .v2-nav-btn {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px !important;
+  gap: 5px !important;
   border: 0 !important;
   border-right: 0 !important;
   border-radius: 12px !important;
@@ -6721,10 +6721,20 @@ body.theme-game .v2-nav-btn:active {
 }
 
 body.theme-game .v2-nav-btn__icon {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(183, 204, 238, 0.76);
+  opacity: .9;
+}
+
+body.theme-game .v2-nav-btn__icon svg {
+  width: 20px;
+  height: 20px;
   display: block;
-  font-size: 17px;
-  line-height: 1;
-  opacity: .72;
+  vector-effect: non-scaling-stroke;
 }
 
 body.theme-game .v2-nav-btn__label {
@@ -6762,6 +6772,12 @@ body.theme-game .v2-nav-btn[aria-current='page'] .v2-nav-btn__icon,
 body.theme-game .v2-nav-btn.active .v2-nav-btn__label,
 body.theme-game .v2-nav-btn[aria-current='page'] .v2-nav-btn__label {
   opacity: 1 !important;
+}
+
+body.theme-game .v2-nav-btn.active .v2-nav-btn__icon,
+body.theme-game .v2-nav-btn[aria-current='page'] .v2-nav-btn__icon {
+  color: #f4fbff;
+  filter: drop-shadow(0 0 8px rgba(118, 192, 255, 0.28));
 }
 
 body.theme-game .v2-nav-btn.active::after,

@@ -169,7 +169,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
       <div class="home-tournaments-teaser__left">
         <strong>${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</strong>
         <span class="home-tournaments-teaser__meta">${formatHomeTournamentMeta(item)}</span>
-        <span class="home-tournaments-teaser__stats">${Number(item?.teamsCount || 0)} команд · ${Number(item?.gamesCount || 0)} матчів · ${Number(item?.playersCount || 0)} гравців</span>
+        <span class="home-tournaments-teaser__stats">${Number(item?.teamsCount || 0)} команд · ${Number(item?.gamesCount || 0)} матчів</span>
       </div>
       <span class="home-tournaments-teaser__open">Відкрити</span>
     </a>`

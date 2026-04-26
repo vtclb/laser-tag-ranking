@@ -10,6 +10,10 @@ body.theme-game #app :is(.topnav, .page, .container, .hero, .px-card, .section, 
   --muted: #9cb0cf;
   --accent: #31d0ff;
   --accent-2: #7cff72;
+  --v2-radius-xs: 2px;
+  --v2-radius-sm: 4px;
+  --v2-radius-md: 6px;
+  --v2-radius-lg: 8px;
   /* Canonical rank palette (synced with original/main site). */
   --rank-s: #a44dff;
   --rank-a: #ff4fa3;
@@ -8357,14 +8361,9 @@ body.theme-game .rules-v2.rules-v2--clean > .px-card::after,
 }
 
 /* v2 UI rule:
-   content cards, buttons, tabs and state blocks use sharp rectangular corners.
-   Avoid pill/oval radius in v2 content UI. */
-body.theme-game {
-  --v2-radius-xs: 2px;
-  --v2-radius-sm: 4px;
-  --v2-radius-md: 6px;
-  --v2-radius-lg: 8px;
-}
+   Content cards, CTA buttons, tabs, state blocks and tournament UI use sharp rectangular corners.
+   Avoid pill/oval radius in v2 content UI.
+*/
 
 body.theme-game .v2-rect-card {
   border-radius: var(--v2-radius-md);
@@ -8375,10 +8374,40 @@ body.theme-game .v2-rect-tab {
   border-radius: var(--v2-radius-sm);
 }
 
-body.theme-game :is(.home-tournaments-card, .tournaments-hero, .tournaments-page-hero, .tournament-list, .tournaments-page-active, .tournament-dashboard__shell, .tournament-status, .tournaments-preview__card, .tournament-dashboard-preview__card, .tournament-card, .tournament-team-card, .tournament-match-card, .tournament-table-wrap) {
+body.theme-game :is(
+  .home-tournaments-card,
+  .home-tournament-strip,
+  .home-tournaments-card__item,
+  .tournaments-page,
+  .tournaments-hero,
+  .tournaments-page-hero,
+  .tournaments-state,
+  .tournaments-empty,
+  .tournaments-preview-card,
+  .tournaments-preview__card,
+  .tournament-list,
+  .tournaments-page-active,
+  .tournament-card,
+  .tournament-dashboard,
+  .tournament-dashboard__shell,
+  .tournament-status,
+  .tournament-dashboard-preview__card,
+  .tournament-table-wrap,
+  .tournament-team-card,
+  .tournament-match-card,
+  .tournament-player-table
+) {
   border-radius: var(--v2-radius-md) !important;
 }
 
-body.theme-game :is(.home-tournaments-card__item, .home-tournaments-card__item-status, .home-tournaments-card__empty, .tournament-meta-item, .tournament-open-btn, .home-tournaments-card__cta, .tournament-tab) {
+body.theme-game :is(
+  .home-tournaments-card__cta,
+  .home-tournament-strip__action,
+  .tournament-open-btn,
+  .tournament-tab,
+  .home-tournaments-card__item-status,
+  .home-tournaments-card__empty,
+  .tournament-meta-item
+) {
   border-radius: var(--v2-radius-sm) !important;
 }

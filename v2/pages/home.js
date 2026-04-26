@@ -1,6 +1,7 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
 import { listActiveTournaments } from '../core/tournamentApi.js';
+import { formatDataUpdatedAt, makeDataStatus } from '../core/dataStatus.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
 const STATS_LINKS = {
@@ -117,6 +118,30 @@ function renderLeadersNow(adultLeader, kidsLeader) {
       </div>
     </section>
   `;
+}
+
+function pickHomeStatus(adultsStatus, kidsStatus) {
+  const statuses = [adultsStatus, kidsStatus]
+    .filter((status) => status && typeof status === 'object')
+    .map((status) => makeDataStatus(status));
+  if (!statuses.length) return makeDataStatus({ source: 'unknown', ok: false, message: 'Data unavailable' });
+  const withDate = statuses
+    .map((status) => ({ status, ts: Date.parse(status.updatedAt || '') }))
+    .filter((entry) => Number.isFinite(entry.ts))
+    .sort((a, b) => b.ts - a.ts);
+  return withDate[0]?.status || statuses[0];
+}
+
+function renderDataStatusLine(status) {
+  const safeStatus = makeDataStatus(status);
+  const timeLabel = formatDataUpdatedAt(safeStatus.updatedAt);
+  if (safeStatus.ok && timeLabel) {
+    return `<p class="data-status-line data-status-line--ok">Дані оновлено: ${esc(timeLabel)}</p>`;
+  }
+  if (safeStatus.source === 'cache' && timeLabel) {
+    return `<p class="data-status-line data-status-line--warning">Показуємо кеш · оновлено: ${esc(timeLabel)}</p>`;
+  }
+  return '<p class="data-status-line data-status-line--error">Дані тимчасово недоступні</p>';
 }
 
 function renderLeagueSection({ league, players }) {
@@ -367,6 +392,7 @@ async function safeInitHomePage(root) {
       <section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
       <div class="px-divider"></div>
       <section class="section" id="leadersNowMount"></section>
+      <section class="section" id="homeDataStatusMount"></section>
       <section class="section" id="homeTournamentsMount"></section>
       <section class="section" id="leagueSections"></section>
     </div>`;
@@ -374,9 +400,10 @@ async function safeInitHomePage(root) {
   const lifecycle = setHomeLoadingLifecycle(root);
   const stateBox = document.getElementById('stateBox');
   const leadersNowMount = document.getElementById('leadersNowMount');
+  const homeDataStatusMount = document.getElementById('homeDataStatusMount');
   const homeTournamentsMount = document.getElementById('homeTournamentsMount');
   const leagueSections = document.getElementById('leagueSections');
-  if (!stateBox || !leadersNowMount || !leagueSections || !homeTournamentsMount) {
+  if (!stateBox || !leadersNowMount || !homeDataStatusMount || !leagueSections || !homeTournamentsMount) {
     lifecycle.destroy();
     lifecycle.revealContent();
     return;
@@ -386,6 +413,7 @@ async function safeInitHomePage(root) {
     stateBox.hidden = false;
     stateBox.textContent = 'Дані тимчасово недоступні';
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
+    homeDataStatusMount.innerHTML = renderDataStatusLine(makeDataStatus({ source: 'unknown', ok: false, message: 'Data unavailable' }));
     homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'error');
     leagueSections.innerHTML = '';
   };
@@ -416,8 +444,10 @@ async function safeInitHomePage(root) {
     const pickSeasonActive = (livePlayers = []) => (livePlayers || []).filter((player) => isCurrentSeasonActive(player)).sort(byPointsDesc);
     const adultsPlayers = pickSeasonActive(adultsLive?.players || []);
     const kidsPlayers = pickSeasonActive(kidsLive?.players || []);
+    const homeStatus = pickHomeStatus(adultsLive?.dataStatus, kidsLive?.dataStatus);
 
     leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
+    homeDataStatusMount.innerHTML = renderDataStatusLine(homeStatus);
     homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'loading');
     fetchHomeTournaments()
       .then((items) => {
@@ -443,6 +473,7 @@ async function safeInitHomePage(root) {
     stateBox.hidden = false;
     stateBox.textContent = msg;
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
+    homeDataStatusMount.innerHTML = renderDataStatusLine(makeDataStatus({ source: 'unknown', ok: false, message: 'Data unavailable' }));
     leagueSections.innerHTML = '';
   } finally {
     lifecycle.revealContent();

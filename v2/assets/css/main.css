@@ -244,6 +244,36 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   max-width: 40px !important;
 }
 
+.data-status-line {
+  display: inline-block;
+  margin: .4rem 0 0;
+  padding: .24rem .5rem;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: var(--v2-radius-sm);
+  font-size: .78rem;
+  line-height: 1.3;
+  color: var(--muted);
+  background: rgba(255,255,255,.04);
+}
+
+.data-status-line--ok {
+  color: #a4e7ff;
+  border-color: rgba(49, 208, 255, .35);
+  background: rgba(49, 208, 255, .12);
+}
+
+.data-status-line--warning {
+  color: #ffe0a3;
+  border-color: rgba(255, 191, 60, .4);
+  background: rgba(255, 191, 60, .12);
+}
+
+.data-status-line--error {
+  color: #ffb3be;
+  border-color: rgba(255, 90, 95, .38);
+  background: rgba(255, 90, 95, .12);
+}
+
 .home-v2 .home-player-info {
   flex: 1 1 auto;
   min-width: 0;

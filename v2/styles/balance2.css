@@ -18,6 +18,7 @@
 .counts-row,
 .row-btns,
 .league-controls,
+.balance-step,
 .series-count,
 .series-count-choices,
 .team-actions,
@@ -31,6 +32,35 @@
 
 .section-head,
 .series-count { justify-content: space-between; }
+
+.balance-step {
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: .6rem;
+  padding: .65rem;
+  background: rgba(255, 255, 255, .02);
+}
+.balance-step h3 {
+  margin: 0 0 .45rem;
+  font-size: 1rem;
+}
+.balance-step--event { margin-bottom: .55rem; }
+.event-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .45rem;
+}
+.event-mode-button {
+  min-height: 40px;
+  border-radius: .4rem;
+}
+.player-source-control {
+  display: grid;
+  gap: .45rem;
+}
+.player-source-control select,
+.player-source-control button {
+  width: 100%;
+}
 
 .section-hint {
   margin: .2rem 0 .6rem;

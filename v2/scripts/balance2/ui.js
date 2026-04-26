@@ -104,11 +104,11 @@ function balanceIntoNTeamsLocal(players, rawTeamCount) {
 
 export function render() {
   renderLeagueControls();
+  renderLegacyControls();
   renderPlayers();
   renderLobby();
   renderTeams();
   renderMatchConfig();
-  renderTournamentSourceOptions();
   renderMatchTeams();
   renderSeriesEditor();
   renderMatchSummary();
@@ -117,10 +117,8 @@ export function render() {
   renderLastSavedGame();
 }
 
-function renderTournamentSourceOptions() {
-  const sourceSelect = document.querySelector('select[data-role="player-source-mode"]');
-  if (!sourceSelect) return;
-  const options = state.app.eventMode === 'tournament'
+function sourceOptionsForEventMode() {
+  return state.app.eventMode === 'tournament'
     ? [
       { value: 'sundaygames', label: 'Дорослі' },
       { value: 'kids', label: 'Дитяча' },
@@ -130,17 +128,45 @@ function renderTournamentSourceOptions() {
       { value: 'sundaygames', label: 'Дорослі' },
       { value: 'kids', label: 'Дитяча' },
     ];
-  sourceSelect.innerHTML = options.map((option) => `<option value="${escapeAttr(option.value)}">${escapeHtml(option.label)}</option>`).join('');
-  sourceSelect.value = options.some((option) => option.value === state.app.playerSourceMode)
+}
+
+export function renderLeagueControls() {
+  const sourceOptions = sourceOptionsForEventMode();
+  const sourceLabel = state.app.eventMode === 'tournament' ? 'Джерело гравців' : 'Ліга';
+  const controlsSection = document.getElementById('leagueSelect')?.closest('section.card');
+  if (controlsSection) {
+    controlsSection.innerHTML = `
+      <section class="balance-step balance-step--event">
+        <h3>1. Тип події</h3>
+        <div class="event-mode-switch">
+          <button type="button" class="chip event-mode-button ${state.app.eventMode === 'regular' ? 'active' : ''}" data-event-mode="regular">Рейтинговий матч</button>
+          <button type="button" class="chip event-mode-button ${state.app.eventMode === 'tournament' ? 'active' : ''}" data-event-mode="tournament">Турнір</button>
+        </div>
+      </section>
+      <section class="balance-step balance-step--source">
+        <h3>2. Джерело гравців</h3>
+        <div class="player-source-control">
+          <label class="league-label" for="leagueSelect">${escapeHtml(sourceLabel)}</label>
+          <select id="leagueSelect" class="chip" data-role="player-source-mode">
+            ${sourceOptions.map((option) => `<option value="${escapeAttr(option.value)}">${escapeHtml(option.label)}</option>`).join('')}
+          </select>
+          <button id="loadPlayersBtn" class="chip" type="button" data-load-players="1">Завантажити гравців</button>
+        </div>
+      </section>
+    `;
+  }
+
+  const sourceSelect = document.querySelector('select[data-role="player-source-mode"]');
+  if (!sourceSelect) return;
+  sourceSelect.innerHTML = sourceOptions.map((option) => `<option value="${escapeAttr(option.value)}">${escapeHtml(option.label)}</option>`).join('');
+  sourceSelect.value = sourceOptions.some((option) => option.value === state.app.playerSourceMode)
     ? state.app.playerSourceMode
     : 'sundaygames';
 }
 
-export function renderLeagueControls() {
-  const select = document.getElementById('leagueSelect');
+export function renderLegacyControls() {
   const sortSelect = document.getElementById('sortMode');
   const teamCountControl = document.getElementById('teamCountControl');
-  if (select && select.value !== state.app.league) select.value = state.app.league;
   if (sortSelect && sortSelect.value !== state.app.sortMode) sortSelect.value = state.app.sortMode;
   if (teamCountControl) {
     const existing = new Set(Array.from(teamCountControl.querySelectorAll('[data-team-count]'))
@@ -260,20 +286,9 @@ export function renderMatchConfig() {
   `;
 
   root.innerHTML = `
-    <div class="series-count"><span>Режим:</span><div class="series-count-choices">
-      <button class="chip ${eventMode === 'regular' ? 'active' : ''}" type="button" data-event-mode="regular">Звичайний матч</button>
-      <button class="chip ${eventMode === 'tournament' ? 'active' : ''}" type="button" data-event-mode="tournament">Турнір</button>
-    </div></div>
     ${eventMode === 'regular' ? regularContent : `
       <div class="tournament-panel">
         <div class="tag">Змішаний турнір завантажує гравців з дорослої та дитячої ліги.</div>
-        <label>Джерело гравців
-          <select class="chip" data-role="player-source-mode">
-            <option value="sundaygames">Дорослі</option>
-            <option value="kids">Дитяча</option>
-            <option value="mixed">Змішаний турнір</option>
-          </select>
-        </label>
         <label>Назва турніру <input class="search-input" data-tournament-name type="text" value="${escapeAttr(state.tournamentState.tournamentName || '')}" placeholder="Весняний турнір"></label>
         <label>Режим бою
           <select class="chip" data-tournament-game-mode>
@@ -475,6 +490,7 @@ export function bindUiEvents(handlers) {
     const eventMode = e.target.closest('[data-event-mode]')?.dataset.eventMode;
     const createTournament = e.target.closest('[data-tournament-create]');
     const saveTeams = e.target.closest('[data-tournament-save-teams]');
+    const loadPlayers = e.target.closest('[data-load-players]');
 
     if (toggle) {
       const alreadySelected = state.playersState.selectedMap.has(toggle);
@@ -519,6 +535,7 @@ export function bindUiEvents(handlers) {
     if (penaltiesToggle) handlers.onTogglePenalties();
     if (matchMode) handlers.onMatchMode(matchMode);
     if (eventMode) handlers.onEventMode(eventMode);
+    if (loadPlayers) handlers.onLoadPlayers();
     if (createTournament) handlers.onCreateTournament();
     if (saveTeams) handlers.onSaveTournamentTeams();
   });

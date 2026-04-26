@@ -3,6 +3,7 @@ import { rankFromPoints } from '../../core/rankRules.js';
 export const state = {
   app: {
     league: 'kids',
+    playerSourceMode: 'kids',
     mode: 'auto',
     eventMode: 'regular',
     sortMode: 'points_desc',
@@ -93,17 +94,30 @@ export function normalizeLeague(league) {
   return key === 'kids' ? 'kids' : 'sundaygames';
 }
 
+export function normalizePlayerSourceMode(mode, eventMode = 'regular') {
+  const key = String(mode || '').trim().toLowerCase();
+  if (key === 'kids') return 'kids';
+  if (key === 'mixed') return eventMode === 'tournament' ? 'mixed' : 'sundaygames';
+  return 'sundaygames';
+}
+
+export function getPlayerKey(playerOrKey) {
+  if (typeof playerOrKey === 'string') return playerOrKey;
+  if (!playerOrKey || typeof playerOrKey !== 'object') return '';
+  return String(playerOrKey.uid || playerOrKey.id || playerOrKey.nick || playerOrKey.name || '').trim();
+}
+
 export function getSelectedPlayers() {
-  const map = new Map(state.playersState.players.map((p) => [p.nick, p]));
-  return state.playersState.selected.map((nick) => map.get(nick)).filter(Boolean);
+  const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  return state.playersState.selected.map((playerKey) => map.get(playerKey)).filter(Boolean);
 }
 
 export function syncSelectedMap() {
   state.playersState.selectedMap = new Set(state.playersState.selected);
 }
 
-export function isSelected(nick) {
-  return state.playersState.selectedMap.has(nick);
+export function isSelected(playerOrKey) {
+  return state.playersState.selectedMap.has(getPlayerKey(playerOrKey));
 }
 
 export function getTeamLabel(teamKey) {

@@ -64,6 +64,13 @@
 .player-row.selected { border-color: rgba(124, 255, 114, .7); background: rgba(124, 255, 114, .11); }
 .player-meta { display: inline-flex; gap: .45rem; align-items: baseline; flex-wrap: wrap; }
 .player-meta small { opacity: .8; }
+.league-marker {
+  display: inline-block;
+  border: 1px solid rgba(49, 208, 255, .45);
+  background: rgba(49, 208, 255, .12);
+  border-radius: 2px;
+  padding: 0 .25rem;
+}
 
 .team-card {
   border: 1px solid rgba(255, 255, 255, .13);

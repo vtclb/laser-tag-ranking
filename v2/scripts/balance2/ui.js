@@ -7,6 +7,7 @@ import {
   getAvailableTeamKeys,
   getActiveMatchTeams,
   syncSelectedMap,
+  getPlayerKey,
   TEAM_KEYS,
   TEAM_COUNT_OPTIONS,
   MAX_LOBBY_PLAYERS,
@@ -65,12 +66,14 @@ function formatPlayer(playerOrNick) {
     nick: playerOrNick.nick,
     points: Number(playerOrNick.points ?? playerOrNick.pts) || 0,
     rank: playerOrNick.rank || '—',
+    sourceLeagueLabel: playerOrNick.sourceLeagueLabel || '',
   };
 }
 
 function playerMetaHtml(player) {
   const parsed = formatPlayer(player);
-  return `<span class="player-meta"><strong>${escapeHtml(parsed.nick)}</strong> <small>${parsed.points} pts · ${escapeHtml(parsed.rank)}</small></span>`;
+  const leagueMarker = parsed.sourceLeagueLabel ? ` · <span class="league-marker">${escapeHtml(parsed.sourceLeagueLabel)}</span>` : '';
+  return `<span class="player-meta"><strong>${escapeHtml(parsed.nick)}</strong> <small>${parsed.points} pts · ${escapeHtml(parsed.rank)}${leagueMarker}</small></span>`;
 }
 
 function sanitizeTeamCount(value) {
@@ -155,18 +158,19 @@ export function renderPlayers() {
   selectedCount.textContent = `Обрано: ${state.playersState.selected.length} / ${MAX_LOBBY_PLAYERS}`;
 
   list.innerHTML = players.map((player) => {
-    const selected = isSelected(player.nick);
-    return `<div class="player-row ${selected ? 'selected' : ''}" data-toggle="${escapeAttr(player.nick)}">${playerMetaHtml(player)}<span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span></div>`;
+    const key = getPlayerKey(player);
+    const selected = isSelected(key);
+    return `<div class="player-row ${selected ? 'selected' : ''}" data-toggle="${escapeAttr(key)}">${playerMetaHtml(player)}<span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span></div>`;
   }).join('');
 }
 
 export function renderLobby() {
   const wrap = document.getElementById('lobbyList');
   if (!wrap) return;
-  const playersMap = new Map(state.playersState.players.map((p) => [p.nick, p]));
-  wrap.innerHTML = state.playersState.selected.map((nick) => {
-    const player = playersMap.get(nick) || { nick, points: 0, rank: '—' };
-    return `<div class="lobby-row">${playerMetaHtml(player)}<button class="chip" data-remove="${escapeAttr(nick)}">Прибрати</button></div>`;
+  const playersMap = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  wrap.innerHTML = state.playersState.selected.map((playerKey) => {
+    const player = playersMap.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
+    return `<div class="lobby-row">${playerMetaHtml(player)}<button class="chip" data-remove="${escapeAttr(playerKey)}">Прибрати</button></div>`;
   }).join('');
 }
 
@@ -174,9 +178,9 @@ function teamNameControl(key) {
   return `<div class="team-name-wrap" data-team-name-wrap="${escapeAttr(key)}"><strong class="team-name-label">${escapeHtml(getTeamLabel(key))}</strong><button class="chip" type="button" data-rename-team="${escapeAttr(key)}">✏️ Назва</button></div>`;
 }
 
-function sumByNicks(nicks) {
-  const map = new Map(state.playersState.players.map((p) => [p.nick, p]));
-  return nicks.reduce((acc, nick) => acc + (Number(map.get(nick)?.points ?? map.get(nick)?.pts) || 0), 0);
+function sumByNicks(playerKeys) {
+  const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  return playerKeys.reduce((acc, playerKey) => acc + (Number(map.get(playerKey)?.points ?? map.get(playerKey)?.pts) || 0), 0);
 }
 
 export function renderTeams() {
@@ -184,20 +188,23 @@ export function renderTeams() {
   if (!grid) return;
 
   const keys = TEAM_KEYS.slice(0, state.teamsState.teamCount);
-  const map = new Map(state.playersState.players.map((p) => [p.nick, p]));
+  const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
   const cards = keys.map((key) => {
-    const nicks = state.teamsState.teams[key];
-    const total = sumByNicks(nicks);
-    const members = nicks.map((nick) => {
-      const player = map.get(nick) || { nick, points: 0, rank: '—' };
-      return `<div class="team-player">${playerMetaHtml(player)}<button class="chip" data-move="${escapeAttr(nick)}:bench">Лавка</button></div>`;
+    const playerKeys = state.teamsState.teams[key];
+    const total = sumByNicks(playerKeys);
+    const members = playerKeys.map((playerKey) => {
+      const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
+      return `<div class="team-player">${playerMetaHtml(player)}<button class="chip" data-move="${escapeAttr(playerKey)}:bench">Лавка</button></div>`;
     }).join('') || '<div class="tag">порожньо</div>';
     return `<div class="team-card"><h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${members}</div>`;
   });
 
   if (state.app.mode === 'manual') {
-    const bench = state.playersState.selected.filter((nick) => !keys.some((key) => state.teamsState.teams[key].includes(nick)));
-    cards.push(`<div class="team-card"><h4>Лавка</h4>${bench.map((nick) => `<div class="team-player"><span>${escapeHtml(nick)}</span><div class="team-actions">${keys.map((k) => `<button class="chip" data-move="${escapeAttr(nick)}:${k}">→ ${escapeHtml(getTeamLabel(k))}</button>`).join('')}</div></div>`).join('') || '<div class="tag">порожньо</div>'}</div>`);
+    const bench = state.playersState.selected.filter((playerKey) => !keys.some((key) => state.teamsState.teams[key].includes(playerKey)));
+    cards.push(`<div class="team-card"><h4>Лавка</h4>${bench.map((playerKey) => {
+      const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
+      return `<div class="team-player">${playerMetaHtml(player)}<div class="team-actions">${keys.map((k) => `<button class="chip" data-move="${escapeAttr(playerKey)}:${k}">→ ${escapeHtml(getTeamLabel(k))}</button>`).join('')}</div></div>`;
+    }).join('') || '<div class="tag">порожньо</div>'}</div>`);
   }
 
   grid.innerHTML = cards.join('');
@@ -239,6 +246,7 @@ export function renderMatchConfig() {
     </div></div>
     ${eventMode === 'regular' ? regularContent : `
       <div class="tournament-panel">
+        <div class="tag">Змішаний турнір завантажує гравців з дорослої та дитячої ліги.</div>
         <label>Назва турніру <input class="search-input" data-tournament-name type="text" value="${escapeAttr(state.tournamentState.tournamentName || '')}" placeholder="Весняний турнір"></label>
         <label>Режим бою
           <select class="chip" data-tournament-game-mode>
@@ -281,8 +289,13 @@ export function renderMatchTeams() {
     return;
   }
 
+  const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
   root.innerHTML = [teamA, teamB].map((key, idx) => {
-    const items = state.teamsState.teams[key].map((nick) => `<li>${escapeHtml(nick)}</li>`).join('');
+    const items = state.teamsState.teams[key].map((playerKey) => {
+      const player = map.get(playerKey);
+      const leagueLabel = player?.sourceLeagueLabel ? ` · ${escapeHtml(player.sourceLeagueLabel)}` : '';
+      return `<li>${escapeHtml(player?.nick || playerKey)}${leagueLabel}</li>`;
+    }).join('');
     const label = idx === 0 ? 'A' : 'B';
     return `<div class="team-card"><h4>${label} · ${escapeHtml(getTeamLabel(key))}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
   }).join('');
@@ -328,16 +341,20 @@ export function renderPenalties() {
   section.classList.toggle('collapsed', collapsed);
   chevron.textContent = collapsed ? '▸' : '▾';
 
-  root.innerHTML = getParticipants().map((nick) => {
-    const val = Number(state.matchState.match.penalties[nick] || 0);
-    return `<div class="penalty-row"><span>${escapeHtml(nick)}</span><div class="penalty-controls"><button class="chip" data-pen="${escapeAttr(nick)}:-1">-</button><strong>${val}</strong><button class="chip" data-pen="${escapeAttr(nick)}:1">+</button></div></div>`;
+  const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  root.innerHTML = getParticipants().map((playerKey) => {
+    const player = map.get(playerKey);
+    const val = Number(state.matchState.match.penalties[playerKey] || 0);
+    return `<div class="penalty-row"><span>${escapeHtml(player?.nick || playerKey)}</span><div class="penalty-controls"><button class="chip" data-pen="${escapeAttr(playerKey)}:-1">-</button><strong>${val}</strong><button class="chip" data-pen="${escapeAttr(playerKey)}:1">+</button></div></div>`;
   }).join('');
 }
 
 export function renderMatchFields() {
-  const participants = state.app.eventMode === 'tournament'
+  const participantKeys = state.app.eventMode === 'tournament'
     ? [...new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])])]
     : [...new Set(getParticipants())];
+  const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  const participants = participantKeys.map((playerKey) => map.get(playerKey)?.nick || playerKey);
   const dl = document.getElementById('participantsDatalist');
   if (dl) dl.innerHTML = participants.map((nick) => `<option value="${escapeAttr(nick)}"></option>`).join('');
 
@@ -387,11 +404,11 @@ export function bindUiEvents(handlers) {
         window.alert(`Недостатньо гравців для ${teamCount} команд. Мінімум: ${teamCount}.`);
         return;
       }
-      const map = new Map(state.playersState.players.map((p) => [p.nick, p]));
-      const picked = state.playersState.selected.map((nick) => map.get(nick)).filter(Boolean);
+      const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+      const picked = state.playersState.selected.map((playerKey) => map.get(playerKey)).filter(Boolean);
       const teams = balanceIntoNTeamsLocal(picked, teamCount);
       TEAM_KEYS.forEach((key) => {
-        state.teamsState.teams[key] = (teams[key] || []).map((p) => p.nick);
+        state.teamsState.teams[key] = (teams[key] || []).map((p) => getPlayerKey(p));
       });
       state.teamsState.teamCount = teamCount;
       e.preventDefault();
@@ -494,3 +511,13 @@ export function bindUiEvents(handlers) {
     }
   });
 }
+  if (select && !select.querySelector('option[value="mixed"]')) {
+    const option = document.createElement('option');
+    option.value = 'mixed';
+    option.textContent = 'Змішаний турнір';
+    select.appendChild(option);
+  }
+  if (select) {
+    const mixedOption = select.querySelector('option[value="mixed"]');
+    if (mixedOption) mixedOption.disabled = state.app.eventMode !== 'tournament';
+  }

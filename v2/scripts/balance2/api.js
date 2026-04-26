@@ -71,21 +71,34 @@ export function mergeMixedLeaguePlayers(adultsPlayers = [], kidsPlayers = []) {
 export async function loadPlayersForSource(sourceMode, { force = false, timeoutMs = 15000 } = {}) {
   if (sourceMode !== 'mixed') {
     const players = await loadPlayers(sourceMode, { force, timeoutMs });
-    return { sourceMode, players, counts: { sundaygames: sourceMode === 'sundaygames' ? players.length : 0, kids: sourceMode === 'kids' ? players.length : 0 } };
+    return {
+      sourceMode,
+      players,
+      counts: { sundaygames: sourceMode === 'sundaygames' ? players.length : 0, kids: sourceMode === 'kids' ? players.length : 0 },
+      errors: { sundaygames: '', kids: '' },
+    };
   }
 
   const [adultsResult, kidsResult] = await Promise.allSettled([
     loadPlayers('sundaygames', { force, timeoutMs }),
     loadPlayers('kids', { force, timeoutMs }),
   ]);
-  if (adultsResult.status === 'rejected') throw new Error(`Не вдалося завантажити дорослу лігу: ${adultsResult.reason?.message || 'невідома помилка'}`);
-  if (kidsResult.status === 'rejected') throw new Error(`Не вдалося завантажити дитячу лігу: ${kidsResult.reason?.message || 'невідома помилка'}`);
+  const adultsPlayers = adultsResult.status === 'fulfilled' ? adultsResult.value : [];
+  const kidsPlayers = kidsResult.status === 'fulfilled' ? kidsResult.value : [];
+  const errors = {
+    sundaygames: adultsResult.status === 'rejected' ? `Не вдалося завантажити дорослу лігу: ${adultsResult.reason?.message || 'невідома помилка'}` : '',
+    kids: kidsResult.status === 'rejected' ? `Не вдалося завантажити дитячу лігу: ${kidsResult.reason?.message || 'невідома помилка'}` : '',
+  };
+  if (!adultsPlayers.length && !kidsPlayers.length && (errors.sundaygames || errors.kids)) {
+    throw new Error(errors.sundaygames || errors.kids);
+  }
 
-  const merged = mergeMixedLeaguePlayers(adultsResult.value, kidsResult.value);
+  const merged = mergeMixedLeaguePlayers(adultsPlayers, kidsPlayers);
   return {
     sourceMode: 'mixed',
     players: merged,
-    counts: { sundaygames: adultsResult.value.length, kids: kidsResult.value.length },
+    counts: { sundaygames: adultsPlayers.length, kids: kidsPlayers.length },
+    errors,
   };
 }
 

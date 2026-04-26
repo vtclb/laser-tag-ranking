@@ -6777,6 +6777,7 @@ body.theme-game .v2-nav-btn__icon {
   justify-content: center;
   color: rgba(183, 204, 238, 0.76);
   opacity: .9;
+  transition: color .18s ease, opacity .18s ease, filter .18s ease;
 }
 
 body.theme-game .v2-nav-btn__icon svg {
@@ -6784,6 +6785,7 @@ body.theme-game .v2-nav-btn__icon svg {
   height: 20px;
   display: block;
   vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
 }
 
 body.theme-game .v2-nav-btn__label {

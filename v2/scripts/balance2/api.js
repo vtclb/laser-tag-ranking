@@ -52,6 +52,43 @@ export async function loadPlayers(league, { force = false, timeoutMs = 15000 } =
   return players;
 }
 
+export function mergeMixedLeaguePlayers(adultsPlayers = [], kidsPlayers = []) {
+  const withMeta = (players, sourceLeague, sourceLeagueLabel) => players.map((player) => {
+    const nick = String(player.nick || player.nickname || '').trim();
+    return {
+      ...player,
+      sourceLeague,
+      sourceLeagueLabel,
+      uid: `${sourceLeague}::${nick}`,
+    };
+  });
+  return [
+    ...withMeta(adultsPlayers, 'sundaygames', 'Дорослі'),
+    ...withMeta(kidsPlayers, 'kids', 'Дитяча'),
+  ];
+}
+
+export async function loadPlayersForSource(sourceMode, { force = false, timeoutMs = 15000 } = {}) {
+  if (sourceMode !== 'mixed') {
+    const players = await loadPlayers(sourceMode, { force, timeoutMs });
+    return { sourceMode, players, counts: { sundaygames: sourceMode === 'sundaygames' ? players.length : 0, kids: sourceMode === 'kids' ? players.length : 0 } };
+  }
+
+  const [adultsResult, kidsResult] = await Promise.allSettled([
+    loadPlayers('sundaygames', { force, timeoutMs }),
+    loadPlayers('kids', { force, timeoutMs }),
+  ]);
+  if (adultsResult.status === 'rejected') throw new Error(`Не вдалося завантажити дорослу лігу: ${adultsResult.reason?.message || 'невідома помилка'}`);
+  if (kidsResult.status === 'rejected') throw new Error(`Не вдалося завантажити дитячу лігу: ${kidsResult.reason?.message || 'невідома помилка'}`);
+
+  const merged = mergeMixedLeaguePlayers(adultsResult.value, kidsResult.value);
+  return {
+    sourceMode: 'mixed',
+    players: merged,
+    counts: { sundaygames: adultsResult.value.length, kids: kidsResult.value.length },
+  };
+}
+
 export async function saveMatch(payload, timeoutMs = 20000) {
   const body = toFormUrlEncoded({ ...payload, league: normalizeLeague(payload.league) });
   try {

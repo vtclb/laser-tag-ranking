@@ -1,11 +1,13 @@
 import {
   state,
   normalizeLeague,
+  normalizePlayerSourceMode,
   getSelectedPlayers,
   computeSeriesSummary,
   syncSelectedMap,
   rankLetterForPoints,
   sortByPointsDesc,
+  getPlayerKey,
   getAvailableTeamKeys,
   getActiveMatchTeams,
   getTeamLabel,
@@ -14,7 +16,7 @@ import {
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setTournamentStatus, clearTournamentStatus } from './ui.js';
-import { loadPlayers, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js';
+import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js';
 import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 
@@ -59,10 +61,20 @@ function normalizeLoadedPlayers(players = []) {
       const nick = String(player.nick || player.nickname || '').trim();
       if (!nick) return null;
       const points = Number(player.points ?? player.pts) || 0;
-      return { nick, points, pts: points, rank: String(player.rank || rankLetterForPoints(points)) };
+      return {
+        ...player,
+        nick,
+        points,
+        pts: points,
+        rank: String(player.rank || rankLetterForPoints(points)),
+      };
     })
     .filter(Boolean)
     .sort(sortByPointsDesc);
+}
+
+function getPlayersByKeyMap() {
+  return new Map(state.playersState.players.map((player) => [getPlayerKey(player), player]));
 }
 
 function buildRoundRobinSchedule() {
@@ -160,12 +172,12 @@ function runBalance() {
   clearTeams();
   if (state.teamsState.teamCount === 2) {
     const teams = autoBalance2(selected);
-    state.teamsState.teams.team1 = teams.team1.map((p) => p.nick);
-    state.teamsState.teams.team2 = teams.team2.map((p) => p.nick);
+    state.teamsState.teams.team1 = teams.team1.map((p) => getPlayerKey(p));
+    state.teamsState.teams.team2 = teams.team2.map((p) => getPlayerKey(p));
   } else {
     const teams = balanceIntoNTeams(selected, state.teamsState.teamCount);
     TEAM_KEYS.forEach((key) => {
-      state.teamsState.teams[key] = (teams[key] || []).map((p) => p.nick);
+      state.teamsState.teams[key] = (teams[key] || []).map((p) => getPlayerKey(p));
     });
   }
   state.app.mode = 'auto';
@@ -214,10 +226,12 @@ function buildPayload() {
   state.matchState.match.winner = summary.winner;
   const [teamA, teamB] = getActiveMatchTeams();
 
+  const playersMap = getPlayersByKeyMap();
+  const toNick = (playerKey) => playersMap.get(playerKey)?.nick || playerKey;
   return {
-    league: state.app.league,
-    team1: state.teamsState.teams[teamA].join(', '),
-    team2: state.teamsState.teams[teamB].join(', '),
+    league: normalizeLeague(state.app.league),
+    team1: state.teamsState.teams[teamA].map(toNick).join(', '),
+    team2: state.teamsState.teams[teamB].map(toNick).join(', '),
     team3: '',
     team4: '',
     winner: summary.winner,
@@ -230,6 +244,7 @@ function buildPayload() {
 }
 
 function buildTournamentTeamsPayload() {
+  const playersMap = getPlayersByKeyMap();
   return TEAM_KEYS
     .slice(0, state.teamsState.teamCount)
     .filter((teamId) => (state.teamsState.teams[teamId] || []).length > 0)
@@ -237,7 +252,7 @@ function buildTournamentTeamsPayload() {
       teamId,
       teamName: state.teamsState.teamNames[teamId] || `Команда ${teamId.replace('team', '')}`,
       players: [...new Set((state.teamsState.teams[teamId] || [])
-        .map((nick) => String(nick || '').trim())
+        .map((playerKey) => String(playersMap.get(playerKey)?.nick || playerKey || '').trim())
         .filter(Boolean))],
     }));
 }
@@ -296,9 +311,11 @@ function validateSave() {
     if (!['A', 'B', 'DRAW'].includes(mappedResult)) return 'Вкажи коректний результат матчу';
     if (state.tournamentState.gameMode === 'KT' && mappedResult === 'DRAW') return 'Для KT нічия недоступна';
     const allowed = new Set([...teamAPlayers, ...teamBPlayers]);
+    const playersMap = getPlayersByKeyMap();
+    const allowedNicks = new Set([...allowed].map((playerKey) => playersMap.get(playerKey)?.nick || playerKey));
     for (const id of ['mvp1', 'mvp2', 'mvp3']) {
       const nick = state.matchState.match[id];
-      if (nick && !allowed.has(nick)) return 'MVP має бути гравцем активних команд';
+      if (nick && !allowedNicks.has(nick)) return 'MVP має бути гравцем активних команд';
     }
   }
   const [teamA, teamB] = state.app.eventMode === 'tournament'
@@ -381,9 +398,9 @@ async function doSave(retry = false) {
       return;
     }
     try {
-      clearPlayersCache(state.app.league);
-      const freshPlayers = await loadPlayers(state.app.league, { force: true, timeoutMs: 15000 });
-      state.playersState.players = normalizeLoadedPlayers(freshPlayers);
+      clearPlayersCache(normalizeLeague(state.app.league));
+      const freshPlayers = await loadPlayersForSource(state.app.playerSourceMode, { force: true, timeoutMs: 15000 });
+      state.playersState.players = normalizeLoadedPlayers(freshPlayers.players || []);
 
       const snapshot = createLastSavedSnapshot();
       state.lastSavedGame = snapshot;
@@ -460,20 +477,33 @@ function cleanupTournamentMvp() {
 async function ensurePlayersLoaded({ force = false } = {}) {
   const btn = $('loadPlayersBtn');
   const original = btn?.textContent || 'Завантажити гравців';
-  const league = normalizeLeague($('leagueSelect')?.value || state.app.league);
+  const sourceMode = normalizePlayerSourceMode($('leagueSelect')?.value || state.app.playerSourceMode, state.app.eventMode);
 
-  state.app.league = league;
-  localStorage.setItem(LEAGUE_KEY, league);
+  state.app.playerSourceMode = sourceMode;
+  state.app.league = sourceMode;
+  localStorage.setItem(LEAGUE_KEY, sourceMode);
   if (btn) {
     btn.disabled = true;
     btn.textContent = '⏳ Завантаження…';
   }
-  setStatus({ state: 'saving', text: 'Завантаження…', retryVisible: false });
+  setStatus({ state: 'saving', text: sourceMode === 'mixed' ? 'Завантажую дорослу та дитячу ліги...' : 'Завантаження…', retryVisible: false });
 
   try {
-    const loaded = await loadPlayers(league, { force, timeoutMs: 15000 });
-    state.playersState.players = normalizeLoadedPlayers(loaded);
-    setStatus({ state: 'saved', text: `✅ Завантажено: ${state.playersState.players.length} гравців`, retryVisible: false });
+    const loaded = await loadPlayersForSource(sourceMode, { force, timeoutMs: 15000 });
+    state.playersState.players = normalizeLoadedPlayers(loaded.players || []);
+    if (sourceMode === 'mixed') {
+      if (!state.playersState.players.length) throw new Error('Не знайдено гравців для змішаного турніру');
+      setStatus({ state: 'saved', text: `✅ Завантажено: ${loaded.counts.sundaygames} дорослих, ${loaded.counts.kids} дитячих`, retryVisible: false });
+      const nickCounts = new Map();
+      state.playersState.players.forEach((player) => {
+        nickCounts.set(player.nick, (nickCounts.get(player.nick) || 0) + 1);
+      });
+      if ([...nickCounts.values()].some((count) => count > 1)) {
+        setTournamentStatus('Є однакові нікнейми в різних лігах — перевір склад перед збереженням.', 'warning');
+      }
+    } else {
+      setStatus({ state: 'saved', text: `✅ Завантажено: ${state.playersState.players.length} гравців`, retryVisible: false });
+    }
     renderAndSync();
   } catch (error) {
     setStatus({ state: 'error', text: `❌ ${error.message || 'Не вдалося отримати відповідь від сервера'}`, retryVisible: false });
@@ -499,8 +529,9 @@ async function init() {
   });
 
   $('leagueSelect')?.addEventListener('change', (e) => {
-    state.app.league = normalizeLeague(e.target.value);
-    localStorage.setItem(LEAGUE_KEY, state.app.league);
+    state.app.playerSourceMode = normalizePlayerSourceMode(e.target.value, state.app.eventMode);
+    state.app.league = state.app.playerSourceMode;
+    localStorage.setItem(LEAGUE_KEY, state.app.playerSourceMode);
     state.playersState.players = [];
     state.playersState.selected = [];
     syncSelectedMap();
@@ -536,7 +567,9 @@ async function init() {
       const value = e.target.value.trim();
       if (state.app.eventMode === 'tournament') {
         const allowed = new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])]);
-        state.matchState.match[id] = allowed.has(value) || !value ? value : '';
+        const playersMap = getPlayersByKeyMap();
+        const allowedNicks = new Set([...allowed].map((playerKey) => playersMap.get(playerKey)?.nick || playerKey));
+        state.matchState.match[id] = allowedNicks.has(value) || !value ? value : '';
       } else {
         state.matchState.match[id] = value;
       }
@@ -628,6 +661,9 @@ async function init() {
     },
     onEventMode(mode) {
       state.app.eventMode = mode === 'tournament' ? 'tournament' : 'regular';
+      state.app.playerSourceMode = normalizePlayerSourceMode(state.app.playerSourceMode, state.app.eventMode);
+      state.app.league = state.app.playerSourceMode;
+      localStorage.setItem(LEAGUE_KEY, state.app.playerSourceMode);
       if (state.app.eventMode === 'regular') clearTournamentStatus();
       syncSaveButtonState();
       saveLobby();
@@ -668,8 +704,8 @@ async function init() {
         renderAndSync();
         return;
       }
-      if (!['kids', 'sundaygames'].includes(state.app.league)) {
-        const message = 'Обери лігу kids або sundaygames';
+      if (!['kids', 'sundaygames', 'mixed'].includes(state.app.playerSourceMode)) {
+        const message = 'Обери лігу kids, sundaygames або mixed';
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
         setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
@@ -685,16 +721,16 @@ async function init() {
         renderAndSync();
         return;
       }
-      const leagueLabel = state.app.league === 'kids' ? 'Kids' : 'SundayGames';
+      const leagueLabel = state.app.playerSourceMode === 'kids' ? 'Kids' : (state.app.playerSourceMode === 'mixed' ? 'Mixed' : 'SundayGames');
       const rawName = String(state.tournamentState.tournamentName || '').trim();
       const name = rawName.length >= 3 ? rawName : `Турнір ${leagueLabel} ${today}`;
       const payload = {
         name,
-        league: state.app.league,
+        league: state.app.playerSourceMode === 'mixed' ? 'sundaygames' : state.app.playerSourceMode,
         dateStart: today,
         dateEnd: '',
         status: 'ACTIVE',
-        notes: '',
+        notes: state.app.playerSourceMode === 'mixed' ? 'Mixed tournament: sundaygames + kids' : '',
       };
       state.tournamentState.isSaving = true;
       setTournamentStatus('Створюю турнір...', 'loading');
@@ -802,7 +838,8 @@ async function init() {
     },
   });
 
-  state.app.league = normalizeLeague(localStorage.getItem(LEAGUE_KEY) || state.app.league);
+  state.app.playerSourceMode = normalizePlayerSourceMode(localStorage.getItem(LEAGUE_KEY) || state.app.playerSourceMode, state.app.eventMode);
+  state.app.league = state.app.playerSourceMode;
   state.lastSavedGame = readLastSavedGame();
   $('leagueSelect').value = state.app.league;
   $('sortMode').value = state.app.sortMode;

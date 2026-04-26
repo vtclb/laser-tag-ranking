@@ -8,6 +8,7 @@ import {
   getActiveMatchTeams,
   syncSelectedMap,
   TEAM_KEYS,
+  TEAM_COUNT_OPTIONS,
   MAX_LOBBY_PLAYERS,
   normalizeTeamCount,
 } from './state.js';
@@ -104,8 +105,23 @@ export function render() {
 export function renderLeagueControls() {
   const select = document.getElementById('leagueSelect');
   const sortSelect = document.getElementById('sortMode');
+  const teamCountControl = document.getElementById('teamCountControl');
   if (select && select.value !== state.app.league) select.value = state.app.league;
   if (sortSelect && sortSelect.value !== state.app.sortMode) sortSelect.value = state.app.sortMode;
+  if (teamCountControl) {
+    const existing = new Set(Array.from(teamCountControl.querySelectorAll('[data-team-count]'))
+      .map((btn) => Number(btn.dataset.teamCount))
+      .filter(Number.isFinite));
+    TEAM_COUNT_OPTIONS.forEach((count) => {
+      if (existing.has(count)) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip';
+      btn.dataset.teamCount = String(count);
+      btn.textContent = `${count} команд${count < 5 ? 'и' : ''}`;
+      teamCountControl.appendChild(btn);
+    });
+  }
 
   document.querySelectorAll('[data-team-count]').forEach((btn) => {
     btn.classList.toggle('active', Number(btn.dataset.teamCount) === state.teamsState.teamCount);

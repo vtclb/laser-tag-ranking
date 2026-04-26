@@ -54,7 +54,7 @@ function normalizeEventAndSourceState(nextEventMode = state.app.eventMode, nextS
   state.app.league = normalizeLeague(playerSourceMode);
 }
 
-function setTournamentDirty(message = 'Команди змінилися — збережи їх повторно') {
+function setTournamentDirty(message = 'Команди змінено — збережи їх повторно перед матчем') {
   if (state.app.eventMode !== 'tournament') return;
   state.tournamentState.teamsSaved = false;
   state.tournamentState.savedTournamentTeamIds = [];

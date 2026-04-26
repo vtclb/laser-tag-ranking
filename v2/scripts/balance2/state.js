@@ -2,6 +2,7 @@ export const state = {
   app: {
     league: 'kids',
     mode: 'auto',
+    eventMode: 'regular',
     sortMode: 'points_desc',
     query: '',
   },
@@ -36,6 +37,17 @@ export const state = {
     schedule: [],
     selectedScheduleMatchId: '',
   },
+  tournamentState: {
+    tournamentId: '',
+    tournamentName: '',
+    gameMode: 'DM',
+    teamsSaved: false,
+    gamesCreated: false,
+    currentGameId: '',
+    nextGameNumber: 1,
+  },
+  activeTeamAId: 'team1',
+  activeTeamBId: 'team2',
   uiState: {
     penaltiesCollapsed: true,
   },

@@ -128,37 +128,50 @@ function renderLeagueSection({ league, players }) {
   </section>`;
 }
 
+function formatHomeTournamentMeta(item = {}) {
+  const league = escapeHtml(leagueLabelUA(item?.league) || item?.league || 'Ліга');
+  const status = escapeHtml(String(item?.status || 'ACTIVE').toUpperCase());
+  const dateStart = item?.dateStart ? new Date(item.dateStart) : null;
+  if (dateStart && !Number.isNaN(dateStart.getTime())) {
+    const dateLabel = escapeHtml(dateStart.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }));
+    return `${league} · ${status} · ${dateLabel}`;
+  }
+  return `${league} · ${status}`;
+}
+
 function renderHomeTournamentsCard(items = [], status = 'empty') {
   const hasItems = Array.isArray(items) && items.length > 0;
-  const list = (items || []).slice(0, 3).map((item) => (
-    `<li class="home-tournaments-card__item">
-      <div class="home-tournaments-card__item-main">
-        <div class="home-tournaments-card__item-title">${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</div>
-        <span class="home-tournaments-card__item-status">${escapeHtml(item?.status || 'ACTIVE')}</span>
+  const visibleItems = hasItems ? items.slice(0, 2) : [];
+  const restCount = hasItems && items.length > 2 ? items.length - 2 : 0;
+  const list = visibleItems.map((item) => (
+    `<a class="home-tournaments-teaser__row" href="#tournaments?selected=${encodeURIComponent(item?.tournamentId || '')}">
+      <div>
+        <strong>${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</strong>
+        <span class="home-tournaments-teaser__meta">${formatHomeTournamentMeta(item)}</span>
       </div>
-      <div class="home-tournaments-card__item-meta">
-        <span>Ліга: ${escapeHtml(item?.league || '—')}</span>
-      </div>
-    </li>`
+      <span class="home-tournaments-teaser__arrow" aria-hidden="true">→</span>
+    </a>`
   )).join('');
-  const emptyTitle = status === 'error'
-    ? 'Не вдалося завантажити турніри'
-    : (status === 'loading' ? 'Завантаження турнірів...' : 'Поки немає активних турнірів');
-  const emptyText = status === 'error'
-    ? 'Спробуй оновити сторінку пізніше'
-    : (status === 'loading'
-      ? 'Оновлюємо список активних турнірів'
-      : 'Коли турнір з’явиться, тут буде швидкий доступ до всіх результатів');
-  return `<section class="px-card home-tournaments-card">
-    <div class="home-tournaments-card__head">
-      <h3 class="px-card__title">АКТИВНІ ТУРНІРИ</h3>
-      <a class="home-tournaments-card__cta" href="#tournaments">ДО ТУРНІРІВ</a>
+
+  if (status === 'error') {
+    console.warn('[home] tournaments unavailable, using neutral fallback');
+  }
+
+  return `<section class="home-tournaments-teaser">
+    <div class="home-tournaments-teaser__header">
+      <div>
+        <p class="home-tournaments-teaser__kicker">ТУРНІРНИЙ РЕЖИМ</p>
+        <h2>Активні турніри</h2>
+      </div>
+      <a href="#tournaments" class="home-tournaments-teaser__cta">До турнірів</a>
     </div>
-    <p class="px-card__text">Слідкуй за турнірною таблицею, матчами та статистикою команд</p>
-    ${hasItems ? `<ul class="list-clean home-tournaments-card__list">${list}</ul>` : `<div class="home-tournaments-card__empty">
-      <p class="home-tournaments-card__empty-title">${emptyTitle}</p>
-      <p class="home-tournaments-card__empty-text">${emptyText}</p>
-    </div>`}
+    <p class="home-tournaments-teaser__text">Слідкуй за турнірною таблицею, матчами та статистикою команд.</p>
+    <div class="home-tournaments-teaser__content">
+      ${hasItems ? `${list}${restCount > 0 ? `<span class="home-tournaments-teaser__meta">+${restCount} ще</span>` : ''}` : `<div class="home-tournaments-teaser__empty">
+        <strong>Поки немає активних турнірів</strong>
+        <p>Коли турнір стартує, тут з’явиться швидкий доступ до таблиці та матчів.</p>
+      </div>`}
+    </div>
   </section>`;
 }
 

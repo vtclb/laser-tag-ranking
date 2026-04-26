@@ -9,6 +9,7 @@ import {
   getAvailableTeamKeys,
   getActiveMatchTeams,
   getTeamLabel,
+  MAX_LOBBY_PLAYERS,
 } from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
@@ -273,7 +274,7 @@ function toggleSelectedPlayer(nick) {
     Object.keys(state.teamsState.teams).forEach((key) => {
       state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== nick);
     });
-  } else if (state.playersState.selected.length < 15) {
+  } else if (state.playersState.selected.length < MAX_LOBBY_PLAYERS) {
     state.playersState.selected = [...state.playersState.selected, nick];
   }
   syncSelectedMap();

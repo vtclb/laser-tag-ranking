@@ -334,11 +334,14 @@ function actionLabel(status = '') {
 
 function hasMixedHint(value = '') {
   const normalized = String(value || '').toLowerCase();
+  const hasAdults = normalized.includes('sundaygames') || normalized.includes('adult') || normalized.includes('дорос');
+  const hasKids = normalized.includes('kids') || normalized.includes('дит');
   return normalized.includes('mixed')
     || normalized.includes('мікс')
     || normalized.includes('змішан')
     || normalized.includes('sundaygames + kids')
-    || normalized.includes('kids + sundaygames');
+    || normalized.includes('kids + sundaygames')
+    || (hasAdults && hasKids);
 }
 
 function detectLeagueValue(value = '') {
@@ -392,10 +395,35 @@ export function formatTournamentDate(value) {
   return `${dateLabel} · ${timeLabel}`;
 }
 
-function getMatchResultLabel(game, winner) {
-  const isDraw = String(game?.isDraw || '').toLowerCase();
-  if (isDraw === 'true' || isDraw === '1' || !String(game?.winnerTeamId || '').trim()) return 'Нічия';
-  return `Переможець: ${winner}`;
+function isTruthy(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+function getTeamName(teamId, teamMap) {
+  const key = String(teamId || '').trim();
+  if (!key) return 'Команда';
+  return teamMap?.get(key) || key;
+}
+
+function getWinnerLabel(game, teamMap) {
+  const winnerTeamId = String(game?.winnerTeamId || '').trim();
+  if (isTruthy(game?.isDraw) || !winnerTeamId) return 'Нічия';
+  return `${getTeamName(winnerTeamId, teamMap)} перемогла`;
+}
+
+function getMatchScoreLabel(game) {
+  const scoreA = Number(game?.scoreA);
+  const scoreB = Number(game?.scoreB);
+  if (Number.isFinite(scoreA) && Number.isFinite(scoreB)) return `${scoreA}:${scoreB}`;
+  return '';
+}
+
+function getMvpLabel(game) {
+  return [game?.mvpNick, game?.secondNick, game?.thirdNick]
+    .map((nick) => String(nick || '').trim())
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function renderRankBadge(rank) {
@@ -535,7 +563,10 @@ function renderTournamentDashboard(node, data) {
 
   const dashboardCard = createElement('section', 'px-card tournament-dashboard__shell');
   const head = createElement('div', 'tournament-dashboard__head tournament-summary-card');
-  head.append(createElement('h3', 'px-card__title', title));
+  head.append(
+    createElement('p', 'tournament-hero__kicker', 'Турнір'),
+    createElement('h3', 'px-card__title', title)
+  );
   const meta = createElement('div', 'tournament-dashboard__meta');
   const startLabel = formatTournamentDate(tournament?.dateStart || tournament?.startDate || tournament?.createdAt);
   meta.append(
@@ -554,15 +585,15 @@ function renderTournamentDashboard(node, data) {
   const contentWrap = createElement('div', 'tournament-tab-content');
 
   const tabs = [
-    { key: 'overview', label: 'Огляд' },
-    { key: 'table', label: 'Таблиця' },
+    { key: 'result', label: 'Результат' },
     { key: 'games', label: 'Матчі' },
-    { key: 'players', label: 'Гравці' }
+    { key: 'players', label: 'Гравці' },
+    { key: 'overview', label: 'Огляд' }
   ];
 
   const renderers = {
+    result: () => renderTeamsTable(contentWrap, teams),
     overview: () => renderOverview(contentWrap, teams, games, players, teamMap),
-    table: () => renderTeamsTable(contentWrap, teams),
     games: () => renderGames(contentWrap, games, teamMap),
     players: () => renderPlayers(contentWrap, players, teamMap)
   };
@@ -580,13 +611,13 @@ function renderTournamentDashboard(node, data) {
 
   dashboardCard.append(head, meta, summaryStrip, tabsWrap, contentWrap);
   node.append(dashboardCard);
-  renderers.overview();
+  renderers.result();
 }
 
 function renderTeamsTable(node, teams) {
   clear(node);
   if (!teams.length) {
-    node.append(stateCard('Команди ще формуються', 'Після збереження складів тут зʼявиться турнірна таблиця.'));
+    node.append(stateCard('Команди ще формуються', 'Після збереження команд тут з’явиться таблиця турніру.'));
     return;
   }
 
@@ -613,7 +644,7 @@ function renderTeamsTable(node, teams) {
     const card = createElement('article', `tournament-standing-card${index < 3 ? ` is-top-${index + 1}` : ''}`);
     card.append(
       createElement('h4', 'tournament-standing-card__title', `#${index + 1} ${toText(team.teamName, toText(team.teamId))}`),
-      createElement('p', 'tournament-standing-card__line', `${toNumber(team.wins)} перемоги · ${toNumber(team.losses)} поразок · ${toNumber(team.draws)} нічия`),
+      createElement('p', 'tournament-standing-card__line', `${toNumber(team.wins)} В · ${toNumber(team.losses)} П · ${toNumber(team.draws)} Н`),
       createElement('p', 'tournament-standing-card__line', `Очки: ${toNumber(team.points)}`),
       createElement('p', 'tournament-standing-card__line', `MMR: ${toNumber(team.mmrCurrent) || '—'}`)
     );
@@ -646,40 +677,59 @@ function renderTeamsTable(node, teams) {
 function renderGames(node, games, teamMap) {
   clear(node);
   if (!games.length) {
-    node.append(stateCard('Матчі ще не додані', 'Після старту турніру тут з’явиться список матчів і результатів.'));
+    node.append(stateCard('Матчі ще не додані', 'Після першого результату тут з’являться логи матчів.'));
     return;
   }
 
-  const list = createElement('div', 'tournament-games-list');
-  games.forEach((game) => {
-    const card = createElement('article', 'tournament-match-card');
-    const teamA = teamMap.get(String(game?.teamAId || '')) || toText(game?.teamAId);
-    const teamB = teamMap.get(String(game?.teamBId || '')) || toText(game?.teamBId);
-    const winner = String(game?.winnerTeamId || '').trim()
-      ? (teamMap.get(String(game?.winnerTeamId || '')) || toText(game?.winnerTeamId))
-      : 'Нічия';
+  const list = createElement('div', 'tournament-match-list');
+  games.forEach((game, index) => {
+    const teamA = getTeamName(game?.teamAId, teamMap);
+    const teamB = getTeamName(game?.teamBId, teamMap);
+    const winnerLabel = getWinnerLabel(game, teamMap);
+    const scoreLabel = getMatchScoreLabel(game);
+    const mvpLabel = getMvpLabel(game);
+    const card = createElement('article', 'tournament-match-log-card');
+    const triggerId = `tournamentMatch${index + 1}`;
+    const head = createElement('button', 'tournament-match-log-head');
+    head.type = 'button';
+    head.setAttribute('aria-expanded', 'false');
+    head.setAttribute('aria-controls', `${triggerId}Details`);
 
-    const top = createElement('div', 'tournament-match-card__top');
-    top.append(
-      createElement('span', 'tournament-match-card__id', `Матч ${toText(game?.gameId, '—')}`),
-      createElement('span', 'tournament-match-card__mode', toText(game?.mode, 'Режим уточнюється')),
-      createElement('span', 'tournament-match-card__time', formatTournamentDate(game?.timestamp))
+    const info = createElement('div', 'tournament-match-log-head__info');
+    info.append(
+      createElement('span', 'tournament-match-log-head__eyebrow', `Матч ${toText(game?.gameId, `G${index + 1}`)}`),
+      createElement('strong', 'tournament-match-log-head__title', `${teamA} vs ${teamB}`),
+      createElement('small', 'tournament-match-log-head__meta', `${toText(game?.mode, 'Режим')} · ${formatTournamentDate(game?.timestamp)}`)
     );
 
-    const middle = createElement('div', 'tournament-match-card__middle', `${teamA} vs ${teamB}`);
+    const result = createElement('div', 'tournament-match-log-head__result', scoreLabel ? `${scoreLabel} · ${winnerLabel}` : winnerLabel);
+    head.append(info, result);
 
-    const bottom = createElement('div', 'tournament-match-card__bottom');
-    const mvpLabel = [game?.mvpNick, game?.secondNick, game?.thirdNick]
-      .map((nick) => String(nick || '').trim())
-      .filter(Boolean)
-      .join(' / ');
-    bottom.append(
-      createMetaItem('Результат', getMatchResultLabel(game, winner)),
-      createMetaItem('MVP', mvpLabel || '—'),
-      createMetaItem('ΔMMR', `${toNumber(game?.teamAMmrDelta)} / ${toNumber(game?.teamBMmrDelta)}`)
-    );
-
-    card.append(top, middle, bottom);
+    const details = createElement('div', 'tournament-match-log-details');
+    details.id = `${triggerId}Details`;
+    details.hidden = true;
+    const teamGrid = createElement('div', 'tournament-match-log-team-grid');
+    const winnerTeamId = String(game?.winnerTeamId || '').trim();
+    [game?.teamAId, game?.teamBId].forEach((teamId) => {
+      const box = createElement('section', `tournament-match-log-team-box${winnerTeamId && String(teamId) === winnerTeamId ? ' is-winner' : ''}`);
+      box.append(
+        createElement('h4', '', getTeamName(teamId, teamMap)),
+        createElement('p', '', winnerTeamId && String(teamId) === winnerTeamId ? 'Переможець матчу' : 'Учасник матчу')
+      );
+      teamGrid.append(box);
+    });
+    details.append(teamGrid);
+    if (mvpLabel) details.append(createElement('p', 'tournament-match-log-mvp-box', `MVP: ${mvpLabel}`));
+    if (toNumber(game?.teamAMmrDelta) || toNumber(game?.teamBMmrDelta)) {
+      details.append(createElement('p', 'tournament-match-log-delta-list', `ΔMMR: ${teamA} ${toNumber(game?.teamAMmrDelta)} · ${teamB} ${toNumber(game?.teamBMmrDelta)}`));
+    }
+    head.addEventListener('click', () => {
+      const expanded = head.getAttribute('aria-expanded') === 'true';
+      head.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      details.hidden = expanded;
+      card.classList.toggle('is-open', !expanded);
+    });
+    card.append(head, details);
     list.append(card);
   });
 
@@ -689,7 +739,7 @@ function renderGames(node, games, teamMap) {
 function renderPlayers(node, players, teamMap) {
   clear(node);
   if (!players.length) {
-    node.append(stateCard('Статистика гравців ще не готова', 'Після перших матчів тут з’явиться особиста статистика учасників.'));
+    node.append(stateCard('Індивідуальний рейтинг ще формується', 'Після матчів тут з’явиться статистика учасників турніру.'));
     return;
   }
 
@@ -700,26 +750,28 @@ function renderPlayers(node, players, teamMap) {
     if (byMvp) return byMvp;
     const byWins = toNumber(b.wins) - toNumber(a.wins);
     if (byWins) return byWins;
-    return toNumber(b.mmrChange) - toNumber(a.mmrChange);
+    const byGames = toNumber(b.games) - toNumber(a.games);
+    if (byGames) return byGames;
+    return String(a?.playerNick || '').localeCompare(String(b?.playerNick || ''), 'uk');
   });
 
-  const list = createElement('div', 'tournament-players-list');
-  sorted.forEach((player) => {
-    const row = createElement('article', 'tournament-player-row');
+  const list = createElement('div', 'tournament-player-rank-list');
+  sorted.forEach((player, index) => {
+    const row = createElement('article', 'tournament-player-rank-card');
     const teamName = teamMap.get(String(player?.teamId || '')) || toText(player?.teamId);
-    row.append(createElement('h4', 'tournament-player-row__name', toText(player.playerNick, 'Гравець')));
-    const stats = createElement('div', 'tournament-player-row__stats');
-    const compact = [];
-    if (toNumber(player.games) || toNumber(player.wins) || toNumber(player.mvpCount)) {
-      compact.push(`Ігор: ${toNumber(player.games)} · Перемог: ${toNumber(player.wins)} · MVP: ${toNumber(player.mvpCount)}`);
+    row.append(
+      createElement('h4', 'tournament-player-rank-card__title', `#${index + 1} ${toText(player.playerNick, 'Гравець')}`),
+      createElement('p', 'tournament-player-rank-card__team', teamName),
+      createElement('p', 'tournament-player-rank-card__line', `Ігор: ${toNumber(player.games)} · Перемог: ${toNumber(player.wins)} · MVP: ${toNumber(player.mvpCount)}`)
+    );
+    const impact = toNumber(player.impactPoints);
+    const mmr = toNumber(player.mmrChange);
+    if (impact || mmr) {
+      const deltaLine = [];
+      if (impact) deltaLine.push(`Impact: ${impact > 0 ? '+' : ''}${impact}`);
+      if (mmr) deltaLine.push(`MMR: ${mmr > 0 ? '+' : ''}${mmr}`);
+      row.append(createElement('p', 'tournament-player-rank-card__line', deltaLine.join(' · ')));
     }
-    const deltas = [];
-    if (toNumber(player.impactPoints)) deltas.push(`Impact: ${toNumber(player.impactPoints) > 0 ? '+' : ''}${toNumber(player.impactPoints)}`);
-    if (toNumber(player.mmrChange)) deltas.push(`MMR: ${toNumber(player.mmrChange) > 0 ? '+' : ''}${toNumber(player.mmrChange)}`);
-    stats.append(createMetaItem('Команда', teamName));
-    if (compact.length) stats.append(createElement('p', 'tournament-player-row__compact', compact.join('')));
-    if (deltas.length) stats.append(createElement('p', 'tournament-player-row__compact', deltas.join(' · ')));
-    row.append(stats);
     list.append(row);
   });
   node.append(list);
@@ -745,11 +797,8 @@ function renderOverview(node, teams, games, players, teamMap) {
   if (latestGame) {
     const teamA = teamMap.get(String(latestGame?.teamAId || '')) || toText(latestGame?.teamAId);
     const teamB = teamMap.get(String(latestGame?.teamBId || '')) || toText(latestGame?.teamBId);
-    const winner = String(latestGame?.winnerTeamId || '').trim()
-      ? (teamMap.get(String(latestGame?.winnerTeamId || '')) || toText(latestGame?.winnerTeamId))
-      : 'Нічия';
     matchCard.append(createElement('p', 'px-card__text', `${teamA} vs ${teamB}`));
-    matchCard.append(createElement('p', 'px-card__text', `${getMatchResultLabel(latestGame, winner)}${latestGame?.mvpNick ? ` · MVP: ${toText(latestGame.mvpNick)}` : ''}`));
+    matchCard.append(createElement('p', 'px-card__text', `${getWinnerLabel(latestGame, teamMap)}${latestGame?.mvpNick ? ` · MVP: ${toText(latestGame.mvpNick)}` : ''}`));
   } else {
     matchCard.append(createElement('p', 'px-card__text', 'Поки що матчів немає.'));
   }

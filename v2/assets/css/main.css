@@ -304,6 +304,11 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
+.tournaments-page-v2,
+.tournaments-page-v2 * {
+  box-sizing: border-box;
+}
+
 .tournaments-hero,
 .tournaments-page-hero,
 .home-tournaments-card {
@@ -431,6 +436,14 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   margin-bottom: .55rem;
 }
 
+.tournament-hero__kicker {
+  margin: 0 0 .24rem;
+  font-size: .7rem;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .tournament-meta-item {
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 4px;
@@ -497,6 +510,8 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 6px;
   background: rgba(10, 17, 29, .75);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tournament-standings-cards {
@@ -506,8 +521,11 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 
 .tournament-standing-card {
   border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--v2-radius-sm);
   background: rgba(10, 16, 28, .66);
   padding: .6rem;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tournament-standing-card__title {
@@ -521,9 +539,109 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   font-size: .8rem;
 }
 
-.tournament-standing-card.is-top-1 { border-color: rgba(124,255,114,.42); background: rgba(124,255,114,.08); }
-.tournament-standing-card.is-top-2 { border-color: rgba(49,208,255,.4); background: rgba(49,208,255,.08); }
-.tournament-standing-card.is-top-3 { border-color: rgba(255,191,60,.42); background: rgba(255,191,60,.08); }
+.tournament-standing-card.is-top-1 { border-color: rgba(124,255,114,.32); background: rgba(124,255,114,.06); }
+.tournament-standing-card.is-top-2 { border-color: rgba(49,208,255,.3); background: rgba(49,208,255,.06); }
+.tournament-standing-card.is-top-3 { border-color: rgba(255,191,60,.3); background: rgba(255,191,60,.06); }
+
+.tournament-match-list {
+  display: grid;
+  gap: .52rem;
+}
+
+.tournament-match-log-card {
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: var(--v2-radius-sm);
+  background: rgba(10, 17, 29, .8);
+  overflow: hidden;
+}
+
+.tournament-match-log-head {
+  width: 100%;
+  border: 0;
+  padding: .62rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  display: grid;
+  gap: .5rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.tournament-match-log-head__eyebrow,
+.tournament-match-log-head__meta {
+  color: var(--muted);
+  display: block;
+  font-size: .75rem;
+}
+
+.tournament-match-log-head__title {
+  display: block;
+  font-size: .92rem;
+}
+
+.tournament-match-log-head__result {
+  font-size: .8rem;
+  color: #9ddfff;
+}
+
+.tournament-match-log-details {
+  border-top: 1px solid rgba(255,255,255,.09);
+  padding: .58rem;
+  display: grid;
+  gap: .45rem;
+}
+
+.tournament-match-log-team-grid {
+  display: grid;
+  gap: .45rem;
+}
+
+.tournament-match-log-team-box {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--v2-radius-sm);
+  padding: .5rem;
+  background: rgba(6, 11, 20, .5);
+}
+
+.tournament-match-log-team-box.is-winner {
+  border-color: rgba(124,255,114,.36);
+  background: rgba(124,255,114,.06);
+}
+
+.tournament-match-log-team-box h4,
+.tournament-match-log-team-box p,
+.tournament-match-log-mvp-box,
+.tournament-match-log-delta-list {
+  margin: 0;
+}
+
+.tournament-match-log-mvp-box,
+.tournament-match-log-delta-list {
+  font-size: .8rem;
+  color: #dbe7f6;
+}
+
+.tournament-player-rank-list {
+  display: grid;
+  gap: .45rem;
+}
+
+.tournament-player-rank-card {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--v2-radius-sm);
+  padding: .6rem;
+  background: rgba(10, 16, 28, .66);
+}
+
+.tournament-player-rank-card__title,
+.tournament-player-rank-card__team,
+.tournament-player-rank-card__line {
+  margin: 0 0 .25rem;
+}
+
+.tournament-player-rank-card__line:last-child {
+  margin-bottom: 0;
+}
 
 .tournament-team-grid {
   display: grid;
@@ -923,10 +1041,11 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
     font-size: .92rem;
   }
 
-  .tournament-player-table { display: none; }
+  .tournament-player-table { display: none; min-width: 0 !important; }
   .tournament-standings-cards { display: grid; }
   .tournament-match-card__bottom,
   .tournament-player-row__stats { grid-template-columns: 1fr; }
+  .tournament-match-log-head { grid-template-columns: 1fr; }
 }
 
 /* Home V2 hard overrides (load-last expectations) */

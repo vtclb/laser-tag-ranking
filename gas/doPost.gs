@@ -34,6 +34,47 @@ function normalizeLeague_(value) {
   return key;
 }
 
+function respond_(payload, callbackName) {
+  const body = JSON.stringify(payload || {});
+  const cb = String(callbackName || '').trim();
+  if (!cb) {
+    return ContentService.createTextOutput(body)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(`${cb}(${body})`)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function jsonTextOutputToObject_(output) {
+  if (!output || typeof output.getContent !== 'function') {
+    throw new Error('Invalid TextOutput');
+  }
+  return JSON.parse(output.getContent() || '{}');
+}
+
+function doGet(e) {
+  try {
+    const p = (e && e.parameter) || {};
+    const action = String(p.action || '').trim();
+    const cb = p.callback;
+
+    if (action === 'listTournaments' || action === 'getTournamentData') {
+      const payload = Object.assign({}, p, { mode: 'tournament', action });
+      const textOutput = handleTournamentRequest_(payload);
+      const obj = jsonTextOutputToObject_(textOutput);
+      return respond_(obj, cb);
+    }
+
+    if (action === 'ping') {
+      return respond_({ status: 'OK', pong: true, ts: new Date().toISOString() }, cb);
+    }
+
+    return respond_({ status: 'ERR', message: 'Unknown GET action' }, cb);
+  } catch (err) {
+    return respond_({ status: 'ERR', message: err && err.message ? err.message : String(err) }, e && e.parameter ? e.parameter.callback : '');
+  }
+}
+
 function doPost(e) {
   try {
     // ---------- JSON API ----------

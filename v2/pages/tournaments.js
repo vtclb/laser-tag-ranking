@@ -1,4 +1,4 @@
-const TOURNAMENTS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
+import { getTournamentData, listActiveTournaments } from '../core/tournamentApi.js';
 
 function toNumber(value) {
   const n = Number(value);
@@ -99,31 +99,6 @@ function renderRankBadge(rank) {
   return badge;
 }
 
-async function postTournamentJson(payload, timeoutMs = 20000) {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(TOURNAMENTS_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const json = await response.json();
-    if (json?.status === 'ERR') {
-      throw new Error(json?.message || 'Помилка завантаження турнірів');
-    }
-    return json;
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
 export async function initTournamentsPage(params = {}) {
   const root = document.getElementById('tournamentsRoot');
   if (!root) return;
@@ -148,7 +123,7 @@ export async function initTournamentsPage(params = {}) {
   root.append(hero, listWrap, dashboard);
 
   try {
-    const listData = await postTournamentJson({ action: 'listTournaments', mode: 'tournament', status: 'ACTIVE' });
+    const listData = await listActiveTournaments();
     const tournaments = Array.isArray(listData?.tournaments) ? listData.tournaments : [];
 
     listWrap.replaceChildren(listHeading);
@@ -196,8 +171,8 @@ export async function initTournamentsPage(params = {}) {
 
     listWrap.append(grid);
     if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, true);
-  } catch (error) {
-    console.warn('[tournaments] list failed', error);
+  } catch {
+    console.warn('[tournaments] list failed');
     listWrap.replaceChildren(listHeading, stateCard('Турніри тимчасово недоступні', 'Спробуй оновити сторінку трохи пізніше', 'px-card'));
     dashboard.replaceChildren(createPreviewSections());
   }
@@ -216,11 +191,7 @@ async function openTournament(tournamentId, dashboardNode, listNode, silentHashU
   dashboardNode.replaceChildren(stateCard('Завантаження даних турніру...', 'Будь ласка, зачекай'));
 
   try {
-    const data = await postTournamentJson({
-      action: 'getTournamentData',
-      mode: 'tournament',
-      tournamentId
-    });
+    const data = await getTournamentData(tournamentId);
 
     if (!silentHashUpdate) {
       const nextHash = `#tournaments?selected=${encodeURIComponent(tournamentId)}`;
@@ -230,8 +201,8 @@ async function openTournament(tournamentId, dashboardNode, listNode, silentHashU
     }
 
     renderTournamentDashboard(dashboardNode, data);
-  } catch (error) {
-    console.warn('[tournaments] dashboard failed', error);
+  } catch {
+    console.warn('[tournaments] dashboard failed');
     dashboardNode.replaceChildren(stateCard('Не вдалося завантажити турнір', sanitizeErrorMessage(), 'px-card px-card--accent'));
   }
 }

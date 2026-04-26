@@ -2,7 +2,8 @@ import { normalizeLeague, state } from './state.js';
 import { loadPlayersCache, savePlayersCache } from './storage.js';
 
 const PROXY_ORIGIN = 'https://laser-proxy.vartaclub.workers.dev';
-const TOURNAMENT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
+const TOURNAMENT_PROXY_JSON_ENDPOINT = `${PROXY_ORIGIN}/json`;
+const TOURNAMENT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
 
 function toFormUrlEncoded(obj = {}) {
   return Object.entries(obj).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`).join('&');
@@ -66,11 +67,38 @@ export async function saveMatch(payload, timeoutMs = 20000) {
   }
 }
 
-export async function postGasTournament(payload, timeoutMs = 20000) {
+function normalizeTournamentResponse(action, res, data) {
+  if (!res.ok) return { ok: false, data: data || null, message: data?.message || data?.error || `HTTP ${res.status}` };
+  const status = String(data?.status || '').toUpperCase();
+  if (status === 'OK') return { ok: true, data, message: '' };
+  return { ok: false, data: data || null, message: data?.message || data?.error || 'Помилка GAS: status != OK' };
+}
+
+async function postTournament(payload, timeoutMs = 20000) {
   const action = String(payload?.action || 'unknown');
   console.debug(`[balance2:tournament] request ${action} payload`, payload);
+
   try {
-    const res = await fetchWithTimeout(TOURNAMENT_ENDPOINT, {
+    const proxyRes = await fetchWithTimeout(TOURNAMENT_PROXY_JSON_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+      body: JSON.stringify(payload || {}),
+    }, timeoutMs);
+    let proxyData = null;
+    try {
+      proxyData = await proxyRes.json();
+    } catch {
+      throw new Error('Некоректна JSON-відповідь від proxy');
+    }
+    const normalized = normalizeTournamentResponse(action, proxyRes, proxyData);
+    console.debug(`[balance2:tournament] response ${action} result`, normalized);
+    return normalized;
+  } catch (proxyError) {
+    console.debug('[balance2:tournament] proxy failed, trying direct GAS', proxyError);
+  }
+
+  try {
+    const res = await fetchWithTimeout(TOURNAMENT_GAS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload || {}),
@@ -78,25 +106,14 @@ export async function postGasTournament(payload, timeoutMs = 20000) {
     let data = null;
     try {
       data = await res.json();
-    } catch (parseError) {
+    } catch {
       const invalid = { ok: false, data: null, message: 'Некоректна JSON-відповідь від GAS' };
       console.debug(`[balance2:tournament] response ${action} result`, invalid);
       return invalid;
     }
-    if (!res.ok) {
-      const httpError = { ok: false, data: data || null, message: data?.message || data?.error || `HTTP ${res.status}` };
-      console.debug(`[balance2:tournament] response ${action} result`, httpError);
-      return httpError;
-    }
-    const status = String(data?.status || '').toUpperCase();
-    if (status === 'OK') {
-      const success = { ok: true, data, message: '' };
-      console.debug(`[balance2:tournament] response ${action} result`, success);
-      return success;
-    }
-    const gasError = { ok: false, data: data || null, message: data?.message || data?.error || 'Помилка GAS: status != OK' };
-    console.debug(`[balance2:tournament] response ${action} result`, gasError);
-    return gasError;
+    const normalized = normalizeTournamentResponse(action, res, data);
+    console.debug(`[balance2:tournament] response ${action} result`, normalized);
+    return normalized;
   } catch (e) {
     const networkError = {
       ok: false,
@@ -109,7 +126,7 @@ export async function postGasTournament(payload, timeoutMs = 20000) {
 }
 
 export function createTournament(payload = {}) {
-  return postGasTournament({
+  return postTournament({
     action: 'createTournament',
     mode: 'tournament',
     name: payload.name || '',
@@ -122,7 +139,7 @@ export function createTournament(payload = {}) {
 }
 
 export function saveTournamentTeams(payload = {}) {
-  return postGasTournament({
+  return postTournament({
     action: 'saveTeams',
     mode: 'tournament',
     tournamentId: payload.tournamentId || '',
@@ -131,7 +148,7 @@ export function saveTournamentTeams(payload = {}) {
 }
 
 export function createTournamentGames(payload = {}) {
-  return postGasTournament({
+  return postTournament({
     action: 'createGames',
     mode: 'tournament',
     tournamentId: payload.tournamentId || '',
@@ -140,7 +157,7 @@ export function createTournamentGames(payload = {}) {
 }
 
 export function saveTournamentGame(payload = {}) {
-  return postGasTournament({
+  return postTournament({
     action: 'saveGame',
     mode: 'tournament',
     tournamentId: payload.tournamentId || '',
@@ -157,7 +174,7 @@ export function saveTournamentGame(payload = {}) {
 }
 
 export function getTournamentData(tournamentId) {
-  return postGasTournament({
+  return postTournament({
     action: 'getTournamentData',
     mode: 'tournament',
     tournamentId: tournamentId || '',
@@ -165,7 +182,7 @@ export function getTournamentData(tournamentId) {
 }
 
 export function listTournaments({ league, status } = {}) {
-  return postGasTournament({
+  return postTournament({
     action: 'listTournaments',
     mode: 'tournament',
     league: league ? normalizeLeague(league) : '',

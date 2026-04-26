@@ -130,6 +130,14 @@ nav, .header, .menu, .burger, .hamburger { display: none !important; }
   padding: .55rem;
   background: rgba(255,255,255,.02);
 }
+.tournament-debug {
+  border: 1px dashed rgba(255,255,255,.2);
+  border-radius: .5rem;
+  padding: .4rem .5rem;
+  font-size: .86rem;
+  display: grid;
+  gap: .2rem;
+}
 
 .balance-status {
   min-height: 36px;

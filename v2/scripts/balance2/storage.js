@@ -1,4 +1,10 @@
-import { state, normalizeLeague, computeSeriesSummary, syncSelectedMap } from './state.js';
+import {
+  state,
+  normalizeLeague,
+  computeSeriesSummary,
+  syncSelectedMap,
+  MAX_LOBBY_PLAYERS,
+} from './state.js';
 
 const KEY = 'balance2:lobby';
 const PLAYERS_KEY = 'balance2:playersCache';
@@ -34,7 +40,7 @@ export function restoreLobby() {
   state.app.query = '';
 
   state.playersState.selected = Array.isArray(data?.playersState?.selected || data?.selected)
-    ? (data.playersState?.selected || data.selected).slice(0, 15)
+    ? (data.playersState?.selected || data.selected).slice(0, MAX_LOBBY_PLAYERS)
     : [];
   syncSelectedMap();
 

@@ -1,4 +1,4 @@
-import { state, syncSelectedMap } from './state.js';
+import { state, syncSelectedMap, MAX_LOBBY_PLAYERS } from './state.js';
 
 export function clearTeams() {
   state.teamsState.teams.team1 = [];
@@ -13,7 +13,7 @@ export function syncSelectedFromTeamsAndBench() {
   for (const nick of state.playersState.selected) {
     if (!inTeams.has(nick)) withBench.push(nick);
   }
-  state.playersState.selected = [...new Set(withBench)].slice(0, 15);
+  state.playersState.selected = [...new Set(withBench)].slice(0, MAX_LOBBY_PLAYERS);
   syncSelectedMap();
 }
 

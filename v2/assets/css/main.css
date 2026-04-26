@@ -653,21 +653,26 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   background: linear-gradient(165deg, rgba(49,208,255,.11), rgba(124,255,114,.05));
   border: 1px solid rgba(255,255,255,.16);
   border-radius: var(--v2-radius-md);
-  padding: .62rem .72rem;
+  padding: .58rem .66rem;
   display: grid;
-  gap: .36rem;
+  gap: .3rem;
 }
 
 .home-tournaments-teaser__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: .5rem;
+  gap: .45rem;
+}
+
+.home-tournaments-teaser__titleBlock {
+  min-width: 0;
 }
 
 .home-tournaments-teaser__header h2 {
   margin: 0;
-  font-size: 1.02rem;
+  font-size: .99rem;
+  line-height: 1.2;
 }
 
 .home-tournaments-teaser__kicker {
@@ -689,15 +694,17 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   padding: .34rem .52rem;
   font-size: .74rem;
   line-height: 1.2;
-  border-radius: var(--v2-radius-sm);
+  border-radius: min(var(--v2-radius-sm), 4px);
   min-height: auto;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .home-tournaments-teaser__text {
   margin: 0;
   color: rgba(224, 244, 255, .82);
-  font-size: .82rem;
+  font-size: .79rem;
+  line-height: 1.38;
 }
 
 .home-tournaments-teaser__content {
@@ -709,7 +716,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   border: 1px solid rgba(255,255,255,.1);
   border-radius: var(--v2-radius-sm);
   background: rgba(10, 16, 28, .55);
-  padding: .48rem .56rem;
+  padding: .46rem .52rem;
 }
 
 .home-tournaments-teaser__empty strong {
@@ -726,7 +733,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   border: 1px solid rgba(255,255,255,.11);
   border-radius: var(--v2-radius-sm);
   background: rgba(10, 16, 28, .66);
-  padding: .42rem .52rem;
+  padding: .38rem .5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -744,7 +751,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   display: block;
   color: var(--muted);
   font-size: .74rem;
-  margin-top: .14rem;
+  margin-top: .12rem;
 }
 
 .home-tournaments-teaser__arrow {

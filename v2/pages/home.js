@@ -142,9 +142,8 @@ function formatHomeTournamentMeta(item = {}) {
 function renderHomeTournamentsCard(items = [], status = 'empty') {
   const hasItems = Array.isArray(items) && items.length > 0;
   const visibleItems = hasItems ? items.slice(0, 2) : [];
-  const restCount = hasItems && items.length > 2 ? items.length - 2 : 0;
   const list = visibleItems.map((item) => (
-    `<a class="home-tournaments-teaser__row" href="#tournaments?selected=${encodeURIComponent(item?.tournamentId || '')}">
+    `<a class="home-tournaments-teaser__row" href="${item?.tournamentId ? `#tournaments?selected=${encodeURIComponent(item.tournamentId)}` : '#tournaments'}">
       <div>
         <strong>${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</strong>
         <span class="home-tournaments-teaser__meta">${formatHomeTournamentMeta(item)}</span>
@@ -159,7 +158,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
 
   return `<section class="home-tournaments-teaser">
     <div class="home-tournaments-teaser__header">
-      <div>
+      <div class="home-tournaments-teaser__titleBlock">
         <p class="home-tournaments-teaser__kicker">ТУРНІРНИЙ РЕЖИМ</p>
         <h2>Активні турніри</h2>
       </div>
@@ -167,7 +166,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
     </div>
     <p class="home-tournaments-teaser__text">Слідкуй за турнірною таблицею, матчами та статистикою команд.</p>
     <div class="home-tournaments-teaser__content">
-      ${hasItems ? `${list}${restCount > 0 ? `<span class="home-tournaments-teaser__meta">+${restCount} ще</span>` : ''}` : `<div class="home-tournaments-teaser__empty">
+      ${hasItems ? list : `<div class="home-tournaments-teaser__empty">
         <strong>Поки немає активних турнірів</strong>
         <p>Коли турнір стартує, тут з’явиться швидкий доступ до таблиці та матчів.</p>
       </div>`}
@@ -424,8 +423,8 @@ async function safeInitHomePage(root) {
       .then((items) => {
         homeTournamentsMount.innerHTML = renderHomeTournamentsCard(items, 'empty');
       })
-      .catch(() => {
-        console.warn('[home] tournaments unavailable');
+      .catch((error) => {
+        console.warn('[home] tournaments unavailable', error);
         homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'error');
       });
 

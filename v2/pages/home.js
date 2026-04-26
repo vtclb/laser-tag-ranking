@@ -1,6 +1,6 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
-import { loadTournamentsList } from './tournaments.js';
+import { loadTournamentsList, getTournamentFormatLabel } from './tournaments.js';
 import { formatDataUpdatedAt, makeDataStatus } from '../core/dataStatus.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
@@ -154,15 +154,10 @@ function renderLeagueSection({ league, players }) {
 }
 
 function formatHomeTournamentMeta(item = {}) {
-  const league = escapeHtml(leagueLabelUA(item?.league) || item?.league || 'Ліга');
+  const format = escapeHtml(getTournamentFormatLabel(item) || 'Турнір');
   const rawStatus = String(item?.status || '').trim();
-  const status = escapeHtml(rawStatus ? rawStatus.toUpperCase() : 'ПЛАНУЄТЬСЯ');
-  const dateStart = item?.dateStart ? new Date(item.dateStart) : null;
-  if (dateStart && !Number.isNaN(dateStart.getTime())) {
-    const dateLabel = escapeHtml(dateStart.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }));
-    return `${league} · ${status} · ${dateLabel}`;
-  }
-  return `${league} · ${status}`;
+  const status = escapeHtml(rawStatus ? rawStatus : 'Планується');
+  return `${format} · ${status}`;
 }
 
 function renderHomeTournamentsCard(items = [], status = 'empty') {
@@ -170,11 +165,12 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
   const visibleItems = hasItems ? items.slice(0, 2) : [];
   const list = visibleItems.map((item) => (
     `<a class="home-tournaments-teaser__row" href="${item?.tournamentId ? `#tournaments?selected=${encodeURIComponent(item.tournamentId)}` : '#tournaments'}">
-      <div>
+      <div class="home-tournaments-teaser__left">
         <strong>${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</strong>
         <span class="home-tournaments-teaser__meta">${formatHomeTournamentMeta(item)}</span>
+        <span class="home-tournaments-teaser__stats">Команд: ${Number(item?.teamsCount || 0)} · Матчів: ${Number(item?.gamesCount || 0)}</span>
       </div>
-      <span class="home-tournaments-teaser__arrow" aria-hidden="true">→</span>
+      <span class="home-tournaments-teaser__open">Відкрити</span>
     </a>`
   )).join('');
 

@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Дитяча ліга | LaserTag v2</title>
-  <script type="module" src="./pages/global-styles.js"></script>
+  <script>
+    window.location.replace('./index.html#league-stats?league=kids');
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=./index.html#league-stats?league=kids">
+  </noscript>
 </head>
-<body class="home-v2 league-page" data-league="kids">
-  <header class="topbar"></header>
-  <main class="page"><div class="container section" id="view"></div></main>
-  <script type="module" src="./pages/league-stats.js"></script>
+<body>
+  <p>Перенаправляємо до актуальної сторінки...</p>
+  <p><a href="./index.html#league-stats?league=kids">Відкрити сторінку</a></p>
 </body>
 </html>

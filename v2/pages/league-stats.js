@@ -1,6 +1,7 @@
 ﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
+import { formatDataUpdatedAt, makeDataStatus } from '../core/dataStatus.js';
 
 const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
@@ -196,9 +197,16 @@ function getSmallestPositiveGrowth(players = []) {
 }
 
 function renderHero(root, league, data) {
+  const dataStatus = makeDataStatus(data?.dataStatus);
+  const updatedAt = formatDataUpdatedAt(dataStatus.updatedAt);
+  const statusText = dataStatus.ok && updatedAt
+    ? `Дані оновлено: ${updatedAt}`
+    : 'Дані тимчасово недоступні';
+  const statusClass = dataStatus.ok && updatedAt ? 'data-status-line--ok' : 'data-status-line--error';
   root.innerHTML = `<div class="league-hero__eyebrow">\u0416\u0438\u0432\u0438\u0439 \u0441\u0435\u0437\u043e\u043d</div>
   <h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
-  <p class="px-card__text league-season-title">\u041f\u043e\u0442\u043e\u0447\u043d\u0438\u0439 \u0441\u0435\u0437\u043e\u043d: <strong>${esc(data.seasonLabel)}</strong></p>`;
+  <p class="px-card__text league-season-title">\u041f\u043e\u0442\u043e\u0447\u043d\u0438\u0439 \u0441\u0435\u0437\u043e\u043d: <strong>${esc(data.seasonLabel)}</strong></p>
+  <p class="data-status-line ${statusClass}">${esc(statusText)}</p>`;
 }
 
 function renderGameDaySection(lastGameDay, league) {
@@ -346,7 +354,8 @@ function renderLoading(root, league) {
   if (hero) {
     hero.classList.remove('league-loading-block');
     hero.innerHTML = `<h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
-    <p class="px-card__text league-season-title">\u0416\u0438\u0432\u0456 \u0434\u0430\u043d\u0456: <strong>\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f\u2026</strong></p>`;
+    <p class="px-card__text league-season-title">\u0416\u0438\u0432\u0456 \u0434\u0430\u043d\u0456: <strong>\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f\u2026</strong></p>
+    <p class="data-status-line data-status-line--warning">Оновлюємо live-дані…</p>`;
   }
   if (tableTitle) tableTitle.textContent = '\u0422\u041e\u041f-10 \u0433\u0440\u0430\u0432\u0446\u0456\u0432';
   if (searchInput) {

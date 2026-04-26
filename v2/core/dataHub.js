@@ -3,6 +3,7 @@ import seasonsConfig from './seasons.config.js';
 import { jsonp } from './utils.js';
 import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueKey } from './naming.js';
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
+import { makeDataStatus } from './dataStatus.js';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -444,6 +445,16 @@ function readCache(key, ttlMs) {
     return null;
   }
   return hit.value;
+}
+
+function readCacheEntry(key, ttlMs) {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.ts > ttlMs) {
+    cache.delete(key);
+    return null;
+  }
+  return { value: hit.value, ts: hit.ts };
 }
 function readStorageCache(key, ttlMs) {
   if ((!key.startsWith('sheet:') && !key.startsWith('home:')) || typeof window === 'undefined') return null;
@@ -1334,8 +1345,19 @@ function buildAwards(players = [], recentGames = [], progress = {}) {
 export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
   const league = normalizeLeague(leagueId) || 'kids';
   const cacheKey = `league-live-current:${league}`;
-  const cached = readCache(cacheKey, TTL.leagueSnapshot);
-  if (cached) return cached;
+  const cachedEntry = readCacheEntry(cacheKey, TTL.leagueSnapshot);
+  if (cachedEntry?.value) {
+    const cachedUpdatedAt = cachedEntry.value?.dataStatus?.updatedAt || new Date(cachedEntry.ts).toISOString();
+    return {
+      ...cachedEntry.value,
+      dataStatus: makeDataStatus({
+        source: 'cache',
+        ok: false,
+        updatedAt: cachedUpdatedAt,
+        message: 'Live data unavailable'
+      })
+    };
+  }
 
   const season = await fetchCritical('current-season', () => getCurrentSeason());
   const leagueSheet = await fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 4000, limitCols: 40 }));
@@ -1478,9 +1500,19 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     summary,
     progress,
     awards: buildCurrentLeagueAwards(activePlayers, progress, seasonLabel),
-    lastGameDay
+    lastGameDay,
+    dataStatus: makeDataStatus({
+      source: 'live',
+      ok: true,
+      updatedAt: new Date().toISOString()
+    })
   };
 
+  console.debug('[dataHub] dataStatus', {
+    source: result.dataStatus.source,
+    ok: result.dataStatus.ok,
+    updatedAt: result.dataStatus.updatedAt
+  });
   return writeCache(cacheKey, result);
 }
 
@@ -1494,8 +1526,19 @@ export async function getLiveLeaguePlayerByNick({ league = 'kids', nick } = {}) 
 export async function getLeagueLiveData(leagueId = 'kids') {
   const league = normalizeLeague(leagueId) || 'kids';
   const cacheKey = `league-live:${league}`;
-  const cached = readCache(cacheKey, TTL.leagueSnapshot);
-  if (cached) return cached;
+  const cachedEntry = readCacheEntry(cacheKey, TTL.leagueSnapshot);
+  if (cachedEntry?.value) {
+    const cachedUpdatedAt = cachedEntry.value?.dataStatus?.updatedAt || new Date(cachedEntry.ts).toISOString();
+    return {
+      ...cachedEntry.value,
+      dataStatus: makeDataStatus({
+        source: 'cache',
+        ok: false,
+        updatedAt: cachedUpdatedAt,
+        message: 'Live data unavailable'
+      })
+    };
+  }
 
   const leagueSheet = await fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }));
   const [logsSheet, gamesSheet, avatarsMap] = await Promise.all([
@@ -1544,7 +1587,7 @@ export async function getLeagueLiveData(leagueId = 'kids') {
   const mostMvp = [...enrichedPlayers].sort((a, b) => (b.mvp || 0) - (a.mvp || 0))[0] || null;
   const progress = { bestGrowth, biggestMinus, mostMvp };
 
-  return writeCache(cacheKey, {
+  const result = {
     league,
     players: enrichedPlayers,
     top10: enrichedPlayers.slice(0, 10),
@@ -1559,8 +1602,19 @@ export async function getLeagueLiveData(leagueId = 'kids') {
     progress,
     awards: buildAwards(enrichedPlayers, recentGames, progress),
     recentGames,
-    recentLogs
+    recentLogs,
+    dataStatus: makeDataStatus({
+      source: 'live',
+      ok: true,
+      updatedAt: new Date().toISOString()
+    })
+  };
+  console.debug('[dataHub] dataStatus', {
+    source: result.dataStatus.source,
+    ok: result.dataStatus.ok,
+    updatedAt: result.dataStatus.updatedAt
   });
+  return writeCache(cacheKey, result);
 }
 
 export async function getHomeLiveData() {

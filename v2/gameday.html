@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ігровий день | LaserTag v2</title>
-  <script type="module" src="./pages/global-styles.js"></script>
+  <script>
+    window.location.replace('./index.html#gameday?league=sundaygames');
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=./index.html#gameday?league=sundaygames">
+  </noscript>
 </head>
-<body class="home-v2">
-  <header class="topbar"></header>
-  <main class="page"><div class="container section" id="view"></div></main>
-  <script type="module" src="./pages/gameday.js"></script>
+<body>
+  <p>Перенаправляємо до актуальної сторінки...</p>
+  <p><a href="./index.html#gameday?league=sundaygames">Відкрити сторінку</a></p>
 </body>
 </html>

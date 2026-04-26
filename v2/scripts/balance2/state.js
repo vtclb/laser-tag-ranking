@@ -47,6 +47,7 @@ export const state = {
 
 export const MAX_LOBBY_PLAYERS = 30;
 export const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
+export const TEAM_COUNT_OPTIONS = [2, 3, 4, 5, 6];
 export const MIN_TEAM_COUNT = 2;
 export const MAX_TEAM_COUNT = 6;
 

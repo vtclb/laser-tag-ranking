@@ -1,3 +1,5 @@
+import { rankFromPoints } from '../../core/rankRules.js';
+
 export const state = {
   app: {
     league: 'kids',
@@ -83,15 +85,7 @@ export function sortByPointsDesc(a, b) {
 }
 
 export function rankLetterForPoints(points) {
-  const pts = Number(points);
-  if (!Number.isFinite(pts)) return 'F';
-  if (pts >= 1000) return 'S';
-  if (pts >= 900) return 'A';
-  if (pts >= 800) return 'B';
-  if (pts >= 700) return 'C';
-  if (pts >= 600) return 'D';
-  if (pts >= 500) return 'E';
-  return 'F';
+  return rankFromPoints(points);
 }
 
 export function normalizeLeague(league) {

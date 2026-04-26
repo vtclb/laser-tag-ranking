@@ -7,11 +7,10 @@ import {
   safeErrorMessage
 } from '../core/dataHub.js';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
+import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
 
 const placeholder = '../assets/default-avatar.svg';
-const RANK_ORDER = ['F', 'E', 'D', 'C', 'B', 'A', 'S'];
-const RANK_MIN_POINTS = { F: 0, E: 200, D: 400, C: 600, B: 800, A: 1000, S: 1200 };
 
 function esc(v) {
   return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -140,32 +139,22 @@ function seasonOrderKey(label = '') {
   return 99;
 }
 
-function getRankProgress(points, rankLetter) {
-  const rank = String(rankLetter || 'F').toUpperCase();
-  const index = RANK_ORDER.indexOf(rank);
-  const currentMin = RANK_MIN_POINTS[rank] ?? 0;
+function getRankProgress(points) {
   const pointsValue = num(points);
 
   if (pointsValue === null) {
-    return { percent: 0, currentMin, nextMin: null, remain: null, nextRank: null, isMax: rank === 'S' };
+    return { percent: 0, currentMin: 0, nextMin: null, remain: null, nextRank: null, isMax: false };
   }
 
-  if (index === -1 || rank === 'S') {
-    return { percent: 100, currentMin, nextMin: null, remain: 0, nextRank: null, isMax: true };
-  }
-
-  const nextRank = RANK_ORDER[index + 1];
-  const nextMin = RANK_MIN_POINTS[nextRank];
-  const span = Math.max(1, nextMin - currentMin);
-  const percent = Math.max(0, Math.min(100, ((pointsValue - currentMin) / span) * 100));
+  const progress = getNextRankProgress(pointsValue);
 
   return {
-    percent,
-    currentMin,
-    nextMin,
-    remain: Math.max(0, nextMin - pointsValue),
-    nextRank,
-    isMax: false
+    percent: progress.progress * 100,
+    currentMin: progress.currentMin,
+    nextMin: progress.nextMin,
+    remain: progress.pointsToNext,
+    nextRank: progress.nextRank,
+    isMax: progress.isMaxRank
   };
 }
 

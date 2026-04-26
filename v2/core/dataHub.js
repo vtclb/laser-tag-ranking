@@ -2,6 +2,7 @@
 import seasonsConfig from './seasons.config.js';
 import { jsonp } from './utils.js';
 import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueKey } from './naming.js';
+import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -49,7 +50,6 @@ const RANK_META = {
   E: { label: 'E', cssClass: 'rank-E', themeVars: { '--rank-color': '#666', '--rank-glow': 'rgba(102,102,102,.28)' } },
   F: { label: 'F', cssClass: 'rank-F', themeVars: { '--rank-color': '#444', '--rank-glow': 'rgba(68,68,68,.22)' } }
 };
-const RANK_THRESHOLDS = [['S', 1200], ['A', 1000], ['B', 800], ['C', 600], ['D', 400], ['E', 200], ['F', 0]];
 const RANK_PRIORITY = { S: 0, A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const MAX_BATTLES_PER_GAME = 7;
 const ARCHIVE_LIMIT_ROWS = 1000;
@@ -423,8 +423,7 @@ function normalizeSeasonMasterPayload(payload, seasonId = '') {
 
 
 export function rankFromPoints(points = 0) {
-  for (const [rank, min] of RANK_THRESHOLDS) if ((points || 0) >= min) return rank;
-  return 'F';
+  return rankFromPointsByRules(points);
 }
 
 export function rankMeta(rank = 'F') { return RANK_META[rank] || RANK_META.F; }

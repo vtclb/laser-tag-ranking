@@ -240,7 +240,7 @@ export function renderTeams() {
     const total = sumByNicks(playerKeys);
     const members = playerKeys.map((playerKey) => {
       const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
-      return `<div class="team-player">${playerMetaHtml(player)}<button class="chip" data-move="${escapeAttr(playerKey)}:bench">Лавка</button></div>`;
+      return `<div class="team-player">${playerMetaHtml(player)}<button class="chip" data-move-player-key="${escapeAttr(playerKey)}" data-move-team="bench">Лавка</button></div>`;
     }).join('') || '<div class="tag">порожньо</div>';
     return `<div class="team-card"><h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${members}</div>`;
   });
@@ -249,7 +249,7 @@ export function renderTeams() {
     const bench = state.playersState.selected.filter((playerKey) => !keys.some((key) => state.teamsState.teams[key].includes(playerKey)));
     cards.push(`<div class="team-card"><h4>Лавка</h4>${bench.map((playerKey) => {
       const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
-      return `<div class="team-player">${playerMetaHtml(player)}<div class="team-actions">${keys.map((k) => `<button class="chip" data-move="${escapeAttr(playerKey)}:${k}">→ ${escapeHtml(getTeamLabel(k))}</button>`).join('')}</div></div>`;
+      return `<div class="team-player">${playerMetaHtml(player)}<div class="team-actions">${keys.map((k) => `<button class="chip" data-move-player-key="${escapeAttr(playerKey)}" data-move-team="${escapeAttr(k)}">→ ${escapeHtml(getTeamLabel(k))}</button>`).join('')}</div></div>`;
     }).join('') || '<div class="tag">порожньо</div>'}</div>`);
   }
 
@@ -387,7 +387,7 @@ export function renderPenalties() {
   root.innerHTML = getParticipants().map((playerKey) => {
     const player = map.get(playerKey);
     const val = Number(state.matchState.match.penalties[playerKey] || 0);
-    return `<div class="penalty-row"><span>${escapeHtml(player?.nick || playerKey)}</span><div class="penalty-controls"><button class="chip" data-pen="${escapeAttr(playerKey)}:-1">-</button><strong>${val}</strong><button class="chip" data-pen="${escapeAttr(playerKey)}:1">+</button></div></div>`;
+    return `<div class="penalty-row"><span>${escapeHtml(player?.nick || playerKey)}</span><div class="penalty-controls"><button class="chip" data-pen-player-key="${escapeAttr(playerKey)}" data-pen-delta="-1">-</button><strong>${val}</strong><button class="chip" data-pen-player-key="${escapeAttr(playerKey)}" data-pen-delta="1">+</button></div></div>`;
   }).join('');
 }
 
@@ -479,11 +479,11 @@ export function bindUiEvents(handlers) {
   document.addEventListener('click', (e) => {
     const toggle = e.target.closest('[data-toggle]')?.dataset.toggle;
     const remove = e.target.closest('[data-remove]')?.dataset.remove;
-    const move = e.target.closest('[data-move]')?.dataset.move;
+    const moveBtn = e.target.closest('[data-move-player-key]');
     const seriesCount = e.target.closest('[data-series-count]')?.dataset.seriesCount;
     const teamCount = e.target.closest('[data-team-count]')?.dataset.teamCount;
     const clearSeries = e.target.closest('[data-series-reset]');
-    const pen = e.target.closest('[data-pen]')?.dataset.pen;
+    const penBtn = e.target.closest('[data-pen-player-key]');
     const renameTeam = e.target.closest('[data-rename-team]')?.dataset.renameTeam;
     const penaltiesToggle = e.target.closest('[data-toggle-penalties]');
     const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
@@ -516,9 +516,10 @@ export function bindUiEvents(handlers) {
       syncSelectedMap();
       handlers.onChanged();
     }
-    if (move) {
-      const [nick, team] = move.split(':');
-      movePlayerToTeam(nick, team === 'bench' ? '' : team);
+    if (moveBtn) {
+      const playerKey = moveBtn.dataset.movePlayerKey || '';
+      const team = moveBtn.dataset.moveTeam || '';
+      movePlayerToTeam(playerKey, team === 'bench' ? '' : team);
       handlers.onChanged();
     }
     if (teamCount) {
@@ -527,9 +528,10 @@ export function bindUiEvents(handlers) {
     }
     if (seriesCount) handlers.onSeriesCount(Number(seriesCount));
     if (clearSeries) handlers.onSeriesReset();
-    if (pen) {
-      const [nick, delta] = pen.split(':');
-      handlers.onPenalty(nick, Number(delta));
+    if (penBtn) {
+      const playerKey = penBtn.dataset.penPlayerKey || '';
+      const delta = Number(penBtn.dataset.penDelta || 0);
+      handlers.onPenalty(playerKey, delta);
     }
     if (renameTeam) handlers.onRenameStart(renameTeam);
     if (penaltiesToggle) handlers.onTogglePenalties();

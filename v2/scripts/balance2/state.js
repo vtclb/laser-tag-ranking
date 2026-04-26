@@ -11,6 +11,7 @@ export const state = {
   },
   playersState: {
     players: [],
+    playersLoaded: false,
     selected: [],
     selectedMap: new Set(),
     cache: {},

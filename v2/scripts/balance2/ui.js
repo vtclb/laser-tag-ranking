@@ -108,12 +108,32 @@ export function render() {
   renderLobby();
   renderTeams();
   renderMatchConfig();
+  renderTournamentSourceOptions();
   renderMatchTeams();
   renderSeriesEditor();
   renderMatchSummary();
   renderPenalties();
   renderMatchFields();
   renderLastSavedGame();
+}
+
+function renderTournamentSourceOptions() {
+  const sourceSelect = document.querySelector('select[data-role="player-source-mode"]');
+  if (!sourceSelect) return;
+  const options = state.app.eventMode === 'tournament'
+    ? [
+      { value: 'sundaygames', label: 'Дорослі' },
+      { value: 'kids', label: 'Дитяча' },
+      { value: 'mixed', label: 'Змішаний турнір' },
+    ]
+    : [
+      { value: 'sundaygames', label: 'Дорослі' },
+      { value: 'kids', label: 'Дитяча' },
+    ];
+  sourceSelect.innerHTML = options.map((option) => `<option value="${escapeAttr(option.value)}">${escapeHtml(option.label)}</option>`).join('');
+  sourceSelect.value = options.some((option) => option.value === state.app.playerSourceMode)
+    ? state.app.playerSourceMode
+    : 'sundaygames';
 }
 
 export function renderLeagueControls() {
@@ -247,6 +267,13 @@ export function renderMatchConfig() {
     ${eventMode === 'regular' ? regularContent : `
       <div class="tournament-panel">
         <div class="tag">Змішаний турнір завантажує гравців з дорослої та дитячої ліги.</div>
+        <label>Джерело гравців
+          <select class="chip" data-role="player-source-mode">
+            <option value="sundaygames">Дорослі</option>
+            <option value="kids">Дитяча</option>
+            <option value="mixed">Змішаний турнір</option>
+          </select>
+        </label>
         <label>Назва турніру <input class="search-input" data-tournament-name type="text" value="${escapeAttr(state.tournamentState.tournamentName || '')}" placeholder="Весняний турнір"></label>
         <label>Режим бою
           <select class="chip" data-tournament-game-mode>
@@ -424,12 +451,14 @@ export function bindUiEvents(handlers) {
     const eventMode = e.target.closest('[data-event-mode]')?.dataset.eventMode;
     const tournamentTeamPick = e.target.closest('select[data-tournament-team]');
     const gameModePick = e.target.closest('select[data-tournament-game-mode]');
+    const playerSourceModePick = e.target.closest('select[data-role="player-source-mode"]');
     if (matchMode) handlers.onMatchMode(matchMode);
     if (teamPick) handlers.onMatchTeamPick(teamPick.dataset.matchTeam, teamPick.value);
     if (schedulePick) handlers.onSchedulePick(schedulePick);
     if (eventMode) handlers.onEventMode(eventMode);
     if (tournamentTeamPick) handlers.onTournamentTeamPick(tournamentTeamPick.dataset.tournamentTeam, tournamentTeamPick.value);
     if (gameModePick) handlers.onTournamentGameMode(gameModePick.value);
+    if (playerSourceModePick) handlers.onPlayerSourceMode(playerSourceModePick.value);
   });
 
   document.addEventListener('click', (e) => {
@@ -511,13 +540,3 @@ export function bindUiEvents(handlers) {
     }
   });
 }
-  if (select && !select.querySelector('option[value="mixed"]')) {
-    const option = document.createElement('option');
-    option.value = 'mixed';
-    option.textContent = 'Змішаний турнір';
-    select.appendChild(option);
-  }
-  if (select) {
-    const mixedOption = select.querySelector('option[value="mixed"]');
-    if (mixedOption) mixedOption.disabled = state.app.eventMode !== 'tournament';
-  }

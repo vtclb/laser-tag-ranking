@@ -210,7 +210,8 @@ function buildTournamentTeamsPayload() {
 }
 
 function buildTournamentGamePayload() {
-  const gameId = state.tournamentState.currentGameId || `G${String(state.tournamentState.nextGameNumber).padStart(3, '0')}`;
+  const gameNumber = Number(state.tournamentState.nextGameNumber) || 1;
+  const gameId = state.tournamentState.currentGameId || `G${String(gameNumber).padStart(3, '0')}`;
   const summary = computeSeriesSummary();
   const result = summary.winner === 'tie' ? 'DRAW' : (summary.winner === 'team1' ? 'A' : 'B');
   return {
@@ -240,22 +241,28 @@ function resetMatchOnlyState() {
 
 function validateSave() {
   if (state.app.eventMode === 'tournament') {
-    if (!state.tournamentState.tournamentId) return 'Спочатку створіть турнір';
-    if (!state.tournamentState.teamsSaved) return 'Спочатку збережіть команди турніру';
-    if (!state.activeTeamAId || !state.activeTeamBId) return 'Виберіть активні команди';
-    if (state.activeTeamAId === state.activeTeamBId) return 'Команда A і Команда B мають бути різними';
+    if (!state.tournamentState.tournamentId) return 'Спочатку створи турнір';
+    if (!state.tournamentState.teamsSaved) return 'Спочатку збережи команди турніру';
+    if (!state.activeTeamAId || !state.activeTeamBId) return 'Обери дві команди матчу';
+    if (state.activeTeamAId === state.activeTeamBId) return 'Обери дві різні команди матчу';
     const teamAPlayers = state.teamsState.teams[state.activeTeamAId] || [];
     const teamBPlayers = state.teamsState.teams[state.activeTeamBId] || [];
-    if (!teamAPlayers.length || !teamBPlayers.length) return 'Обидві активні команди мають містити гравців';
-    if (!['DM', 'TR', 'KT'].includes(state.tournamentState.gameMode)) return 'Невірний режим бою';
-    if (state.tournamentState.gameMode === 'KT' && computeSeriesSummary().winner === 'tie') return 'Для KT нічия недоступна';
+    if (!teamAPlayers.length || !teamBPlayers.length) return 'Обидві активні команди мають гравців';
+    if (!['DM', 'TR', 'KT'].includes(state.tournamentState.gameMode)) return 'Невірний режим матчу';
+    const summary = computeSeriesSummary();
+    if (summary.played < 3) return 'Вкажи результат матчу';
+    const mappedResult = summary.winner === 'tie' ? 'DRAW' : (summary.winner === 'team1' ? 'A' : 'B');
+    if (!['A', 'B', 'DRAW'].includes(mappedResult)) return 'Вкажи коректний результат матчу';
+    if (state.tournamentState.gameMode === 'KT' && mappedResult === 'DRAW') return 'Для KT нічия недоступна';
     const allowed = new Set([...teamAPlayers, ...teamBPlayers]);
     for (const id of ['mvp1', 'mvp2', 'mvp3']) {
       const nick = state.matchState.match[id];
-      if (nick && !allowed.has(nick)) return `${id.toUpperCase()} має бути з активних команд`;
+      if (nick && !allowed.has(nick)) return 'MVP має бути з активних команд';
     }
   }
-  const [teamA, teamB] = getActiveMatchTeams();
+  const [teamA, teamB] = state.app.eventMode === 'tournament'
+    ? [state.activeTeamAId, state.activeTeamBId]
+    : getActiveMatchTeams();
   if (!state.teamsState.teams[teamA]?.length || !state.teamsState.teams[teamB]?.length) return 'Активні команди не заповнені';
   if (computeSeriesSummary().played < 3) return 'Потрібно мінімум 3 зіграні бої';
   return '';
@@ -299,7 +306,7 @@ async function doSave(retry = false) {
   saveLocked = true;
   lockSaveButton(true);
   syncSaveButtonState();
-  setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
+  setStatus({ state: 'saving', text: state.app.eventMode === 'tournament' ? 'Збереження турнірного матчу...' : 'Зберігаю…', retryVisible: false });
 
   const res = state.app.eventMode === 'tournament'
     ? await saveTournamentGame(payload)

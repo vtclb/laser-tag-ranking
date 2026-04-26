@@ -66,16 +66,19 @@ export async function saveMatch(payload, timeoutMs = 20000) {
   }
 }
 
-export async function postTournamentJson(payload, timeoutMs = 20000) {
+async function postGasJson(payload, timeoutMs = 20000) {
   try {
     const res = await fetchWithTimeout(TOURNAMENT_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload || {}),
     }, timeoutMs);
     const data = await res.json();
+    if (!res.ok) {
+      return { ok: false, data: data || null, message: data?.message || data?.error || `HTTP ${res.status}` };
+    }
     const status = String(data?.status || '').toUpperCase();
-    if (status === 'OK') return { ok: true, data, message: data?.message || 'OK' };
+    if (status === 'OK') return { ok: true, data, message: data?.message || '' };
     return { ok: false, data: data || null, message: data?.message || data?.error || 'Невідома помилка' };
   } catch (e) {
     return {
@@ -87,7 +90,7 @@ export async function postTournamentJson(payload, timeoutMs = 20000) {
 }
 
 export function createTournament(payload = {}) {
-  return postTournamentJson({
+  return postGasJson({
     action: 'createTournament',
     mode: 'tournament',
     name: payload.name || '',
@@ -100,7 +103,7 @@ export function createTournament(payload = {}) {
 }
 
 export function saveTournamentTeams(payload = {}) {
-  return postTournamentJson({
+  return postGasJson({
     action: 'saveTeams',
     mode: 'tournament',
     tournamentId: payload.tournamentId || '',
@@ -109,7 +112,7 @@ export function saveTournamentTeams(payload = {}) {
 }
 
 export function createTournamentGames(payload = {}) {
-  return postTournamentJson({
+  return postGasJson({
     action: 'createGames',
     mode: 'tournament',
     tournamentId: payload.tournamentId || '',
@@ -118,7 +121,7 @@ export function createTournamentGames(payload = {}) {
 }
 
 export function saveTournamentGame(payload = {}) {
-  return postTournamentJson({
+  return postGasJson({
     action: 'saveGame',
     mode: 'tournament',
     tournamentId: payload.tournamentId || '',
@@ -135,7 +138,7 @@ export function saveTournamentGame(payload = {}) {
 }
 
 export function getTournamentData(tournamentId) {
-  return postTournamentJson({
+  return postGasJson({
     action: 'getTournamentData',
     mode: 'tournament',
     tournamentId: tournamentId || '',
@@ -143,7 +146,7 @@ export function getTournamentData(tournamentId) {
 }
 
 export function listTournaments({ league, status } = {}) {
-  return postTournamentJson({
+  return postGasJson({
     action: 'listTournaments',
     mode: 'tournament',
     league: league ? normalizeLeague(league) : '',

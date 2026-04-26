@@ -14,12 +14,12 @@ import {
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { clearTeams, syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents } from './ui.js';
-import { loadPlayers, saveMatch } from './api.js';
+import { loadPlayers, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js';
 import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 
 const $ = (id) => document.getElementById(id);
-const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
+const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
 const LEAGUE_KEY = 'balance2:league';
 let saveLocked = false;
 
@@ -108,7 +108,7 @@ function syncSeriesMirror() {
 }
 
 function setTeamCount(rawValue) {
-  state.teamsState.teamCount = Math.min(4, Math.max(2, Number(rawValue) || 2));
+  state.teamsState.teamCount = Math.min(6, Math.max(2, Number(rawValue) || 2));
   TEAM_KEYS.slice(state.teamsState.teamCount).forEach((key) => { state.teamsState.teams[key] = []; });
   state.matchState.seriesRounds = state.matchState.seriesRounds.map((value) => {
     const numeric = Number(value);
@@ -117,6 +117,10 @@ function setTeamCount(rawValue) {
     return null;
   });
   ensureActiveMatchState();
+  if (state.teamsState.teamCount === 2) {
+    state.activeTeamAId = 'team1';
+    state.activeTeamBId = 'team2';
+  }
   syncSeriesMirror();
 }
 
@@ -134,7 +138,12 @@ function runBalance() {
     });
   }
   state.app.mode = 'auto';
+  if (state.app.eventMode === 'tournament') state.tournamentState.teamsSaved = false;
   ensureActiveMatchState();
+  if (state.teamsState.teamCount === 2) {
+    state.activeTeamAId = 'team1';
+    state.activeTeamBId = 'team2';
+  }
   saveLobby();
 }
 
@@ -148,7 +157,9 @@ function toPenaltiesString() {
 function syncSaveButtonState() {
   const btn = $('saveBtn');
   if (!btn) return;
-  const [teamA, teamB] = getActiveMatchTeams();
+  const [teamA, teamB] = state.app.eventMode === 'tournament'
+    ? [state.activeTeamAId, state.activeTeamBId]
+    : getActiveMatchTeams();
   const hasTeams = state.teamsState.teams[teamA]?.length > 0 && state.teamsState.teams[teamB]?.length > 0;
   const canSave = hasTeams && computeSeriesSummary().played >= 3;
   btn.disabled = saveLocked || !canSave;
@@ -156,6 +167,12 @@ function syncSaveButtonState() {
 
 function renderAndSync() {
   ensureActiveMatchState();
+  const available = getAvailableTeamKeys();
+  const fallbackA = available[0] || 'team1';
+  const fallbackB = available.find((key) => key !== fallbackA) || 'team2';
+  if (!available.includes(state.activeTeamAId)) state.activeTeamAId = fallbackA;
+  if (!available.includes(state.activeTeamBId) || state.activeTeamBId === state.activeTeamAId) state.activeTeamBId = fallbackB;
+  cleanupTournamentMvp();
   render();
   syncSaveButtonState();
 }
@@ -181,6 +198,35 @@ function buildPayload() {
   };
 }
 
+function buildTournamentTeamsPayload() {
+  return TEAM_KEYS
+    .slice(0, state.teamsState.teamCount)
+    .filter((teamId) => (state.teamsState.teams[teamId] || []).length > 0)
+    .map((teamId) => ({
+      teamId,
+      teamName: state.teamsState.teamNames[teamId] || `Команда ${teamId.replace('team', '')}`,
+      players: [...(state.teamsState.teams[teamId] || [])],
+    }));
+}
+
+function buildTournamentGamePayload() {
+  const gameId = state.tournamentState.currentGameId || `G${String(state.tournamentState.nextGameNumber).padStart(3, '0')}`;
+  const summary = computeSeriesSummary();
+  const result = summary.winner === 'tie' ? 'DRAW' : (summary.winner === 'team1' ? 'A' : 'B');
+  return {
+    tournamentId: state.tournamentState.tournamentId,
+    gameId,
+    gameMode: state.tournamentState.gameMode,
+    teamAId: state.activeTeamAId,
+    teamBId: state.activeTeamBId,
+    result,
+    mvp1: state.matchState.match.mvp1 || '',
+    mvp2: state.matchState.match.mvp2 || '',
+    mvp3: state.matchState.match.mvp3 || '',
+    notes: toPenaltiesString(),
+  };
+}
+
 function resetMatchOnlyState() {
   state.matchState.seriesRounds = Array(7).fill(null);
   state.matchState.series = ['-', '-', '-', '-', '-', '-', '-'];
@@ -193,6 +239,22 @@ function resetMatchOnlyState() {
 }
 
 function validateSave() {
+  if (state.app.eventMode === 'tournament') {
+    if (!state.tournamentState.tournamentId) return 'Спочатку створіть турнір';
+    if (!state.tournamentState.teamsSaved) return 'Спочатку збережіть команди турніру';
+    if (!state.activeTeamAId || !state.activeTeamBId) return 'Виберіть активні команди';
+    if (state.activeTeamAId === state.activeTeamBId) return 'Команда A і Команда B мають бути різними';
+    const teamAPlayers = state.teamsState.teams[state.activeTeamAId] || [];
+    const teamBPlayers = state.teamsState.teams[state.activeTeamBId] || [];
+    if (!teamAPlayers.length || !teamBPlayers.length) return 'Обидві активні команди мають містити гравців';
+    if (!['DM', 'TR', 'KT'].includes(state.tournamentState.gameMode)) return 'Невірний режим бою';
+    if (state.tournamentState.gameMode === 'KT' && computeSeriesSummary().winner === 'tie') return 'Для KT нічия недоступна';
+    const allowed = new Set([...teamAPlayers, ...teamBPlayers]);
+    for (const id of ['mvp1', 'mvp2', 'mvp3']) {
+      const nick = state.matchState.match[id];
+      if (nick && !allowed.has(nick)) return `${id.toUpperCase()} має бути з активних команд`;
+    }
+  }
   const [teamA, teamB] = getActiveMatchTeams();
   if (!state.teamsState.teams[teamA]?.length || !state.teamsState.teams[teamB]?.length) return 'Активні команди не заповнені';
   if (computeSeriesSummary().played < 3) return 'Потрібно мінімум 3 зіграні бої';
@@ -231,7 +293,7 @@ async function doSave(retry = false) {
     return;
   }
 
-  const payload = retry ? state.meta.lastPayload : buildPayload();
+  const payload = retry ? state.meta.lastPayload : (state.app.eventMode === 'tournament' ? buildTournamentGamePayload() : buildPayload());
   state.meta.lastPayload = payload;
 
   saveLocked = true;
@@ -239,8 +301,26 @@ async function doSave(retry = false) {
   syncSaveButtonState();
   setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
 
-  const res = await saveMatch(payload, 20000);
+  const res = state.app.eventMode === 'tournament'
+    ? await saveTournamentGame(payload)
+    : await saveMatch(payload, 20000);
   if (res.ok) {
+    if (state.app.eventMode === 'tournament') {
+      const snapshot = createLastSavedSnapshot();
+      state.lastSavedGame = snapshot;
+      saveLastSavedGame(snapshot);
+      state.tournamentState.nextGameNumber += 1;
+      state.tournamentState.currentGameId = '';
+      resetMatchOnlyState();
+      syncSeriesMirror();
+      saveLobby();
+      setStatus({ state: 'saved', text: '✅ Турнірний матч збережено', retryVisible: false });
+      renderAndSync();
+      saveLocked = false;
+      lockSaveButton(false);
+      syncSaveButtonState();
+      return;
+    }
     try {
       clearPlayersCache(state.app.league);
       const freshPlayers = await loadPlayers(state.app.league, { force: true, timeoutMs: 15000 });
@@ -278,6 +358,7 @@ function toggleSelectedPlayer(nick) {
     state.playersState.selected = [...state.playersState.selected, nick];
   }
   syncSelectedMap();
+  if (state.app.eventMode === 'tournament' && state.tournamentState.teamsSaved) state.tournamentState.teamsSaved = false;
   ensureActiveMatchState();
 }
 
@@ -296,8 +377,16 @@ function saveTeamName(teamKey, rawValue) {
   const value = String(rawValue || '').trim();
   state.teamsState.teamNames[teamKey] = value || `Команда ${teamKey.replace('team', '')}`;
   ensureActiveMatchState();
+  if (state.app.eventMode === 'tournament') state.tournamentState.teamsSaved = false;
   saveLobby();
   renderAndSync();
+}
+
+function cleanupTournamentMvp() {
+  const allowed = new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])]);
+  ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
+    if (state.matchState.match[id] && !allowed.has(state.matchState.match[id])) state.matchState.match[id] = '';
+  });
 }
 
 async function ensurePlayersLoaded({ force = false } = {}) {
@@ -348,6 +437,7 @@ async function init() {
     state.playersState.selected = [];
     syncSelectedMap();
     clearTeams();
+    state.tournamentState.teamsSaved = false;
     ensureActiveMatchState();
     saveLobby();
     renderAndSync();
@@ -361,8 +451,8 @@ async function init() {
 
   $('loadPlayersBtn')?.addEventListener('click', () => ensurePlayersLoaded({ force: true }));
   $('balanceBtn')?.addEventListener('click', () => { runBalance(); renderAndSync(); });
-  $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); saveLobby(); renderAndSync(); });
-  $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearTeams(); ensureActiveMatchState(); saveLobby(); renderAndSync(); });
+  $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); state.tournamentState.teamsSaved = false; saveLobby(); renderAndSync(); });
+  $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearTeams(); ensureActiveMatchState(); state.tournamentState.teamsSaved = false; saveLobby(); renderAndSync(); });
 
   const debouncedSearch = (() => {
     let timer;
@@ -375,7 +465,13 @@ async function init() {
 
   ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
     $(id)?.addEventListener('input', (e) => {
-      state.matchState.match[id] = e.target.value.trim();
+      const value = e.target.value.trim();
+      if (state.app.eventMode === 'tournament') {
+        const allowed = new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])]);
+        state.matchState.match[id] = allowed.has(value) || !value ? value : '';
+      } else {
+        state.matchState.match[id] = value;
+      }
       saveLobby();
     });
   });
@@ -436,7 +532,18 @@ async function init() {
     },
     onRenameStart(teamKey) { startRenameTeam(teamKey); },
     onRenameSave(teamKey, value) { saveTeamName(teamKey, value); },
-    onChanged() { syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); saveLobby(); renderAndSync(); },
+    onChanged() {
+      syncSelectedFromTeamsAndBench();
+      ensureActiveMatchState();
+      if (state.app.eventMode === 'tournament') state.tournamentState.teamsSaved = false;
+      if (state.teamsState.teamCount === 2) {
+        state.activeTeamAId = 'team1';
+        state.activeTeamBId = 'team2';
+      }
+      cleanupTournamentMvp();
+      saveLobby();
+      renderAndSync();
+    },
     onMatchMode(mode) {
       state.activeMatch.mode = mode;
       ensureActiveMatchState();
@@ -448,6 +555,85 @@ async function init() {
       if (side === 'B') state.activeMatch.teamB = teamKey;
       ensureActiveMatchState();
       saveLobby();
+      renderAndSync();
+    },
+    onEventMode(mode) {
+      state.app.eventMode = mode === 'tournament' ? 'tournament' : 'regular';
+      syncSaveButtonState();
+      saveLobby();
+      renderAndSync();
+    },
+    onTournamentName(name) {
+      state.tournamentState.tournamentName = String(name || '').trimStart();
+      saveLobby();
+    },
+    onTournamentGameMode(mode) {
+      state.tournamentState.gameMode = ['DM', 'TR', 'KT'].includes(mode) ? mode : 'DM';
+      saveLobby();
+      renderAndSync();
+    },
+    onTournamentTeamPick(side, teamKey) {
+      if (side === 'A') state.activeTeamAId = teamKey;
+      if (side === 'B') state.activeTeamBId = teamKey;
+      if (state.activeTeamAId === state.activeTeamBId) {
+        setStatus({ state: 'error', text: '❌ Команда A і Команда B не можуть бути однаковими', retryVisible: false });
+      }
+      cleanupTournamentMvp();
+      saveLobby();
+      renderAndSync();
+    },
+    async onCreateTournament() {
+      if (state.app.eventMode !== 'tournament') return;
+      if (!state.tournamentState.tournamentName.trim()) {
+        setStatus({ state: 'error', text: '❌ Вкажіть назву турніру', retryVisible: false });
+        return;
+      }
+      if (!state.app.league) {
+        setStatus({ state: 'error', text: '❌ Оберіть лігу', retryVisible: false });
+        return;
+      }
+      setStatus({ state: 'saving', text: 'Створюю турнір…', retryVisible: false });
+      const res = await createTournament({
+        name: state.tournamentState.tournamentName,
+        league: state.app.league,
+        dateStart: new Date().toISOString().slice(0, 10),
+        dateEnd: '',
+        status: 'ACTIVE',
+        notes: '',
+      });
+      if (!res.ok) {
+        setStatus({ state: 'error', text: `❌ ${res.message}`, retryVisible: false });
+        return;
+      }
+      state.tournamentState.tournamentId = res.data?.tournamentId || res.data?.data?.tournamentId || '';
+      state.tournamentState.teamsSaved = false;
+      saveLobby();
+      setStatus({ state: 'saved', text: `✅ Турнір створено: ${state.tournamentState.tournamentId || 'ID невідомий'}`, retryVisible: false });
+      renderAndSync();
+    },
+    async onSaveTournamentTeams() {
+      if (state.app.eventMode !== 'tournament') return;
+      if (!state.tournamentState.tournamentId) {
+        setStatus({ state: 'error', text: '❌ Спочатку створіть турнір', retryVisible: false });
+        return;
+      }
+      const teams = buildTournamentTeamsPayload();
+      if (teams.length < 2 || teams.some((team) => !team.players.length)) {
+        setStatus({ state: 'error', text: '❌ Потрібно мінімум 2 непорожні команди', retryVisible: false });
+        return;
+      }
+      setStatus({ state: 'saving', text: 'Зберігаю команди турніру…', retryVisible: false });
+      const res = await saveTournamentTeams({
+        tournamentId: state.tournamentState.tournamentId,
+        teams,
+      });
+      if (!res.ok) {
+        setStatus({ state: 'error', text: `❌ ${res.message}`, retryVisible: false });
+        return;
+      }
+      state.tournamentState.teamsSaved = true;
+      saveLobby();
+      setStatus({ state: 'saved', text: '✅ Команди турніру збережено', retryVisible: false });
       renderAndSync();
     },
     onSchedulePick(matchId) {

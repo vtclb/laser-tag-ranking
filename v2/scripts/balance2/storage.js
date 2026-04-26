@@ -19,6 +19,9 @@ export function saveLobby() {
     teamsState: state.teamsState,
     matchState: state.matchState,
     activeMatch: state.activeMatch,
+    tournamentState: state.tournamentState,
+    activeTeamAId: state.activeTeamAId,
+    activeTeamBId: state.activeTeamBId,
     uiState: state.uiState,
   };
   localStorage.setItem(KEY, JSON.stringify(data));
@@ -37,6 +40,7 @@ export function restoreLobby() {
   state.app.sortMode = ['name_asc', 'name_desc', 'points_desc', 'points_asc'].includes(data?.app?.sortMode || data?.sortMode)
     ? (data?.app?.sortMode || data?.sortMode)
     : 'points_desc';
+  state.app.eventMode = (data?.app?.eventMode === 'tournament' ? 'tournament' : 'regular');
   state.app.query = '';
 
   state.playersState.selected = Array.isArray(data?.playersState?.selected || data?.selected)
@@ -44,13 +48,15 @@ export function restoreLobby() {
     : [];
   syncSelectedMap();
 
-  state.teamsState.teamCount = Math.min(4, Math.max(2, Number(data?.teamsState?.teamCount || data?.teamCount || data?.teamsCount) || 2));
+  state.teamsState.teamCount = Math.min(6, Math.max(2, Number(data?.teamsState?.teamCount || data?.teamCount || data?.teamsCount) || 2));
   const restoredTeams = data?.teamsState?.teams || data?.teams || {};
   state.teamsState.teams = {
     team1: Array.isArray(restoredTeams.team1) ? restoredTeams.team1 : [],
     team2: Array.isArray(restoredTeams.team2) ? restoredTeams.team2 : [],
     team3: Array.isArray(restoredTeams.team3) ? restoredTeams.team3 : [],
     team4: Array.isArray(restoredTeams.team4) ? restoredTeams.team4 : [],
+    team5: Array.isArray(restoredTeams.team5) ? restoredTeams.team5 : [],
+    team6: Array.isArray(restoredTeams.team6) ? restoredTeams.team6 : [],
   };
 
   const names = data?.teamsState?.teamNames || data?.teamNames || {};
@@ -59,6 +65,8 @@ export function restoreLobby() {
     team2: String(names.team2 || 'Команда 2').trim() || 'Команда 2',
     team3: String(names.team3 || 'Команда 3').trim() || 'Команда 3',
     team4: String(names.team4 || 'Команда 4').trim() || 'Команда 4',
+    team5: String(names.team5 || 'Команда 5').trim() || 'Команда 5',
+    team6: String(names.team6 || 'Команда 6').trim() || 'Команда 6',
   };
 
   const matchState = data?.matchState || {};
@@ -85,6 +93,18 @@ export function restoreLobby() {
     schedule: Array.isArray(data?.activeMatch?.schedule) ? data.activeMatch.schedule : [],
     selectedScheduleMatchId: data?.activeMatch?.selectedScheduleMatchId || '',
   };
+  const tournamentState = data?.tournamentState || {};
+  state.tournamentState = {
+    tournamentId: tournamentState.tournamentId || '',
+    tournamentName: tournamentState.tournamentName || '',
+    gameMode: ['DM', 'TR', 'KT'].includes(tournamentState.gameMode) ? tournamentState.gameMode : 'DM',
+    teamsSaved: tournamentState.teamsSaved === true,
+    gamesCreated: tournamentState.gamesCreated === true,
+    currentGameId: tournamentState.currentGameId || '',
+    nextGameNumber: Math.max(1, Number(tournamentState.nextGameNumber) || 1),
+  };
+  state.activeTeamAId = data?.activeTeamAId || 'team1';
+  state.activeTeamBId = data?.activeTeamBId || 'team2';
 
   state.uiState.penaltiesCollapsed = data?.uiState?.penaltiesCollapsed !== false;
 

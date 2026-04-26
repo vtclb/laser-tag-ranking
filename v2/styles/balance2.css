@@ -121,7 +121,15 @@ nav, .header, .menu, .burger, .hamburger { display: none !important; }
 
 .match-config,
 .schedule-list,
-.match-pick-grid { display: grid; gap: .45rem; }
+.match-pick-grid,
+.tournament-panel { display: grid; gap: .45rem; }
+
+.tournament-panel {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: .65rem;
+  padding: .55rem;
+  background: rgba(255,255,255,.02);
+}
 
 .match-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .match-pick-grid select { width: 100%; }

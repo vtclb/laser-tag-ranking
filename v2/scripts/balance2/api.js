@@ -2,6 +2,7 @@ import { normalizeLeague, state } from './state.js';
 import { loadPlayersCache, savePlayersCache } from './storage.js';
 
 const PROXY_ORIGIN = 'https://laser-proxy.vartaclub.workers.dev';
+const TOURNAMENT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
 
 function toFormUrlEncoded(obj = {}) {
   return Object.entries(obj).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`).join('&');
@@ -63,4 +64,89 @@ export async function saveMatch(payload, timeoutMs = 20000) {
   } catch (e) {
     return { ok: false, message: e?.name === 'AbortError' ? 'Не вдалося отримати відповідь від сервера' : (e?.message || 'Помилка мережі') };
   }
+}
+
+export async function postTournamentJson(payload, timeoutMs = 20000) {
+  try {
+    const res = await fetchWithTimeout(TOURNAMENT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    }, timeoutMs);
+    const data = await res.json();
+    const status = String(data?.status || '').toUpperCase();
+    if (status === 'OK') return { ok: true, data, message: data?.message || 'OK' };
+    return { ok: false, data: data || null, message: data?.message || data?.error || 'Невідома помилка' };
+  } catch (e) {
+    return {
+      ok: false,
+      data: null,
+      message: e?.name === 'AbortError' ? 'Не вдалося отримати відповідь від сервера' : (e?.message || 'Помилка мережі'),
+    };
+  }
+}
+
+export function createTournament(payload = {}) {
+  return postTournamentJson({
+    action: 'createTournament',
+    mode: 'tournament',
+    name: payload.name || '',
+    league: normalizeLeague(payload.league),
+    dateStart: payload.dateStart || '',
+    dateEnd: payload.dateEnd || '',
+    status: payload.status || 'ACTIVE',
+    notes: payload.notes || '',
+  });
+}
+
+export function saveTournamentTeams(payload = {}) {
+  return postTournamentJson({
+    action: 'saveTeams',
+    mode: 'tournament',
+    tournamentId: payload.tournamentId || '',
+    teams: Array.isArray(payload.teams) ? payload.teams : [],
+  });
+}
+
+export function createTournamentGames(payload = {}) {
+  return postTournamentJson({
+    action: 'createGames',
+    mode: 'tournament',
+    tournamentId: payload.tournamentId || '',
+    games: Array.isArray(payload.games) ? payload.games : [],
+  });
+}
+
+export function saveTournamentGame(payload = {}) {
+  return postTournamentJson({
+    action: 'saveGame',
+    mode: 'tournament',
+    tournamentId: payload.tournamentId || '',
+    gameId: payload.gameId || '',
+    gameMode: payload.gameMode || 'DM',
+    teamAId: payload.teamAId || '',
+    teamBId: payload.teamBId || '',
+    result: payload.result || '',
+    mvp1: payload.mvp1 || '',
+    mvp2: payload.mvp2 || '',
+    mvp3: payload.mvp3 || '',
+    notes: payload.notes || '',
+  });
+}
+
+export function getTournamentData(tournamentId) {
+  return postTournamentJson({
+    action: 'getTournamentData',
+    mode: 'tournament',
+    tournamentId: tournamentId || '',
+  });
+}
+
+export function listTournaments({ league, status } = {}) {
+  return postTournamentJson({
+    action: 'listTournaments',
+    mode: 'tournament',
+    league: league ? normalizeLeague(league) : '',
+    status: status || '',
+  });
 }

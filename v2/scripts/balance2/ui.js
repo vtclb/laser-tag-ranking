@@ -195,13 +195,11 @@ export function renderTeams() {
 export function renderMatchConfig() {
   const root = document.getElementById('activeMatchConfig');
   if (!root) return;
+  const eventMode = state.app.eventMode === 'tournament' ? 'tournament' : 'regular';
   const keys = getAvailableTeamKeys();
-  if (keys.length <= 2) {
-    root.innerHTML = '';
-    return;
-  }
-
-  const [teamA, teamB] = getActiveMatchTeams();
+  const [teamA, teamB] = eventMode === 'tournament'
+    ? [state.activeTeamAId || 'team1', state.activeTeamBId || 'team2']
+    : getActiveMatchTeams();
   const teamOptions = (current, other, side) => keys.map((key) => `<option value="${key}" ${key === current ? 'selected' : ''} ${key === other ? 'disabled' : ''}>${escapeHtml(getTeamLabel(key))} (${side})</option>`).join('');
 
   const scheduleItems = state.activeMatch.schedule.map((match) => {
@@ -210,7 +208,7 @@ export function renderMatchConfig() {
     return `<label class="schedule-item ${selected ? 'active' : ''}"><input type="radio" name="scheduleMatch" data-schedule-pick="${escapeAttr(match.id)}" ${selected ? 'checked' : ''}/><span>${escapeHtml(match.label)}</span>${status}</label>`;
   }).join('');
 
-  root.innerHTML = `
+  const regularContent = keys.length <= 2 ? '' : `
     <div class="series-count"><span>Режим бою:</span><div class="series-count-choices">
       <button class="chip ${state.activeMatch.mode === 'manual' ? 'active' : ''}" type="button" data-match-mode="manual">Ручний вибір</button>
       <button class="chip ${state.activeMatch.mode === 'schedule' ? 'active' : ''}" type="button" data-match-mode="schedule">Розклад ігор</button>
@@ -222,12 +220,41 @@ export function renderMatchConfig() {
       </div>
     ` : `<div class="schedule-list">${scheduleItems}</div>`}
   `;
+
+  root.innerHTML = `
+    <div class="series-count"><span>Режим:</span><div class="series-count-choices">
+      <button class="chip ${eventMode === 'regular' ? 'active' : ''}" type="button" data-event-mode="regular">Звичайний матч</button>
+      <button class="chip ${eventMode === 'tournament' ? 'active' : ''}" type="button" data-event-mode="tournament">Турнір</button>
+    </div></div>
+    ${eventMode === 'regular' ? regularContent : `
+      <div class="tournament-panel">
+        <label>Назва турніру <input class="search-input" data-tournament-name type="text" value="${escapeAttr(state.tournamentState.tournamentName || '')}" placeholder="Весняний турнір"></label>
+        <label>Режим бою
+          <select class="chip" data-tournament-game-mode>
+            ${['DM', 'TR', 'KT'].map((mode) => `<option value="${mode}" ${state.tournamentState.gameMode === mode ? 'selected' : ''}>${mode}</option>`).join('')}
+          </select>
+        </label>
+        <div class="row-btns">
+          <button class="chip" type="button" data-tournament-create="1">Створити турнір</button>
+          <button class="chip" type="button" data-tournament-save-teams="1">Зберегти команди</button>
+        </div>
+        <div class="tag">Tournament ID: ${escapeHtml(state.tournamentState.tournamentId || '—')}</div>
+        <div class="tag">Teams saved: ${state.tournamentState.teamsSaved ? '✅ так' : '❗ ні'}</div>
+      </div>
+      <div class="match-pick-grid">
+        <label>Команда A <select data-tournament-team="A">${teamOptions(teamA, teamB, 'A')}</select></label>
+        <label>Команда B <select data-tournament-team="B">${teamOptions(teamB, teamA, 'B')}</select></label>
+      </div>
+    `}
+  `;
 }
 
 export function renderMatchTeams() {
   const root = document.getElementById('matchTeamsPreview');
   if (!root) return;
-  const [teamA, teamB] = getActiveMatchTeams();
+  const [teamA, teamB] = state.app.eventMode === 'tournament'
+    ? [state.activeTeamAId || 'team1', state.activeTeamBId || 'team2']
+    : getActiveMatchTeams();
   const matchTitle = document.getElementById('activeMatchLabel');
   if (matchTitle) matchTitle.textContent = `${getTeamLabel(teamA)} vs ${getTeamLabel(teamB)}`;
 
@@ -291,7 +318,9 @@ export function renderPenalties() {
 }
 
 export function renderMatchFields() {
-  const participants = [...new Set(getParticipants())];
+  const participants = state.app.eventMode === 'tournament'
+    ? [...new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])])]
+    : [...new Set(getParticipants())];
   const dl = document.getElementById('participantsDatalist');
   if (dl) dl.innerHTML = participants.map((nick) => `<option value="${escapeAttr(nick)}"></option>`).join('');
 
@@ -358,9 +387,15 @@ export function bindUiEvents(handlers) {
     const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
     const teamPick = e.target.closest('select[data-match-team]');
     const schedulePick = e.target.closest('[data-schedule-pick]')?.dataset.schedulePick;
+    const eventMode = e.target.closest('[data-event-mode]')?.dataset.eventMode;
+    const tournamentTeamPick = e.target.closest('select[data-tournament-team]');
+    const gameModePick = e.target.closest('select[data-tournament-game-mode]');
     if (matchMode) handlers.onMatchMode(matchMode);
     if (teamPick) handlers.onMatchTeamPick(teamPick.dataset.matchTeam, teamPick.value);
     if (schedulePick) handlers.onSchedulePick(schedulePick);
+    if (eventMode) handlers.onEventMode(eventMode);
+    if (tournamentTeamPick) handlers.onTournamentTeamPick(tournamentTeamPick.dataset.tournamentTeam, tournamentTeamPick.value);
+    if (gameModePick) handlers.onTournamentGameMode(gameModePick.value);
   });
 
   document.addEventListener('click', (e) => {
@@ -374,6 +409,9 @@ export function bindUiEvents(handlers) {
     const renameTeam = e.target.closest('[data-rename-team]')?.dataset.renameTeam;
     const penaltiesToggle = e.target.closest('[data-toggle-penalties]');
     const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
+    const eventMode = e.target.closest('[data-event-mode]')?.dataset.eventMode;
+    const createTournament = e.target.closest('[data-tournament-create]');
+    const saveTeams = e.target.closest('[data-tournament-save-teams]');
 
     if (toggle) {
       const alreadySelected = state.playersState.selectedMap.has(toggle);
@@ -417,6 +455,14 @@ export function bindUiEvents(handlers) {
     if (renameTeam) handlers.onRenameStart(renameTeam);
     if (penaltiesToggle) handlers.onTogglePenalties();
     if (matchMode) handlers.onMatchMode(matchMode);
+    if (eventMode) handlers.onEventMode(eventMode);
+    if (createTournament) handlers.onCreateTournament();
+    if (saveTeams) handlers.onSaveTournamentTeams();
+  });
+
+  document.addEventListener('input', (e) => {
+    const tournamentNameInput = e.target.closest('[data-tournament-name]');
+    if (tournamentNameInput) handlers.onTournamentName(tournamentNameInput.value);
   });
 
   document.addEventListener('keydown', (e) => {

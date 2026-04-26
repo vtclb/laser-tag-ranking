@@ -251,6 +251,11 @@ export function renderMatchConfig() {
         </div>
         <div class="tag">Tournament ID: ${escapeHtml(state.tournamentState.tournamentId || '—')}</div>
         <div class="tag">Teams saved: ${state.tournamentState.teamsSaved ? '✅ так' : '❗ ні'}</div>
+        <div class="tournament-debug">
+          <div><strong>Остання дія:</strong> ${escapeHtml(state.tournamentState.lastAction || '—')}</div>
+          <div><strong>Статус:</strong> ${escapeHtml(state.tournamentState.lastRequestStatus || '—')}</div>
+          <div><strong>Помилка:</strong> ${escapeHtml(state.tournamentState.lastErrorMessage || '—')}</div>
+        </div>
         <div id="tournamentStatus" class="balance-status" data-status-type="${escapeAttr(state.tournamentState.status?.type || 'idle')}">${escapeHtml(state.tournamentState.status?.message || '')}</div>
       </div>
       <div class="match-pick-grid">

@@ -23,6 +23,12 @@ const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
 const LEAGUE_KEY = 'balance2:league';
 let saveLocked = false;
 
+function setTournamentRequestMeta({ action = '', requestStatus = '', error = '' } = {}) {
+  state.tournamentState.lastAction = action;
+  state.tournamentState.lastRequestStatus = requestStatus;
+  state.tournamentState.lastErrorMessage = error;
+}
+
 function setTournamentDirty(message = 'Команди змінилися — збережи їх повторно') {
   if (state.app.eventMode !== 'tournament') return;
   state.tournamentState.teamsSaved = false;
@@ -325,6 +331,7 @@ async function doSave(retry = false) {
     if (state.app.eventMode === 'tournament') {
       console.debug(`[balance2:tournament] validation failed ${error}`);
       setTournamentStatus(error, 'error');
+      setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error });
       renderAndSync();
     }
     setStatus({ state: 'error', text: `❌ Помилка: ${error}`, retryVisible: false });
@@ -341,7 +348,7 @@ async function doSave(retry = false) {
   setStatus({ state: 'saving', text: state.app.eventMode === 'tournament' ? 'Збереження турнірного матчу...' : 'Зберігаю…', retryVisible: false });
   if (state.app.eventMode === 'tournament') {
     setTournamentStatus(`Зберігаю матч ${payload.gameId}...`, 'loading');
-    console.debug('[balance2:tournament] saveGame payload', payload);
+    setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'PENDING', error: '' });
     renderAndSync();
   }
 
@@ -360,6 +367,7 @@ async function doSave(retry = false) {
       saveLobby();
       setStatus({ state: 'saved', text: '✅ Турнірний матч збережено', retryVisible: false });
       setTournamentStatus(`Матч ${payload.gameId} збережено`, 'success');
+      setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'OK', error: '' });
       finishTournamentSaving();
       return;
     }
@@ -382,7 +390,11 @@ async function doSave(retry = false) {
       setStatus({ state: 'error', text: `❌ Не вдалося отримати відповідь від сервера: ${loadError.message}`, retryVisible: true });
     }
   } else {
-    if (state.app.eventMode === 'tournament') setTournamentStatus(`Помилка GAS: ${res.message || 'Невідома помилка'}`, 'error');
+    if (state.app.eventMode === 'tournament') {
+      const message = res.message || 'Невідома помилка';
+      setTournamentStatus(`Не вдалося зберегти матч: ${message}`, 'error');
+      setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error: message });
+    }
     setStatus({ state: 'error', text: `❌ ${res.message || 'Не вдалося отримати відповідь від сервера'}`, retryVisible: true });
   }
 
@@ -643,6 +655,7 @@ async function init() {
         const message = 'Увімкни турнірний режим';
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'warning');
+        setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
@@ -650,10 +663,19 @@ async function init() {
         const message = 'Обери лігу kids або sundaygames';
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
+        setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
       const today = new Date().toISOString().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) {
+        const message = 'Невірна дата старту турніру';
+        console.debug(`[balance2:tournament] validation failed ${message}`);
+        setTournamentStatus(message, 'error');
+        setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
+        renderAndSync();
+        return;
+      }
       const leagueLabel = state.app.league === 'kids' ? 'Kids' : 'SundayGames';
       const rawName = String(state.tournamentState.tournamentName || '').trim();
       const name = rawName.length >= 3 ? rawName : `Турнір ${leagueLabel} ${today}`;
@@ -667,18 +689,22 @@ async function init() {
       };
       state.tournamentState.isSaving = true;
       setTournamentStatus('Створюю турнір...', 'loading');
-      console.debug('[balance2:tournament] createTournament payload', payload);
+      setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'PENDING', error: '' });
       renderAndSync();
       const res = await createTournament(payload);
       state.tournamentState.isSaving = false;
       if (!res.ok) {
-        setTournamentStatus(`Помилка GAS: ${res.message}`, 'error');
+        const message = res.message || 'Невідома помилка';
+        setTournamentStatus(`Не вдалося створити турнір: ${message}`, 'error');
+        setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
       const newTournamentId = res.data?.tournamentId || res.data?.data?.tournamentId || '';
       if (!newTournamentId) {
-        setTournamentStatus('Помилка GAS: не повернувся tournamentId', 'error');
+        const message = 'не повернувся tournamentId';
+        setTournamentStatus(`Не вдалося створити турнір: ${message}`, 'error');
+        setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
@@ -688,6 +714,7 @@ async function init() {
       state.tournamentState.savedTournamentTeamIds = [];
       saveLobby();
       setTournamentStatus(`Турнір створено: ${state.tournamentState.tournamentId}`, 'success');
+      setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'OK', error: '' });
       renderAndSync();
     },
     async onSaveTournamentTeams() {
@@ -700,6 +727,7 @@ async function init() {
         const message = 'Увімкни турнірний режим';
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'warning');
+        setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
@@ -707,6 +735,7 @@ async function init() {
         const message = 'Спочатку створи турнір';
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
+        setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
@@ -715,6 +744,7 @@ async function init() {
         const message = 'Спочатку збалансуй гравців у команди';
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
+        setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
@@ -722,6 +752,7 @@ async function init() {
         const message = 'Кожна команда має містити хоча б 1 гравця';
         console.debug(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
+        setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
@@ -731,13 +762,15 @@ async function init() {
       };
       state.tournamentState.isSaving = true;
       setTournamentStatus('Зберігаю команди...', 'loading');
-      console.debug('[balance2:tournament] saveTeams payload', payload);
+      setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'PENDING', error: '' });
       renderAndSync();
       const res = await saveTournamentTeams(payload);
       state.tournamentState.isSaving = false;
       if (!res.ok) {
         state.tournamentState.teamsSaved = false;
-        setTournamentStatus(`Помилка GAS: ${res.message}`, 'error');
+        const message = res.message || 'Невідома помилка';
+        setTournamentStatus(`Не вдалося зберегти команди: ${message}`, 'error');
+        setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
         return;
       }
@@ -745,6 +778,7 @@ async function init() {
       state.tournamentState.savedTournamentTeamIds = teams.map((team) => team.teamId);
       saveLobby();
       setTournamentStatus(`Команди турніру збережено: ${teams.length} команд`, 'success');
+      setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'OK', error: '' });
       renderAndSync();
     },
     onSchedulePick(matchId) {

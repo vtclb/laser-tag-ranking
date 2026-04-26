@@ -21,15 +21,16 @@ function clear(node) {
   if (node) node.replaceChildren();
 }
 
-function stateCard(title, text = '', className = 'px-card') {
-  const wrap = createElement('article', `${className} tournament-status`);
-  wrap.append(createElement('h3', 'px-card__title', title));
+function stateCard(title, text = '', tone = 'empty') {
+  const wrap = createElement('article', `px-card tournament-status tournament-status--${tone}`);
+  wrap.append(createElement('h3', 'px-card__title tournament-status__title', title));
   if (text) wrap.append(createElement('p', 'px-card__text', text));
   return wrap;
 }
 
 function createPreviewSections() {
-  const wrap = createElement('section', 'tournaments-preview');
+  const wrap = createElement('section', 'tournament-dashboard-preview');
+  const shell = createElement('div', 'tournament-dashboard-preview__grid');
   const items = [
     {
       title: 'Таблиця команд',
@@ -46,14 +47,15 @@ function createPreviewSections() {
   ];
 
   items.forEach((item) => {
-    const card = createElement('article', 'px-card tournaments-preview__card');
+    const card = createElement('article', 'px-card tournament-dashboard-preview__card');
     card.append(
       createElement('h3', 'px-card__title', item.title),
       createElement('p', 'px-card__text', item.text)
     );
-    wrap.append(card);
+    shell.append(card);
   });
 
+  wrap.append(shell);
   return wrap;
 }
 
@@ -67,7 +69,7 @@ function createMetaItem(label, value, className = '') {
 }
 
 function sanitizeErrorMessage() {
-  return 'Спробуй оновити сторінку або перевірити підключення до API';
+  return 'Спробуй оновити сторінку пізніше';
 }
 
 function statusClass(status = '') {
@@ -105,21 +107,23 @@ export async function initTournamentsPage(params = {}) {
 
   clear(root);
 
-  const hero = createElement('section', 'px-card tournaments-hero');
+  root.classList.add('tournaments-page-v2');
+
+  const hero = createElement('section', 'px-card tournaments-page-hero');
   hero.append(
-    createElement('h1', 'px-card__title', 'Турніри'),
+    createElement('h1', 'px-card__title', 'ТУРНІРИ'),
     createElement('p', 'px-card__text', 'Командні битви, матчі, таблиця та статистика')
   );
 
-  const listWrap = createElement('section', 'px-card tournament-list');
-  const listHeading = createElement('div', 'tournament-list__heading');
+  const listWrap = createElement('section', 'px-card tournaments-page-active');
+  const listHeading = createElement('div', 'tournaments-page-active__heading');
   listHeading.append(
-    createElement('h2', 'px-card__title', 'Активні турніри'),
-    createElement('p', 'px-card__text', 'Оберіть турнір, щоб переглянути таблицю, матчі та статистику')
+    createElement('h2', 'px-card__title', 'АКТИВНІ ТУРНІРИ'),
+    createElement('p', 'px-card__text', 'Обери турнір, щоб переглянути таблицю, матчі та статистику')
   );
 
-  const dashboard = createElement('section', 'tournament-dashboard');
-  listWrap.append(listHeading, stateCard('Завантаження турнірів...', 'Отримуємо список активних ігор'));
+  const dashboard = createElement('section', 'tournament-dashboard-shell');
+  listWrap.append(listHeading, stateCard('Завантаження турнірів...', 'Отримуємо список активних ігор', 'loading'));
   root.append(hero, listWrap, dashboard);
 
   try {
@@ -128,13 +132,13 @@ export async function initTournamentsPage(params = {}) {
 
     listWrap.replaceChildren(listHeading);
     if (!tournaments.length) {
-      listWrap.append(stateCard('Активних турнірів поки немає', 'Щойно буде створено перший турнір, тут з’являться таблиця, матчі й статистика'));
+      listWrap.append(stateCard('АКТИВНИХ ТУРНІРІВ ПОКИ НЕМАЄ', 'Коли турнір з’явиться, тут буде доступ до таблиці команд, матчів і статистики', 'empty'));
       dashboard.replaceChildren(createPreviewSections());
       return;
     }
 
     const selectedId = String(params.selected || params.id || '').trim();
-    const grid = createElement('div', 'tournament-list__grid');
+    const grid = createElement('div', 'tournaments-page-active__list');
     let autoOpenId = '';
 
     tournaments.forEach((tournament, idx) => {
@@ -155,7 +159,7 @@ export async function initTournamentsPage(params = {}) {
       card.append(meta);
 
       const actions = createElement('div', 'tournament-card__actions');
-      const openBtn = createElement('button', 'btn tournament-open-btn', actionLabel(tournament?.status));
+      const openBtn = createElement('button', 'tournament-open-btn', actionLabel(tournament?.status));
       openBtn.type = 'button';
       openBtn.addEventListener('click', () => openTournament(tournamentId, dashboard, grid));
       actions.append(openBtn);
@@ -173,7 +177,7 @@ export async function initTournamentsPage(params = {}) {
     if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, true);
   } catch {
     console.warn('[tournaments] list failed');
-    listWrap.replaceChildren(listHeading, stateCard('Турніри тимчасово недоступні', 'Спробуй оновити сторінку трохи пізніше', 'px-card'));
+    listWrap.replaceChildren(listHeading, stateCard('Не вдалося завантажити дані турнірів', 'Спробуй оновити сторінку пізніше', 'error'));
     dashboard.replaceChildren(createPreviewSections());
   }
 }
@@ -188,7 +192,7 @@ function activateTournamentCard(listNode, nextId) {
 async function openTournament(tournamentId, dashboardNode, listNode, silentHashUpdate = false) {
   if (!dashboardNode || !tournamentId) return;
   activateTournamentCard(listNode, tournamentId);
-  dashboardNode.replaceChildren(stateCard('Завантаження даних турніру...', 'Будь ласка, зачекай'));
+  dashboardNode.replaceChildren(stateCard('Завантаження даних турніру...', 'Будь ласка, зачекай', 'loading'));
 
   try {
     const data = await getTournamentData(tournamentId);
@@ -203,7 +207,7 @@ async function openTournament(tournamentId, dashboardNode, listNode, silentHashU
     renderTournamentDashboard(dashboardNode, data);
   } catch {
     console.warn('[tournaments] dashboard failed');
-    dashboardNode.replaceChildren(stateCard('Не вдалося завантажити турнір', sanitizeErrorMessage(), 'px-card px-card--accent'));
+    dashboardNode.replaceChildren(stateCard('Не вдалося завантажити турнір', sanitizeErrorMessage(), 'error'));
   }
 }
 

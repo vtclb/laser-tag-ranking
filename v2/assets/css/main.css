@@ -43,7 +43,7 @@ main { max-width: 1080px; margin: 0 auto; padding: 1rem; }
 .rank-badge { font-weight: 700; padding: .2rem .45rem; border-radius: .55rem; display: inline-flex; }
 .section-title { margin: .2rem 0 1rem; font-size: 1.1rem; }
 .table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,.1); border-radius: .8rem; }
-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+table { width: 100%; border-collapse: collapse; min-width: 0; }
 th, td { padding: .55rem .6rem; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; }
 tr.inactive { opacity: .45; }
 .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
@@ -298,6 +298,10 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 .tournaments-page-v2 {
   display: grid;
   gap: .55rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
 
 .tournaments-hero,
@@ -332,6 +336,9 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   border-radius: 6px;
   padding: .62rem;
   background: rgba(8, 14, 24, .55);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tournament-list__heading .px-card__title,
@@ -352,6 +359,9 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   padding: .7rem;
   cursor: pointer;
   transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tournament-card:hover {
@@ -412,6 +422,9 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   border-radius: 6px;
   background: rgba(7, 12, 22, .64);
   padding: .75rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tournament-dashboard__head {
@@ -453,6 +466,9 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   margin: .65rem 0;
   overflow-x: auto;
   padding-bottom: .15rem;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tournament-tab {
@@ -462,6 +478,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   padding: .42rem .58rem;
   white-space: nowrap;
   font-size: .84rem;
+  flex: 0 0 auto;
 }
 
 .tournament-tab.is-active {
@@ -471,14 +488,42 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 
 .tournament-tab-content {
   min-height: 140px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .tournament-table-wrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 6px;
   background: rgba(10, 17, 29, .75);
 }
+
+.tournament-standings-cards {
+  display: none;
+  gap: .45rem;
+}
+
+.tournament-standing-card {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(10, 16, 28, .66);
+  padding: .6rem;
+}
+
+.tournament-standing-card__title {
+  margin: 0 0 .3rem;
+  font-size: .92rem;
+}
+
+.tournament-standing-card__line {
+  margin: 0;
+  color: #d8e5f8;
+  font-size: .8rem;
+}
+
+.tournament-standing-card.is-top-1 { border-color: rgba(124,255,114,.42); background: rgba(124,255,114,.08); }
+.tournament-standing-card.is-top-2 { border-color: rgba(49,208,255,.4); background: rgba(49,208,255,.08); }
+.tournament-standing-card.is-top-3 { border-color: rgba(255,191,60,.42); background: rgba(255,191,60,.08); }
 
 .tournament-team-grid {
   display: grid;
@@ -518,7 +563,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 
 .tournament-match-card__top {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr;
   gap: .35rem;
   font-size: .74rem;
   color: var(--muted);
@@ -789,9 +834,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   font-size: .85rem;
 }
 
-.tournament-player-table {
-  min-width: 760px;
-}
+.tournament-player-table { min-width: 0; width: 100%; }
 
 .home-v2 .home-rank-badge {
   border-radius: 0 !important;
@@ -813,15 +856,23 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 }
 
 @media (max-width: 640px) {
-  .tournament-match-card__top {
-    grid-template-columns: 1fr;
+  .tournaments-page-v2,
+  .tournaments-page-active,
+  .tournament-dashboard__shell,
+  .tournament-card,
+  .tournament-dashboard__summary,
+  .tournament-tabs,
+  .tournament-tab-content {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .tournament-card__meta,
   .tournament-dashboard__meta,
   .tournament-team-card__stats,
   .tournament-match-card__bottom {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .tournament-team-grid {
@@ -871,6 +922,11 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
     min-width: 54px;
     font-size: .92rem;
   }
+
+  .tournament-player-table { display: none; }
+  .tournament-standings-cards { display: grid; }
+  .tournament-match-card__bottom,
+  .tournament-player-row__stats { grid-template-columns: 1fr; }
 }
 
 /* Home V2 hard overrides (load-last expectations) */

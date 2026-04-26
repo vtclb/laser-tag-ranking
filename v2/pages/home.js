@@ -128,23 +128,37 @@ function renderLeagueSection({ league, players }) {
   </section>`;
 }
 
-function renderHomeTournamentsCard(items = [], unavailable = false) {
-  const list = (items || []).slice(0, 2).map((item) => (
+function renderHomeTournamentsCard(items = [], status = 'empty') {
+  const hasItems = Array.isArray(items) && items.length > 0;
+  const list = (items || []).slice(0, 3).map((item) => (
     `<li class="home-tournaments-card__item">
-      <div class="home-tournaments-card__item-title">${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</div>
+      <div class="home-tournaments-card__item-main">
+        <div class="home-tournaments-card__item-title">${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</div>
+        <span class="home-tournaments-card__item-status">${escapeHtml(item?.status || 'ACTIVE')}</span>
+      </div>
       <div class="home-tournaments-card__item-meta">
         <span>Ліга: ${escapeHtml(item?.league || '—')}</span>
-        <span>Статус: ${escapeHtml(item?.status || 'ACTIVE')}</span>
       </div>
     </li>`
   )).join('');
+  const emptyTitle = status === 'error'
+    ? 'Не вдалося завантажити турніри'
+    : (status === 'loading' ? 'Завантаження турнірів...' : 'Поки немає активних турнірів');
+  const emptyText = status === 'error'
+    ? 'Спробуй оновити сторінку пізніше'
+    : (status === 'loading'
+      ? 'Оновлюємо список активних турнірів'
+      : 'Коли турнір з’явиться, тут буде швидкий доступ до всіх результатів');
   return `<section class="px-card home-tournaments-card">
     <div class="home-tournaments-card__head">
-      <h3 class="px-card__title">Активні турніри</h3>
-      <a class="btn btn--secondary home-tournaments-card__cta" href="#tournaments">До турнірів</a>
+      <h3 class="px-card__title">АКТИВНІ ТУРНІРИ</h3>
+      <a class="home-tournaments-card__cta" href="#tournaments">ДО ТУРНІРІВ</a>
     </div>
-    <p class="px-card__text">${list ? 'Командні битви, матчі та статистика в одному розділі' : (unavailable ? 'Скоро тут з’являться активні турніри' : 'Турніри готуються')}</p>
-    ${list ? `<ul class="list-clean home-tournaments-card__list">${list}</ul>` : ''}
+    <p class="px-card__text">Слідкуй за турнірною таблицею, матчами та статистикою команд</p>
+    ${hasItems ? `<ul class="list-clean home-tournaments-card__list">${list}</ul>` : `<div class="home-tournaments-card__empty">
+      <p class="home-tournaments-card__empty-title">${emptyTitle}</p>
+      <p class="home-tournaments-card__empty-text">${emptyText}</p>
+    </div>`}
   </section>`;
 }
 
@@ -360,7 +374,7 @@ async function safeInitHomePage(root) {
     stateBox.hidden = false;
     stateBox.textContent = 'Дані тимчасово недоступні';
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
-    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], true);
+    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'error');
     leagueSections.innerHTML = '';
   };
 
@@ -392,14 +406,14 @@ async function safeInitHomePage(root) {
     const kidsPlayers = pickSeasonActive(kidsLive?.players || []);
 
     leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
-    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], true);
+    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'loading');
     fetchHomeTournaments()
       .then((items) => {
-        homeTournamentsMount.innerHTML = renderHomeTournamentsCard(items);
+        homeTournamentsMount.innerHTML = renderHomeTournamentsCard(items, 'empty');
       })
       .catch(() => {
         console.warn('[home] tournaments unavailable');
-        homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], true);
+        homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'error');
       });
 
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({

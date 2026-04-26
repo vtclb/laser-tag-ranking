@@ -1,6 +1,6 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
-import { loadTournamentsList, getTournamentFormatLabel } from './tournaments.js';
+import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate } from './tournaments.js';
 import { formatDataUpdatedAt, makeDataStatus } from '../core/dataStatus.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
@@ -157,7 +157,8 @@ function formatHomeTournamentMeta(item = {}) {
   const format = escapeHtml(getTournamentFormatLabel(item) || 'Турнір');
   const rawStatus = String(item?.status || '').trim();
   const status = escapeHtml(rawStatus ? rawStatus : 'Планується');
-  return `${format} · ${status}`;
+  const date = escapeHtml(formatTournamentDate(item?.dateStart));
+  return `${format} · ${status} · ${date}`;
 }
 
 function renderHomeTournamentsCard(items = [], status = 'empty') {
@@ -168,7 +169,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
       <div class="home-tournaments-teaser__left">
         <strong>${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</strong>
         <span class="home-tournaments-teaser__meta">${formatHomeTournamentMeta(item)}</span>
-        <span class="home-tournaments-teaser__stats">Команд: ${Number(item?.teamsCount || 0)} · Матчів: ${Number(item?.gamesCount || 0)}</span>
+        <span class="home-tournaments-teaser__stats">${Number(item?.teamsCount || 0)} команд · ${Number(item?.gamesCount || 0)} матчів · ${Number(item?.playersCount || 0)} гравців</span>
       </div>
       <span class="home-tournaments-teaser__open">Відкрити</span>
     </a>`

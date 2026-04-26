@@ -38,13 +38,13 @@ function ensureBottomNav() {
   const nav = document.createElement('div');
   nav.className = 'v2-bottom-nav';
   nav.setAttribute('aria-label', 'Нижня навігація');
-  const iconAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false"';
+  const iconAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
   const NAV_ICONS = {
-    main: `<svg ${iconAttrs}><path d="M4.5 10.5 12 4l7.5 6.5v8.2l-2.2 1.3h-10.6l-2.2-1.3z"/><path d="M9 20v-4.2h6V20"/><path d="M8 10h8"/></svg>`,
-    adults: `<svg ${iconAttrs}><path d="M12 3.5 19 6v5.7c0 3.8-3 7.2-7 8.8-4-1.6-7-5-7-8.8V6z"/><path d="m8.4 10.1 3.6-2.3 3.6 2.3"/><path d="m8.4 13.3 3.6-2.3 3.6 2.3"/></svg>`,
-    kids: `<svg ${iconAttrs}><path d="M12 3.5 19 6v5.7c0 3.8-3 7.2-7 8.8-4-1.6-7-5-7-8.8V6z"/><path d="m12 8.5 1.3 2.5 2.8.4-2 1.9.5 2.7-2.6-1.3-2.6 1.3.5-2.7-2-1.9 2.8-.4z"/></svg>`,
-    gameday: `<svg ${iconAttrs}><path d="M12 4.5v4.2M12 15.3v4.2M4.5 12h4.2M15.3 12h4.2"/><path d="M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"/><path d="M12 10.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></svg>`,
-    rules: `<svg ${iconAttrs}><path d="M8 4.5h8l3 3V19l-2 1.5H8l-2-1.5V6z"/><path d="M16 4.5V8h3"/><path d="m10 11.2 1.2 1.2 2.3-2.3"/><path d="M10 15.5h5.2"/></svg>`
+    main: `<svg ${iconAttrs}><path d="M3.5 10.8 12 4l8.5 6.8V20H3.5z"/><path d="M9.2 20v-5.6h5.6V20"/><path d="M7.8 10.8h8.4"/></svg>`,
+    adults: `<svg ${iconAttrs}><path d="M12 3.5 19 6.2v5.4c0 4-2.9 7.4-7 8.9-4.1-1.5-7-4.9-7-8.9V6.2z"/><path d="m8.2 10.2 3.8-2.2 3.8 2.2"/><path d="m8.2 13.6 3.8-2.2 3.8 2.2"/></svg>`,
+    kids: `<svg ${iconAttrs}><path d="M12 3.5 19 6.2v5.4c0 4-2.9 7.4-7 8.9-4.1-1.5-7-4.9-7-8.9V6.2z"/><path d="m12 8.4 1.2 2.2 2.4.3-1.8 1.7.4 2.4-2.2-1.1-2.2 1.1.4-2.4-1.8-1.7 2.4-.3z"/></svg>`,
+    gameday: `<svg ${iconAttrs}><rect x="4" y="5" width="16" height="15" rx="2.4"/><path d="M8 3.8v2.6M16 3.8v2.6M4 9.2h16"/><path d="m10.2 12 4 2.2-4 2.2z"/></svg>`,
+    rules: `<svg ${iconAttrs}><path d="M7.2 4.4h9.6l1.9 1.9v13.3H5.3V6.3z"/><path d="M16.8 4.4v2h1.9"/><path d="m8.7 10.9 1.3 1.3 2.4-2.4"/><path d="M8.7 15.3h6.5"/></svg>`
   };
   nav.innerHTML = `
     <a class="v2-nav-btn nav-item" data-route="#main" href="#main"><span class="v2-nav-btn__icon">${NAV_ICONS.main}</span><small class="v2-nav-btn__label">ГОЛОВНА</small></a>

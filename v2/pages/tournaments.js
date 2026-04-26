@@ -21,11 +21,53 @@ function clear(node) {
   if (node) node.replaceChildren();
 }
 
-function statusBlock(text, className = 'px-card') {
+function stateCard(title, text = '', className = 'px-card') {
   const wrap = createElement('article', `${className} tournament-status`);
-  const p = createElement('p', 'px-card__text', text);
-  wrap.append(p);
+  wrap.append(createElement('h3', 'px-card__title', title));
+  if (text) wrap.append(createElement('p', 'px-card__text', text));
   return wrap;
+}
+
+function createMetaItem(label, value, className = '') {
+  const item = createElement('div', `tournament-meta-item${className ? ` ${className}` : ''}`);
+  item.append(
+    createElement('span', 'tournament-meta-item__label', label),
+    createElement('strong', 'tournament-meta-item__value', value)
+  );
+  return item;
+}
+
+function sanitizeErrorMessage() {
+  return 'Спробуй оновити сторінку або перевірити підключення до API';
+}
+
+function statusClass(status = '') {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized.includes('active')) return 'is-active';
+  if (normalized.includes('finished')) return 'is-finished';
+  return 'is-neutral';
+}
+
+function statusLabel(status = '') {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized.includes('active')) return 'Активний';
+  if (normalized.includes('finished')) return 'Завершений';
+  return toText(status);
+}
+
+function actionLabel(status = '') {
+  return statusClass(status) === 'is-active' ? 'Відкрити' : 'Переглянути';
+}
+
+function shortTimestamp(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '—';
+  return raw.replace('T', ' ').replace('Z', '');
+}
+
+function renderRankBadge(rank) {
+  const badge = createElement('span', 't-rank-badge', toText(rank, '—'));
+  return badge;
 }
 
 async function postTournamentJson(payload, timeoutMs = 20000) {
@@ -58,68 +100,90 @@ export async function initTournamentsPage(params = {}) {
   if (!root) return;
 
   clear(root);
+
   const hero = createElement('section', 'px-card tournaments-hero');
   hero.append(
     createElement('h1', 'px-card__title', 'Турніри'),
     createElement('p', 'px-card__text', 'Командні битви, результати матчів, MVP і прогрес команд')
   );
 
-  const listWrap = createElement('section', 'tournament-list');
-  listWrap.append(statusBlock('Завантаження турнірів...'));
+  const listWrap = createElement('section', 'px-card tournament-list');
+  const listHeading = createElement('div', 'tournament-list__heading');
+  listHeading.append(
+    createElement('h2', 'px-card__title', 'Активні турніри'),
+    createElement('p', 'px-card__text', 'Оберіть турнір, щоб переглянути таблицю, матчі та статистику')
+  );
 
   const dashboard = createElement('section', 'tournament-dashboard');
-
+  listWrap.append(listHeading, stateCard('Завантаження турнірів...', 'Отримуємо список активних ігор'));
   root.append(hero, listWrap, dashboard);
 
   try {
     const listData = await postTournamentJson({ action: 'listTournaments', mode: 'tournament', status: 'ACTIVE' });
     const tournaments = Array.isArray(listData?.tournaments) ? listData.tournaments : [];
 
-    clear(listWrap);
+    listWrap.replaceChildren(listHeading);
     if (!tournaments.length) {
-      listWrap.append(statusBlock('Активних турнірів поки немає'));
+      listWrap.append(stateCard('Активних турнірів поки немає', 'Список оновиться, щойно з’явиться новий турнір'));
+      dashboard.replaceChildren(stateCard('Оберіть турнір', 'Дані таблиці та матчів з’являться тут'));
       return;
     }
 
     const selectedId = String(params.selected || params.id || '').trim();
+    const grid = createElement('div', 'tournament-list__grid');
     let autoOpenId = '';
 
     tournaments.forEach((tournament, idx) => {
-      const card = createElement('article', 'px-card tournament-card');
+      const card = createElement('article', 'tournament-card');
       const tournamentId = String(tournament?.tournamentId || tournament?.id || '').trim();
-      if (!autoOpenId && selectedId && selectedId === tournamentId) {
-        autoOpenId = tournamentId;
-      }
+      if (!autoOpenId && selectedId && selectedId === tournamentId) autoOpenId = tournamentId;
+      if (!autoOpenId && idx === 0) autoOpenId = tournamentId;
 
-      card.append(
-        createElement('h2', 'px-card__title', toText(tournament?.name, `Турнір ${idx + 1}`)),
-        createElement('p', 'px-card__text', `Ліга: ${toText(tournament?.league, '—')}`),
-        createElement('p', 'px-card__text', `Статус: ${toText(tournament?.status, 'ACTIVE')}`),
-        createElement('p', 'px-card__text', `Старт: ${toText(tournament?.startDate, tournament?.createdAt || '—')}`)
+      card.setAttribute('data-tournament-id', tournamentId);
+      card.append(createElement('h3', 'tournament-card__title', toText(tournament?.name, `Турнір ${idx + 1}`)));
+
+      const meta = createElement('div', 'tournament-card__meta');
+      meta.append(
+        createMetaItem('Ліга', toText(tournament?.league)),
+        createMetaItem('Статус', statusLabel(tournament?.status || 'ACTIVE'), `status-${statusClass(tournament?.status)}`),
+        createMetaItem('Старт', toText(tournament?.startDate, tournament?.createdAt || '—'))
       );
+      card.append(meta);
 
-      const actions = createElement('div', 'px-card__actions');
-      const openBtn = createElement('button', 'btn', 'Відкрити');
+      const actions = createElement('div', 'tournament-card__actions');
+      const openBtn = createElement('button', 'btn tournament-open-btn', actionLabel(tournament?.status));
       openBtn.type = 'button';
-      openBtn.addEventListener('click', () => openTournament(tournamentId, dashboard));
+      openBtn.addEventListener('click', () => openTournament(tournamentId, dashboard, grid));
       actions.append(openBtn);
       card.append(actions);
-      listWrap.append(card);
+
+      card.addEventListener('click', (event) => {
+        if (event.target instanceof HTMLElement && event.target.closest('button')) return;
+        openTournament(tournamentId, dashboard, grid);
+      });
+
+      grid.append(card);
     });
 
-    if (autoOpenId) {
-      await openTournament(autoOpenId, dashboard, true);
-    }
+    listWrap.append(grid);
+    if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, true);
   } catch (error) {
-    clear(listWrap);
-    listWrap.append(statusBlock(error?.message || 'Помилка завантаження турнірів', 'px-card px-card--accent'));
+    console.warn('[tournaments] list failed', error);
+    listWrap.replaceChildren(listHeading, stateCard('Не вдалося завантажити турніри', sanitizeErrorMessage(), 'px-card px-card--accent'));
   }
 }
 
-async function openTournament(tournamentId, dashboardNode, silentHashUpdate = false) {
+function activateTournamentCard(listNode, nextId) {
+  listNode?.querySelectorAll('.tournament-card').forEach((card) => {
+    const selected = card.getAttribute('data-tournament-id') === nextId;
+    card.classList.toggle('is-selected', selected);
+  });
+}
+
+async function openTournament(tournamentId, dashboardNode, listNode, silentHashUpdate = false) {
   if (!dashboardNode || !tournamentId) return;
-  clear(dashboardNode);
-  dashboardNode.append(statusBlock('Завантаження турніру...'));
+  activateTournamentCard(listNode, tournamentId);
+  dashboardNode.replaceChildren(stateCard('Завантаження даних турніру...', 'Будь ласка, зачекай'));
 
   try {
     const data = await postTournamentJson({
@@ -137,8 +201,8 @@ async function openTournament(tournamentId, dashboardNode, silentHashUpdate = fa
 
     renderTournamentDashboard(dashboardNode, data);
   } catch (error) {
-    clear(dashboardNode);
-    dashboardNode.append(statusBlock(error?.message || 'Помилка завантаження турніру', 'px-card px-card--accent'));
+    console.warn('[tournaments] dashboard failed', error);
+    dashboardNode.replaceChildren(stateCard('Не вдалося завантажити турнір', sanitizeErrorMessage(), 'px-card px-card--accent'));
   }
 }
 
@@ -146,9 +210,21 @@ function renderTournamentDashboard(node, data) {
   const teams = Array.isArray(data?.teams) ? [...data.teams] : [];
   const games = Array.isArray(data?.games) ? data.games : [];
   const players = Array.isArray(data?.players) ? [...data.players] : [];
+  const tournament = data?.tournament || data || {};
+  const title = toText(tournament?.name, toText(tournament?.tournamentId, 'Турнір'));
   const teamMap = new Map(teams.map((team) => [String(team?.teamId || ''), toText(team?.teamName, String(team?.teamId || '—'))]));
 
   clear(node);
+
+  const dashboardCard = createElement('section', 'px-card tournament-dashboard__shell');
+  const head = createElement('div', 'tournament-dashboard__head');
+  head.append(createElement('h3', 'px-card__title', title));
+  const meta = createElement('div', 'tournament-dashboard__meta');
+  meta.append(
+    createMetaItem('Ліга', toText(tournament?.league)),
+    createMetaItem('Статус', statusLabel(tournament?.status || 'ACTIVE'), `status-${statusClass(tournament?.status)}`),
+    createMetaItem('Старт', toText(tournament?.startDate, tournament?.createdAt || '—'))
+  );
 
   const tabsWrap = createElement('div', 'tournament-tabs');
   const contentWrap = createElement('div', 'tournament-tab-content');
@@ -178,14 +254,15 @@ function renderTournamentDashboard(node, data) {
     tabsWrap.append(btn);
   });
 
-  node.append(tabsWrap, contentWrap);
+  dashboardCard.append(head, meta, tabsWrap, contentWrap);
+  node.append(dashboardCard);
   renderers.table();
 }
 
 function renderTeamsTable(node, teams) {
   clear(node);
   if (!teams.length) {
-    node.append(statusBlock('Команди ще не збережені'));
+    node.append(stateCard('Команди ще не збережені', 'Таблиця зʼявиться після формування складів'));
     return;
   }
 
@@ -204,7 +281,7 @@ function renderTeamsTable(node, teams) {
   const thead = createElement('thead');
   const tbody = createElement('tbody');
   const headRow = createElement('tr');
-  ['Місце', 'Команда', 'Ігор', 'W', 'L', 'D', 'Очки', 'MMR', 'Ранг'].forEach((title) => headRow.append(createElement('th', '', title)));
+  ['#', 'Команда', 'І', 'В', 'П', 'Н', 'Очки', 'MMR', 'Ранг'].forEach((title) => headRow.append(createElement('th', '', title)));
   thead.append(headRow);
 
   sorted.forEach((team, index) => {
@@ -218,9 +295,11 @@ function renderTeamsTable(node, teams) {
       String(toNumber(team.losses)),
       String(toNumber(team.draws)),
       String(toNumber(team.points)),
-      String(toNumber(team.mmrCurrent)),
-      toText(team.rank)
+      String(toNumber(team.mmrCurrent))
     ].forEach((cell) => tr.append(createElement('td', '', cell)));
+    const rankTd = createElement('td');
+    rankTd.append(renderRankBadge(team.rank));
+    tr.append(rankTd);
     tbody.append(tr);
   });
 
@@ -232,26 +311,31 @@ function renderTeamsTable(node, teams) {
 function renderTeamsCards(node, teams) {
   clear(node);
   if (!teams.length) {
-    node.append(statusBlock('Команди ще не збережені'));
+    node.append(stateCard('Команди ще не збережені', 'Склади команд будуть показані після додавання учасників'));
     return;
   }
 
   const grid = createElement('div', 'tournament-team-grid');
   teams.forEach((team) => {
-    const card = createElement('article', 'px-card tournament-card');
+    const card = createElement('article', 'tournament-team-card');
     const players = String(team?.players || '')
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
 
-    card.append(
-      createElement('h3', 'px-card__title', toText(team.teamName, toText(team.teamId))),
-      createElement('p', 'px-card__text', `W/L/D: ${toNumber(team.wins)}/${toNumber(team.losses)}/${toNumber(team.draws)}`),
-      createElement('p', 'px-card__text', `Очки: ${toNumber(team.points)} | MMR: ${toNumber(team.mmrCurrent)} | Ранг: ${toText(team.rank)}`)
+    card.append(createElement('h3', 'tournament-team-card__title', toText(team.teamName, toText(team.teamId))));
+
+    const stats = createElement('div', 'tournament-team-card__stats');
+    stats.append(
+      createMetaItem('W/L/D', `${toNumber(team.wins)}/${toNumber(team.losses)}/${toNumber(team.draws)}`),
+      createMetaItem('Очки', String(toNumber(team.points))),
+      createMetaItem('MMR', String(toNumber(team.mmrCurrent))),
+      createMetaItem('Ранг', toText(team.rank))
     );
+    card.append(stats);
 
     if (players.length) {
-      const ul = createElement('ul', 'list-clean');
+      const ul = createElement('ul', 'tournament-team-card__players');
       players.forEach((nick) => ul.append(createElement('li', '', nick)));
       card.append(ul);
     }
@@ -265,38 +349,46 @@ function renderTeamsCards(node, teams) {
 function renderGames(node, games, teamMap) {
   clear(node);
   if (!games.length) {
-    node.append(statusBlock('Матчі ще не зіграні'));
+    node.append(stateCard('Матчі ще не зіграні', 'Лог матчів з’явиться після першої гри'));
     return;
   }
 
+  const list = createElement('div', 'tournament-games-list');
   games.forEach((game) => {
-    const card = createElement('article', 'px-card tournament-match-card');
+    const card = createElement('article', 'tournament-match-card');
     const teamA = teamMap.get(String(game?.teamAId || '')) || toText(game?.teamAId);
     const teamB = teamMap.get(String(game?.teamBId || '')) || toText(game?.teamBId);
     const winner = String(game?.winnerTeamId || '').trim()
       ? (teamMap.get(String(game?.winnerTeamId || '')) || toText(game?.winnerTeamId))
       : 'Нічия';
 
-    [
-      `Матч: ${toText(game?.gameId)}`,
-      `Режим: ${toText(game?.mode)}`,
-      `${teamA} vs ${teamB}`,
-      `Переможець: ${winner}`,
-      `MVP: ${toText(game?.mvpNick)}`,
-      `2 місце: ${toText(game?.secondNick)}`,
-      `3 місце: ${toText(game?.thirdNick)}`,
-      `ΔMMR: ${toNumber(game?.teamAMmrDelta)} / ${toNumber(game?.teamBMmrDelta)}`,
-      `Час: ${toText(game?.timestamp)}`
-    ].forEach((line) => card.append(createElement('p', 'px-card__text', line)));
+    const top = createElement('div', 'tournament-match-card__top');
+    top.append(
+      createElement('span', 'tournament-match-card__id', `ID: ${toText(game?.gameId)}`),
+      createElement('span', 'tournament-match-card__mode', toText(game?.mode)),
+      createElement('span', 'tournament-match-card__time', shortTimestamp(game?.timestamp))
+    );
 
-    node.append(card);
+    const middle = createElement('div', 'tournament-match-card__middle', `${teamA} vs ${teamB}`);
+
+    const bottom = createElement('div', 'tournament-match-card__bottom');
+    bottom.append(
+      createMetaItem('Результат', String(game?.winnerTeamId || '').trim() ? winner : 'Нічия'),
+      createMetaItem('MVP', `${toText(game?.mvpNick)} / ${toText(game?.secondNick)} / ${toText(game?.thirdNick)}`),
+      createMetaItem('ΔMMR', `${toNumber(game?.teamAMmrDelta)} / ${toNumber(game?.teamBMmrDelta)}`)
+    );
+
+    card.append(top, middle, bottom);
+    list.append(card);
   });
+
+  node.append(list);
 }
 
 function renderPlayers(node, players, teamMap) {
   clear(node);
   if (!players.length) {
-    node.append(statusBlock('Статистика гравців з’явиться після першого матчу'));
+    node.append(stateCard('Статистика гравців з’явиться після першого матчу', 'Після матчу тут буде рейтинг гравців'));
     return;
   }
 
@@ -316,7 +408,7 @@ function renderPlayers(node, players, teamMap) {
   const tbody = createElement('tbody');
 
   const headRow = createElement('tr');
-  ['Гравець', 'Команда', 'Ігор', 'W', 'L', 'D', 'MVP', '2nd', '3rd', 'Impact', 'MMR Δ'].forEach((title) => {
+  ['Гравець', 'Команда', 'І', 'В', 'П', 'Н', 'MVP', '2', '3', 'Impact', 'MMR +/-'].forEach((title) => {
     headRow.append(createElement('th', '', title));
   });
 

@@ -7,6 +7,7 @@ const STATS_LINKS = {
   kids: '#league-stats?league=kids'
 };
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 rx=%220%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
+const TOURNAMENTS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
 
 function esc(v) {
   return String(v ?? '')
@@ -125,6 +126,37 @@ function renderLeagueSection({ league, players }) {
     <article class="home-panel home-section-panel">${currentRankingCard(players)}</article>
     <div class="home-cta-row"><a class="btn btn--secondary" href="${statsLink}">Детальна статистика</a></div>
   </section>`;
+}
+
+function renderHomeTournamentsCard(items = []) {
+  const list = (items || []).slice(0, 2).map((item) => (
+    `<li>${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</li>`
+  )).join('');
+  return `<section class="px-card home-tournaments-card">
+    <h3 class="px-card__title">Активні турніри</h3>
+    <p class="px-card__text">Слідкуй за командними битвами, MVP і таблицею турніру</p>
+    ${list ? `<ul class="list-clean">${list}</ul>` : ''}
+    <div class="px-card__actions"><a class="btn btn--secondary" href="#tournaments">Перейти до турнірів</a></div>
+  </section>`;
+}
+
+async function fetchHomeTournaments() {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 7000);
+  try {
+    const response = await fetch(TOURNAMENTS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'listTournaments', mode: 'tournament', status: 'ACTIVE' }),
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    if (json?.status === 'ERR') throw new Error(json?.message || 'GAS error');
+    return Array.isArray(json?.tournaments) ? json.tournaments : [];
+  } finally {
+    window.clearTimeout(timer);
+  }
 }
 
 function renderHomeLoadingSkeleton() {
@@ -315,14 +347,16 @@ async function safeInitHomePage(root) {
       <section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
       <div class="px-divider"></div>
       <section class="section" id="leadersNowMount"></section>
+      <section class="section" id="homeTournamentsMount"></section>
       <section class="section" id="leagueSections"></section>
     </div>`;
 
   const lifecycle = setHomeLoadingLifecycle(root);
   const stateBox = document.getElementById('stateBox');
   const leadersNowMount = document.getElementById('leadersNowMount');
+  const homeTournamentsMount = document.getElementById('homeTournamentsMount');
   const leagueSections = document.getElementById('leagueSections');
-  if (!stateBox || !leadersNowMount || !leagueSections) {
+  if (!stateBox || !leadersNowMount || !leagueSections || !homeTournamentsMount) {
     lifecycle.destroy();
     lifecycle.revealContent();
     return;
@@ -332,6 +366,7 @@ async function safeInitHomePage(root) {
     stateBox.hidden = false;
     stateBox.textContent = 'Дані тимчасово недоступні';
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
+    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([]);
     leagueSections.innerHTML = '';
   };
 
@@ -363,6 +398,14 @@ async function safeInitHomePage(root) {
     const kidsPlayers = pickSeasonActive(kidsLive?.players || []);
 
     leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
+    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([]);
+    fetchHomeTournaments()
+      .then((items) => {
+        homeTournamentsMount.innerHTML = renderHomeTournamentsCard(items);
+      })
+      .catch((error) => {
+        console.warn('[home] tournaments unavailable', error);
+      });
 
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({
       league,

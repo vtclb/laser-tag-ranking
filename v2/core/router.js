@@ -2,7 +2,7 @@ import { ensureGlobalStyles } from '../pages/global-styles.js';
 import { normalizeLeague } from './naming.js';
 
 const templateCache = new Map();
-const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules']);
+const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments']);
 
 function getView() {
   return document.getElementById('view');
@@ -48,6 +48,7 @@ function toHashFromHref(href = '') {
   if (/index\.html$|pages\/index\.html$/.test(pathOnly)) return buildHash('main');
   if (/seasons\.html$|pages\/seasons\.html$/.test(pathOnly)) return buildHash('seasons');
   if (/rules\.html$|pages\/rules\.html$/.test(pathOnly)) return buildHash('rules');
+  if (/tournaments\.html$|pages\/tournaments\.html$/.test(pathOnly)) return buildHash('tournaments');
 
   if (/season\.html$|pages\/season\.html$/.test(pathOnly)) {
     return buildHash('season', { season: qp.get('season') || '', league: qp.get('league') || '' });
@@ -238,6 +239,15 @@ async function renderRoute() {
       await mountTemplate('./pages/rules.html');
       const { initRulesPage } = await import('../pages/rules.js');
       await runPageInit(route, initRulesPage);
+      return;
+    }
+
+    if (route === 'tournaments') {
+      await mountTemplate('./pages/tournaments.html');
+      const { initTournamentsPage } = await import('../pages/tournaments.js');
+      await runPageInit(route, initTournamentsPage, {
+        selected: queryParams.selected || queryParams.id || ''
+      });
       return;
     }
 

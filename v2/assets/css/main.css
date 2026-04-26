@@ -259,6 +259,65 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   font-size: .82rem;
 }
 
+.tournaments-page {
+  display: grid;
+  gap: .75rem;
+}
+
+.tournaments-hero,
+.tournament-dashboard,
+.home-tournaments-card {
+  background: linear-gradient(165deg, rgba(49,208,255,.12), rgba(124,255,114,.06));
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+.tournament-list {
+  display: grid;
+  gap: .65rem;
+}
+
+.tournament-card {
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.tournament-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-bottom: .6rem;
+}
+
+.tournament-tab {
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  padding: .45rem .65rem;
+}
+
+.tournament-tab.is-active {
+  border-color: rgba(49,208,255,.7);
+  background: rgba(49,208,255,.16);
+}
+
+.tournament-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.tournament-team-grid {
+  display: grid;
+  gap: .6rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.tournament-match-card {
+  margin-bottom: .55rem;
+}
+
+.tournament-player-table {
+  min-width: 760px;
+}
+
 .home-v2 .home-rank-badge {
   border-radius: 0 !important;
   width: 32px;

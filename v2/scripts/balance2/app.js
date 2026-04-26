@@ -40,6 +40,20 @@ function setTournamentRequestMeta({ action = '', requestStatus = '', error = '' 
   state.tournamentState.lastErrorMessage = error;
 }
 
+function normalizeEventAndSourceState(nextEventMode = state.app.eventMode, nextSourceMode = state.app.playerSourceMode) {
+  const eventMode = nextEventMode === 'tournament' ? 'tournament' : 'regular';
+  let playerSourceMode = normalizePlayerSourceMode(nextSourceMode, eventMode);
+  if (eventMode === 'regular' && playerSourceMode === 'mixed') {
+    playerSourceMode = 'sundaygames';
+  }
+  if (eventMode === 'tournament' && !['sundaygames', 'kids', 'mixed'].includes(playerSourceMode)) {
+    playerSourceMode = 'sundaygames';
+  }
+  state.app.eventMode = eventMode;
+  state.app.playerSourceMode = playerSourceMode;
+  state.app.league = normalizeLeague(playerSourceMode);
+}
+
 function setTournamentDirty(message = 'Команди змінилися — збережи їх повторно') {
   if (state.app.eventMode !== 'tournament') return;
   state.tournamentState.teamsSaved = false;
@@ -477,9 +491,8 @@ function cleanupTournamentMvp() {
 function onPlayerSourceChanged(nextMode, { warnOnLobby = false } = {}) {
   const sourceMode = normalizePlayerSourceMode(nextMode, state.app.eventMode);
   const changed = sourceMode !== state.app.playerSourceMode;
-  state.app.playerSourceMode = sourceMode;
-  state.app.league = sourceMode;
-  localStorage.setItem(LEAGUE_KEY, sourceMode);
+  normalizeEventAndSourceState(state.app.eventMode, sourceMode);
+  localStorage.setItem(LEAGUE_KEY, state.app.playerSourceMode);
   if (!changed) return;
 
   state.playersState.players = [];
@@ -494,18 +507,13 @@ function onPlayerSourceChanged(nextMode, { warnOnLobby = false } = {}) {
 async function ensurePlayersLoaded({ force = false } = {}) {
   const btn = $('loadPlayersBtn');
   const original = btn?.textContent || 'Завантажити гравців';
-  const sourceFromControl = state.app.eventMode === 'tournament'
-    ? document.querySelector('select[data-role="player-source-mode"]')?.value
-    : $('leagueSelect')?.value;
-  const sourceMode = normalizePlayerSourceMode(sourceFromControl || state.app.playerSourceMode || state.app.league, state.app.eventMode);
-
-  state.app.playerSourceMode = sourceMode;
-  state.app.league = sourceMode;
+  normalizeEventAndSourceState(state.app.eventMode, state.app.playerSourceMode);
+  const sourceMode = state.app.playerSourceMode;
+  const eventMode = state.app.eventMode;
   localStorage.setItem(LEAGUE_KEY, sourceMode);
   console.debug('[balance2] load players source', {
-    eventMode: state.app?.eventMode,
-    league: state.app.league,
-    playerSourceMode: state.app.playerSourceMode,
+    eventMode,
+    sourceMode,
   });
   if (btn) {
     btn.disabled = true;
@@ -553,22 +561,11 @@ async function init() {
 
   $('restoreBtn')?.addEventListener('click', async () => {
     if (!restoreLobby()) return;
-    $('leagueSelect').value = state.app.league;
+    normalizeEventAndSourceState(state.app.eventMode, state.app.playerSourceMode);
     $('sortMode').value = state.app.sortMode;
     await ensurePlayersLoaded();
     renderAndSync();
     $('restoreCard')?.classList.add('hidden');
-  });
-
-  $('leagueSelect')?.addEventListener('change', (e) => {
-    onPlayerSourceChanged(e.target.value);
-    state.playersState.selected = [];
-    syncSelectedMap();
-    clearTeams();
-    setTournamentDirty();
-    ensureActiveMatchState();
-    saveLobby();
-    renderAndSync();
   });
 
   $('sortMode')?.addEventListener('change', (e) => {
@@ -577,7 +574,6 @@ async function init() {
     renderAndSync();
   });
 
-  $('loadPlayersBtn')?.addEventListener('click', () => ensurePlayersLoaded({ force: true }));
   $('balanceBtn')?.addEventListener('click', () => { runBalance(); renderAndSync(); });
   $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
   $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearTeams(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
@@ -689,13 +685,18 @@ async function init() {
       renderAndSync();
     },
     onEventMode(mode) {
-      state.app.eventMode = mode === 'tournament' ? 'tournament' : 'regular';
-      if (state.app.eventMode === 'regular' && state.app.playerSourceMode === 'mixed') {
-        onPlayerSourceChanged('sundaygames');
-        setStatus({ state: 'error', text: '⚠️ Змішаний режим доступний тільки для турніру.', retryVisible: false });
-      } else {
-        onPlayerSourceChanged(state.app.playerSourceMode);
-      }
+      const nextEventMode = mode === 'tournament' ? 'tournament' : 'regular';
+      const changed = nextEventMode !== state.app.eventMode;
+      normalizeEventAndSourceState(nextEventMode, state.app.playerSourceMode);
+      localStorage.setItem(LEAGUE_KEY, state.app.playerSourceMode);
+      state.playersState.players = [];
+      state.playersState.playersLoaded = false;
+      state.tournamentState.teamsSaved = false;
+      state.tournamentState.savedTournamentTeamIds = [];
+      const statusText = changed && state.playersState.selected.length > 0
+        ? '⚠️ Тип події змінено — перевір lobby перед балансуванням.'
+        : 'Обери джерело гравців і завантаж список';
+      setStatus({ state: changed && state.playersState.selected.length > 0 ? 'error' : 'idle', text: statusText, retryVisible: false });
       if (state.app.eventMode === 'regular') clearTournamentStatus();
       syncSaveButtonState();
       saveLobby();
@@ -705,6 +706,9 @@ async function init() {
       onPlayerSourceChanged(sourceMode, { warnOnLobby: true });
       saveLobby();
       renderAndSync();
+    },
+    onLoadPlayers() {
+      ensurePlayersLoaded({ force: true });
     },
     onTournamentName(name) {
       state.tournamentState.tournamentName = String(name || '').trimStart();
@@ -875,10 +879,8 @@ async function init() {
     },
   });
 
-  state.app.playerSourceMode = normalizePlayerSourceMode(localStorage.getItem(LEAGUE_KEY) || state.app.playerSourceMode, state.app.eventMode);
-  state.app.league = state.app.playerSourceMode;
+  normalizeEventAndSourceState(state.app.eventMode, localStorage.getItem(LEAGUE_KEY) || state.app.playerSourceMode);
   state.lastSavedGame = readLastSavedGame();
-  $('leagueSelect').value = state.app.league;
   $('sortMode').value = state.app.sortMode;
   syncSelectedMap();
   ensureActiveMatchState();

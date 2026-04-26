@@ -1,4 +1,4 @@
-import { getTournamentData, listActiveTournaments } from '../core/tournamentApi.js';
+const TOURNAMENTS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
 
 function toNumber(value) {
   const n = Number(value);
@@ -8,6 +8,145 @@ function toNumber(value) {
 function toText(value, fallback = '—') {
   const text = String(value ?? '').trim();
   return text || fallback;
+}
+
+function normalizeStatusValue(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isActiveStatus(value = '') {
+  const normalized = normalizeStatusValue(value);
+  return normalized === 'active' || normalized === 'активний';
+}
+
+function parsePlayersList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
+  if (typeof value !== 'string') return [];
+  const raw = value.trim();
+  if (!raw) return [];
+  if (raw.startsWith('[') || raw.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.map((item) => String(item || '').trim()).filter(Boolean);
+    } catch {
+      // noop: fallback to comma-separated parsing
+    }
+  }
+  return raw.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function normalizeTournamentList(data) {
+  const source = (
+    (Array.isArray(data?.tournaments) && data.tournaments)
+    || (Array.isArray(data?.rows) && data.rows)
+    || (Array.isArray(data?.items) && data.items)
+    || (Array.isArray(data?.data) && data.data)
+    || []
+  );
+
+  return source.map((item, idx) => {
+    const tournamentId = String(
+      item?.tournamentId
+      ?? item?.id
+      ?? item?.tournament_id
+      ?? item?.ID
+      ?? ''
+    ).trim();
+    return {
+      ...item,
+      tournamentId,
+      name: toText(item?.name, item?.title || (tournamentId || `Турнір ${idx + 1}`)),
+      league: toText(item?.league),
+      dateStart: toText(item?.dateStart, item?.startDate || item?.createdAt || ''),
+      dateEnd: toText(item?.dateEnd, item?.endDate || ''),
+      status: toText(item?.status, 'ACTIVE'),
+      notes: toText(item?.notes, '')
+    };
+  });
+}
+
+function normalizeTournamentDetail(data) {
+  const tournament = data?.tournament || data?.data?.tournament || data || {};
+  const teamsRaw = Array.isArray(data?.teams) ? data.teams : (Array.isArray(data?.data?.teams) ? data.data.teams : []);
+  const gamesRaw = Array.isArray(data?.games) ? data.games : (Array.isArray(data?.data?.games) ? data.data.games : []);
+  const playersRaw = Array.isArray(data?.players) ? data.players : (Array.isArray(data?.data?.players) ? data.data.players : []);
+  return {
+    tournament: {
+      ...tournament,
+      tournamentId: String(tournament?.tournamentId || tournament?.id || '').trim(),
+      name: toText(tournament?.name, tournament?.tournamentId || 'Турнір'),
+      status: toText(tournament?.status, 'ACTIVE'),
+      dateStart: toText(tournament?.dateStart, tournament?.startDate || tournament?.createdAt || '')
+    },
+    teams: teamsRaw.map((team) => ({ ...team, playersList: parsePlayersList(team?.players) })),
+    games: gamesRaw.map((game) => ({ ...game })),
+    players: playersRaw.map((player) => ({ ...player })),
+    config: data?.config || data?.data?.config || {}
+  };
+}
+
+function gasTournamentJsonp(action, params = {}, timeoutMs = 15_000) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `__tcb${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const script = document.createElement('script');
+    const requestUrl = new URL(TOURNAMENTS_ENDPOINT);
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error(`JSONP timeout: ${action}`));
+    }, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[callbackName];
+    };
+
+    Object.entries({ action, mode: 'tournament', ...params }).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') requestUrl.searchParams.set(key, String(value));
+    });
+    requestUrl.searchParams.set('callback', callbackName);
+    requestUrl.searchParams.set('cb', callbackName);
+
+    window[callbackName] = (payload) => {
+      cleanup();
+      if (payload?.status === 'ERR') {
+        reject(new Error(payload?.message || 'Tournament API error'));
+        return;
+      }
+      resolve(payload || {});
+    };
+
+    script.async = true;
+    script.onerror = () => {
+      cleanup();
+      reject(new Error(`JSONP network error: ${action}`));
+    };
+    script.src = requestUrl.toString();
+    document.head.appendChild(script);
+  });
+}
+
+export async function loadTournamentsList(timeoutMs = 15_000) {
+  const activeResponse = await gasTournamentJsonp('listTournaments', { status: 'ACTIVE' }, timeoutMs);
+  console.debug('[tournaments] list response', activeResponse);
+  let tournaments = normalizeTournamentList(activeResponse);
+
+  if (!tournaments.length) {
+    const fallbackResponse = await gasTournamentJsonp('listTournaments', {}, timeoutMs);
+    console.debug('[tournaments] list response (fallback)', fallbackResponse);
+    tournaments = normalizeTournamentList(fallbackResponse);
+  }
+
+  const active = tournaments.filter((item) => isActiveStatus(item?.status));
+  const normalized = active.length ? active : tournaments;
+  console.debug('[tournaments] normalized list', normalized);
+  return normalized;
+}
+
+async function loadTournamentDetail(tournamentId, timeoutMs = 20_000) {
+  const data = await gasTournamentJsonp('getTournamentData', { tournamentId }, timeoutMs);
+  console.debug('[tournaments] detail response', data);
+  return normalizeTournamentDetail(data);
 }
 
 function createElement(tag, className, text) {
@@ -74,14 +213,14 @@ function sanitizeErrorMessage() {
 
 function statusClass(status = '') {
   const normalized = String(status || '').toLowerCase();
-  if (normalized.includes('active')) return 'is-active';
+  if (normalized.includes('active') || normalized.includes('актив')) return 'is-active';
   if (normalized.includes('finished')) return 'is-finished';
   return 'is-neutral';
 }
 
 function statusLabel(status = '') {
   const normalized = String(status || '').toLowerCase();
-  if (normalized.includes('active')) return 'Активний';
+  if (normalized.includes('active') || normalized.includes('актив')) return 'Активний';
   if (normalized.includes('finished')) return 'Завершений';
   return toText(status);
 }
@@ -127,8 +266,7 @@ export async function initTournamentsPage(params = {}) {
   root.append(hero, listWrap, dashboard);
 
   try {
-    const listData = await listActiveTournaments();
-    const tournaments = Array.isArray(listData?.tournaments) ? listData.tournaments : [];
+    const tournaments = await loadTournamentsList();
 
     listWrap.replaceChildren(listHeading);
     if (!tournaments.length) {
@@ -145,16 +283,17 @@ export async function initTournamentsPage(params = {}) {
       const card = createElement('article', 'tournament-card');
       const tournamentId = String(tournament?.tournamentId || tournament?.id || '').trim();
       if (!autoOpenId && selectedId && selectedId === tournamentId) autoOpenId = tournamentId;
+      if (!autoOpenId && isActiveStatus(tournament?.status)) autoOpenId = tournamentId;
       if (!autoOpenId && idx === 0) autoOpenId = tournamentId;
 
       card.setAttribute('data-tournament-id', tournamentId);
-      card.append(createElement('h3', 'tournament-card__title', toText(tournament?.name, `Турнір ${idx + 1}`)));
+      card.append(createElement('h3', 'tournament-card__title', toText(tournament?.name, 'Турнір')));
 
       const meta = createElement('div', 'tournament-card__meta');
       meta.append(
         createMetaItem('Ліга', toText(tournament?.league)),
         createMetaItem('Статус', statusLabel(tournament?.status || 'ACTIVE'), `status-${statusClass(tournament?.status)}`),
-        createMetaItem('Старт', toText(tournament?.startDate, tournament?.createdAt || '—'))
+        createMetaItem('Старт', toText(tournament?.dateStart, tournament?.startDate || tournament?.createdAt || '—'))
       );
       card.append(meta);
 
@@ -175,8 +314,8 @@ export async function initTournamentsPage(params = {}) {
 
     listWrap.append(grid);
     if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, true);
-  } catch {
-    console.warn('[tournaments] list failed');
+  } catch (err) {
+    console.warn('[tournaments] list failed', err);
     listWrap.replaceChildren(listHeading, stateCard('Не вдалося завантажити дані турнірів', 'Спробуй оновити сторінку пізніше', 'error'));
     dashboard.replaceChildren(createPreviewSections());
   }
@@ -195,7 +334,7 @@ async function openTournament(tournamentId, dashboardNode, listNode, silentHashU
   dashboardNode.replaceChildren(stateCard('Завантаження даних турніру...', 'Будь ласка, зачекай', 'loading'));
 
   try {
-    const data = await getTournamentData(tournamentId);
+    const data = await loadTournamentDetail(tournamentId);
 
     if (!silentHashUpdate) {
       const nextHash = `#tournaments?selected=${encodeURIComponent(tournamentId)}`;
@@ -205,8 +344,8 @@ async function openTournament(tournamentId, dashboardNode, listNode, silentHashU
     }
 
     renderTournamentDashboard(dashboardNode, data);
-  } catch {
-    console.warn('[tournaments] dashboard failed');
+  } catch (err) {
+    console.warn('[tournaments] dashboard failed', err);
     dashboardNode.replaceChildren(stateCard('Не вдалося завантажити турнір', sanitizeErrorMessage(), 'error'));
   }
 }
@@ -228,7 +367,7 @@ function renderTournamentDashboard(node, data) {
   meta.append(
     createMetaItem('Ліга', toText(tournament?.league)),
     createMetaItem('Статус', statusLabel(tournament?.status || 'ACTIVE'), `status-${statusClass(tournament?.status)}`),
-    createMetaItem('Старт', toText(tournament?.startDate, tournament?.createdAt || '—'))
+    createMetaItem('Старт', toText(tournament?.dateStart, tournament?.startDate || tournament?.createdAt || '—'))
   );
 
   const tabsWrap = createElement('div', 'tournament-tabs');
@@ -323,10 +462,7 @@ function renderTeamsCards(node, teams) {
   const grid = createElement('div', 'tournament-team-grid');
   teams.forEach((team) => {
     const card = createElement('article', 'tournament-team-card');
-    const players = String(team?.players || '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const players = Array.isArray(team?.playersList) ? team.playersList : parsePlayersList(team?.players);
 
     card.append(createElement('h3', 'tournament-team-card__title', toText(team.teamName, toText(team.teamId))));
 

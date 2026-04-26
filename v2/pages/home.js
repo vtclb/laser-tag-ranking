@@ -128,15 +128,21 @@ function renderLeagueSection({ league, players }) {
   </section>`;
 }
 
-function renderHomeTournamentsCard(items = []) {
+function renderHomeTournamentsCard(items = [], unavailable = false) {
   const list = (items || []).slice(0, 2).map((item) => (
-    `<li>${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</li>`
+    `<li class="home-tournaments-card__item">
+      <div class="home-tournaments-card__item-title">${escapeHtml(item?.name || item?.tournamentId || 'Турнір')}</div>
+      <div class="home-tournaments-card__item-meta">
+        <span>Ліга: ${escapeHtml(item?.league || '—')}</span>
+        <span>Статус: ${escapeHtml(item?.status || 'ACTIVE')}</span>
+      </div>
+    </li>`
   )).join('');
   return `<section class="px-card home-tournaments-card">
     <h3 class="px-card__title">Активні турніри</h3>
-    <p class="px-card__text">Слідкуй за командними битвами, MVP і таблицею турніру</p>
-    ${list ? `<ul class="list-clean">${list}</ul>` : ''}
-    <div class="px-card__actions"><a class="btn btn--secondary" href="#tournaments">Перейти до турнірів</a></div>
+    <p class="px-card__text">${unavailable ? 'Турніри скоро з’являться' : 'Слідкуй за командними битвами, MVP і таблицею турніру'}</p>
+    ${list ? `<ul class="list-clean home-tournaments-card__list">${list}</ul>` : ''}
+    <div class="px-card__actions"><a class="btn btn--secondary home-tournaments-card__cta" href="#tournaments">Перейти до турнірів</a></div>
   </section>`;
 }
 
@@ -366,7 +372,7 @@ async function safeInitHomePage(root) {
     stateBox.hidden = false;
     stateBox.textContent = 'Дані тимчасово недоступні';
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
-    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([]);
+    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], true);
     leagueSections.innerHTML = '';
   };
 
@@ -398,13 +404,14 @@ async function safeInitHomePage(root) {
     const kidsPlayers = pickSeasonActive(kidsLive?.players || []);
 
     leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
-    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([]);
+    homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], true);
     fetchHomeTournaments()
       .then((items) => {
         homeTournamentsMount.innerHTML = renderHomeTournamentsCard(items);
       })
       .catch((error) => {
         console.warn('[home] tournaments unavailable', error);
+        homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], true);
       });
 
     leagueSections.innerHTML = HOME_LEAGUES.map((league) => renderLeagueSection({

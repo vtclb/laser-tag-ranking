@@ -27,6 +27,17 @@ function escapeAttr(value) {
   return escapeHtml(value);
 }
 
+export function setTournamentStatus(message, type = 'idle') {
+  state.tournamentState.status = {
+    message: String(message || ''),
+    type: ['idle', 'loading', 'success', 'error', 'warning'].includes(type) ? type : 'idle',
+  };
+}
+
+export function clearTournamentStatus() {
+  setTournamentStatus('', 'idle');
+}
+
 function sortPlayers(players) {
   const copy = [...players];
   switch (state.app.sortMode) {
@@ -235,11 +246,12 @@ export function renderMatchConfig() {
           </select>
         </label>
         <div class="row-btns">
-          <button class="chip" type="button" data-tournament-create="1">Створити турнір</button>
-          <button class="chip" type="button" data-tournament-save-teams="1">Зберегти команди</button>
+          <button class="chip" type="button" data-tournament-create="1" ${state.tournamentState.isSaving ? 'disabled' : ''}>Створити турнір</button>
+          <button class="chip" type="button" data-tournament-save-teams="1" ${state.tournamentState.isSaving ? 'disabled' : ''}>Зберегти команди</button>
         </div>
         <div class="tag">Tournament ID: ${escapeHtml(state.tournamentState.tournamentId || '—')}</div>
         <div class="tag">Teams saved: ${state.tournamentState.teamsSaved ? '✅ так' : '❗ ні'}</div>
+        <div id="tournamentStatus" class="balance-status" data-status-type="${escapeAttr(state.tournamentState.status?.type || 'idle')}">${escapeHtml(state.tournamentState.status?.message || '')}</div>
       </div>
       <div class="match-pick-grid">
         <label>Команда A <select data-tournament-team="A">${teamOptions(teamA, teamB, 'A')}</select></label>

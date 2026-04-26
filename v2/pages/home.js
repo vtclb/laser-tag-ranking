@@ -1,5 +1,6 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA } from '../core/naming.js';
+import { listActiveTournaments } from '../core/tournamentApi.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
 const STATS_LINKS = {
@@ -7,7 +8,6 @@ const STATS_LINKS = {
   kids: '#league-stats?league=kids'
 };
 const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 rx=%220%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
-const TOURNAMENTS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
 
 function esc(v) {
   return String(v ?? '')
@@ -149,22 +149,8 @@ function renderHomeTournamentsCard(items = [], unavailable = false) {
 }
 
 async function fetchHomeTournaments() {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 7000);
-  try {
-    const response = await fetch(TOURNAMENTS_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'listTournaments', mode: 'tournament', status: 'ACTIVE' }),
-      signal: controller.signal
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const json = await response.json();
-    if (json?.status === 'ERR') throw new Error(json?.message || 'GAS error');
-    return Array.isArray(json?.tournaments) ? json.tournaments : [];
-  } finally {
-    window.clearTimeout(timer);
-  }
+  const json = await listActiveTournaments(7000);
+  return Array.isArray(json?.tournaments) ? json.tournaments : [];
 }
 
 function renderHomeLoadingSkeleton() {
@@ -411,8 +397,8 @@ async function safeInitHomePage(root) {
       .then((items) => {
         homeTournamentsMount.innerHTML = renderHomeTournamentsCard(items);
       })
-      .catch((error) => {
-        console.warn('[home] tournaments unavailable', error);
+      .catch(() => {
+        console.warn('[home] tournaments unavailable');
         homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], true);
       });
 

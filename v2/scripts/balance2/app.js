@@ -366,9 +366,11 @@ function markScheduledMatchPlayed(resultSummary) {
 }
 
 async function doSave(retry = false) {
+  const eventMode = state.app?.eventMode === 'tournament' ? 'tournament' : 'regular';
+  console.debug('[balance2:save] mode', eventMode);
   const error = validateSave();
   if (error) {
-    if (state.app.eventMode === 'tournament') {
+    if (eventMode === 'tournament') {
       console.debug(`[balance2:tournament] validation failed ${error}`);
       setTournamentStatus(error, 'error');
       setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error });
@@ -378,39 +380,72 @@ async function doSave(retry = false) {
     return;
   }
 
-  const payload = retry ? state.meta.lastPayload : (state.app.eventMode === 'tournament' ? buildTournamentGamePayload() : buildPayload());
-  state.meta.lastPayload = payload;
-
-  saveLocked = true;
-  if (state.app.eventMode === 'tournament') state.tournamentState.isSaving = true;
-  lockSaveButton(true);
-  syncSaveButtonState();
-  setStatus({ state: 'saving', text: state.app.eventMode === 'tournament' ? 'Збереження турнірного матчу...' : 'Зберігаю…', retryVisible: false });
-  if (state.app.eventMode === 'tournament') {
-    setTournamentStatus(`Зберігаю матч ${payload.gameId}...`, 'loading');
-    setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'PENDING', error: '' });
-    renderAndSync();
+  if (eventMode === 'tournament') {
+    await handleSaveTournamentGame(retry);
+    return;
   }
 
-  const res = state.app.eventMode === 'tournament'
-    ? await saveTournamentGame(payload)
-    : await saveMatch(payload, 20000);
+  await handleSaveRegularGame(retry);
+}
+
+async function handleSaveTournamentGame(retry = false) {
+  const payload = retry ? state.meta.lastPayload : buildTournamentGamePayload();
+  state.meta.lastPayload = payload;
+  console.debug('[balance2:tournament] save payload', payload);
+
+  saveLocked = true;
+  state.tournamentState.isSaving = true;
+  lockSaveButton(true);
+  syncSaveButtonState();
+  setStatus({ state: 'saving', text: 'Зберігаю турнірний матч...', retryVisible: false });
+  setTournamentStatus(`Зберігаю матч ${payload.gameId}...`, 'loading');
+  setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'PENDING', error: '' });
+  renderAndSync();
+
+  const res = await saveTournamentGame(payload);
   if (res.ok) {
-    if (state.app.eventMode === 'tournament') {
-      const snapshot = createLastSavedSnapshot();
-      state.lastSavedGame = snapshot;
-      saveLastSavedGame(snapshot);
-      state.tournamentState.nextGameNumber += 1;
-      state.tournamentState.currentGameId = '';
-      resetMatchOnlyState();
-      syncSeriesMirror();
-      saveLobby();
-      setStatus({ state: 'saved', text: '✅ Турнірний матч збережено', retryVisible: false });
-      setTournamentStatus(`Матч ${payload.gameId} збережено`, 'success');
-      setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'OK', error: '' });
-      finishTournamentSaving();
-      return;
-    }
+    const snapshot = createLastSavedSnapshot();
+    state.lastSavedGame = snapshot;
+    saveLastSavedGame(snapshot);
+    state.tournamentState.nextGameNumber += 1;
+    state.tournamentState.currentGameId = '';
+    resetMatchOnlyState();
+    syncSeriesMirror();
+    saveLobby();
+    console.debug('[balance2:tournament] saved without regular rating update', res);
+    setStatus({ state: 'saved', text: `Турнірний матч ${payload.gameId} збережено. Основний рейтинг не змінювався.`, retryVisible: false });
+    setTournamentStatus(`Матч ${payload.gameId} збережено`, 'success');
+    setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'OK', error: '' });
+    finishTournamentSaving();
+    return;
+  }
+
+  const message = res.message || 'Невідома помилка';
+  setTournamentStatus(`Не вдалося зберегти матч: ${message}`, 'error');
+  setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error: message });
+  setStatus({ state: 'error', text: `Не вдалося зберегти турнірний матч: ${message}`, retryVisible: true });
+  finishTournamentSaving();
+}
+
+async function handleSaveRegularGame(retry = false) {
+  if (state.app?.eventMode === 'tournament') {
+    const message = 'Tournament mode cannot use regular save flow';
+    console.debug(`[balance2:regular] guard blocked save: ${message}`);
+    setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: false });
+    return;
+  }
+
+  const payload = retry ? state.meta.lastPayload : buildPayload();
+  state.meta.lastPayload = payload;
+  console.debug('[balance2:regular] save payload', payload);
+
+  saveLocked = true;
+  lockSaveButton(true);
+  syncSaveButtonState();
+  setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
+
+  const res = await saveMatch(payload, 20000);
+  if (res.ok) {
     try {
       clearPlayersCache(normalizeLeague(state.app.league));
       const freshPlayers = await loadPlayersForSource(state.app.playerSourceMode, { force: true, timeoutMs: 15000 });
@@ -424,27 +459,18 @@ async function doSave(retry = false) {
       resetMatchOnlyState();
       syncSeriesMirror();
       saveLobby();
-      setStatus({ state: 'saved', text: `✅ Збережено (${new Date().toLocaleTimeString('uk-UA')})`, retryVisible: false });
+      setStatus({ state: 'saved', text: 'Рейтинговий матч збережено. Рейтинг оновлено.', retryVisible: false });
       renderAndSync();
     } catch (loadError) {
       setStatus({ state: 'error', text: `❌ Не вдалося отримати відповідь від сервера: ${loadError.message}`, retryVisible: true });
     }
   } else {
-    if (state.app.eventMode === 'tournament') {
-      const message = res.message || 'Невідома помилка';
-      setTournamentStatus(`Не вдалося зберегти матч: ${message}`, 'error');
-      setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error: message });
-    }
     setStatus({ state: 'error', text: `❌ ${res.message || 'Не вдалося отримати відповідь від сервера'}`, retryVisible: true });
   }
 
-  if (state.app.eventMode === 'tournament') {
-    finishTournamentSaving();
-  } else {
-    saveLocked = false;
-    lockSaveButton(false);
-    syncSaveButtonState();
-  }
+  saveLocked = false;
+  lockSaveButton(false);
+  syncSaveButtonState();
 }
 
 function toggleSelectedPlayer(nick) {

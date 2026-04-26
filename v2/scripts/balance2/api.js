@@ -207,7 +207,7 @@ export function createTournamentGames(payload = {}) {
 }
 
 export function saveTournamentGame(payload = {}) {
-  return postTournament({
+  const body = {
     action: 'saveGame',
     mode: 'tournament',
     tournamentId: payload.tournamentId || '',
@@ -220,7 +220,11 @@ export function saveTournamentGame(payload = {}) {
     mvp2: payload.mvp2 || '',
     mvp3: payload.mvp3 || '',
     notes: payload.notes || '',
-  });
+  };
+  if (body.mode !== 'tournament') {
+    throw new Error('Invalid tournament save mode');
+  }
+  return postTournament(body);
 }
 
 export function getTournamentData(tournamentId) {

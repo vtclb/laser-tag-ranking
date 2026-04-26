@@ -13,8 +13,15 @@ export const state = {
   },
   teamsState: {
     teamCount: 2,
-    teams: { team1: [], team2: [], team3: [], team4: [] },
-    teamNames: { team1: 'Команда 1', team2: 'Команда 2', team3: 'Команда 3', team4: 'Команда 4' },
+    teams: { team1: [], team2: [], team3: [], team4: [], team5: [], team6: [] },
+    teamNames: {
+      team1: 'Команда 1',
+      team2: 'Команда 2',
+      team3: 'Команда 3',
+      team4: 'Команда 4',
+      team5: 'Команда 5',
+      team6: 'Команда 6',
+    },
   },
   matchState: {
     seriesCount: 3,
@@ -38,7 +45,14 @@ export const state = {
   },
 };
 
-const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
+export const MAX_LOBBY_PLAYERS = 30;
+export const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
+export const MIN_TEAM_COUNT = 2;
+export const MAX_TEAM_COUNT = 6;
+
+export function normalizeTeamCount(value) {
+  return Math.min(MAX_TEAM_COUNT, Math.max(MIN_TEAM_COUNT, Number(value) || MIN_TEAM_COUNT));
+}
 
 export function sortByPointsDesc(a, b) {
   const pointsDelta = (Number(b.points ?? b.pts) || 0) - (Number(a.points ?? a.pts) || 0);
@@ -86,7 +100,7 @@ export function getParticipants() {
 }
 
 export function getAvailableTeamKeys() {
-  return TEAM_KEYS.slice(0, state.teamsState.teamCount);
+  return TEAM_KEYS.slice(0, normalizeTeamCount(state.teamsState.teamCount));
 }
 
 export function getActiveMatchTeams() {

@@ -6,10 +6,25 @@ import {
   getTeamLabel,
   getAvailableTeamKeys,
   getActiveMatchTeams,
+  syncSelectedMap,
+  TEAM_KEYS,
+  MAX_LOBBY_PLAYERS,
+  normalizeTeamCount,
 } from './state.js';
 import { movePlayerToTeam } from './manual.js';
 
-const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
 
 function sortPlayers(players) {
   const copy = [...players];
@@ -43,7 +58,33 @@ function formatPlayer(playerOrNick) {
 
 function playerMetaHtml(player) {
   const parsed = formatPlayer(player);
-  return `<span class="player-meta"><strong>${parsed.nick}</strong> <small>${parsed.points} pts · ${parsed.rank}</small></span>`;
+  return `<span class="player-meta"><strong>${escapeHtml(parsed.nick)}</strong> <small>${parsed.points} pts · ${escapeHtml(parsed.rank)}</small></span>`;
+}
+
+function sanitizeTeamCount(value) {
+  return normalizeTeamCount(value);
+}
+
+function sumPoints(team) {
+  return team.reduce((acc, player) => acc + (Number(player.points ?? player.pts) || 0), 0);
+}
+
+function balanceIntoNTeamsLocal(players, rawTeamCount) {
+  const teamCount = sanitizeTeamCount(rawTeamCount);
+  const teams = Object.fromEntries(TEAM_KEYS.map((key) => [key, []]));
+  const sorted = [...players].sort((a, b) => ((Number(b.points ?? b.pts) || 0) - (Number(a.points ?? a.pts) || 0)));
+  const targets = Array.from(
+    { length: teamCount },
+    (_, i) => Math.floor(sorted.length / teamCount) + (i < sorted.length % teamCount ? 1 : 0),
+  );
+
+  sorted.forEach((player) => {
+    const idx = Array.from({ length: teamCount }, (_, i) => i)
+      .filter((i) => teams[`team${i + 1}`].length < targets[i])
+      .sort((a, b) => sumPoints(teams[`team${a + 1}`]) - sumPoints(teams[`team${b + 1}`]))[0] ?? 0;
+    teams[`team${idx + 1}`].push(player);
+  });
+  return teams;
 }
 
 export function render() {
@@ -84,11 +125,11 @@ export function renderPlayers() {
   const players = sortPlayers(filtered);
 
   count.textContent = `Гравців: ${players.length}`;
-  selectedCount.textContent = `Обрано: ${state.playersState.selected.length} / 15`;
+  selectedCount.textContent = `Обрано: ${state.playersState.selected.length} / ${MAX_LOBBY_PLAYERS}`;
 
   list.innerHTML = players.map((player) => {
     const selected = isSelected(player.nick);
-    return `<div class="player-row ${selected ? 'selected' : ''}" data-toggle="${player.nick}">${playerMetaHtml(player)}<span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span></div>`;
+    return `<div class="player-row ${selected ? 'selected' : ''}" data-toggle="${escapeAttr(player.nick)}">${playerMetaHtml(player)}<span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span></div>`;
   }).join('');
 }
 
@@ -98,7 +139,7 @@ export function renderLobby() {
   const playersMap = new Map(state.playersState.players.map((p) => [p.nick, p]));
   wrap.innerHTML = state.playersState.selected.map((nick) => {
     const player = playersMap.get(nick) || { nick, points: 0, rank: '—' };
-    return `<div class="lobby-row">${playerMetaHtml(player)}<button class="chip" data-remove="${nick}">Прибрати</button></div>`;
+    return `<div class="lobby-row">${playerMetaHtml(player)}<button class="chip" data-remove="${escapeAttr(nick)}">Прибрати</button></div>`;
   }).join('');
 }
 
@@ -122,14 +163,14 @@ export function renderTeams() {
     const total = sumByNicks(nicks);
     const members = nicks.map((nick) => {
       const player = map.get(nick) || { nick, points: 0, rank: '—' };
-      return `<div class="team-player">${playerMetaHtml(player)}<button class="chip" data-move="${nick}:bench">Лавка</button></div>`;
+      return `<div class="team-player">${playerMetaHtml(player)}<button class="chip" data-move="${escapeAttr(nick)}:bench">Лавка</button></div>`;
     }).join('') || '<div class="tag">порожньо</div>';
     return `<div class="team-card"><h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${members}</div>`;
   });
 
   if (state.app.mode === 'manual') {
     const bench = state.playersState.selected.filter((nick) => !keys.some((key) => state.teamsState.teams[key].includes(nick)));
-    cards.push(`<div class="team-card"><h4>Лавка</h4>${bench.map((nick) => `<div class="team-player"><span>${nick}</span><div class="team-actions">${keys.map((k) => `<button class="chip" data-move="${nick}:${k}">→ ${getTeamLabel(k)}</button>`).join('')}</div></div>`).join('') || '<div class="tag">порожньо</div>'}</div>`);
+    cards.push(`<div class="team-card"><h4>Лавка</h4>${bench.map((nick) => `<div class="team-player"><span>${escapeHtml(nick)}</span><div class="team-actions">${keys.map((k) => `<button class="chip" data-move="${escapeAttr(nick)}:${k}">→ ${escapeHtml(getTeamLabel(k))}</button>`).join('')}</div></div>`).join('') || '<div class="tag">порожньо</div>'}</div>`);
   }
 
   grid.innerHTML = cards.join('');
@@ -145,12 +186,12 @@ export function renderMatchConfig() {
   }
 
   const [teamA, teamB] = getActiveMatchTeams();
-  const teamOptions = (current, other, side) => keys.map((key) => `<option value="${key}" ${key === current ? 'selected' : ''} ${key === other ? 'disabled' : ''}>${getTeamLabel(key)} (${side})</option>`).join('');
+  const teamOptions = (current, other, side) => keys.map((key) => `<option value="${key}" ${key === current ? 'selected' : ''} ${key === other ? 'disabled' : ''}>${escapeHtml(getTeamLabel(key))} (${side})</option>`).join('');
 
   const scheduleItems = state.activeMatch.schedule.map((match) => {
     const selected = match.id === state.activeMatch.selectedScheduleMatchId;
     const status = match.played ? `<span class="tag">Зіграно ${match.resultSummary ? `· ${match.resultSummary}` : ''}</span>` : '<span class="tag">Ще не зіграно</span>';
-    return `<label class="schedule-item ${selected ? 'active' : ''}"><input type="radio" name="scheduleMatch" data-schedule-pick="${match.id}" ${selected ? 'checked' : ''}/><span>${match.label}</span>${status}</label>`;
+    return `<label class="schedule-item ${selected ? 'active' : ''}"><input type="radio" name="scheduleMatch" data-schedule-pick="${escapeAttr(match.id)}" ${selected ? 'checked' : ''}/><span>${escapeHtml(match.label)}</span>${status}</label>`;
   }).join('');
 
   root.innerHTML = `
@@ -181,7 +222,7 @@ export function renderMatchTeams() {
   }
 
   root.innerHTML = [teamA, teamB].map((key, idx) => {
-    const items = state.teamsState.teams[key].map((nick) => `<li>${nick}</li>`).join('');
+    const items = state.teamsState.teams[key].map((nick) => `<li>${escapeHtml(nick)}</li>`).join('');
     const label = idx === 0 ? 'A' : 'B';
     return `<div class="team-card"><h4>${label} · ${getTeamLabel(key)}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
   }).join('');
@@ -229,14 +270,14 @@ export function renderPenalties() {
 
   root.innerHTML = getParticipants().map((nick) => {
     const val = Number(state.matchState.match.penalties[nick] || 0);
-    return `<div class="penalty-row"><span>${nick}</span><div class="penalty-controls"><button class="chip" data-pen="${nick}:-1">-</button><strong>${val}</strong><button class="chip" data-pen="${nick}:1">+</button></div></div>`;
+    return `<div class="penalty-row"><span>${escapeHtml(nick)}</span><div class="penalty-controls"><button class="chip" data-pen="${escapeAttr(nick)}:-1">-</button><strong>${val}</strong><button class="chip" data-pen="${escapeAttr(nick)}:1">+</button></div></div>`;
   }).join('');
 }
 
 export function renderMatchFields() {
   const participants = [...new Set(getParticipants())];
   const dl = document.getElementById('participantsDatalist');
-  if (dl) dl.innerHTML = participants.map((nick) => `<option value="${nick}"></option>`).join('');
+  if (dl) dl.innerHTML = participants.map((nick) => `<option value="${escapeAttr(nick)}"></option>`).join('');
 
   ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
     const input = document.getElementById(id);
@@ -273,6 +314,30 @@ export function bindUiEvents(handlers) {
     });
   }
 
+  const balanceBtn = document.getElementById('balanceBtn');
+  if (balanceBtn) {
+    balanceBtn.addEventListener('click', (e) => {
+      const selected = state.playersState.selected.length;
+      const teamCount = sanitizeTeamCount(state.teamsState.teamCount);
+      if (selected < teamCount) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        window.alert(`Недостатньо гравців для ${teamCount} команд. Мінімум: ${teamCount}.`);
+        return;
+      }
+      const map = new Map(state.playersState.players.map((p) => [p.nick, p]));
+      const picked = state.playersState.selected.map((nick) => map.get(nick)).filter(Boolean);
+      const teams = balanceIntoNTeamsLocal(picked, teamCount);
+      TEAM_KEYS.forEach((key) => {
+        state.teamsState.teams[key] = (teams[key] || []).map((p) => p.nick);
+      });
+      state.teamsState.teamCount = teamCount;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      handlers.onChanged();
+    }, true);
+  }
+
   document.addEventListener('change', (e) => {
     const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
     const teamPick = e.target.closest('select[data-match-team]');
@@ -294,14 +359,39 @@ export function bindUiEvents(handlers) {
     const penaltiesToggle = e.target.closest('[data-toggle-penalties]');
     const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
 
-    if (toggle) handlers.onTogglePlayer(toggle);
-    if (remove) handlers.onRemove(remove);
+    if (toggle) {
+      const alreadySelected = state.playersState.selectedMap.has(toggle);
+      if (alreadySelected) {
+        state.playersState.selected = state.playersState.selected.filter((n) => n !== toggle);
+        Object.keys(state.teamsState.teams).forEach((key) => {
+          state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== toggle);
+        });
+      } else if (state.playersState.selected.length >= MAX_LOBBY_PLAYERS) {
+        window.alert(`Лобі заповнене. Максимум ${MAX_LOBBY_PLAYERS} гравців.`);
+        return;
+      } else {
+        state.playersState.selected = [...state.playersState.selected, toggle];
+      }
+      syncSelectedMap();
+      handlers.onChanged();
+    }
+    if (remove) {
+      state.playersState.selected = state.playersState.selected.filter((n) => n !== remove);
+      Object.keys(state.teamsState.teams).forEach((key) => {
+        state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== remove);
+      });
+      syncSelectedMap();
+      handlers.onChanged();
+    }
     if (move) {
       const [nick, team] = move.split(':');
       movePlayerToTeam(nick, team === 'bench' ? '' : team);
       handlers.onChanged();
     }
-    if (teamCount) handlers.onTeamCount(Number(teamCount));
+    if (teamCount) {
+      state.teamsState.teamCount = sanitizeTeamCount(teamCount);
+      handlers.onChanged();
+    }
     if (seriesCount) handlers.onSeriesCount(Number(seriesCount));
     if (clearSeries) handlers.onSeriesReset();
     if (pen) {

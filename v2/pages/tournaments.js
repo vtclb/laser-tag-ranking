@@ -28,6 +28,35 @@ function stateCard(title, text = '', className = 'px-card') {
   return wrap;
 }
 
+function createPreviewSections() {
+  const wrap = createElement('section', 'tournaments-preview');
+  const items = [
+    {
+      title: 'Таблиця команд',
+      text: 'Тут буде турнірна таблиця з очками, перемогами та MMR'
+    },
+    {
+      title: 'Матчі',
+      text: 'Тут з’явиться список матчів, результатів і MVP'
+    },
+    {
+      title: 'Гравці',
+      text: 'Тут буде статистика учасників турніру'
+    }
+  ];
+
+  items.forEach((item) => {
+    const card = createElement('article', 'px-card tournaments-preview__card');
+    card.append(
+      createElement('h3', 'px-card__title', item.title),
+      createElement('p', 'px-card__text', item.text)
+    );
+    wrap.append(card);
+  });
+
+  return wrap;
+}
+
 function createMetaItem(label, value, className = '') {
   const item = createElement('div', `tournament-meta-item${className ? ` ${className}` : ''}`);
   item.append(
@@ -104,7 +133,7 @@ export async function initTournamentsPage(params = {}) {
   const hero = createElement('section', 'px-card tournaments-hero');
   hero.append(
     createElement('h1', 'px-card__title', 'Турніри'),
-    createElement('p', 'px-card__text', 'Командні битви, результати матчів, MVP і прогрес команд')
+    createElement('p', 'px-card__text', 'Командні битви, матчі, таблиця та статистика')
   );
 
   const listWrap = createElement('section', 'px-card tournament-list');
@@ -124,8 +153,8 @@ export async function initTournamentsPage(params = {}) {
 
     listWrap.replaceChildren(listHeading);
     if (!tournaments.length) {
-      listWrap.append(stateCard('Активних турнірів поки немає', 'Список оновиться, щойно з’явиться новий турнір'));
-      dashboard.replaceChildren(stateCard('Оберіть турнір', 'Дані таблиці та матчів з’являться тут'));
+      listWrap.append(stateCard('Активних турнірів поки немає', 'Щойно буде створено перший турнір, тут з’являться таблиця, матчі й статистика'));
+      dashboard.replaceChildren(createPreviewSections());
       return;
     }
 
@@ -169,7 +198,8 @@ export async function initTournamentsPage(params = {}) {
     if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, true);
   } catch (error) {
     console.warn('[tournaments] list failed', error);
-    listWrap.replaceChildren(listHeading, stateCard('Не вдалося завантажити турніри', sanitizeErrorMessage(), 'px-card px-card--accent'));
+    listWrap.replaceChildren(listHeading, stateCard('Турніри тимчасово недоступні', 'Спробуй оновити сторінку трохи пізніше', 'px-card'));
+    dashboard.replaceChildren(createPreviewSections());
   }
 }
 

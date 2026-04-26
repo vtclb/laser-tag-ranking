@@ -261,7 +261,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 
 .tournaments-page {
   display: grid;
-  gap: .65rem;
+  gap: .55rem;
 }
 
 .tournaments-hero,
@@ -272,7 +272,7 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 }
 
 .tournaments-hero {
-  padding: .8rem .9rem;
+  padding: .72rem .82rem;
 }
 
 .tournaments-hero .px-card__title {
@@ -286,10 +286,10 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 
 .tournament-list {
   display: grid;
-  gap: .5rem;
+  gap: .45rem;
   border: 1px solid rgba(255,255,255,.13);
   border-radius: 6px;
-  padding: .7rem;
+  padding: .62rem;
   background: rgba(8, 14, 24, .55);
 }
 
@@ -489,10 +489,47 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   border-radius: 6px;
 }
 
-.home-tournaments-card__list {
-  margin: .3rem 0 0;
+.tournaments-preview {
   display: grid;
-  gap: .45rem;
+  gap: .5rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.tournaments-preview__card {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  background: rgba(10, 16, 28, .72);
+  padding: .62rem .66rem;
+}
+
+.tournaments-preview__card .px-card__title {
+  margin-bottom: .2rem;
+}
+
+.home-tournaments-card__list {
+  margin: .2rem 0 0;
+  display: grid;
+  gap: .35rem;
+}
+
+.home-tournaments-card {
+  padding: .62rem .72rem !important;
+}
+
+.home-tournaments-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .2rem;
+}
+
+.home-tournaments-card__head .px-card__title {
+  margin: 0;
+}
+
+.home-tournaments-card .px-card__text {
+  margin-bottom: .3rem;
 }
 
 .home-tournaments-card__item {
@@ -513,6 +550,14 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
   gap: .4rem .6rem;
   color: var(--muted);
   font-size: .76rem;
+}
+
+.home-tournaments-card__cta {
+  padding: .34rem .5rem !important;
+  min-height: auto !important;
+  font-size: .76rem !important;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .tournament-player-table {
@@ -552,6 +597,10 @@ body.rank-S { background: radial-gradient(circle at top, color-mix(in srgb, var(
 
   .tournament-team-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-tournaments-card__head {
+    align-items: flex-start;
   }
 
   .home-v2 .home-place {

@@ -139,10 +139,12 @@ function renderHomeTournamentsCard(items = [], unavailable = false) {
     </li>`
   )).join('');
   return `<section class="px-card home-tournaments-card">
-    <h3 class="px-card__title">Активні турніри</h3>
-    <p class="px-card__text">${unavailable ? 'Турніри скоро з’являться' : 'Слідкуй за командними битвами, MVP і таблицею турніру'}</p>
+    <div class="home-tournaments-card__head">
+      <h3 class="px-card__title">Активні турніри</h3>
+      <a class="btn btn--secondary home-tournaments-card__cta" href="#tournaments">До турнірів</a>
+    </div>
+    <p class="px-card__text">${list ? 'Командні битви, матчі та статистика в одному розділі' : (unavailable ? 'Скоро тут з’являться активні турніри' : 'Турніри готуються')}</p>
     ${list ? `<ul class="list-clean home-tournaments-card__list">${list}</ul>` : ''}
-    <div class="px-card__actions"><a class="btn btn--secondary home-tournaments-card__cta" href="#tournaments">Перейти до турнірів</a></div>
   </section>`;
 }
 

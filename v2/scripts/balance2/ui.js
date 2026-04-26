@@ -12,6 +12,7 @@ import {
   TEAM_COUNT_OPTIONS,
   MAX_LOBBY_PLAYERS,
   normalizeTeamCount,
+  getAssignedTeamId,
 } from './state.js';
 import { movePlayerToTeam } from './manual.js';
 
@@ -213,10 +214,13 @@ export function renderPlayers() {
 export function renderLobby() {
   const wrap = document.getElementById('lobbyList');
   if (!wrap) return;
+  const availableTeamKeys = getAvailableTeamKeys();
   const playersMap = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
   wrap.innerHTML = state.playersState.selected.map((playerKey) => {
     const player = playersMap.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
-    return `<div class="lobby-row">${playerMetaHtml(player)}<button class="chip" data-remove="${escapeAttr(playerKey)}">Прибрати</button></div>`;
+    const assignedTeamId = getAssignedTeamId(playerKey);
+    const status = assignedTeamId ? `У команді: ${getTeamLabel(assignedTeamId)}` : 'Не в команді';
+    return `<div class="lobby-row"><div>${playerMetaHtml(player)}<div class="player-assignment-status">${escapeHtml(status)}</div></div><div class="manual-assign-control"><select class="team-assignment-select" data-role="assign-player-team" data-player-key="${escapeAttr(playerKey)}"><option value="">У команду...</option>${availableTeamKeys.map((teamKey) => `<option value="${escapeAttr(teamKey)}" ${assignedTeamId === teamKey ? 'selected' : ''}>${escapeHtml(getTeamLabel(teamKey))}</option>`).join('')}</select><button class="chip" data-remove="${escapeAttr(playerKey)}">Прибрати</button></div></div>`;
   }).join('');
 }
 
@@ -236,22 +240,14 @@ export function renderTeams() {
   const keys = TEAM_KEYS.slice(0, state.teamsState.teamCount);
   const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
   const cards = keys.map((key) => {
-    const playerKeys = state.teamsState.teams[key];
+    const playerKeys = state.teamsState.teams[key] || [];
     const total = sumByNicks(playerKeys);
     const members = playerKeys.map((playerKey) => {
       const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
-      return `<div class="team-player">${playerMetaHtml(player)}<button class="chip" data-move-player-key="${escapeAttr(playerKey)}" data-move-team="bench">Лавка</button></div>`;
-    }).join('') || '<div class="tag">порожньо</div>';
+      return `<div class="team-player">${playerMetaHtml(player)}<button class="team-player-remove" type="button" data-role="remove-player-from-team" data-player-key="${escapeAttr(playerKey)}" data-team-id="${escapeAttr(key)}">Прибрати</button></div>`;
+    }).join('') || '<div class="team-empty-state">Додай гравців із lobby</div>';
     return `<div class="team-card"><h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${members}</div>`;
   });
-
-  if (state.app.mode === 'manual') {
-    const bench = state.playersState.selected.filter((playerKey) => !keys.some((key) => state.teamsState.teams[key].includes(playerKey)));
-    cards.push(`<div class="team-card"><h4>Лавка</h4>${bench.map((playerKey) => {
-      const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
-      return `<div class="team-player">${playerMetaHtml(player)}<div class="team-actions">${keys.map((k) => `<button class="chip" data-move-player-key="${escapeAttr(playerKey)}" data-move-team="${escapeAttr(k)}">→ ${escapeHtml(getTeamLabel(k))}</button>`).join('')}</div></div>`;
-    }).join('') || '<div class="tag">порожньо</div>'}</div>`);
-  }
 
   grid.innerHTML = cards.join('');
 }
@@ -467,6 +463,7 @@ export function bindUiEvents(handlers) {
     const tournamentTeamPick = e.target.closest('select[data-tournament-team]');
     const gameModePick = e.target.closest('select[data-tournament-game-mode]');
     const playerSourceModePick = e.target.closest('select[data-role="player-source-mode"]');
+    const assignPlayerTeam = e.target.closest('select[data-role="assign-player-team"]');
     if (matchMode) handlers.onMatchMode(matchMode);
     if (teamPick) handlers.onMatchTeamPick(teamPick.dataset.matchTeam, teamPick.value);
     if (schedulePick) handlers.onSchedulePick(schedulePick);
@@ -474,6 +471,7 @@ export function bindUiEvents(handlers) {
     if (tournamentTeamPick) handlers.onTournamentTeamPick(tournamentTeamPick.dataset.tournamentTeam, tournamentTeamPick.value);
     if (gameModePick) handlers.onTournamentGameMode(gameModePick.value);
     if (playerSourceModePick) handlers.onPlayerSourceMode(playerSourceModePick.value);
+    if (assignPlayerTeam) handlers.onAssignPlayerTeam(assignPlayerTeam.dataset.playerKey, assignPlayerTeam.value);
   });
 
   document.addEventListener('click', (e) => {
@@ -491,6 +489,7 @@ export function bindUiEvents(handlers) {
     const createTournament = e.target.closest('[data-tournament-create]');
     const saveTeams = e.target.closest('[data-tournament-save-teams]');
     const loadPlayers = e.target.closest('[data-load-players]');
+    const removeFromTeam = e.target.closest('[data-role="remove-player-from-team"]');
 
     if (toggle) {
       const alreadySelected = state.playersState.selectedMap.has(toggle);
@@ -540,6 +539,7 @@ export function bindUiEvents(handlers) {
     if (loadPlayers) handlers.onLoadPlayers();
     if (createTournament) handlers.onCreateTournament();
     if (saveTeams) handlers.onSaveTournamentTeams();
+    if (removeFromTeam) handlers.onRemovePlayerFromTeam(removeFromTeam.dataset.playerKey, removeFromTeam.dataset.teamId);
   });
 
   document.addEventListener('input', (e) => {

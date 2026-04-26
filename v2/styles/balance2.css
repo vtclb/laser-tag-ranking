@@ -101,6 +101,22 @@
   border-radius: 2px;
   padding: 0 .25rem;
 }
+.manual-assign-control {
+  display: grid;
+  gap: .35rem;
+  min-width: 140px;
+}
+.team-assignment-select {
+  min-height: 34px;
+  border-radius: .35rem;
+  padding: .3rem .4rem;
+  width: 100%;
+}
+.player-assignment-status {
+  margin-top: .2rem;
+  font-size: .78rem;
+  opacity: .9;
+}
 
 .team-card {
   border: 1px solid rgba(255, 255, 255, .13);
@@ -111,6 +127,16 @@
 .team-card h4 { margin: .1rem 0 .5rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
 .team-name-wrap { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
 .match-team-preview { margin: 0; padding-left: 1.2rem; display: grid; gap: .25rem; }
+.team-empty-state {
+  border: 1px dashed rgba(255,255,255,.2);
+  border-radius: .5rem;
+  padding: .5rem;
+  opacity: .85;
+}
+.team-player-remove {
+  border-radius: .35rem;
+  min-height: 32px;
+}
 
 .round-card {
   padding: .6rem;

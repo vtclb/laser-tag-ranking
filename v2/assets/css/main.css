@@ -8842,6 +8842,48 @@ body.theme-game :is(
 .tournament-player-row__meta,
 .tournament-match-log__line { margin: 6px 0 0; color: #d4e4f8; font-size: 13px; border: 0; background: transparent; }
 .tournament-table-row.is-leader { border-color: rgba(124,255,114,.44); }
+.tournament-standings-main {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tournament-team-toggle {
+  color: #9fe0ff;
+  font-weight: 700;
+  min-width: 1ch;
+  text-align: center;
+}
+.tournament-team-roster {
+  display: none;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+.tournament-standings-row.is-expanded { border-color: rgba(49,208,255,.42); background: rgba(14,26,45,.82); }
+.tournament-standings-row.is-expanded .tournament-team-roster { display: block; }
+.tournament-team-roster__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #d7e6f9;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.tournament-team-roster__list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 3px;
+  color: #edf5ff;
+  font-size: 13px;
+}
+.tournament-team-roster__empty {
+  margin: 0;
+  color: #b8cbe2;
+  font-size: 12px;
+}
 
 .tournament-player-row__identity,
 .tournament-player-row__impact { display: grid; gap: 2px; }

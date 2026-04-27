@@ -28,20 +28,28 @@ function isEmptyStatus(value = '') {
   return String(value || '').trim() === '';
 }
 
-function parsePlayersList(value) {
+function parseTeamPlayers(value) {
   if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean);
-  if (typeof value !== 'string') return [];
+  if (value == null) return [];
+  if (typeof value !== 'string') return [String(value).trim()].filter(Boolean);
   const raw = value.trim();
   if (!raw) return [];
   if (raw.startsWith('[') || raw.startsWith('{')) {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed.map((item) => String(item || '').trim()).filter(Boolean);
+      if (parsed && typeof parsed === 'object') {
+        const nested = Array.isArray(parsed.players) ? parsed.players : [];
+        if (nested.length) return nested.map((item) => String(item || '').trim()).filter(Boolean);
+      }
     } catch {
       // noop
     }
   }
-  return raw.split(',').map((item) => item.trim()).filter(Boolean);
+  return raw
+    .split(/[;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function normalizeObjectRow(row = {}) {
@@ -150,7 +158,7 @@ function normalizeTournamentSheets({ tournamentsRows, teamsRows, gamesRows, play
       draws: toNumber(getCell(row, 'draws')),
       points: toNumber(getCell(row, 'points')),
       rank: toText(getCell(row, 'rank'), ''),
-      playersList: parsePlayersList(getCell(row, 'players'))
+      playersList: parseTeamPlayers(getCell(row, 'players'))
     });
   });
 
@@ -551,6 +559,7 @@ function renderTournamentDashboard(node, data) {
   const tournament = data?.tournament || data || {};
   const title = toText(tournament?.name, toText(tournament?.tournamentId, 'Турнір'));
   const teamMap = new Map(teams.map((team) => [String(team?.teamId || ''), toText(team?.teamName, String(team?.teamId || '—'))]));
+  const expandedTeams = new Set();
 
   clear(node);
 
@@ -578,7 +587,7 @@ function renderTournamentDashboard(node, data) {
   ];
 
   const renderers = {
-    table: () => renderTeamsTable(contentWrap, teams),
+    table: () => renderTeamsTable(contentWrap, teams, expandedTeams),
     overview: () => renderOverview(contentWrap, teams, games, players, teamMap),
     games: () => renderGames(contentWrap, games, teamMap),
     players: () => renderPlayers(contentWrap, players, teamMap)
@@ -669,7 +678,7 @@ function formatRecordLabel(record = {}, compact = false) {
   ].join(' · ');
 }
 
-function renderTeamsTable(node, teams) {
+function renderTeamsTable(node, teams, expandedTeams = new Set()) {
   clear(node);
   if (!teams.length) {
     node.append(stateCard('Команди ще формуються', 'Після збереження команд тут з’явиться результат турніру.'));
@@ -689,14 +698,56 @@ function renderTeamsTable(node, teams) {
   const wrap = createElement('section', 'tournament-result-view');
   const standings = createElement('div', 'tournament-table-list');
   sorted.forEach((team, index) => {
+    const teamKey = String(team?.teamId || team?.teamName || `team-${index}`);
+    const isExpanded = expandedTeams.has(teamKey);
     const row = createElement('article', `tournament-table-row${index === 0 ? ' is-leader' : ''}`);
-    const topLine = createElement('div', 'tournament-table-row__top');
+    row.classList.add('tournament-standings-row');
+    row.classList.toggle('is-expanded', isExpanded);
+
+    const topLine = createElement('button', 'tournament-table-row__top tournament-standings-main');
+    topLine.type = 'button';
+    topLine.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
     topLine.append(
       createElement('span', 'place', `#${index + 1}`),
       createElement('strong', '', toText(team.teamName, toText(team.teamId))),
-      createElement('span', 'points', String(toNumber(team.points)))
+      createElement('span', 'points', String(toNumber(team.points))),
+      createElement('span', 'tournament-team-toggle', isExpanded ? '−' : '+')
     );
-    row.append(topLine, createElement('p', 'tournament-table-row__meta', `${formatRecordLabel(team, true)} · MMR ${toNumber(team.mmrCurrent) || '—'}`));
+
+    const players = parseTeamPlayers(team?.playersList?.length ? team.playersList : team?.players);
+    const roster = createElement('div', 'tournament-team-roster');
+    const rosterHead = createElement('div', 'tournament-team-roster__head');
+    const playersCount = players.length;
+    rosterHead.append(
+      createElement('span', '', 'Склад'),
+      createElement('span', '', `${playersCount} ${pluralizeUa(playersCount, 'гравець', 'гравці', 'гравців')}`)
+    );
+    roster.append(rosterHead);
+
+    if (playersCount) {
+      const rosterList = createElement('ul', 'tournament-team-roster__list');
+      players.forEach((player) => {
+        rosterList.append(createElement('li', '', player));
+      });
+      roster.append(rosterList);
+    } else {
+      roster.append(createElement('p', 'tournament-team-roster__empty', 'Склад команди ще не збережено'));
+    }
+
+    topLine.addEventListener('click', () => {
+      if (expandedTeams.has(teamKey)) expandedTeams.delete(teamKey);
+      else expandedTeams.add(teamKey);
+      row.classList.toggle('is-expanded', expandedTeams.has(teamKey));
+      topLine.setAttribute('aria-expanded', expandedTeams.has(teamKey) ? 'true' : 'false');
+      const toggle = topLine.querySelector('.tournament-team-toggle');
+      if (toggle) toggle.textContent = expandedTeams.has(teamKey) ? '−' : '+';
+    });
+
+    row.append(
+      topLine,
+      createElement('p', 'tournament-table-row__meta', `${formatRecordLabel(team, true)} · MMR ${toNumber(team.mmrCurrent) || '—'}`),
+      roster
+    );
     standings.append(row);
   });
   wrap.append(standings);

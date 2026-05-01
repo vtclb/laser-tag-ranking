@@ -1,26 +1,38 @@
+import { rankFromPoints } from '../../core/rankRules.js';
+
 export const state = {
   app: {
     league: 'kids',
+    playerSourceMode: 'kids',
     mode: 'auto',
+    eventMode: 'regular',
     sortMode: 'points_desc',
     query: '',
   },
   playersState: {
     players: [],
+    playersLoaded: false,
     selected: [],
     selectedMap: new Set(),
     cache: {},
   },
   teamsState: {
     teamCount: 2,
-    teams: { team1: [], team2: [], team3: [], team4: [] },
-    teamNames: { team1: 'Команда 1', team2: 'Команда 2', team3: 'Команда 3', team4: 'Команда 4' },
+    teams: { team1: [], team2: [], team3: [], team4: [], team5: [], team6: [] },
+    teamNames: {
+      team1: 'Команда 1',
+      team2: 'Команда 2',
+      team3: 'Команда 3',
+      team4: 'Команда 4',
+      team5: 'Команда 5',
+      team6: 'Команда 6',
+    },
   },
   matchState: {
     seriesCount: 3,
     seriesRounds: Array(7).fill(null),
     series: ['-', '-', '-', '-', '-', '-', '-'],
-    match: { winner: '', series: '', mvp1: '', mvp2: '', mvp3: '', penalties: {} },
+    match: { winner: '', series: '', mvp1: '', mvp2: '', mvp3: '', mvp1Key: '', mvp2Key: '', mvp3Key: '', penalties: {} },
   },
   activeMatch: {
     mode: 'manual',
@@ -29,6 +41,30 @@ export const state = {
     schedule: [],
     selectedScheduleMatchId: '',
   },
+  tournamentState: {
+    tournamentId: '',
+    tournamentName: '',
+    gameMode: 'DM',
+    teamsSaved: false,
+    savedTournamentTeamIds: [],
+    tournamentType: 'custom',
+    tournamentSchedule: [],
+    currentScheduleGameId: '',
+    gamesCreated: false,
+    currentGameId: '',
+    nextGameNumber: 1,
+    isSaving: false,
+    status: {
+      message: '',
+      type: 'idle',
+    },
+    lastAction: '',
+    lastRequestStatus: '',
+    lastErrorMessage: '',
+  },
+  activeTeamAId: 'team1',
+  activeTeamBId: 'team2',
+  requireMvp: true,
   uiState: {
     penaltiesCollapsed: true,
   },
@@ -38,7 +74,15 @@ export const state = {
   },
 };
 
-const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4'];
+export const MAX_LOBBY_PLAYERS = 30;
+export const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
+export const TEAM_COUNT_OPTIONS = [2, 3, 4, 5, 6];
+export const MIN_TEAM_COUNT = 2;
+export const MAX_TEAM_COUNT = 6;
+
+export function normalizeTeamCount(value) {
+  return Math.min(MAX_TEAM_COUNT, Math.max(MIN_TEAM_COUNT, Number(value) || MIN_TEAM_COUNT));
+}
 
 export function sortByPointsDesc(a, b) {
   const pointsDelta = (Number(b.points ?? b.pts) || 0) - (Number(a.points ?? a.pts) || 0);
@@ -47,15 +91,7 @@ export function sortByPointsDesc(a, b) {
 }
 
 export function rankLetterForPoints(points) {
-  const pts = Number(points);
-  if (!Number.isFinite(pts)) return 'F';
-  if (pts >= 1000) return 'S';
-  if (pts >= 900) return 'A';
-  if (pts >= 800) return 'B';
-  if (pts >= 700) return 'C';
-  if (pts >= 600) return 'D';
-  if (pts >= 500) return 'E';
-  return 'F';
+  return rankFromPoints(points);
 }
 
 export function normalizeLeague(league) {
@@ -63,17 +99,36 @@ export function normalizeLeague(league) {
   return key === 'kids' ? 'kids' : 'sundaygames';
 }
 
+export function normalizePlayerSourceMode(mode, eventMode = 'regular') {
+  const key = String(mode || '').trim().toLowerCase();
+  if (key === 'kids') return 'kids';
+  if (key === 'mixed') return eventMode === 'tournament' ? 'mixed' : 'sundaygames';
+  return 'sundaygames';
+}
+
+export function getPlayerKey(playerOrKey) {
+  if (typeof playerOrKey === 'string') return playerOrKey;
+  if (!playerOrKey || typeof playerOrKey !== 'object') return '';
+  return String(playerOrKey.uid || playerOrKey.id || playerOrKey.nick || playerOrKey.name || '').trim();
+}
+
 export function getSelectedPlayers() {
-  const map = new Map(state.playersState.players.map((p) => [p.nick, p]));
-  return state.playersState.selected.map((nick) => map.get(nick)).filter(Boolean);
+  const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  return state.playersState.selected.map((playerKey) => map.get(playerKey)).filter(Boolean);
+}
+
+export function resolvePlayerByKey(playerKey) {
+  const key = getPlayerKey(playerKey);
+  if (!key) return null;
+  return state.playersState.players.find((player) => getPlayerKey(player) === key) || null;
 }
 
 export function syncSelectedMap() {
   state.playersState.selectedMap = new Set(state.playersState.selected);
 }
 
-export function isSelected(nick) {
-  return state.playersState.selectedMap.has(nick);
+export function isSelected(playerOrKey) {
+  return state.playersState.selectedMap.has(getPlayerKey(playerOrKey));
 }
 
 export function getTeamLabel(teamKey) {
@@ -86,7 +141,52 @@ export function getParticipants() {
 }
 
 export function getAvailableTeamKeys() {
-  return TEAM_KEYS.slice(0, state.teamsState.teamCount);
+  return TEAM_KEYS.slice(0, normalizeTeamCount(state.teamsState.teamCount));
+}
+
+export function ensureTeamsForManualAssignment(rawTeamCount = state.teamsState.teamCount) {
+  const teamCount = normalizeTeamCount(rawTeamCount);
+  state.teamsState.teamCount = teamCount;
+  TEAM_KEYS.forEach((teamKey, idx) => {
+    if (!Array.isArray(state.teamsState.teams[teamKey])) state.teamsState.teams[teamKey] = [];
+    if (idx >= teamCount) state.teamsState.teams[teamKey] = [];
+  });
+  return TEAM_KEYS.slice(0, teamCount);
+}
+
+export function getAssignedTeamId(playerKey) {
+  const key = getPlayerKey(playerKey);
+  if (!key) return '';
+  return TEAM_KEYS.find((teamKey) => (state.teamsState.teams[teamKey] || []).includes(key)) || '';
+}
+
+export function removePlayerFromTeam(playerKey, teamId) {
+  const key = getPlayerKey(playerKey);
+  if (!key || !TEAM_KEYS.includes(teamId) || !Array.isArray(state.teamsState.teams[teamId])) return false;
+  const before = state.teamsState.teams[teamId].length;
+  state.teamsState.teams[teamId] = state.teamsState.teams[teamId].filter((id) => id !== key);
+  return state.teamsState.teams[teamId].length !== before;
+}
+
+export function removePlayerFromAllTeams(playerKey) {
+  const key = getPlayerKey(playerKey);
+  if (!key) return false;
+  let changed = false;
+  TEAM_KEYS.forEach((teamKey) => {
+    changed = removePlayerFromTeam(key, teamKey) || changed;
+  });
+  return changed;
+}
+
+export function assignPlayerToTeam(playerKey, teamId) {
+  const key = getPlayerKey(playerKey);
+  if (!key || !TEAM_KEYS.includes(teamId) || !Array.isArray(state.teamsState.teams[teamId])) return false;
+  const inLobby = state.playersState.selected.includes(key);
+  const exists = !!resolvePlayerByKey(key);
+  if (!inLobby && !exists) return false;
+  removePlayerFromAllTeams(key);
+  if (!state.teamsState.teams[teamId].includes(key)) state.teamsState.teams[teamId].push(key);
+  return true;
 }
 
 export function getActiveMatchTeams() {

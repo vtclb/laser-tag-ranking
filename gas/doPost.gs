@@ -1,4 +1,4 @@
-***********************
+/***********************
  * LaserTag doPost.gs  *
  * (з розширеннями під балансер, аватарки, PDF, кабінет)
  ***********************/
@@ -32,6 +32,47 @@ function normalizeLeague_(value) {
   if (!key) return '';
   if (key === 'olds') return 'sundaygames';
   return key;
+}
+
+function respond_(payload, callbackName) {
+  const body = JSON.stringify(payload || {});
+  const cb = String(callbackName || '').trim();
+  if (!cb) {
+    return ContentService.createTextOutput(body)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(`${cb}(${body})`)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function jsonTextOutputToObject_(output) {
+  if (!output || typeof output.getContent !== 'function') {
+    throw new Error('Invalid TextOutput');
+  }
+  return JSON.parse(output.getContent() || '{}');
+}
+
+function doGet(e) {
+  try {
+    const p = (e && e.parameter) || {};
+    const action = String(p.action || '').trim();
+    const cb = p.callback;
+
+    if (action === 'listTournaments' || action === 'getTournamentData') {
+      const payload = Object.assign({}, p, { mode: 'tournament', action });
+      const textOutput = handleTournamentRequest_(payload);
+      const obj = jsonTextOutputToObject_(textOutput);
+      return respond_(obj, cb);
+    }
+
+    if (action === 'ping') {
+      return respond_({ status: 'OK', pong: true, ts: new Date().toISOString() }, cb);
+    }
+
+    return respond_({ status: 'ERR', message: 'Unknown GET action' }, cb);
+  } catch (err) {
+    return respond_({ status: 'ERR', message: err && err.message ? err.message : String(err) }, e && e.parameter ? e.parameter.callback : '');
+  }
 }
 
 function doPost(e) {
@@ -719,7 +760,7 @@ function saveTournamentGame_(payload) {
   const tournamentId = (payload.tournamentId || '').trim();
   const gameId = (payload.gameId || '').trim();
   const result = String(payload.result || '').toUpperCase();
-  const mode = (payload.mode || '').trim().toUpperCase();
+  const mode = String(payload.gameMode || payload.mode || '').trim().toUpperCase();
   if (!tournamentId || !gameId || !result) throw new Error('tournamentId/gameId/result required');
 
   const allowDraw = readTournamentConfigMap_()[mode] !== false;
@@ -853,9 +894,9 @@ function saveTournamentGame_(payload) {
       case 'teambid': return teamBId;
       case 'winnerteamid': return winnerTeamId;
       case 'isdraw': return isDraw ? 'TRUE' : 'FALSE';
-      case 'mvpnick': return payload.mvp || '';
-      case 'secondnick': return payload.second || '';
-      case 'thirdnick': return payload.third || '';
+      case 'mvpnick': return payload.mvp1 || payload.mvp || '';
+      case 'secondnick': return payload.mvp2 || payload.second || '';
+      case 'thirdnick': return payload.mvp3 || payload.third || '';
       case 'teamammrbefore': return mmrA;
       case 'teambmmrbefore': return mmrB;
       case 'teamammrdelta': return deltaA;
@@ -889,9 +930,9 @@ function saveTournamentGame_(payload) {
   ];
 
   const awards = {
-    mvp: { nick: payload.mvp, field: 'mvpCount', impact: 3 },
-    second: { nick: payload.second, field: 'secondCount', impact: 2 },
-    third: { nick: payload.third, field: 'thirdCount', impact: 1 },
+    mvp: { nick: payload.mvp1 || payload.mvp, field: 'mvpCount', impact: 3 },
+    second: { nick: payload.mvp2 || payload.second, field: 'secondCount', impact: 2 },
+    third: { nick: payload.mvp3 || payload.third, field: 'thirdCount', impact: 1 },
   };
 
   teamPlayers.forEach(({ team, won, lost, drew }) => {

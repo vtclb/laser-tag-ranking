@@ -13,6 +13,50 @@
 .status-card[data-state="saved"] { border-color: rgba(124, 255, 114, .55); }
 .status-card[data-state="error"] { border-color: rgba(255, 90, 95, .65); }
 
+.balance-flow {
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 4px;
+  padding: .55rem;
+  background: rgba(255, 255, 255, .035);
+}
+.balance-flow-steps {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: .35rem;
+}
+.balance-flow-step {
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 3px;
+  padding: .38rem .45rem;
+  font-size: .82rem;
+  opacity: .68;
+}
+.balance-flow-step.active {
+  border-color: rgba(49, 208, 255, .8);
+  background: rgba(49, 208, 255, .12);
+  opacity: 1;
+}
+.balance-flow-step.done {
+  border-color: rgba(124, 255, 114, .45);
+  opacity: .88;
+}
+.balance-flow-hint {
+  margin-top: .45rem;
+  font-size: .92rem;
+  opacity: .88;
+}
+.flow-section-muted {
+  opacity: .62;
+}
+.flow-disabled-hint {
+  margin: .25rem 0 .55rem;
+  padding: .35rem .45rem;
+  border: 1px dashed rgba(255, 196, 79, .5);
+  border-radius: 3px;
+  font-size: .86rem;
+  opacity: .9;
+}
+
 .section-head,
 .search-row,
 .counts-row,
@@ -60,6 +104,48 @@
 .player-source-control select,
 .player-source-control button {
   width: 100%;
+}
+
+.team-settings-card {
+  display: grid;
+  gap: .55rem;
+}
+.team-settings-card h3 {
+  margin: 0;
+}
+.team-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+}
+.team-settings-group {
+  display: grid;
+  gap: .4rem;
+  padding: .55rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .025);
+}
+.team-count-select-label {
+  display: grid;
+  gap: .35rem;
+  font-weight: 700;
+}
+.team-count-select {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 4px;
+}
+.team-settings-actions {
+  display: grid;
+  gap: .45rem;
+}
+.balance-actions-row .chip {
+  flex: 1 1 160px;
+}
+.balance-primary-action {
+  width: 100%;
+  min-height: 42px;
 }
 
 .section-hint {
@@ -174,12 +260,68 @@
   background: linear-gradient(180deg, rgba(9, 13, 22, 0) 0%, rgba(9, 13, 22, .95) 35%);
 }
 .save-btn { width: 100%; }
+.save-preview {
+  margin: .25rem 0 .35rem;
+  padding: .5rem;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .035);
+}
+.save-preview-title {
+  margin-bottom: .35rem;
+  font-weight: 700;
+  font-size: .92rem;
+}
+.save-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .28rem .45rem;
+}
+.save-preview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: .45rem;
+  padding: .28rem .35rem;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .025);
+  font-size: .85rem;
+}
+.save-preview-row span { opacity: .72; }
+.save-preview-row strong {
+  text-align: right;
+  font-weight: 600;
+}
+.save-status {
+  margin: .2rem 0 .35rem;
+  padding: .42rem .55rem;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .04);
+  font-size: .92rem;
+}
+.save-status--saving { border-color: rgba(49, 208, 255, .55); }
+.save-status--success {
+  border-color: rgba(124, 255, 114, .65);
+  background: rgba(124, 255, 114, .09);
+}
+.save-status--error {
+  border-color: rgba(255, 90, 95, .7);
+  background: rgba(255, 90, 95, .1);
+}
 
 nav, .header, .menu, .burger, .hamburger { display: none !important; }
 
 @media (min-width: 900px) {
   .teams-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .match-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .balance-flow-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .team-settings-grid { grid-template-columns: 1fr; }
+  .tournament-schedule-row { grid-template-columns: 1fr; }
+  .save-preview-grid { grid-template-columns: 1fr; }
 }
 
 .match-config,
@@ -192,6 +334,49 @@ nav, .header, .menu, .burger, .hamburger { display: none !important; }
   border-radius: .65rem;
   padding: .55rem;
   background: rgba(255,255,255,.02);
+}
+.tournament-type-control {
+  display: grid;
+  gap: .4rem;
+  padding: .5rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  background: rgba(255,255,255,.025);
+}
+.tournament-schedule {
+  display: grid;
+  gap: .45rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  padding: .55rem;
+  background: rgba(255,255,255,.025);
+}
+.tournament-schedule h4 { margin: 0; }
+.tournament-schedule-list {
+  display: grid;
+  gap: .35rem;
+}
+.tournament-schedule-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: .45rem;
+  align-items: center;
+  padding: .45rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  background: rgba(255,255,255,.02);
+}
+.tournament-schedule-row > div {
+  display: grid;
+  gap: .12rem;
+}
+.tournament-schedule-row--current {
+  border-color: rgba(49, 208, 255, .75);
+  background: rgba(49, 208, 255, .09);
+}
+.tournament-schedule-row--done {
+  opacity: .72;
+  border-color: rgba(124, 255, 114, .35);
 }
 .tournament-debug {
   border: 1px dashed rgba(255,255,255,.2);

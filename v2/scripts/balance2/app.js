@@ -25,10 +25,15 @@ import { render, bindUiEvents, setTournamentStatus, clearTournamentStatus } from
 import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js';
 import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
+import { debugLog } from '../../core/debug.js';
 
 const $ = (id) => document.getElementById(id);
 const LEAGUE_KEY = 'balance2:league';
+const MVP_IDS = ['mvp1', 'mvp2', 'mvp3'];
+const MIXED_MVP_DUPLICATE_WARNING = 'Уточни MVP: є кілька гравців з таким ніком у різних лігах';
+const MIXED_MVP_SAVE_BLOCK = 'Уточни MVP: вибери гравця зі списку';
 let saveLocked = false;
+let saveStatusResetTimer = 0;
 
 function escapeAttr(value = '') {
   return String(value ?? '')
@@ -43,6 +48,33 @@ function setTournamentRequestMeta({ action = '', requestStatus = '', error = '' 
   state.tournamentState.lastAction = action;
   state.tournamentState.lastRequestStatus = requestStatus;
   state.tournamentState.lastErrorMessage = error;
+}
+
+function ensureSaveStatusState() {
+  if (!['idle', 'saving', 'success', 'error'].includes(state.saveStatus)) state.saveStatus = 'idle';
+  if (typeof state.saveMessage !== 'string') state.saveMessage = '';
+}
+
+function setSaveFeedback(saveStatus = 'idle', saveMessage = '', { renderNow = true } = {}) {
+  ensureSaveStatusState();
+  state.saveStatus = ['idle', 'saving', 'success', 'error'].includes(saveStatus) ? saveStatus : 'idle';
+  state.saveMessage = String(saveMessage || '');
+
+  if (saveStatusResetTimer) {
+    window.clearTimeout(saveStatusResetTimer);
+    saveStatusResetTimer = 0;
+  }
+
+  if (state.saveStatus === 'success' || state.saveStatus === 'error') {
+    saveStatusResetTimer = window.setTimeout(() => {
+      state.saveStatus = 'idle';
+      state.saveMessage = '';
+      saveStatusResetTimer = 0;
+      renderAndSync();
+    }, 4000);
+  }
+
+  if (renderNow) renderAndSync();
 }
 
 function normalizeEventAndSourceState(nextEventMode = state.app.eventMode, nextSourceMode = state.app.playerSourceMode) {
@@ -64,6 +96,93 @@ function setTournamentDirty(message = 'Команди змінено — збе�
   state.tournamentState.teamsSaved = false;
   state.tournamentState.savedTournamentTeamIds = [];
   setTournamentStatus(message, 'warning');
+}
+
+function generateRoundRobinSchedule(teamIds = []) {
+  const teams = teamIds.filter((teamId) => TEAM_KEYS.includes(teamId));
+  const schedule = [];
+  let gameNumber = 1;
+  for (let i = 0; i < teams.length; i += 1) {
+    for (let j = i + 1; j < teams.length; j += 1) {
+      schedule.push({
+        gameId: `G${String(gameNumber).padStart(3, '0')}`,
+        teamAId: teams[i],
+        teamBId: teams[j],
+        status: gameNumber === 1 ? 'current' : 'pending',
+      });
+      gameNumber += 1;
+    }
+  }
+  return schedule;
+}
+
+function getCurrentGroupMatch() {
+  if (state.tournamentState.tournamentType !== 'group') return null;
+  const schedule = Array.isArray(state.tournamentState.tournamentSchedule) ? state.tournamentState.tournamentSchedule : [];
+  return schedule.find((match) => match.gameId === state.tournamentState.currentScheduleGameId)
+    || schedule.find((match) => match.status === 'current')
+    || null;
+}
+
+function syncCurrentGroupMatch() {
+  const match = getCurrentGroupMatch();
+  if (!match) return;
+  state.tournamentState.currentScheduleGameId = match.gameId;
+  state.tournamentState.currentGameId = match.gameId;
+  state.activeTeamAId = match.teamAId;
+  state.activeTeamBId = match.teamBId;
+}
+
+function refreshGroupSchedule({ force = false } = {}) {
+  if (state.app.eventMode !== 'tournament' || state.tournamentState.tournamentType !== 'group') return;
+  const teamIds = TEAM_KEYS
+    .slice(0, state.teamsState.teamCount)
+    .filter((teamId) => (state.teamsState.teams[teamId] || []).length > 0);
+  if (teamIds.length < 2) {
+    state.tournamentState.tournamentSchedule = [];
+    state.tournamentState.currentScheduleGameId = '';
+    state.tournamentState.currentGameId = '';
+    return;
+  }
+  if (force || !Array.isArray(state.tournamentState.tournamentSchedule) || state.tournamentState.tournamentSchedule.length === 0) {
+    state.tournamentState.tournamentSchedule = generateRoundRobinSchedule(teamIds);
+    state.tournamentState.currentScheduleGameId = state.tournamentState.tournamentSchedule[0]?.gameId || '';
+  }
+  syncCurrentGroupMatch();
+}
+
+function selectGroupScheduleMatch(gameId) {
+  const schedule = Array.isArray(state.tournamentState.tournamentSchedule) ? state.tournamentState.tournamentSchedule : [];
+  const target = schedule.find((match) => match.gameId === gameId);
+  if (!target || target.status === 'done') return false;
+  schedule.forEach((match) => {
+    if (match.status !== 'done') match.status = match.gameId === gameId ? 'current' : 'pending';
+  });
+  state.tournamentState.currentScheduleGameId = target.gameId;
+  syncCurrentGroupMatch();
+  resetMatchOnlyState();
+  syncSeriesMirror();
+  return true;
+}
+
+function advanceGroupScheduleAfterSave() {
+  const schedule = Array.isArray(state.tournamentState.tournamentSchedule) ? state.tournamentState.tournamentSchedule : [];
+  const currentId = state.tournamentState.currentScheduleGameId;
+  const current = schedule.find((match) => match.gameId === currentId) || schedule.find((match) => match.status === 'current');
+  if (current) current.status = 'done';
+  const next = schedule.find((match) => match.status === 'pending');
+  if (!next) {
+    state.tournamentState.currentScheduleGameId = '';
+    state.tournamentState.currentGameId = '';
+    setTournamentStatus('Усі матчі групового турніру зіграно', 'success');
+    return false;
+  }
+  next.status = 'current';
+  state.tournamentState.currentScheduleGameId = next.gameId;
+  syncCurrentGroupMatch();
+  resetMatchOnlyState();
+  syncSeriesMirror();
+  return true;
 }
 
 function finishTournamentSaving() {
@@ -94,6 +213,89 @@ function normalizeLoadedPlayers(players = []) {
 
 function getPlayersByKeyMap() {
   return new Map(state.playersState.players.map((player) => [getPlayerKey(player), player]));
+}
+
+function getMvpKeyId(id) {
+  return `${id}Key`;
+}
+
+function getMvpLabel(player, playerKey = getPlayerKey(player)) {
+  const nick = String(player?.nick || playerKey || '').trim();
+  const leagueLabel = String(player?.sourceLeagueLabel || '').trim();
+  return leagueLabel && state.app.eventMode === 'tournament' && state.app.playerSourceMode === 'mixed'
+    ? `${nick} · ${leagueLabel}`
+    : nick;
+}
+
+function getActiveMvpOptions() {
+  const playerKeys = state.app.eventMode === 'tournament'
+    ? [...new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])])]
+    : [...new Set(getParticipants())];
+  const playersMap = getPlayersByKeyMap();
+  return playerKeys
+    .map((playerKey) => {
+      const player = playersMap.get(playerKey);
+      const nick = String(player?.nick || playerKey || '').trim();
+      if (!nick) return null;
+      return { key: playerKey, nick, label: getMvpLabel(player, playerKey) };
+    })
+    .filter(Boolean);
+}
+
+function resolveMvpNick(id) {
+  if (state.app.eventMode !== 'tournament') return state.matchState.match[id] || '';
+  const playerKey = state.matchState.match[getMvpKeyId(id)];
+  const player = playerKey ? resolvePlayerByKey(playerKey) : null;
+  return player?.nick || state.matchState.match[id] || '';
+}
+
+function hasSelectedMvp() {
+  return MVP_IDS.some((id) => state.matchState.match[getMvpKeyId(id)] || state.matchState.match[id]);
+}
+
+function syncRequireMvpAfterMvpInput() {
+  if (hasSelectedMvp()) state.requireMvp = true;
+}
+
+function isMixedTournamentMode() {
+  return state.app.eventMode === 'tournament' && state.app.playerSourceMode === 'mixed';
+}
+
+function resolveMvpInputValue(value) {
+  const options = getActiveMvpOptions();
+  const selectedByLabelOrKey = options.find((option) => option.label === value || option.key === value);
+  if (selectedByLabelOrKey) return { selected: selectedByLabelOrKey, ambiguous: false };
+
+  const nickMatches = options.filter((option) => option.nick === value);
+  if (nickMatches.length === 1) return { selected: nickMatches[0], ambiguous: false };
+  return { selected: null, ambiguous: nickMatches.length > 1 };
+}
+
+function hasAmbiguousMixedMvp() {
+  if (!isMixedTournamentMode()) return false;
+  const options = getActiveMvpOptions();
+  return MVP_IDS.some((id) => {
+    const nick = String(state.matchState.match[id] || '').trim();
+    const playerKey = state.matchState.match[getMvpKeyId(id)];
+    if (!nick || playerKey) return false;
+    return options.filter((option) => option.nick === nick).length > 1;
+  });
+}
+
+const saveReadinessMessages = new Set(['Додайте гравців', 'Сформуйте команди', 'Вкажіть результат', 'Оберіть MVP', 'Спочатку створи турнір', 'Спочатку збережи команди турніру', MIXED_MVP_DUPLICATE_WARNING, MIXED_MVP_SAVE_BLOCK]);
+
+function getSaveReadinessMessage() {
+  const [teamA, teamB] = state.app.eventMode === 'tournament'
+    ? [state.activeTeamAId, state.activeTeamBId]
+    : getActiveMatchTeams();
+  if (!state.playersState.selected.length) return 'Додайте гравців';
+  if (!state.teamsState.teams[teamA]?.length || !state.teamsState.teams[teamB]?.length) return 'Сформуйте команди';
+  if (state.app.eventMode === 'tournament' && !state.tournamentState.tournamentId) return 'Спочатку створи турнір';
+  if (state.app.eventMode === 'tournament' && !state.tournamentState.teamsSaved) return 'Спочатку збережи команди турніру';
+  if (computeSeriesSummary().played < 3) return 'Вкажіть результат';
+  if (hasAmbiguousMixedMvp()) return MIXED_MVP_SAVE_BLOCK;
+  if (state.requireMvp !== false && !hasSelectedMvp()) return 'Оберіть MVP';
+  return '';
 }
 
 function buildRoundRobinSchedule() {
@@ -169,7 +371,11 @@ function syncSeriesMirror() {
 }
 
 function setTeamCount(rawValue) {
+  const previousCount = state.teamsState.teamCount;
+  const hadTeams = TEAM_KEYS.some((key) => (state.teamsState.teams[key] || []).length > 0);
   ensureTeamsForManualAssignment(rawValue);
+  const changed = previousCount !== state.teamsState.teamCount;
+  if (changed && hadTeams) clearAllTeams();
   state.matchState.seriesRounds = state.matchState.seriesRounds.map((value) => {
     const numeric = Number(value);
     if (value === null) return null;
@@ -182,7 +388,15 @@ function setTeamCount(rawValue) {
     state.activeTeamBId = 'team2';
   }
   syncSeriesMirror();
-  setTournamentDirty();
+  if (changed) {
+    state.tournamentState.teamsSaved = false;
+    state.tournamentState.savedTournamentTeamIds = [];
+    state.tournamentState.tournamentSchedule = [];
+    state.tournamentState.currentScheduleGameId = '';
+    state.tournamentState.currentGameId = '';
+    setStatus({ state: 'error', text: 'Кількість команд змінено — сформуй команди повторно', retryVisible: false });
+    setTournamentDirty('Кількість команд змінено — сформуй команди повторно');
+  }
 }
 
 function clearAllTeams() {
@@ -209,6 +423,7 @@ function runBalance() {
     state.activeTeamAId = 'team1';
     state.activeTeamBId = 'team2';
   }
+  refreshGroupSchedule({ force: true });
   saveLobby();
 }
 
@@ -222,22 +437,32 @@ function toPenaltiesString() {
 function syncSaveButtonState() {
   const btn = $('saveBtn');
   if (!btn) return;
-  const [teamA, teamB] = state.app.eventMode === 'tournament'
-    ? [state.activeTeamAId, state.activeTeamBId]
-    : getActiveMatchTeams();
-  const hasTeams = state.teamsState.teams[teamA]?.length > 0 && state.teamsState.teams[teamB]?.length > 0;
-  const canSave = hasTeams && computeSeriesSummary().played >= 3;
+  const readinessMessage = getSaveReadinessMessage();
+  state.saveReadinessMessage = readinessMessage;
+  const canSave = !readinessMessage;
   btn.disabled = saveLocked || state.tournamentState.isSaving || !canSave;
+  if (!saveLocked && !state.tournamentState.isSaving) {
+    if (readinessMessage && (state.saveStatus === 'idle' || saveReadinessMessages.has(state.saveMessage))) {
+      state.saveStatus = 'error';
+      state.saveMessage = readinessMessage;
+    } else if (!readinessMessage && state.saveStatus === 'error' && saveReadinessMessages.has(state.saveMessage)) {
+      state.saveStatus = 'idle';
+      state.saveMessage = '';
+    }
+  }
 }
 
 function renderAndSync() {
+  ensureSaveStatusState();
   ensureActiveMatchState();
+  refreshGroupSchedule();
   const available = getAvailableTeamKeys();
   const fallbackA = available[0] || 'team1';
   const fallbackB = available.find((key) => key !== fallbackA) || 'team2';
   if (!available.includes(state.activeTeamAId)) state.activeTeamAId = fallbackA;
   if (!available.includes(state.activeTeamBId) || state.activeTeamBId === state.activeTeamAId) state.activeTeamBId = fallbackB;
   cleanupTournamentMvp();
+  syncSaveButtonState();
   render();
   syncSaveButtonState();
 }
@@ -281,7 +506,8 @@ function buildTournamentTeamsPayload() {
 
 function buildTournamentGamePayload() {
   const gameNumber = Number(state.tournamentState.nextGameNumber) || 1;
-  const gameId = state.tournamentState.currentGameId || `G${String(gameNumber).padStart(3, '0')}`;
+  const groupMatch = getCurrentGroupMatch();
+  const gameId = groupMatch?.gameId || state.tournamentState.currentGameId || `G${String(gameNumber).padStart(3, '0')}`;
   const result = mapTournamentResult();
   return {
     tournamentId: state.tournamentState.tournamentId,
@@ -290,9 +516,9 @@ function buildTournamentGamePayload() {
     teamAId: state.activeTeamAId,
     teamBId: state.activeTeamBId,
     result,
-    mvp1: state.matchState.match.mvp1 || '',
-    mvp2: state.matchState.match.mvp2 || '',
-    mvp3: state.matchState.match.mvp3 || '',
+    mvp1: resolveMvpNick('mvp1'),
+    mvp2: resolveMvpNick('mvp2'),
+    mvp3: resolveMvpNick('mvp3'),
     notes: toPenaltiesString(),
   };
 }
@@ -311,22 +537,31 @@ function resetMatchOnlyState() {
   state.matchState.series = ['-', '-', '-', '-', '-', '-', '-'];
   state.matchState.match.winner = '';
   state.matchState.match.series = '';
-  state.matchState.match.mvp1 = '';
-  state.matchState.match.mvp2 = '';
-  state.matchState.match.mvp3 = '';
+  MVP_IDS.forEach((id) => {
+    state.matchState.match[id] = '';
+    state.matchState.match[getMvpKeyId(id)] = '';
+  });
   state.matchState.match.penalties = {};
 }
 
 function validateSave() {
+  const selectedCount = state.playersState.selected.length;
+  if (!selectedCount) return 'Додайте гравців';
+
   if (state.app.eventMode === 'tournament') {
     if (!state.tournamentState.tournamentId) return 'Спочатку створи турнір';
     if (!state.tournamentState.teamsSaved) return 'Спочатку збережи команди турніру';
+    if (state.tournamentState.tournamentType === 'group') {
+      const currentMatch = getCurrentGroupMatch();
+      if (!currentMatch) return 'Обери матч із календаря турніру';
+      if (state.activeTeamAId !== currentMatch.teamAId || state.activeTeamBId !== currentMatch.teamBId) return 'Обери матч із календаря турніру';
+    }
     if (!state.activeTeamAId || !state.activeTeamBId) return 'Обери дві команди матчу';
     if (state.activeTeamAId === state.activeTeamBId) return 'Обери дві різні команди матчу';
     if (!state.tournamentState.savedTournamentTeamIds.includes(state.activeTeamAId) || !state.tournamentState.savedTournamentTeamIds.includes(state.activeTeamBId)) return 'Обрані активні команди не збережені в турнірі';
     const teamAPlayers = state.teamsState.teams[state.activeTeamAId] || [];
     const teamBPlayers = state.teamsState.teams[state.activeTeamBId] || [];
-    if (!teamAPlayers.length || !teamBPlayers.length) return 'Обидві активні команди мають гравців';
+    if (!teamAPlayers.length || !teamBPlayers.length) return 'Сформуйте команди';
     if (!['DM', 'TR', 'KT'].includes(state.tournamentState.gameMode)) return 'Невірний режим матчу';
     const mappedResult = mapTournamentResult();
     if (!mappedResult) return 'Вкажи результат матчу';
@@ -335,7 +570,10 @@ function validateSave() {
     const allowed = new Set([...teamAPlayers, ...teamBPlayers]);
     const playersMap = getPlayersByKeyMap();
     const allowedNicks = new Set([...allowed].map((playerKey) => playersMap.get(playerKey)?.nick || playerKey));
-    for (const id of ['mvp1', 'mvp2', 'mvp3']) {
+    if (hasAmbiguousMixedMvp()) return MIXED_MVP_SAVE_BLOCK;
+    for (const id of MVP_IDS) {
+      const playerKey = state.matchState.match[getMvpKeyId(id)];
+      if (playerKey && !allowed.has(playerKey)) return 'MVP має бути гравцем активних команд';
       const nick = state.matchState.match[id];
       if (nick && !allowedNicks.has(nick)) return 'MVP має бути гравцем активних команд';
     }
@@ -343,7 +581,8 @@ function validateSave() {
   const [teamA, teamB] = state.app.eventMode === 'tournament'
     ? [state.activeTeamAId, state.activeTeamBId]
     : getActiveMatchTeams();
-  if (!state.teamsState.teams[teamA]?.length || !state.teamsState.teams[teamB]?.length) return 'Активні команди не заповнені';
+  if (!state.teamsState.teams[teamA]?.length || !state.teamsState.teams[teamB]?.length) return 'Сформуйте команди';
+  if (state.requireMvp !== false && !hasSelectedMvp()) return 'Оберіть MVP';
   if (state.app.eventMode !== 'tournament' && computeSeriesSummary().played < 3) return 'Потрібно мінімум 3 зіграні бої';
   return '';
 }
@@ -357,7 +596,7 @@ function createLastSavedSnapshot() {
     teamA: getTeamLabel(teamA),
     teamB: getTeamLabel(teamB),
     summary: `${summary.wins.team1}-${summary.wins.team2}`,
-    mvp: state.matchState.match.mvp1 || state.matchState.match.mvp2 || state.matchState.match.mvp3 || '—',
+    mvp: resolveMvpNick('mvp1') || resolveMvpNick('mvp2') || resolveMvpNick('mvp3') || '—',
     penalties: Object.values(state.matchState.match.penalties || {}).reduce((acc, value) => acc + (Number(value) || 0), 0),
   };
 }
@@ -375,16 +614,18 @@ function markScheduledMatchPlayed(resultSummary) {
 
 async function doSave(retry = false) {
   const eventMode = state.app?.eventMode === 'tournament' ? 'tournament' : 'regular';
-  console.debug('[balance2:save] mode', eventMode);
+  debugLog('[balance2:save] mode', eventMode);
   const error = validateSave();
   if (error) {
+    setSaveFeedback('error', error, { renderNow: false });
     if (eventMode === 'tournament') {
-      console.debug(`[balance2:tournament] validation failed ${error}`);
+      debugLog(`[balance2:tournament] validation failed ${error}`);
       setTournamentStatus(error, 'error');
       setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error });
       renderAndSync();
     }
     setStatus({ state: 'error', text: `❌ Помилка: ${error}`, retryVisible: false });
+    renderAndSync();
     return;
   }
 
@@ -399,36 +640,56 @@ async function doSave(retry = false) {
 async function handleSaveTournamentGame(retry = false) {
   const payload = retry ? state.meta.lastPayload : buildTournamentGamePayload();
   state.meta.lastPayload = payload;
-  console.debug('[balance2:tournament] save payload', payload);
+  debugLog('[balance2:tournament] save payload', payload);
 
   saveLocked = true;
   state.tournamentState.isSaving = true;
   lockSaveButton(true);
   syncSaveButtonState();
+  setSaveFeedback('saving', 'Зберігаємо...', { renderNow: false });
   setStatus({ state: 'saving', text: 'Зберігаю турнірний матч...', retryVisible: false });
   setTournamentStatus(`Зберігаю матч ${payload.gameId}...`, 'loading');
   setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'PENDING', error: '' });
   renderAndSync();
 
-  const res = await saveTournamentGame(payload);
+  let res;
+  try {
+    res = await saveTournamentGame(payload);
+  } catch (saveError) {
+    const message = saveError?.message || 'Не вдалося зберегти гру';
+    setSaveFeedback('error', message, { renderNow: false });
+    setTournamentStatus(`Не вдалося зберегти матч: ${message}`, 'error');
+    setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error: message });
+    setStatus({ state: 'error', text: `Не вдалося зберегти турнірний матч: ${message}`, retryVisible: true });
+    finishTournamentSaving();
+    return;
+  }
+
   if (res.ok) {
     const snapshot = createLastSavedSnapshot();
     state.lastSavedGame = snapshot;
     saveLastSavedGame(snapshot);
     state.tournamentState.nextGameNumber += 1;
-    state.tournamentState.currentGameId = '';
-    resetMatchOnlyState();
-    syncSeriesMirror();
+    if (state.tournamentState.tournamentType === 'group') {
+      const hasNext = advanceGroupScheduleAfterSave();
+      if (hasNext) setTournamentStatus(`Матч ${payload.gameId} збережено. Наступна гра: ${state.tournamentState.currentScheduleGameId}`, 'success');
+    } else {
+      state.tournamentState.currentGameId = '';
+      resetMatchOnlyState();
+      syncSeriesMirror();
+    }
     saveLobby();
-    console.debug('[balance2:tournament] saved without regular rating update', res);
+    debugLog('[balance2:tournament] saved without regular rating update', res);
+    setSaveFeedback('success', 'Турнір збережено', { renderNow: false });
     setStatus({ state: 'saved', text: `Турнірний матч ${payload.gameId} збережено. Основний рейтинг не змінювався.`, retryVisible: false });
-    setTournamentStatus(`Матч ${payload.gameId} збережено`, 'success');
+    if (state.tournamentState.tournamentType !== 'group') setTournamentStatus(`Матч ${payload.gameId} збережено`, 'success');
     setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'OK', error: '' });
     finishTournamentSaving();
     return;
   }
 
-  const message = res.message || 'Невідома помилка';
+  const message = res.message || 'Не вдалося зберегти гру';
+  setSaveFeedback('error', message, { renderNow: false });
   setTournamentStatus(`Не вдалося зберегти матч: ${message}`, 'error');
   setTournamentRequestMeta({ action: 'saveGame', requestStatus: 'ERR', error: message });
   setStatus({ state: 'error', text: `Не вдалося зберегти турнірний матч: ${message}`, retryVisible: true });
@@ -438,21 +699,37 @@ async function handleSaveTournamentGame(retry = false) {
 async function handleSaveRegularGame(retry = false) {
   if (state.app?.eventMode === 'tournament') {
     const message = 'Tournament mode cannot use regular save flow';
-    console.debug(`[balance2:regular] guard blocked save: ${message}`);
+    debugLog(`[balance2:regular] guard blocked save: ${message}`);
+    setSaveFeedback('error', 'Не вдалося зберегти гру', { renderNow: false });
     setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: false });
+    renderAndSync();
     return;
   }
 
   const payload = retry ? state.meta.lastPayload : buildPayload();
   state.meta.lastPayload = payload;
-  console.debug('[balance2:regular] save payload', payload);
+  debugLog('[balance2:regular] save payload', payload);
 
   saveLocked = true;
   lockSaveButton(true);
   syncSaveButtonState();
+  setSaveFeedback('saving', 'Зберігаємо...', { renderNow: false });
   setStatus({ state: 'saving', text: 'Зберігаю…', retryVisible: false });
 
-  const res = await saveMatch(payload, 20000);
+  let res;
+  try {
+    res = await saveMatch(payload, 20000);
+  } catch (saveError) {
+    const message = saveError?.message || 'Не вдалося зберегти гру';
+    setSaveFeedback('error', message, { renderNow: false });
+    setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: true });
+    saveLocked = false;
+    lockSaveButton(false);
+    syncSaveButtonState();
+    renderAndSync();
+    return;
+  }
+
   if (res.ok) {
     try {
       clearPlayersCache(normalizeLeague(state.app.league));
@@ -467,13 +744,18 @@ async function handleSaveRegularGame(retry = false) {
       resetMatchOnlyState();
       syncSeriesMirror();
       saveLobby();
+      setSaveFeedback('success', 'Гру збережено', { renderNow: false });
       setStatus({ state: 'saved', text: 'Рейтинговий матч збережено. Рейтинг оновлено.', retryVisible: false });
       renderAndSync();
     } catch (loadError) {
-      setStatus({ state: 'error', text: `❌ Не вдалося отримати відповідь від сервера: ${loadError.message}`, retryVisible: true });
+      const message = loadError?.message || 'Не вдалося зберегти гру';
+      setSaveFeedback('error', message, { renderNow: false });
+      setStatus({ state: 'error', text: `❌ Не вдалося отримати відповідь від сервера: ${message}`, retryVisible: true });
     }
   } else {
-    setStatus({ state: 'error', text: `❌ ${res.message || 'Не вдалося отримати відповідь від сервера'}`, retryVisible: true });
+    const message = res.message || 'Не вдалося зберегти гру';
+    setSaveFeedback('error', message, { renderNow: false });
+    setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: true });
   }
 
   saveLocked = false;
@@ -515,8 +797,17 @@ function saveTeamName(teamKey, rawValue) {
 
 function cleanupTournamentMvp() {
   const allowed = new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])]);
-  ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
-    if (state.matchState.match[id] && !allowed.has(state.matchState.match[id])) state.matchState.match[id] = '';
+  const playersMap = getPlayersByKeyMap();
+  const allowedNicks = new Set([...allowed].map((playerKey) => playersMap.get(playerKey)?.nick || playerKey));
+  MVP_IDS.forEach((id) => {
+    const keyId = getMvpKeyId(id);
+    const playerKey = state.matchState.match[keyId];
+    if (playerKey && !allowed.has(playerKey)) {
+      state.matchState.match[id] = '';
+      state.matchState.match[keyId] = '';
+      return;
+    }
+    if (!playerKey && state.matchState.match[id] && !allowedNicks.has(state.matchState.match[id])) state.matchState.match[id] = '';
   });
 }
 
@@ -543,7 +834,7 @@ async function ensurePlayersLoaded({ force = false } = {}) {
   const sourceMode = state.app.playerSourceMode;
   const eventMode = state.app.eventMode;
   localStorage.setItem(LEAGUE_KEY, sourceMode);
-  console.debug('[balance2] load players source', {
+  debugLog('[balance2] load players source', {
     eventMode,
     sourceMode,
   });
@@ -619,18 +910,37 @@ async function init() {
   })();
   $('searchInput')?.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
-  ['mvp1', 'mvp2', 'mvp3'].forEach((id) => {
+  MVP_IDS.forEach((id) => {
     $(id)?.addEventListener('input', (e) => {
       const value = e.target.value.trim();
+      const keyId = getMvpKeyId(id);
       if (state.app.eventMode === 'tournament') {
-        const allowed = new Set([...(state.teamsState.teams[state.activeTeamAId] || []), ...(state.teamsState.teams[state.activeTeamBId] || [])]);
-        const playersMap = getPlayersByKeyMap();
-        const allowedNicks = new Set([...allowed].map((playerKey) => playersMap.get(playerKey)?.nick || playerKey));
-        state.matchState.match[id] = allowedNicks.has(value) || !value ? value : '';
+        const result = isMixedTournamentMode()
+          ? resolveMvpInputValue(value)
+          : { selected: getActiveMvpOptions().find((option) => option.label === value || option.nick === value || option.key === value), ambiguous: false };
+        const selected = result.selected;
+        state.matchState.match[id] = selected?.nick || '';
+        state.matchState.match[keyId] = selected?.key || '';
+        if (result.ambiguous) {
+          state.matchState.match[id] = value;
+          saveLobby();
+          setSaveFeedback('error', MIXED_MVP_DUPLICATE_WARNING);
+          return;
+        }
+        if (selected && e.target.value !== selected.label) e.target.value = selected.label;
+        if (selected && saveReadinessMessages.has(state.saveMessage)) {
+          syncRequireMvpAfterMvpInput();
+          saveLobby();
+          setSaveFeedback('idle', '');
+          return;
+        }
       } else {
         state.matchState.match[id] = value;
+        state.matchState.match[keyId] = '';
       }
+      syncRequireMvpAfterMvpInput();
       saveLobby();
+      renderAndSync();
     });
   });
 
@@ -654,6 +964,42 @@ async function init() {
     },
     onTeamCount(count) {
       setTeamCount(count);
+      saveLobby();
+      renderAndSync();
+    },
+    onBalanceMode(mode) {
+      const nextMode = mode === 'manual' ? 'manual' : 'auto';
+      const changed = state.app.mode !== nextMode;
+      const hadTeams = TEAM_KEYS.some((key) => (state.teamsState.teams[key] || []).length > 0);
+      state.app.mode = nextMode;
+      if (nextMode === 'manual') {
+        ensureTeamsForManualAssignment();
+        syncSelectedFromTeamsAndBench();
+      }
+      if (changed && hadTeams) {
+        setStatus({ state: 'error', text: 'Режим балансу змінено — перевір команди', retryVisible: false });
+      }
+      saveLobby();
+      renderAndSync();
+    },
+    onAutoBalance() {
+      const selected = state.playersState.selected.length;
+      const teamCount = state.teamsState.teamCount;
+      if (selected < teamCount) {
+        setStatus({ state: 'error', text: `Недостатньо гравців для ${teamCount} команд. Мінімум: ${teamCount}.`, retryVisible: false });
+        renderAndSync();
+        return;
+      }
+      state.app.mode = 'auto';
+      runBalance();
+      renderAndSync();
+    },
+    onManualBalance() {
+      state.app.mode = 'manual';
+      ensureTeamsForManualAssignment();
+      syncSelectedFromTeamsAndBench();
+      ensureActiveMatchState();
+      setTournamentDirty();
       saveLobby();
       renderAndSync();
     },
@@ -716,6 +1062,7 @@ async function init() {
       renderAndSync();
     },
     onEventMode(mode) {
+      state.uiState.flowStarted = true;
       const nextEventMode = mode === 'tournament' ? 'tournament' : 'regular';
       const changed = nextEventMode !== state.app.eventMode;
       normalizeEventAndSourceState(nextEventMode, state.app.playerSourceMode);
@@ -734,11 +1081,13 @@ async function init() {
       renderAndSync();
     },
     onPlayerSourceMode(sourceMode) {
+      state.uiState.flowStarted = true;
       onPlayerSourceChanged(sourceMode, { warnOnLobby: true });
       saveLobby();
       renderAndSync();
     },
     onLoadPlayers() {
+      state.uiState.flowStarted = true;
       ensurePlayersLoaded({ force: true });
     },
     onTournamentName(name) {
@@ -750,11 +1099,33 @@ async function init() {
       saveLobby();
       renderAndSync();
     },
+    onTournamentType(type) {
+      state.tournamentState.tournamentType = type === 'group' ? 'group' : 'custom';
+      state.tournamentState.tournamentSchedule = [];
+      state.tournamentState.currentScheduleGameId = '';
+      state.tournamentState.currentGameId = '';
+      if (state.tournamentState.tournamentType === 'group') refreshGroupSchedule({ force: true });
+      saveLobby();
+      renderAndSync();
+    },
+    onTournamentSchedulePick(gameId) {
+      if (!selectGroupScheduleMatch(gameId)) return;
+      saveLobby();
+      renderAndSync();
+    },
+    onTournamentNextMatch() {
+      const current = getCurrentGroupMatch();
+      if (current && current.status !== 'done') current.status = 'pending';
+      const pending = state.tournamentState.tournamentSchedule.find((match) => match.status === 'pending');
+      if (pending) selectGroupScheduleMatch(pending.gameId);
+      saveLobby();
+      renderAndSync();
+    },
     onTournamentTeamPick(side, teamKey) {
       if (side === 'A') state.activeTeamAId = teamKey;
       if (side === 'B') state.activeTeamBId = teamKey;
       if (state.activeTeamAId === state.activeTeamBId) {
-        console.debug('[balance2:tournament] validation failed Обери дві різні команди матчу');
+        debugLog('[balance2:tournament] validation failed Обери дві різні команди матчу');
         setTournamentStatus('Обери дві різні команди матчу', 'error');
         setStatus({ state: 'error', text: '❌ Команда A і Команда B не можуть бути однаковими', retryVisible: false });
       }
@@ -795,7 +1166,7 @@ async function init() {
       }
       if (state.app.eventMode !== 'tournament') {
         const message = 'Увімкни турнірний режим';
-        console.debug(`[balance2:tournament] validation failed ${message}`);
+        debugLog(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'warning');
         setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
         renderAndSync();
@@ -803,7 +1174,7 @@ async function init() {
       }
       if (!['kids', 'sundaygames', 'mixed'].includes(state.app.playerSourceMode)) {
         const message = 'Обери лігу kids, sundaygames або mixed';
-        console.debug(`[balance2:tournament] validation failed ${message}`);
+        debugLog(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
         setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
         renderAndSync();
@@ -812,7 +1183,7 @@ async function init() {
       const today = new Date().toISOString().slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) {
         const message = 'Невірна дата старту турніру';
-        console.debug(`[balance2:tournament] validation failed ${message}`);
+        debugLog(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
         setTournamentRequestMeta({ action: 'createTournament', requestStatus: 'ERR', error: message });
         renderAndSync();
@@ -867,7 +1238,7 @@ async function init() {
       }
       if (state.app.eventMode !== 'tournament') {
         const message = 'Увімкни турнірний режим';
-        console.debug(`[balance2:tournament] validation failed ${message}`);
+        debugLog(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'warning');
         setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
@@ -875,7 +1246,7 @@ async function init() {
       }
       if (!state.tournamentState.tournamentId) {
         const message = 'Спочатку створи турнір';
-        console.debug(`[balance2:tournament] validation failed ${message}`);
+        debugLog(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
         setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
@@ -884,7 +1255,7 @@ async function init() {
       const teams = buildTournamentTeamsPayload();
       if (teams.length < 2) {
         const message = 'Спочатку збалансуй гравців у команди';
-        console.debug(`[balance2:tournament] validation failed ${message}`);
+        debugLog(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
         setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
@@ -894,7 +1265,7 @@ async function init() {
       const firstEmptyTeamId = activeTeamIds.find((teamId) => !(state.teamsState.teams[teamId] || []).length);
       if (firstEmptyTeamId) {
         const message = `${getTeamLabel(firstEmptyTeamId)} порожня`;
-        console.debug(`[balance2:tournament] validation failed ${message}`);
+        debugLog(`[balance2:tournament] validation failed ${message}`);
         setTournamentStatus(message, 'error');
         setTournamentRequestMeta({ action: 'saveTeams', requestStatus: 'ERR', error: message });
         renderAndSync();
@@ -933,6 +1304,11 @@ async function init() {
     },
     onTogglePenalties() {
       state.uiState.penaltiesCollapsed = !state.uiState.penaltiesCollapsed;
+      renderAndSync();
+    },
+    onRequireMvpChange(required) {
+      state.requireMvp = required !== false;
+      saveLobby();
       renderAndSync();
     },
   });

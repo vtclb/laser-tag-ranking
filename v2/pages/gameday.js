@@ -1,6 +1,9 @@
 ﻿import { getGameDay } from '../core/dataHub.js';
+import { DEBUG, debugLog } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
+
+const DEFAULT_AVATAR_URL = './assets/default-avatar.svg';
 
 function esc(v) {
   return String(v ?? '')
@@ -10,6 +13,23 @@ function esc(v) {
     .replaceAll('"', '&quot;');
 }
 
+function renderDataQualityPanel(dataQuality) {
+  const warnings = Array.isArray(dataQuality?.warnings) ? dataQuality.warnings : [];
+  if (!DEBUG || warnings.length === 0) return '';
+  const visible = warnings.slice(0, 5);
+  const more = warnings.length - visible.length;
+  return `<section class="admin-quality-panel" aria-label="Data quality warnings">
+    <h3>Data quality warnings</h3>
+    <div class="admin-quality-panel__list">
+      ${visible.map((warning) => `<div class="admin-quality-panel__item admin-quality-panel__item--${esc(warning.severity || 'warning')}">
+        <strong>${esc(warning.severity || 'warning')} · ${esc(warning.type || 'UNKNOWN')}</strong>
+        <span>${esc(warning.message || '')}</span>
+      </div>`).join('')}
+    </div>
+    ${more > 0 ? `<div class="admin-quality-panel__more">+${more} ще</div>` : ''}
+  </section>`;
+}
+
 function fmtDelta(v) {
   const n = Number(v) || 0;
   return `${n > 0 ? '+' : ''}${n}`;
@@ -17,6 +37,15 @@ function fmtDelta(v) {
 
 function fmtRank(value = '') {
   return String(value || '—').trim() || '—';
+}
+
+function avatarUrl(player = {}) {
+  const value = player?.avatarUrl || player?.avatar || player?.photo || '';
+  return String(value || '').trim() || DEFAULT_AVATAR_URL;
+}
+
+function avatarFallbackAttr() {
+  return `onerror="this.onerror=null;this.src='${DEFAULT_AVATAR_URL}';"`;
 }
 
 function rankClass(value = '') {
@@ -61,6 +90,24 @@ function prettyWinner(winner = '') {
   return 'Переможця не визначено';
 }
 
+function matchOutcomeLabel(winner = '') {
+  if (winner === 'tie') return 'НІЧИЯ';
+  if (/^team\d$/.test(String(winner))) return 'ПЕРЕМОГА';
+  return 'ОЧІКУЄ РЕЗУЛЬТАТ';
+}
+
+function sideOutcomeClass(teamKey = '', winnerKey = '', winner = '') {
+  if (winner === 'tie') return 'is-draw';
+  if (!winnerKey) return 'is-pending';
+  return teamKey === winnerKey ? 'is-win' : 'is-loss';
+}
+
+function sideOutcomeShort(teamKey = '', winnerKey = '', winner = '') {
+  if (winner === 'tie') return 'D';
+  if (!winnerKey) return '—';
+  return teamKey === winnerKey ? 'W' : 'L';
+}
+
 function cleanDateLabel(date = '', timestamp = '') {
   const fromDate = String(date || '').trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(fromDate)) return fromDate;
@@ -96,44 +143,35 @@ function computeTeamStats(team = [], pointsChanges = [], roster = new Map()) {
   return { totalRating, totalDelta };
 }
 
+function getPlayerGameDelta(nick = '', pointsChanges = []) {
+  const key = String(nick || '').trim().toLowerCase();
+  if (!key) return 0;
+  const item = (Array.isArray(pointsChanges) ? pointsChanges : [])
+    .find((change) => String(change?.nick || '').trim().toLowerCase() === key);
+  return Number(item?.delta) || 0;
+}
+
 function buildPlayersTable(players = [], league = 'sundaygames') {
   if (!players.length) {
-    return '<p class="px-card__text">Немає гравців для цієї дати.</p>';
+    return '<p class="px-card__text">Для цього дня гравців ще немає.</p>';
   }
 
   return `
-    <div class="gameday-table-wrap">
-      <table class="gameday-table gameday-table--players">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Гравець</th>
-            <th>Ранг</th>
-            <th>Очки</th>
-            <th>Δ</th>
-            <th>Іг / Пер</th>
-            <th>MVP</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${players.map((p, idx) => `
-            <tr>
-              <td>#${idx + 1}</td>
-              <td>
-                <a class="gameday-table__player-link" href="#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(p.nick || '')}">
-                  <img class="gameday-avatar" src="${esc(p.avatarUrl || '../assets/default-avatar.svg')}" alt="${esc(p.nick || '')}">
-                  <span>${esc(p.nick || 'Гравець')}</span>
-                </a>
-              </td>
-              <td><span class="gameday-rank-letter ${rankClass(p.rankAfter || p.rankLetter)}">${esc(fmtRank(p.rankAfter || p.rankLetter))}</span></td>
-              <td>${esc(String(p.pointsAfter ?? 0))}</td>
-              <td class="${Number(p.delta || 0) > 0 ? 'pos' : Number(p.delta || 0) < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(p.delta))}</td>
-              <td>${esc(`${p.matches ?? 0} / ${p.wins ?? 0}`)}</td>
-              <td>${esc(`${p.mvp1 || 0}/${p.mvp2 || 0}/${p.mvp3 || 0}`)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+    <div class="gameday-player-list">
+      ${players.map((p, idx) => {
+        const delta = Number(p.delta || 0);
+        const tone = delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'neu';
+        return `
+          <a class="gameday-player-row" href="#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(p.nick || '')}">
+            <span class="gameday-player-row__place">#${idx + 1}</span>
+            <img class="gameday-player-row__avatar" src="${esc(avatarUrl(p))}" alt="${esc(p.nick || 'Аватар гравця')}" loading="lazy" ${avatarFallbackAttr()}>
+            <span class="gameday-player-row__main">
+              <strong>${esc(p.nick || 'Гравець')}</strong>
+              <span><b class="gameday-rank-letter ${rankClass(p.rankAfter || p.rankLetter)}">${esc(fmtRank(p.rankAfter || p.rankLetter))}</b> · ${esc(String(p.pointsAfter ?? 0))} очок · ${esc(`${p.matches ?? 0} іг / ${p.wins ?? 0} пер`)}</span>
+            </span>
+            <span class="gameday-player-row__delta ${tone}">${esc(fmtDelta(delta))}</span>
+          </a>`;
+      }).join('')}
     </div>`;
 }
 
@@ -151,28 +189,49 @@ function buildMatchCard(match = {}, roster = new Map()) {
   const winnerKey = /^team\d$/.test(String(match.winner || '')) ? String(match.winner) : '';
   const matchId = `gamedayMatch${match.index}`;
   const summaryLine = cleanDateLabel(match.date, match.timestamp);
-  const versusLine = teams.map(([, members]) => compactTeamPreview(members)).join(' vs ');
-  const teamsLine = teams.map(([key]) => {
-    const isWinner = key === winnerKey;
-    return `<span class="gameday-match-head__team ${isWinner ? 'is-winner' : ''}">${esc(teamLabel(key))}</span>`;
-  }).join('<span class="gameday-match-head__vs">vs</span>');
+  const matchupTeams = teams.slice(0, 2);
+  const versusLine = matchupTeams.map(([, members]) => compactTeamPreview(members)).join(' vs ');
+  const teamSideMarkup = ([key, members], side = 'left') => {
+    const outcome = sideOutcomeClass(key, winnerKey, match.winner);
+    return `<div class="gameday-matchup-side gameday-matchup-side--${side} ${outcome}">
+      <span class="gameday-matchup-side__status">${sideOutcomeShort(key, winnerKey, match.winner)}</span>
+      <strong>${esc(teamLabel(key))}</strong>
+      <span>${esc(compactTeamPreview(members))}</span>
+    </div>`;
+  };
   const mvpRows = [
     { label: 'MVP 1', nick: match.mvp1, tone: 'gold' },
     { label: 'MVP 2', nick: match.mvp2, tone: 'silver' },
     { label: 'MVP 3', nick: match.mvp3, tone: 'bronze' }
   ].filter((item) => item.nick);
+  const mvpLabel = mvpRows.length
+    ? mvpRows.map((row) => row.nick).filter(Boolean).join(' · ')
+    : 'MVP ще не визначено';
+  const teamTotals = teams.map(([key, members]) => {
+    const stats = computeTeamStats(members, match.pointsChanges || [], roster);
+    return `${teamLabel(key)}: ${fmtDelta(stats.totalDelta)}`;
+  }).join(' · ');
 
   return `
     <article class="gameday-match-card ${winnerKey ? `gameday-match-card--winner-${winnerKey}` : ''}" data-match-id="${matchId}">
       <button class="gameday-match-head" type="button" aria-expanded="false" aria-controls="${matchId}Details" id="${matchId}Trigger">
-        <div class="gameday-match-head__top">
-          <span class="gameday-match-head__eyebrow">Гра #${match.index}</span>
-          <span class="gameday-match-head__score">${esc(scoreLabel)}</span>
+        <div class="gameday-match-head__topline">
+          <span class="gameday-match-head__eyebrow">ГРА #${match.index}</span>
+          <span class="gameday-match-head__mode">${esc(match.mode || match.type || 'Матч дня')}</span>
+          <span class="gameday-match-head__chevron" aria-hidden="true">⌄</span>
         </div>
-        <div class="gameday-match-head__title">${teamsLine || 'Склади команд'}</div>
-        <div class="gameday-match-head__subline">${esc(versusLine || 'Склади команд')}</div>
+        <div class="gameday-matchup">
+          ${matchupTeams[0] ? teamSideMarkup(matchupTeams[0], 'left') : '<div class="gameday-matchup-side is-pending"><strong>Команда 1</strong><span>Склад ще не визначено</span></div>'}
+          <div class="gameday-matchup-score">
+            <span>${esc(matchOutcomeLabel(match.winner))}</span>
+            <strong>${esc(scoreLabel)}</strong>
+            <em>VS</em>
+          </div>
+          ${matchupTeams[1] ? teamSideMarkup(matchupTeams[1], 'right') : '<div class="gameday-matchup-side gameday-matchup-side--right is-pending"><strong>Команда 2</strong><span>Склад ще не визначено</span></div>'}
+        </div>
         <div class="gameday-match-head__meta">
           <span>${esc(summaryLine || 'Ігровий лог')}</span>
+          <span>MVP: ${esc(mvpLabel)}</span>
         </div>
       </button>
 
@@ -181,31 +240,38 @@ function buildMatchCard(match = {}, roster = new Map()) {
           ${teams.map(([key, members]) => {
             const stats = computeTeamStats(members, match.pointsChanges || [], roster);
             const isWinner = key === winnerKey;
+            const isDraw = match.winner === 'tie';
+            const teamTone = isWinner ? 'is-winner' : isDraw ? 'is-draw' : winnerKey ? 'is-loser' : '';
             return `
-              <section class="gameday-team-box ${isWinner ? 'is-winner' : ''}">
+              <section class="gameday-team-box ${teamTone}">
                 <div class="gameday-team-box__head">
                   <div class="gameday-team-box__title-wrap">
                     <h3>${teamLabel(key)}</h3>
-                    ${isWinner ? '<span class="gameday-team-box__winner-badge">переможець</span>' : ''}
+                    ${isWinner ? '<span class="gameday-team-box__winner-badge">переможець</span>' : isDraw ? '<span class="gameday-team-box__winner-badge">нічия</span>' : winnerKey ? '<span class="gameday-team-box__winner-badge">поразка</span>' : ''}
                   </div>
                   <span class="gameday-team-box__delta ${stats.totalDelta > 0 ? 'pos' : stats.totalDelta < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(stats.totalDelta))}</span>
                 </div>
-                <ul>
-                  ${members.map((nick) => `<li>${esc(nick)}</li>`).join('')}
+                <ul class="gameday-team-player-list">
+                  ${members.map((nick) => {
+                    const delta = getPlayerGameDelta(nick, match.pointsChanges || []);
+                    const tone = delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'neu';
+                    return `<li><span>${esc(nick)}</span><b class="${tone}">${esc(fmtDelta(delta))}</b></li>`;
+                  }).join('')}
                 </ul>
                 <div class="gameday-team-box__foot">${stats.totalRating || 0} pts сумарно</div>
               </section>`;
           }).join('')}
         </div>
 
+        <section class="gameday-match-summary">
+          <div><span>Підсумок</span><strong>${esc(prettyWinner(match.winner))}</strong></div>
+          <div><span>Рахунок</span><strong>${esc(scoreLabel)}</strong></div>
+          <div><span>Бали команд</span><strong>${esc(teamTotals || '—')}</strong></div>
+        </section>
+
         ${mvpRows.length ? `
           <section class="gameday-match-awards">
             ${mvpRows.map((row) => `<div class="gameday-award-chip gameday-award-chip--${row.tone}"><span>${row.label}</span><b>${esc(row.nick)}</b></div>`).join('')}
-          </section>` : ''}
-
-        ${(match.pointsChanges || []).length ? `
-          <section class="gameday-delta-list">
-            ${(match.pointsChanges || []).map((c) => `<span class="${Number(c.delta || 0) > 0 ? 'pos' : Number(c.delta || 0) < 0 ? 'neg' : 'neu'}">${esc(c.nick)} ${esc(fmtDelta(c.delta))}</span>`).join('')}
           </section>` : ''}
 
         ${match.link ? `<a class="btn btn--secondary gameday-log-link" href="${esc(match.link)}" target="_blank" rel="noopener">Відкрити лог / PDF</a>` : ''}
@@ -222,13 +288,32 @@ function render(root, payload, filters) {
   const partialNote = payload.hasLeagueSnapshot
     ? ''
     : '<p class="px-card__text">Таблиця ліги зараз недоступна, тому показуємо лише базовий лог ігрового дня.</p>';
+  const gamesCount = Number(summary.matches ?? payload.gamesCount ?? matches.length ?? 0);
+  const playersCount = Number(summary.participants ?? players.length ?? 0);
+  const mvpDay = (typeof summary.mvpDay === 'string' ? summary.mvpDay : summary.mvpDay?.nick) || 'MVP ще не визначено';
+  const bestGrowthNick = summary.bestDelta?.nick || summary.bestGain?.nick || '';
+  const bestGrowthDelta = summary.bestDelta?.delta ?? summary.bestGain?.delta;
+  const bestGrowth = bestGrowthNick ? `${bestGrowthNick} ${fmtDelta(bestGrowthDelta)}` : 'Приріст ще не розраховано';
 
   root.classList.add('gameday-v2');
   root.innerHTML = `
     <section class="px-card gameday-hero">
       <div class="gameday-hero__eyebrow">Ігровий день</div>
-      <h1 class="px-card__title">${esc(leagueLabelUA(payload.league))}</h1>
-      <div class="gameday-hero__date">${esc(payload.date || '—')}</div>
+      <h1 class="px-card__title">${esc(payload.date || '—')}</h1>
+      <div class="gameday-hero__date">${esc(leagueLabelUA(payload.league))}</div>
+    </section>
+
+    <section class="px-card gameday-summary-hero" aria-label="Підсумок ігрового дня">
+      <div class="gameday-summary-grid">
+        <div class="gameday-summary-card"><span>Ігор</span><b>${esc(String(gamesCount))}</b></div>
+        <div class="gameday-summary-card"><span>Гравців</span><b>${esc(String(playersCount))}</b></div>
+        <div class="gameday-summary-card gameday-summary-card--mvp"><span>MVP дня</span><b>${esc(mvpDay)}</b></div>
+        <div class="gameday-summary-card gameday-summary-card--growth"><span>Найбільший приріст</span><b>${esc(bestGrowth)}</b></div>
+      </div>
+      ${partialNote}
+    </section>
+
+    <section class="px-card gameday-controls-card" aria-label="Фільтри ігрового дня">
       <div class="gameday-toolbar">
         <label>Ліга
           <select id="gamedayLeague" class="search-input">
@@ -243,19 +328,13 @@ function render(root, payload, filters) {
         </label>
         <button id="gamedayLoad" class="btn">Оновити</button>
       </div>
-      <div class="gameday-summary-grid">
-        <div class="gameday-summary-card"><span>Ігор</span><b>${summary.matches ?? payload.gamesCount ?? 0}</b></div>
-        <div class="gameday-summary-card"><span>Найбільший приріст</span><b>${esc((summary.bestDelta?.nick || summary.bestGain?.nick) ? `${summary.bestDelta?.nick || summary.bestGain?.nick} ${fmtDelta(summary.bestDelta?.delta ?? summary.bestGain?.delta)}` : '—')}</b></div>
-        <div class="gameday-summary-card"><span>Гравців</span><b>${summary.participants ?? players.length}</b></div>
-        <div class="gameday-summary-card"><span>MVP дня</span><b>${esc(summary.mvpDay?.nick || '—')}</b></div>
-      </div>
-      ${partialNote}
     </section>
+    ${renderDataQualityPanel(payload.dataQuality)}
 
     <section class="px-card gameday-players-block">
       <div class="gameday-section-head">
         <h2 class="px-card__title">Таблиця гравців дня</h2>
-        <p class="px-card__text">Компактна зведена таблиця за день: очки, приріст, ігри, перемоги та MVP.</p>
+        <p class="px-card__text">Хто як зіграв: очки, приріст і результат за день.</p>
       </div>
       ${buildPlayersTable(players, payload.league)}
     </section>
@@ -263,10 +342,10 @@ function render(root, payload, filters) {
     <section class="px-card gameday-matches-block">
       <div class="gameday-section-head">
         <h2 class="px-card__title">Лог ігор</h2>
-        <p class="px-card__text">Кожна гра згорнута. У шапці одразу видно рахунок, склади та переможця.</p>
+        <p class="px-card__text">Короткий список матчів дня з рахунком, переможцем і MVP.</p>
       </div>
       <div class="gameday-match-list">
-        ${(matches || []).map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Немає ігор за цей день.</p>'}
+        ${(matches || []).map((m) => buildMatchCard(m, rosterMap)).join('') || '<p class="px-card__text">Для цього дня ігор ще немає.</p>'}
       </div>
     </section>
   `;
@@ -318,7 +397,7 @@ export async function initGameDayPage(params = {}) {
 
 export async function initPage(root, params = {}) {
   if (!root) return;
-  console.log('[gameday] init start');
+  debugLog('[gameday] init start');
   try {
     await safeInitGameDayPage(root, params);
   } catch (err) {
@@ -339,7 +418,7 @@ async function safeInitGameDayPage(root, params = {}) {
     </section>`;
   const filters = resolveParams(params);
   const payload = await getGameDay({ league: filters.league, date: filters.date });
-  console.log('[gameday] data loaded', payload);
+  debugLog('[gameday] data loaded', payload);
   if (!payload) {
     console.warn('[gameday] no data, rendering empty state');
     root.innerHTML = `

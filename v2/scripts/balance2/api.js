@@ -1,5 +1,6 @@
 import { normalizeLeague, state } from './state.js';
 import { loadPlayersCache, savePlayersCache } from './storage.js';
+import { debugLog } from '../../core/debug.js';
 
 const PROXY_ORIGIN = 'https://laser-proxy.vartaclub.workers.dev';
 const TOURNAMENT_PROXY_JSON_ENDPOINT = `${PROXY_ORIGIN}/json`;
@@ -126,7 +127,7 @@ function normalizeTournamentResponse(action, res, data) {
 
 async function postTournament(payload, timeoutMs = 20000) {
   const action = String(payload?.action || 'unknown');
-  console.debug(`[balance2:tournament] request ${action} payload`, payload);
+  debugLog(`[balance2:tournament] request ${action} payload`, payload);
 
   try {
     const proxyRes = await fetchWithTimeout(TOURNAMENT_PROXY_JSON_ENDPOINT, {
@@ -141,10 +142,10 @@ async function postTournament(payload, timeoutMs = 20000) {
       throw new Error('Некоректна JSON-відповідь від proxy');
     }
     const normalized = normalizeTournamentResponse(action, proxyRes, proxyData);
-    console.debug(`[balance2:tournament] response ${action} result`, normalized);
+    debugLog(`[balance2:tournament] response ${action} result`, normalized);
     return normalized;
   } catch (proxyError) {
-    console.debug('[balance2:tournament] proxy failed, trying direct GAS', proxyError);
+    debugLog('[balance2:tournament] proxy failed, trying direct GAS', proxyError);
   }
 
   try {
@@ -158,11 +159,11 @@ async function postTournament(payload, timeoutMs = 20000) {
       data = await res.json();
     } catch {
       const invalid = { ok: false, data: null, message: 'Некоректна JSON-відповідь від GAS' };
-      console.debug(`[balance2:tournament] response ${action} result`, invalid);
+      debugLog(`[balance2:tournament] response ${action} result`, invalid);
       return invalid;
     }
     const normalized = normalizeTournamentResponse(action, res, data);
-    console.debug(`[balance2:tournament] response ${action} result`, normalized);
+    debugLog(`[balance2:tournament] response ${action} result`, normalized);
     return normalized;
   } catch (e) {
     const networkError = {
@@ -170,7 +171,7 @@ async function postTournament(payload, timeoutMs = 20000) {
       data: null,
       message: e?.name === 'AbortError' ? 'Timeout запиту до GAS' : (e?.message || 'Fetch failed'),
     };
-    console.debug(`[balance2:tournament] response ${action} result`, networkError);
+    debugLog(`[balance2:tournament] response ${action} result`, networkError);
     return networkError;
   }
 }

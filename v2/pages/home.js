@@ -1,14 +1,15 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { debugLog, debugWarn } from '../core/debug.js';
 import { leagueLabelUA } from '../core/naming.js';
 import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate } from './tournaments.js';
-import { formatDataUpdatedAt, makeDataStatus } from '../core/dataStatus.js';
+import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
 const STATS_LINKS = {
   sundaygames: '#league-stats?league=sundaygames',
   kids: '#league-stats?league=kids'
 };
-const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 rx=%220%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
+const FALLBACK_AVATAR = './assets/default-avatar.svg';
 
 function esc(v) {
   return String(v ?? '')
@@ -44,22 +45,38 @@ function rankKeyFromPlayer(player = {}) {
   return String(player?.rankLetter || rankFromPoints(Number(player?.points || 0)) || 'E').toLowerCase();
 }
 
-function currentRankingCard(players = []) {
+function avatarFallbackAttr() {
+  return `onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}';"`;
+}
+
+function playerProfileHref(league, nickname) {
+  const safeLeague = String(league || '').trim();
+  const safeNickname = String(nickname || '').trim();
+  if (!safeLeague || !safeNickname) return '';
+  return `#player?league=${encodeURIComponent(safeLeague)}&nick=${encodeURIComponent(safeNickname)}`;
+}
+
+function currentRankingCard(players = [], league = '') {
   const rows = (players || []).slice(0, 10).map((player, index) => {
+    const rawNickname = String(player?.nickname || '').trim();
     const avatarUrl = esc(player?.avatarUrl || player?.avatar || FALLBACK_AVATAR);
-    const nickname = esc(player?.nickname || `Гравець ${index + 1}`);
+    const nickname = esc(rawNickname || `Гравець ${index + 1}`);
     const points = Number(player?.points || 0);
     const rank = esc(player?.rankLetter || rankFromPoints(points) || 'E');
     const rankKey = rankKeyFromPlayer(player);
-    return `<li class="home-ranking__row rank-${rankKey}">
+    const topClass = index < 3 ? ` home-ranking__row--top-${index + 1}` : '';
+    const href = playerProfileHref(league, rawNickname);
+    const content = `
       <span class="home-ranking__place">#${index + 1}</span>
       <span class="home-ranking__rank rank-${rankKey}">${rank}</span>
       <span class="home-ranking__identity">
-        <span class="home-ranking__avatar-wrap rank-${rankKey}"><img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" /></span>
+        <span class="home-ranking__avatar-wrap rank-${rankKey}"><img class="home-ranking__avatar" src="${avatarUrl}" alt="${nickname || 'Аватар гравця'}" loading="lazy" ${avatarFallbackAttr()} /></span>
         <span class="home-ranking__name">${nickname}</span>
       </span>
-      <span class="home-ranking__points"><small>очки</small>${points}</span>
-    </li>`;
+      <span class="home-ranking__points"><strong>${points}</strong><small>очки</small></span>`;
+    return href
+      ? `<li class="home-ranking__row rank-${rankKey}${topClass}"><a class="home-ranking__link" href="${href}">${content}</a></li>`
+      : `<li class="home-ranking__row rank-${rankKey}${topClass}">${content}</li>`;
   }).join('');
 
   if (!rows) {
@@ -69,8 +86,10 @@ function currentRankingCard(players = []) {
   return `<ol class="home-ranking">${rows}</ol>`;
 }
 
-function renderLeadersNowCard({ leader, leagueLabel }) {
+function renderLeadersNowCard({ leader, league, leagueLabel, variant = 'secondary' }) {
   const hasLeader = Boolean(leader);
+  const leagueType = variant === 'primary' ? 'adult' : 'kids';
+  const rawNickname = String(leader?.nickname || '').trim();
   const nickname = escapeHtml(hasLeader ? (leader.nickname || 'Гравець') : 'Немає активних даних');
   const avatarUrl = escapeHtml(hasLeader ? (leader.avatarUrl || leader.avatar || FALLBACK_AVATAR) : FALLBACK_AVATAR);
   const rank = escapeHtml(hasLeader ? (leader.rankLetter || leader.rank || 'E') : '—');
@@ -85,36 +104,43 @@ function renderLeadersNowCard({ leader, leagueLabel }) {
     )
     : 0;
 
-  return `
-    <div class="leader-card rank-${rankKey}">
-      <div class="leader-league-label">${escapeHtml(leagueLabel)}</div>
-      <div class="leader-top">
-        <div class="leader-avatar-wrap rank-${rankKey}"><img class="leader-avatar" src="${avatarUrl}" alt="${nickname}" loading="lazy" /></div>
+  const href = hasLeader ? playerProfileHref(league, rawNickname) : '';
+  const tagName = href ? 'a' : 'article';
+  const hrefAttr = href ? ` href="${href}"` : '';
 
-        <div class="leader-info">
-          <div class="leader-name">${nickname}</div>
-          <div class="leader-rank rank-${rankKey}">${rank}</div>
+  return `
+    <${tagName} class="home-leader-v3 home-leader-v3--${leagueType}"${hrefAttr}>
+      <div class="home-leader-v3__league">${escapeHtml(leagueLabel)}</div>
+      <div class="home-leader-v3__body">
+        <img class="home-leader-v3__avatar" src="${avatarUrl}" alt="${nickname || 'Аватар гравця'}" loading="lazy" ${avatarFallbackAttr()} />
+        <div class="home-leader-v3__info">
+          <div class="home-leader-v3__nameRow">
+            <span class="home-leader-v3__name">${nickname}</span>
+            <span class="home-leader-v3__rank rank-${rankKey}">${rank}</span>
+          </div>
+          <div class="home-leader-v3__meta">${matches} ігор · ${winRate} · ${mvpTotal} MVP</div>
+        </div>
+        <div class="home-leader-v3__score">
+          <strong>${points}</strong>
+          <span>очок</span>
         </div>
       </div>
-
-      <div class="leader-points"><small>очки</small>${points}</div>
-
-      <div class="leader-stats">
-        <span>${matches} ігор</span>
-        <span>${winRate}</span>
-        <span>${mvpTotal} MVP</span>
-      </div>
-    </div>
+    </${tagName}>
   `;
 }
 
 function renderLeadersNow(adultLeader, kidsLeader) {
+  const leaders = [
+    { leader: adultLeader, league: 'sundaygames', leagueLabel: 'Доросла ліга' },
+    { leader: kidsLeader, league: 'kids', leagueLabel: 'Дитяча ліга' }
+  ];
+
   return `
-    <section class="leaders-now">
-      <h2 class="px-card__title">Лідери сезону</h2>
-      <div class="leaders-now-grid">
-        ${renderLeadersNowCard({ leader: adultLeader, leagueLabel: 'Доросла ліга' })}
-        ${renderLeadersNowCard({ leader: kidsLeader, leagueLabel: 'Дитяча ліга' })}
+    <section class="home-leaders-v3">
+      <div class="home-leaders-v3__title">Лідери сезону</div>
+      <div class="home-leaders-v3__grid">
+        ${renderLeadersNowCard({ ...leaders[0], variant: 'primary' })}
+        ${renderLeadersNowCard({ ...leaders[1], variant: 'secondary' })}
       </div>
     </section>
   `;
@@ -134,21 +160,132 @@ function pickHomeStatus(adultsStatus, kidsStatus) {
 
 function renderDataStatusLine(status) {
   const safeStatus = makeDataStatus(status);
-  const timeLabel = formatDataUpdatedAt(safeStatus.updatedAt);
-  if (safeStatus.ok && timeLabel) {
-    return `<p class="data-status-line data-status-line--ok">Дані оновлено: ${esc(timeLabel)}</p>`;
+  const tone = resolveDataStatusTone(safeStatus);
+  return `<p class="data-status-line ${tone.className}">${esc(tone.label)}</p>`;
+}
+
+function countActivePlayers(live) {
+  if (Array.isArray(live?.activePlayers)) return live.activePlayers.length;
+  return (live?.players || []).filter((player) => isCurrentSeasonActive(player)).length;
+}
+
+function pickLatestGameDay(adultsLive, kidsLive) {
+  const dates = [adultsLive?.lastGameDay?.date, kidsLive?.lastGameDay?.date]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a));
+  return dates[0] || '';
+}
+
+function pickLatestGameDaySummary(adultsLive, kidsLive) {
+  const items = [
+    { league: 'sundaygames', label: 'Доросла ліга', day: adultsLive?.lastGameDay },
+    { league: 'kids', label: 'Дитяча ліга', day: kidsLive?.lastGameDay }
+  ]
+    .map((item) => ({
+      ...item,
+      date: String(item.day?.date || '').trim(),
+      matchesCount: Number(item.day?.matchesCount || 0),
+      battlesCount: Number(item.day?.battlesCount || 0),
+      mvp: String(item.day?.mvp || '').trim()
+    }))
+    .filter((item) => item.date)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return items[0] || null;
+}
+
+function pickSeasonMovement(adultsLive, kidsLive) {
+  const progressItems = [adultsLive?.progress, kidsLive?.progress].filter(Boolean);
+  const mostMvp = progressItems
+    .map((progress) => progress.mostMvp)
+    .filter(Boolean)
+    .sort((a, b) => Number(b?.mvpTotal ?? b?.mvp ?? 0) - Number(a?.mvpTotal ?? a?.mvp ?? 0))[0];
+  if (mostMvp) {
+    const nick = mostMvp.nickname || mostMvp.nick || 'Гравець';
+    const count = Number(mostMvp.mvpTotal ?? mostMvp.mvp ?? 0);
+    return count ? `${nick} · ${count} MVP` : `${nick} · MVP`;
   }
-  if (safeStatus.source === 'cache' && timeLabel) {
-    return `<p class="data-status-line data-status-line--warning">Показуємо кеш · оновлено: ${esc(timeLabel)}</p>`;
+
+  const bestGrowth = progressItems
+    .map((progress) => progress.bestGrowth)
+    .filter(Boolean)
+    .sort((a, b) => Number(b?.delta || 0) - Number(a?.delta || 0))[0];
+  if (bestGrowth) {
+    const nick = bestGrowth.nickname || bestGrowth.nick || 'Гравець';
+    const delta = Number(bestGrowth.delta || 0);
+    return `${nick} · ${delta >= 0 ? '+' : ''}${delta}`;
   }
-  return '<p class="data-status-line data-status-line--error">Дані тимчасово недоступні</p>';
+
+  return 'Дані накопичуються';
+}
+
+function renderSeasonPulse(adultsLive, kidsLive) {
+  const activePlayersCount = countActivePlayers(adultsLive) + countActivePlayers(kidsLive);
+  const matchesCount = Number(adultsLive?.summary?.matchesCount || 0) + Number(kidsLive?.summary?.matchesCount || 0);
+  const latestGameDay = pickLatestGameDay(adultsLive, kidsLive);
+  const movement = pickSeasonMovement(adultsLive, kidsLive);
+
+  return `<section class="home-season-pulse" aria-label="Живий сезон">
+    <div class="home-season-pulse__head">
+      <h2 class="home-season-pulse__title">Живий сезон</h2>
+      <p class="home-season-pulse__subtitle">Короткий стан рейтингу на зараз</p>
+    </div>
+    <div class="home-season-pulse__grid">
+      <article class="home-season-pulse__card home-season-pulse__card--positive">
+        <span class="home-season-pulse__label">Активні гравці</span>
+        <strong class="home-season-pulse__value">${activePlayersCount}</strong>
+        <span class="home-season-pulse__meta">доросла + дитяча ліги</span>
+      </article>
+      <article class="home-season-pulse__card home-season-pulse__card--neutral">
+        <span class="home-season-pulse__label">Матчі сезону</span>
+        <strong class="home-season-pulse__value">${matchesCount}</strong>
+        <span class="home-season-pulse__meta">за live-даними</span>
+      </article>
+      <article class="home-season-pulse__card home-season-pulse__card--highlight">
+        <span class="home-season-pulse__label">Останній ігровий день</span>
+        <strong class="home-season-pulse__value">${esc(latestGameDay || 'Ще немає даних')}</strong>
+        <span class="home-season-pulse__meta">найновіший день у лігах</span>
+      </article>
+      <article class="home-season-pulse__card home-season-pulse__card--neutral">
+        <span class="home-season-pulse__label">Рух сезону</span>
+        <strong class="home-season-pulse__value">${esc(movement)}</strong>
+        <span class="home-season-pulse__meta">MVP або приріст</span>
+      </article>
+    </div>
+  </section>`;
+}
+
+function renderGameDayTeaser(adultsLive, kidsLive) {
+  const latest = pickLatestGameDaySummary(adultsLive, kidsLive);
+  const href = latest
+    ? `#gameday?league=${encodeURIComponent(latest.league)}&date=${encodeURIComponent(latest.date)}`
+    : '#gameday?league=sundaygames';
+  const matchesLabel = latest
+    ? `${latest.matchesCount || 0} матчів${latest.battlesCount ? ` · ${latest.battlesCount} боїв` : ''}`
+    : 'Ігрові дні ще накопичуються';
+  const mvpLabel = latest?.mvp ? `MVP дня: ${latest.mvp}` : 'Переглянь результати та MVP';
+
+  return `<section class="home-gameday-teaser" aria-label="Останній ігровий день">
+    <div class="home-gameday-teaser__content">
+      <div>
+        <p class="home-gameday-teaser__kicker">Останній ігровий день</p>
+        <h2 class="home-gameday-teaser__title">${esc(latest?.date || 'Ігрові дні ще накопичуються')}</h2>
+      </div>
+      <div class="home-gameday-teaser__meta">
+        <span>${esc(latest?.label || 'Сезон триває')}</span>
+        <span>${esc(matchesLabel)}</span>
+        <span>${esc(mvpLabel)}</span>
+      </div>
+    </div>
+    <a class="home-gameday-teaser__cta" href="${href}">До ігор</a>
+  </section>`;
 }
 
 function renderLeagueSection({ league, players }) {
   const statsLink = STATS_LINKS[league] || '#league-stats';
   return `<section class="px-card home-card home-league home-leaders" data-league="${league}">
     <div class="home-league__head"><h3 class="home-league__title">${esc(leagueLabelUA(league))} — top 10</h3></div>
-    <article class="home-panel home-section-panel">${currentRankingCard(players)}</article>
+    <article class="home-panel home-section-panel">${currentRankingCard(players, league)}</article>
     <div class="home-cta-row"><a class="btn btn--secondary" href="${statsLink}">Детальна статистика</a></div>
   </section>`;
 }
@@ -176,7 +313,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
   )).join('');
 
   if (status === 'error') {
-    console.warn('[home] tournaments unavailable, using neutral fallback');
+    debugWarn('[home] tournaments unavailable, using neutral fallback');
   }
 
   return `<section class="home-tournaments-teaser">
@@ -185,15 +322,14 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
         <p class="home-tournaments-teaser__kicker">ТУРНІРНИЙ РЕЖИМ</p>
         <h2>Активні турніри</h2>
       </div>
-      <a href="#tournaments" class="home-tournaments-teaser__cta">До турнірів</a>
     </div>
-    <p class="home-tournaments-teaser__text">Слідкуй за турнірною таблицею, матчами та статистикою команд.</p>
     <div class="home-tournaments-teaser__content">
       ${hasItems ? list : `<div class="home-tournaments-teaser__empty">
         <strong>Поки немає активних турнірів</strong>
         <p>Коли турнір стартує, тут з’явиться швидкий доступ до таблиці та матчів.</p>
       </div>`}
     </div>
+    <a href="#tournaments" class="home-tournaments-teaser__cta">Відкрити турнір</a>
   </section>`;
 }
 
@@ -369,7 +505,7 @@ export async function initHomePage() {
 
 export async function initPage(root) {
   if (!root) return;
-  console.log('[home] init called');
+  debugLog('[home] init called');
   try {
     await safeInitHomePage(root);
   } catch (err) {
@@ -387,20 +523,25 @@ async function safeInitHomePage(root) {
   root.innerHTML = `${renderHomeLoadingSkeleton()}
     <div class="home-content" id="homeContent">
       <section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
-      <div class="px-divider"></div>
-      <section class="section" id="leadersNowMount"></section>
       <section class="section" id="homeDataStatusMount"></section>
-      <section class="section" id="homeTournamentsMount"></section>
+      <section class="section" id="leadersNowMount"></section>
       <section class="section" id="leagueSections"></section>
+      <section class="section home-dashboard-level home-dashboard-level--tertiary" id="homeSeasonPulseMount"></section>
+      <section class="home-dashboard-level home-dashboard-level--secondary" aria-label="Додаткові блоки">
+        <div id="homeGameDayMount"></div>
+        <div id="homeTournamentsMount"></div>
+      </section>
     </div>`;
 
   const lifecycle = setHomeLoadingLifecycle(root);
   const stateBox = document.getElementById('stateBox');
   const leadersNowMount = document.getElementById('leadersNowMount');
   const homeDataStatusMount = document.getElementById('homeDataStatusMount');
+  const homeSeasonPulseMount = document.getElementById('homeSeasonPulseMount');
+  const homeGameDayMount = document.getElementById('homeGameDayMount');
   const homeTournamentsMount = document.getElementById('homeTournamentsMount');
   const leagueSections = document.getElementById('leagueSections');
-  if (!stateBox || !leadersNowMount || !homeDataStatusMount || !leagueSections || !homeTournamentsMount) {
+  if (!stateBox || !leadersNowMount || !homeDataStatusMount || !homeSeasonPulseMount || !homeGameDayMount || !leagueSections || !homeTournamentsMount) {
     lifecycle.destroy();
     lifecycle.revealContent();
     return;
@@ -411,6 +552,8 @@ async function safeInitHomePage(root) {
     stateBox.textContent = 'Дані тимчасово недоступні';
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
     homeDataStatusMount.innerHTML = renderDataStatusLine(makeDataStatus({ source: 'unknown', ok: false, message: 'Data unavailable' }));
+    homeSeasonPulseMount.innerHTML = renderSeasonPulse(null, null);
+    homeGameDayMount.innerHTML = renderGameDayTeaser(null, null);
     homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'error');
     leagueSections.innerHTML = '';
   };
@@ -425,15 +568,15 @@ async function safeInitHomePage(root) {
     const kidsLive = kidsResult.status === 'fulfilled' ? kidsResult.value : null;
 
     if (adultResult.status === 'rejected') {
-      console.warn('[home] adult failed', adultResult.reason);
+      debugWarn('[home] adult failed', adultResult.reason);
     }
     if (kidsResult.status === 'rejected') {
-      console.warn('[home] kids failed', kidsResult.reason);
+      debugWarn('[home] kids failed', kidsResult.reason);
     }
 
-    console.log('[home] data loaded', { adultsLive, kidsLive });
+    debugLog('[home] data loaded', { adultsLive, kidsLive });
     if (!adultsLive && !kidsLive) {
-      console.warn('[home] no data, rendering empty state');
+      debugWarn('[home] no data, rendering empty state');
       renderEmptyState();
       return;
     }
@@ -445,13 +588,15 @@ async function safeInitHomePage(root) {
 
     leadersNowMount.innerHTML = renderLeadersNow(adultsPlayers[0] || null, kidsPlayers[0] || null);
     homeDataStatusMount.innerHTML = renderDataStatusLine(homeStatus);
+    homeSeasonPulseMount.innerHTML = renderSeasonPulse(adultsLive, kidsLive);
+    homeGameDayMount.innerHTML = renderGameDayTeaser(adultsLive, kidsLive);
     homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'loading');
     fetchHomeTournaments()
       .then((items) => {
         homeTournamentsMount.innerHTML = renderHomeTournamentsCard(items, 'empty');
       })
       .catch((error) => {
-        console.warn('[home] tournaments unavailable', error);
+        debugWarn('[home] tournaments unavailable', error);
         homeTournamentsMount.innerHTML = renderHomeTournamentsCard([], 'error');
       });
 
@@ -471,6 +616,8 @@ async function safeInitHomePage(root) {
     stateBox.textContent = msg;
     leadersNowMount.innerHTML = renderLeadersNow(null, null);
     homeDataStatusMount.innerHTML = renderDataStatusLine(makeDataStatus({ source: 'unknown', ok: false, message: 'Data unavailable' }));
+    homeSeasonPulseMount.innerHTML = renderSeasonPulse(null, null);
+    homeGameDayMount.innerHTML = renderGameDayTeaser(null, null);
     leagueSections.innerHTML = '';
   } finally {
     lifecycle.revealContent();

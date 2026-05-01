@@ -32,7 +32,7 @@ export const state = {
     seriesCount: 3,
     seriesRounds: Array(7).fill(null),
     series: ['-', '-', '-', '-', '-', '-', '-'],
-    match: { winner: '', series: '', mvp1: '', mvp2: '', mvp3: '', penalties: {} },
+    match: { winner: '', series: '', mvp1: '', mvp2: '', mvp3: '', mvp1Key: '', mvp2Key: '', mvp3Key: '', penalties: {} },
   },
   activeMatch: {
     mode: 'manual',
@@ -47,6 +47,9 @@ export const state = {
     gameMode: 'DM',
     teamsSaved: false,
     savedTournamentTeamIds: [],
+    tournamentType: 'custom',
+    tournamentSchedule: [],
+    currentScheduleGameId: '',
     gamesCreated: false,
     currentGameId: '',
     nextGameNumber: 1,
@@ -61,6 +64,7 @@ export const state = {
   },
   activeTeamAId: 'team1',
   activeTeamBId: 'team2',
+  requireMvp: true,
   uiState: {
     penaltiesCollapsed: true,
   },

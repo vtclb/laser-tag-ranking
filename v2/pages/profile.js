@@ -10,7 +10,7 @@ import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/nami
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
 
-const placeholder = '../assets/default-avatar.svg';
+const placeholder = './assets/default-avatar.svg';
 
 function esc(v) {
   return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -143,23 +143,106 @@ function getRankProgress(points) {
   const pointsValue = num(points);
 
   if (pointsValue === null) {
-    return { percent: 0, currentMin: 0, nextMin: null, remain: null, nextRank: null, isMax: false };
+    return { percent: 0, currentRank: null, currentMin: 0, nextMin: null, remain: null, nextRank: null, isMax: false, isValid: false };
   }
 
   const progress = getNextRankProgress(pointsValue);
 
   return {
     percent: progress.progress * 100,
+    currentRank: progress.currentRank,
     currentMin: progress.currentMin,
     nextMin: progress.nextMin,
     remain: progress.pointsToNext,
     nextRank: progress.nextRank,
-    isMax: progress.isMaxRank
+    isMax: progress.isMaxRank,
+    isValid: true
   };
 }
 
 function metricMini({ label, value, tone = '' }) {
   return `<article class="profile-metric ${tone}"><strong>${esc(val(value))}</strong><span>${esc(label)}</span></article>`;
+}
+
+function renderRankProgress({ progress, currentRank }) {
+  const safePercent = Math.max(0, Math.min(100, Number(progress?.percent || 0)));
+  const shownCurrentRank = progress?.currentRank || currentRank || '—';
+
+  if (!progress?.isValid) {
+    return `<div class="profile-rank-progress-card">
+      <div class="profile-rank-progress-card__head">
+        <span>Прогрес рангу</span>
+        <strong>Дані рейтингу недоступні</strong>
+      </div>
+      <div class="profile-rank-progress-card__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span style="width:0%"></span></div>
+      <p class="profile-note">Потрібні коректні очки, щоб показати прогрес до наступного рангу.</p>
+    </div>`;
+  }
+
+  if (progress.isMax) {
+    return `<div class="profile-rank-progress-card is-max">
+      <div class="profile-rank-progress-card__head">
+        <span>Прогрес рангу</span>
+        <strong>Максимальний ранг</strong>
+      </div>
+      <div class="profile-rank-progress-card__route"><strong>${esc(val(shownCurrentRank))}</strong><span>100%</span></div>
+      <div class="profile-rank-progress-card__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span style="width:100%"></span></div>
+      <p class="profile-note">Максимальний ранг досягнуто.</p>
+    </div>`;
+  }
+
+  return `<div class="profile-rank-progress-card">
+    <div class="profile-rank-progress-card__head">
+      <span>Прогрес рангу</span>
+      <strong>${safePercent.toFixed(0)}% до ${esc(val(progress.nextRank))}</strong>
+    </div>
+    <div class="profile-rank-progress-card__route"><strong>${esc(val(shownCurrentRank))} → ${esc(val(progress.nextRank))}</strong><span>${safePercent.toFixed(0)}%</span></div>
+    <div class="profile-rank-progress-card__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(safePercent)}"><span style="width:${safePercent.toFixed(1)}%"></span></div>
+    <p class="profile-note">Ще ${esc(val(progress.remain))} очок до рангу ${esc(val(progress.nextRank))}.</p>
+  </div>`;
+}
+
+function renderShareProfileBlock({ displayNick, currentRank, points, profileLeagueContext }) {
+  const safePoints = num(points);
+  const leagueLabel = leagueLabelUA(profileLeagueContext);
+  return `<section class="profile-section profile-share">
+    <div class="profile-share__content">
+      <div>
+        <h2 class="profile-section__title">Поділитися профілем</h2>
+        <p class="profile-muted">Коротке посилання на поточний профіль гравця.</p>
+      </div>
+      <div class="profile-share__summary" aria-label="Коротке резюме профілю">
+        <span><small>Гравець</small><b>${esc(displayNick || 'Гравець')}</b></span>
+        <span><small>Ранг</small><b>${esc(val(currentRank))}</b></span>
+        <span><small>Очки</small><b>${safePoints === null ? '—' : esc(String(safePoints))}</b></span>
+        <span><small>Ліга</small><b>${esc(leagueLabel)}</b></span>
+      </div>
+    </div>
+    <div class="profile-share__actions">
+      <button type="button" class="btn profile-share__copy" id="profileCopyLinkBtn">Скопіювати посилання</button>
+      <p class="profile-share__status" id="profileShareStatus" aria-live="polite"></p>
+    </div>
+  </section>`;
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const input = document.createElement('input');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.style.position = 'fixed';
+  input.style.left = '-9999px';
+  input.style.top = '0';
+  document.body.append(input);
+  input.select();
+  input.setSelectionRange(0, input.value.length);
+  const ok = document.execCommand('copy');
+  input.remove();
+  return ok;
 }
 
 function renderCareerHighlights(highlights = {}) {
@@ -257,16 +340,16 @@ function meterLabel(level) {
 function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNick, currentRank, topSeason }) {
   const points = livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points;
   const place = livePlayer?.place ?? topSeason?.place ?? topSeason?.finalPlace;
-  const progress = getRankProgress(points, currentRank);
   const seasonLabel = formatSeasonTitleUA(currentSeason?.uiLabel ?? topSeason?.seasonTitle ?? 'Поточний сезон');
   const leagueLabel = leagueLabelUA(profileLeagueContext);
+  const safePoints = num(points);
 
   return `
     <article class="profile-section profile-hero ${rankClass(currentRank)}">
       <a class="btn btn--secondary profile-hero__back" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">← До ліги</a>
       <div class="profile-hero__top">
         <div class="profile-avatar-frame ${rankClass(currentRank)}">
-          <img class="avatar" src="${esc(topSeason?.avatar ?? livePlayer?.avatarUrl ?? placeholder)}" alt="${esc(displayNick)}" onerror="this.src='${placeholder}'">
+          <img class="avatar" src="${esc(topSeason?.avatar ?? livePlayer?.avatarUrl ?? placeholder)}" alt="${esc(displayNick || 'Аватар гравця')}" onerror="this.onerror=null;this.src='${placeholder}'">
         </div>
         <div class="profile-meta">
           <h1 class="name">${esc(displayNick)}</h1>
@@ -276,20 +359,10 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
             <span class="profile-status-badge profile-status-badge--rank">Ранг ${esc(val(currentRank))}</span>
           </div>
         </div>
-        <div class="profile-rank-badge ${rankClass(currentRank)}" data-rank="${esc(String(currentRank || 'F').toLowerCase())}">
-          <p class="profile-rank-label">Поточний ранг</p>
-          <strong class="profile-rank-value">${esc(val(currentRank))}</strong>
+        <div class="profile-hero__score">
+          <strong>${safePoints === null ? '—' : esc(String(safePoints))}</strong>
+          <span>очок</span>
         </div>
-      </div>
-      <div class="profile-progress">
-        <div class="profile-rank-progress__labels">
-          <span>Прогрес до наступного рангу</span>
-          <strong>${progress.isMax ? 'Максимальний ранг досягнуто' : `${progress.percent.toFixed(0)}% до ${progress.nextRank}`}</strong>
-        </div>
-        <div class="profile-rank-progress progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress.percent)}">
-          <span style="width:${progress.percent.toFixed(1)}%"></span>
-        </div>
-        <p class="profile-note">${progress.isMax ? 'Максимальний ранг досягнуто' : `Ще ${val(progress.remain)} очок до рангу ${val(progress.nextRank)}.`}</p>
       </div>
     </article>
   `;
@@ -390,6 +463,94 @@ function renderGameAnalysis({ livePlayer, topSeason }) {
       </article>
     </section>
   `;
+}
+
+function mvpRoleLabel(mvpTotal, games) {
+  const mvp = num(mvpTotal) ?? 0;
+  const totalGames = num(games) ?? 0;
+  const ratio = totalGames > 0 ? mvp / totalGames : 0;
+  if (mvp >= 10 || ratio >= .35) return 'Перша роль';
+  if (mvp >= 4 || ratio >= .15) return 'Стабільний impact';
+  return 'Рідко MVP';
+}
+
+function renderPerformanceSnapshot({ livePlayer, topSeason }) {
+  const wins = livePlayer?.wins ?? topSeason?.wins;
+  const losses = livePlayer?.losses ?? topSeason?.losses;
+  const draws = livePlayer?.draws ?? topSeason?.draws;
+  const wr = livePlayer?.winRate ?? topSeason?.winRate ?? topSeason?.winrate;
+  const games = livePlayer?.matches ?? topSeason?.matches;
+  const battles = livePlayer?.battles ?? topSeason?.rounds;
+  const insights = resolveGameplayInsights({
+    wins,
+    losses,
+    draws,
+    wr,
+    mvp: livePlayer?.mvpTotal ?? topSeason?.mvpTotal,
+    delta: livePlayer?.delta ?? topSeason?.delta ?? topSeason?.ratingDelta,
+    place: livePlayer?.place ?? topSeason?.place ?? topSeason?.finalPlace,
+    games
+  });
+
+  return `<section class="profile-section profile-performance">
+    <h2 class="profile-section__title">Performance Snapshot</h2>
+    <div class="profile-performance-grid">
+      <article class="profile-performance-card">
+        <span>Форма</span>
+        <strong>${esc(insights.formLabel)}</strong>
+      </article>
+      <article class="profile-performance-card">
+        <span>Баланс</span>
+        <strong>${esc(val(wins, '0'))}В · ${esc(val(losses, '0'))}П · ${esc(val(draws, '0'))}Н</strong>
+      </article>
+      <article class="profile-performance-card">
+        <span>Активність</span>
+        <strong>${esc(val(games ?? insights.totalMatches, '0'))} ігор · ${esc(val(battles, '0'))} боїв</strong>
+      </article>
+      <article class="profile-performance-card">
+        <span>Вплив</span>
+        <strong>${meterLabel(insights.impactLevel)}</strong>
+      </article>
+    </div>
+  </section>`;
+}
+
+function renderPlayerAnalysis({ livePlayer, topSeason }) {
+  const games = livePlayer?.matches ?? topSeason?.matches;
+  const wr = livePlayer?.winRate ?? topSeason?.winRate ?? topSeason?.winrate;
+  const mvpTotal = livePlayer?.mvpTotal ?? topSeason?.mvpTotal;
+  const delta = livePlayer?.delta ?? topSeason?.delta ?? topSeason?.ratingDelta;
+  const insights = resolveGameplayInsights({
+    wins: livePlayer?.wins ?? topSeason?.wins,
+    losses: livePlayer?.losses ?? topSeason?.losses,
+    draws: livePlayer?.draws ?? topSeason?.draws,
+    wr,
+    mvp: mvpTotal,
+    delta,
+    place: livePlayer?.place ?? topSeason?.place ?? topSeason?.finalPlace,
+    games
+  });
+  const analysisText = insights.impactLevel === 'high'
+    ? 'Гравець тримає сильний темп сезону: помітний MVP-impact, хороший приріст і стабільна присутність у грі.'
+    : 'Гравець має базу для росту: варто тримати ритм і збільшувати вплив у ключових матчах.';
+  const strengths = insights.strengths.length ? insights.strengths : ['Підтримує стабільну базу для росту'];
+  const growth = insights.growth.length ? insights.growth : ['Підтримувати поточний темп гри'];
+
+  return `<section class="profile-section profile-analysis-v3">
+    <h2 class="profile-section__title">Профіль гравця</h2>
+    <p class="profile-analysis-line">${esc(insights.playStyle)} стиль · ${esc(insights.activityLevel.toLowerCase())} активність · ${esc(mvpRoleLabel(mvpTotal, games))}</p>
+    <p class="profile-analysis-note">${esc(analysisText)}</p>
+    <div class="profile-analysis-lists">
+      <div>
+        <h3>Сильні сторони</h3>
+        <ul>${strengths.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <h3>Зони росту</h3>
+        <ul>${growth.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+      </div>
+    </div>
+  </section>`;
 }
 
 function renderSeasonTabs(container, tabs, selectedId) {
@@ -542,21 +703,31 @@ export async function initProfilePage(params = {}) {
     const seasonRowsById = new Map(seasonRows.map((row) => [row.seasonId, row]));
     const topSeason = seasonRows[0] || {};
     const currentRank = String(livePlayer?.rankLetter || topSeason?.rank || profile?.allTime?.bestRank || 'F').toUpperCase();
+    const profilePoints = livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points;
+    const rankProgress = getRankProgress(profilePoints);
 
     root.innerHTML = `
       <section class="profile-page">
         <div class="profile-shell">
         ${renderHero({ profileLeagueContext, livePlayer: livePlayer || {}, currentSeason, displayNick, currentRank, topSeason })}
+        ${renderRankProgress({ progress: rankProgress, currentRank })}
         ${renderCompactStats({ livePlayer: livePlayer || {}, topSeason })}
-        ${renderGameAnalysis({ livePlayer: livePlayer || {}, topSeason })}
+        ${renderPerformanceSnapshot({ livePlayer: livePlayer || {}, topSeason })}
+        ${renderPlayerAnalysis({ livePlayer: livePlayer || {}, topSeason })}
         ${renderCareerHighlights(profile?.highlights || {})}
 
         <section class="profile-section profile-priority-history">
-          <h2 class="profile-section__title">Сезони</h2>
+          <h2 class="profile-section__title">Детальна статистика</h2>
           <div class="profile-season-tabs" id="seasonTabs"></div>
           <div id="seasonSummaryHost"></div>
           <div id="seasonLogsHost"></div>
         </section>
+        ${renderShareProfileBlock({
+    displayNick,
+    currentRank,
+    points: profilePoints,
+    profileLeagueContext
+  })}
         </div>
       </section>
     `;
@@ -564,6 +735,19 @@ export async function initProfilePage(params = {}) {
     const seasonTabsEl = root.querySelector('#seasonTabs');
     const summaryEl = root.querySelector('#seasonSummaryHost');
     const logsEl = root.querySelector('#seasonLogsHost');
+    const copyLinkBtn = root.querySelector('#profileCopyLinkBtn');
+    const shareStatus = root.querySelector('#profileShareStatus');
+
+    copyLinkBtn?.addEventListener('click', async () => {
+      const shareUrl = window.location.href;
+      try {
+        const copied = await copyTextToClipboard(shareUrl);
+        if (!copied) throw new Error('copy failed');
+        if (shareStatus) shareStatus.textContent = 'Посилання скопійовано';
+      } catch {
+        if (shareStatus) shareStatus.textContent = 'Не вдалося скопіювати посилання';
+      }
+    });
 
     const available = seasonRows
       .map((season) => {

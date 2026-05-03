@@ -986,7 +986,7 @@ async function init() {
       const selected = state.playersState.selected.length;
       const teamCount = state.teamsState.teamCount;
       if (selected < teamCount) {
-        setStatus({ state: 'error', text: `Недостатньо гравців для ${teamCount} команд. Мінімум: ${teamCount}.`, retryVisible: false });
+        setStatus({ state: 'error', text: 'Недостатньо гравців для обраної кількості команд', retryVisible: false });
         renderAndSync();
         return;
       }

@@ -818,7 +818,8 @@ export function bindUiEvents(handlers) {
     const penaltiesToggle = e.target.closest('[data-toggle-penalties]');
     const matchMode = e.target.closest('[data-match-mode]')?.dataset.matchMode;
     const balanceMode = e.target.closest('[data-balance-mode]')?.dataset.balanceMode;
-    const balancePrimary = e.target.closest('[data-balance-primary]')?.dataset.balancePrimary;
+    const balancePrimaryBtn = e.target.closest('[data-role="balance-primary-action"]');
+    const balancePrimary = balancePrimaryBtn?.dataset.balancePrimary;
     const eventMode = e.target.closest('[data-event-mode]')?.dataset.eventMode;
     const createTournament = e.target.closest('[data-tournament-create]');
     const saveTeams = e.target.closest('[data-tournament-save-teams]');
@@ -872,10 +873,11 @@ export function bindUiEvents(handlers) {
     if (penaltiesToggle) handlers.onTogglePenalties();
     if (matchMode) handlers.onMatchMode(matchMode);
     if (balanceMode) handlers.onBalanceMode(balanceMode);
-    if (balancePrimary) {
+    if (balancePrimaryBtn) {
       e.preventDefault();
       e.stopPropagation();
-      if (balancePrimary === 'manual') handlers.onManualBalance();
+      const mode = balancePrimary === 'manual' ? 'manual' : (balancePrimary === 'auto' ? 'auto' : (state.app.mode === 'manual' ? 'manual' : 'auto'));
+      if (mode === 'manual') handlers.onManualBalance();
       else handlers.onAutoBalance();
       return;
     }

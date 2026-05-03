@@ -1,5 +1,5 @@
 function sum(arr) {
-  return arr.reduce((s, p) => s + (Number(p.pts) || 0), 0);
+  return arr.reduce((s, p) => s + (Number(p.pts ?? p.points) || 0), 0);
 }
 
 export function autoBalance2(players) {
@@ -35,9 +35,9 @@ export function autoBalance2(players) {
 }
 
 export function balanceIntoNTeams(players, n) {
-  const teamCount = Math.min(4, Math.max(2, Number(n) || 2));
-  const sorted = [...players].sort((a, b) => ((b.pts || 0) - (a.pts || 0)) || a.nick.localeCompare(b.nick, 'uk'));
-  const teams = { team1: [], team2: [], team3: [], team4: [] };
+  const teamCount = Math.min(6, Math.max(2, Number(n) || 2));
+  const sorted = [...players].sort((a, b) => ((Number(b.pts ?? b.points) || 0) - (Number(a.pts ?? a.points) || 0)) || a.nick.localeCompare(b.nick, 'uk'));
+  const teams = { team1: [], team2: [], team3: [], team4: [], team5: [], team6: [] };
   const targets = Array.from({ length: teamCount }, (_, i) => Math.floor(players.length / teamCount) + (i < players.length % teamCount ? 1 : 0));
 
   for (const player of sorted) {

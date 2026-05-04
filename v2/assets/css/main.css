@@ -12253,6 +12253,19 @@ body.theme-game .gameday-v2 .gameday-player-row__delta {
   line-height: 1 !important;
 }
 
+body.theme-game .gameday-v2 .gameday-player-row__mvp {
+  font-weight: 900 !important;
+  letter-spacing: .02em !important;
+}
+
+body.theme-game .gameday-v2 .gameday-player-row__mvp.is-accent {
+  color: #f8d766 !important;
+}
+
+body.theme-game .gameday-v2 .gameday-player-row__mvp.is-muted {
+  color: rgba(205, 222, 248, .56) !important;
+}
+
 body.theme-game .gameday-v2 .gameday-match-list {
   display: grid !important;
   gap: 8px !important;

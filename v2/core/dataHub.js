@@ -8,7 +8,7 @@ import { makeDataStatus } from './dataStatus.js';
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260517-logs1500';
+const SHEET_CACHE_VERSION = 'sheets-20260517-logs1500-daydelta';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 
@@ -2560,9 +2560,24 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     const key = normalizeHeader(entry.nick);
     deltaByNick.set(key, (deltaByNick.get(key) || 0) + (Number(entry.delta) || 0));
   });
+  const latestPointsBeforeDay = new Map();
+  parseLogs(logsSheet || { header: [], rows: [] }).forEach((entry) => {
+    const key = normalizeHeader(entry.nick);
+    if (!key || entry.league !== league || !Number.isFinite(entry.newPoints) || !entry.date || entry.date >= selectedDate) return;
+    const current = latestPointsBeforeDay.get(key);
+    if (!current || String(entry.timestamp || '').localeCompare(String(current.timestamp || '')) > 0) {
+      latestPointsBeforeDay.set(key, entry);
+    }
+  });
 
   const allAfter = tableNow.map((row) => ({ nick: row.nick, key: normalizeHeader(row.nick), points: Number(row.points) || 0 }));
-  const allBefore = allAfter.map((row) => ({ ...row, points: row.points - (deltaByNick.get(row.key) || 0) }));
+  const resolveDayDelta = (key, pointsAfter) => {
+    if (deltaByNick.has(key)) return deltaByNick.get(key) || 0;
+    const previous = latestPointsBeforeDay.get(key);
+    if (!previous || !Number.isFinite(pointsAfter) || !Number.isFinite(previous.newPoints)) return 0;
+    return pointsAfter - previous.newPoints;
+  };
+  const allBefore = allAfter.map((row) => ({ ...row, points: row.points - resolveDayDelta(row.key, row.points) }));
   const sortPlayers = (list = []) => [...list].sort((a, b) => b.points - a.points || a.nick.localeCompare(b.nick, 'uk'));
   const afterPlace = new Map(sortPlayers(allAfter).map((row, index) => [row.key, index + 1]));
   const beforePlace = new Map(sortPlayers(allBefore).map((row, index) => [row.key, index + 1]));
@@ -2573,13 +2588,14 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     if (!dailyStats.has(key)) {
       const now = nowByNick.get(key);
       const pointsAfter = Number(now?.points) || 0;
-      const pointsBefore = pointsAfter - (deltaByNick.get(key) || 0);
+      const delta = resolveDayDelta(key, pointsAfter);
+      const pointsBefore = pointsAfter - delta;
       dailyStats.set(key, {
         nick,
         avatarUrl: avatarsMap.get(key) || '',
         pointsBefore,
         pointsAfter,
-        delta: deltaByNick.get(key) || 0,
+        delta,
         rankBefore: rankFromPoints(pointsBefore),
         rankAfter: rankFromPoints(pointsAfter),
         placeBefore: beforePlace.get(key) || null,

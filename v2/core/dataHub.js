@@ -27,7 +27,7 @@ const SHEET_RANGES = {
   kids: 'A1:Z600',
   sundaygames: 'A1:Z600',
   games: 'A1:Z5000',
-  logs: 'A1:Z5000',
+  logs: 'A1:Z1500',
   avatars: 'A1:Z2000',
   autumn2025: 'A1:Z5000',
   ocinb2025: 'A1:Z5000',

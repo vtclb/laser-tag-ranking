@@ -1132,8 +1132,57 @@ function parseLogs(sheet) {
     timestamp: find(['timestamp', 'time', 'datetime', 'date']),
     league: find(['league', 'division']),
     nick: find(['nickname', 'nick', 'player']),
-    delta: find(['delta', 'pointsdelta', 'pointdelta']),
-    newPoints: find(['newpoints', 'points', 'pts'])
+    delta: find([
+      'delta',
+      'δ',
+      'δ rating',
+      'δ рейтинг',
+      'приріст',
+      'приріст рейтингу',
+      'ratingdelta',
+      'rating_delta',
+      'rating change',
+      'ratingchange',
+      'rating_change',
+      'rankdelta',
+      'rank_delta',
+      'mmrdelta',
+      'mmr_delta',
+      'mmrchange',
+      'mmr_change',
+      'pointsdelta',
+      'points_delta',
+      'points change',
+      'pointschange',
+      'points_change',
+      'pointdelta',
+      'seasondelta',
+      'season_delta',
+      'seasonchange',
+      'season_change',
+      'change',
+      'gain',
+      'diff',
+      'ratingdiff',
+      'rating_diff',
+      'deltarating',
+      'delta_rating'
+    ]),
+    newPoints: find([
+      'newpoints',
+      'new_points',
+      'pointsafter',
+      'points_after',
+      'ratingafter',
+      'rating_after',
+      'currentpoints',
+      'current_points',
+      'points',
+      'pts',
+      'rating',
+      'score',
+      'mmr'
+    ])
   };
 
   return (sheet.rows || []).map((row) => {
@@ -1190,8 +1239,57 @@ function normalizeLogs(rows = [], header = []) {
   const idxTimestamp = findHeaderIndex(header, ['timestamp', 'time', 'datetime', 'date']);
   const idxLeague = findHeaderIndex(header, ['league', 'division']);
   const idxNick = findHeaderIndex(header, ['nickname', 'nick', 'player']);
-  const idxDelta = findHeaderIndex(header, ['delta', 'pointsdelta', 'pointdelta']);
-  const idxNewPoints = findHeaderIndex(header, ['newpoints', 'points', 'pts']);
+  const idxDelta = findHeaderIndex(header, [
+    'delta',
+    'δ',
+    'δ rating',
+    'δ рейтинг',
+    'приріст',
+    'приріст рейтингу',
+    'ratingdelta',
+    'rating_delta',
+    'rating change',
+    'ratingchange',
+    'rating_change',
+    'rankdelta',
+    'rank_delta',
+    'mmrdelta',
+    'mmr_delta',
+    'mmrchange',
+    'mmr_change',
+    'pointsdelta',
+    'points_delta',
+    'points change',
+    'pointschange',
+    'points_change',
+    'pointdelta',
+    'seasondelta',
+    'season_delta',
+    'seasonchange',
+    'season_change',
+    'change',
+    'gain',
+    'diff',
+    'ratingdiff',
+    'rating_diff',
+    'deltarating',
+    'delta_rating'
+  ]);
+  const idxNewPoints = findHeaderIndex(header, [
+    'newpoints',
+    'new_points',
+    'pointsafter',
+    'points_after',
+    'ratingafter',
+    'rating_after',
+    'currentpoints',
+    'current_points',
+    'points',
+    'pts',
+    'rating',
+    'score',
+    'mmr'
+  ]);
 
   return (Array.isArray(rows) ? rows : []).map((row) => {
     const timestamp = String(row?.[idxTimestamp] || '').trim();

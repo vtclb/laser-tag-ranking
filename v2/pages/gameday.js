@@ -35,6 +35,19 @@ function fmtDelta(v) {
   return `${n > 0 ? '+' : ''}${n}`;
 }
 
+function fmtOptionalDelta(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '—';
+  return fmtDelta(n);
+}
+
+function deltaTone(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 'neu';
+  return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neu';
+}
+
 function fmtRank(value = '') {
   return String(value || '—').trim() || '—';
 }
@@ -199,6 +212,7 @@ function computeTeamStats(team = [], pointsChanges = [], roster = new Map()) {
   const keys = new Set(team.map((nick) => canonicalNick(nick)));
   let totalRating = 0;
   let totalDelta = 0;
+  let hasDelta = false;
 
   team.forEach((nick) => {
     const p = roster.get(canonicalNick(nick));
@@ -206,18 +220,24 @@ function computeTeamStats(team = [], pointsChanges = [], roster = new Map()) {
   });
 
   pointsChanges.forEach((item) => {
-    if (keys.has(canonicalNick(item.nick))) totalDelta += Number(item.delta) || 0;
+    if (!keys.has(canonicalNick(item.nick))) return;
+    const delta = Number(item.delta);
+    if (!Number.isFinite(delta)) return;
+    totalDelta += delta;
+    hasDelta = true;
   });
 
-  return { totalRating, totalDelta };
+  return { totalRating, totalDelta: hasDelta ? totalDelta : null, hasDelta };
 }
 
 function getPlayerGameDelta(nick = '', pointsChanges = []) {
   const key = canonicalNick(nick);
-  if (!key) return 0;
+  if (!key) return null;
   const item = (Array.isArray(pointsChanges) ? pointsChanges : [])
     .find((change) => canonicalNick(change?.nick) === key);
-  return Number(item?.delta) || 0;
+  if (!item) return null;
+  const delta = Number(item.delta);
+  return Number.isFinite(delta) ? delta : null;
 }
 
 function buildPlayersTable(players = [], league = 'sundaygames', matches = []) {
@@ -279,9 +299,10 @@ function buildMatchCard(match = {}, roster = new Map()) {
   const mvpLabel = mvpRows.length
     ? mvpRows.map((row) => row.nick).filter(Boolean).join(' · ')
     : 'MVP ще не визначено';
+  const hasPointChanges = Array.isArray(match.pointsChanges) && match.pointsChanges.length > 0;
   const teamTotals = teams.map(([key, members]) => {
     const stats = computeTeamStats(members, match.pointsChanges || [], roster);
-    return `${teamLabel(key)}: ${fmtDelta(stats.totalDelta)}`;
+    return `${teamLabel(key)}: ${fmtOptionalDelta(stats.totalDelta)}`;
   }).join(' · ');
 
   return `
@@ -321,19 +342,20 @@ function buildMatchCard(match = {}, roster = new Map()) {
                     <h3>${teamLabel(key)}</h3>
                     ${isWinner ? '<span class="gameday-team-box__winner-badge">переможець</span>' : isDraw ? '<span class="gameday-team-box__winner-badge">нічия</span>' : winnerKey ? '<span class="gameday-team-box__winner-badge">поразка</span>' : ''}
                   </div>
-                  <span class="gameday-team-box__delta ${stats.totalDelta > 0 ? 'pos' : stats.totalDelta < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(stats.totalDelta))}</span>
+                  <span class="gameday-team-box__delta ${deltaTone(stats.totalDelta)}">${esc(fmtOptionalDelta(stats.totalDelta))}</span>
                 </div>
                 <ul class="gameday-team-player-list">
                   ${members.map((nick) => {
                     const delta = getPlayerGameDelta(nick, match.pointsChanges || []);
-                    const tone = delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'neu';
-                    return `<li><span>${esc(nick)}</span><b class="${tone}">${esc(fmtDelta(delta))}</b></li>`;
+                    return `<li><span>${esc(nick)}</span><b class="${deltaTone(delta)}">${esc(fmtOptionalDelta(delta))}</b></li>`;
                   }).join('')}
                 </ul>
                 <div class="gameday-team-box__foot">${stats.totalRating || 0} pts сумарно</div>
               </section>`;
           }).join('')}
         </div>
+
+        ${hasPointChanges ? '' : '<p class="gameday-match-details__note">Бали цього матчу тимчасово недоступні.</p>'}
 
         <section class="gameday-match-summary">
           <div><span>Підсумок</span><strong>${esc(prettyWinner(match.winner))}</strong></div>

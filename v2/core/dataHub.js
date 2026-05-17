@@ -8,9 +8,13 @@ import { makeDataStatus } from './dataStatus.js';
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260517-logs1500-daydelta';
+const SHEET_CACHE_VERSION = 'sheets-20260517-logs1500-matchdelta';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
+
+const GAME_WIN_POINTS = 20;
+const MVP_BONUS_POINTS = { mvp1: 12, mvp2: 7, mvp3: 3 };
+const RANK_POINT_PENALTIES = { F: 0, E: -4, D: -6, C: -8, B: -10, A: -12, S: -14 };
 
 const TTL = {
   home: 60_000,
@@ -429,6 +433,11 @@ export function rankFromPoints(points = 0) {
 }
 
 export function rankMeta(rank = 'F') { return RANK_META[rank] || RANK_META.F; }
+
+function rankPenaltyForPoints(points = 0) {
+  const rank = rankFromPoints(points);
+  return RANK_POINT_PENALTIES[rank] ?? 0;
+}
 
 function isRankBetter(nextRank = null, currentRank = null) {
   const next = String(nextRank || '').trim().toUpperCase();
@@ -2581,6 +2590,55 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const sortPlayers = (list = []) => [...list].sort((a, b) => b.points - a.points || a.nick.localeCompare(b.nick, 'uk'));
   const afterPlace = new Map(sortPlayers(allAfter).map((row, index) => [row.key, index + 1]));
   const beforePlace = new Map(sortPlayers(allBefore).map((row, index) => [row.key, index + 1]));
+  const runningPointsByNick = new Map(allBefore.map((row) => [row.key, row.points]));
+  const buildFallbackMatchChanges = (teams = {}, winner = '', match = {}) => {
+    const mvpByNick = new Map([
+      [normalizeHeader(match.mvp1), MVP_BONUS_POINTS.mvp1],
+      [normalizeHeader(match.mvp2), MVP_BONUS_POINTS.mvp2],
+      [normalizeHeader(match.mvp3), MVP_BONUS_POINTS.mvp3]
+    ].filter(([key]) => key));
+    const changes = [];
+    Object.entries(teams).forEach(([teamKey, members]) => {
+      (Array.isArray(members) ? members : []).forEach((nick) => {
+        const key = normalizeHeader(nick);
+        const before = runningPointsByNick.get(key);
+        const hasBefore = Number.isFinite(before);
+        let delta = winner === teamKey ? GAME_WIN_POINTS : 0;
+        delta += mvpByNick.get(key) || 0;
+        delta += hasBefore ? rankPenaltyForPoints(before) : 0;
+        const newPoints = hasBefore ? before + delta : null;
+        changes.push({ nick, delta, newPoints, source: 'computed' });
+      });
+    });
+    return changes;
+  };
+  const mergeMatchChanges = (exactChanges = [], fallbackChanges = []) => {
+    const exactByNick = new Map((Array.isArray(exactChanges) ? exactChanges : [])
+      .filter((entry) => normalizeHeader(entry.nick))
+      .map((entry) => [normalizeHeader(entry.nick), entry]));
+    return (Array.isArray(fallbackChanges) ? fallbackChanges : []).map((entry) => {
+      const exact = exactByNick.get(normalizeHeader(entry.nick));
+      if (!exact) return entry;
+      return {
+        nick: exact.nick || entry.nick,
+        delta: Number.isFinite(Number(exact.delta)) ? Number(exact.delta) : entry.delta,
+        newPoints: Number.isFinite(Number(exact.newPoints)) ? Number(exact.newPoints) : entry.newPoints,
+        source: 'logs'
+      };
+    });
+  };
+  const applyRunningPoints = (changes = []) => {
+    (Array.isArray(changes) ? changes : []).forEach((entry) => {
+      const key = normalizeHeader(entry.nick);
+      if (!key) return;
+      const next = Number.isFinite(Number(entry.newPoints))
+        ? Number(entry.newPoints)
+        : (Number.isFinite(runningPointsByNick.get(key)) && Number.isFinite(Number(entry.delta))
+          ? runningPointsByNick.get(key) + Number(entry.delta)
+          : null);
+      if (Number.isFinite(next)) runningPointsByNick.set(key, next);
+    });
+  };
 
   const dailyStats = new Map();
   const touch = (nick) => {
@@ -2623,6 +2681,15 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       if (!Number.isFinite(tsMs) || !Number.isFinite(entry.tsMs)) return true;
       return Math.abs(entry.tsMs - tsMs) <= 90_000;
     });
+    const exactChanges = localChanges.map((entry) => ({
+      nick: entry.nick,
+      delta: Number.isFinite(Number(entry.delta)) ? Number(entry.delta) : 0,
+      newPoints: Number.isFinite(Number(entry.newPoints)) ? Number(entry.newPoints) : null,
+      source: 'logs'
+    }));
+    const fallbackChanges = buildFallbackMatchChanges(teams, winner, m);
+    const pointsChanges = mergeMatchChanges(exactChanges, fallbackChanges);
+    applyRunningPoints(pointsChanges);
 
     Object.entries(teams).forEach(([teamKey, members]) => {
       members.forEach((nick) => {
@@ -2650,7 +2717,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       series: m.rawSeries || '',
       seriesSummary: formatSeriesSummaryCompact(parseSeriesWins(m.rawSeries || ''), teams),
       link: m.link || '',
-      pointsChanges: localChanges.map((entry) => ({ nick: entry.nick, delta: Number(entry.delta) || 0, newPoints: entry.newPoints }))
+      pointsChanges
     };
   });
 

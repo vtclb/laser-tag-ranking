@@ -8,6 +8,7 @@ import { makeDataStatus } from './dataStatus.js';
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
+const SHEET_CACHE_VERSION = 'sheets-20260517-logs1500';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 
@@ -719,7 +720,7 @@ async function readSheet(sheetName, options = {}) {
   const normalized = normalizeHeader(sheetName).replace(/\s+/g, '');
   const aliases = SHEET_ALIASES[normalized] || SHEET_ALIASES[normalizeHeader(sheetName)] || [];
   const variants = [sheetName, ...aliases].slice(0, 3);
-  const key = `sheet:${variants.join('|')}`;
+  const key = `sheet:${SHEET_CACHE_VERSION}:${variants.join('|')}`;
   const cached = readCache(key, TTL.sheet) || readStorageCache(key, 10 * 60_000);
   if (cached) return cached;
   if (inFlight.has(key)) return inFlight.get(key);

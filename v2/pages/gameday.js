@@ -106,6 +106,39 @@ function getPlayerMvpCount(player = {}, matches = []) {
   return directCount !== null ? directCount : countPlayerMvpFromMatches(player, matches);
 }
 
+function firstFiniteNumber(...values) {
+  for (const value of values) {
+    if (value === undefined || value === null || value === '') continue;
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function getPlayerDayDelta(player = {}) {
+  return firstFiniteNumber(
+    player?.delta,
+    player?.ratingDelta,
+    player?.pointsDelta,
+    player?.dayDelta,
+    player?.scoreDelta,
+    player?.change,
+    player?.gain,
+    player?.dayPoints
+  ) ?? 0;
+}
+
+function getPlayerTotalPoints(player = {}) {
+  return firstFiniteNumber(
+    player?.pointsAfter,
+    player?.totalPoints,
+    player?.currentPoints,
+    player?.points,
+    player?.rating,
+    player?.score
+  );
+}
+
 function teamLabel(teamKey = 'team1') {
   const n = Number(String(teamKey).replace('team', ''));
   return Number.isFinite(n) && n > 0 ? `Команда ${n}` : 'Команда';
@@ -195,17 +228,18 @@ function buildPlayersTable(players = [], league = 'sundaygames', matches = []) {
   return `
     <div class="gameday-player-list">
       ${players.map((p, idx) => {
-        const delta = Number(p.delta || 0);
+        const delta = getPlayerDayDelta(p);
         const tone = delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'neu';
         const mvpCount = getPlayerMvpCount(p, matches);
         const mvpTone = mvpCount > 0 ? 'is-accent' : 'is-muted';
+        const totalPoints = getPlayerTotalPoints(p);
         return `
           <a class="gameday-player-row" href="#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(p.nick || '')}">
             <span class="gameday-player-row__place">#${idx + 1}</span>
             <img class="gameday-player-row__avatar" src="${esc(avatarUrl(p))}" alt="${esc(p.nick || 'Аватар гравця')}" loading="lazy" ${avatarFallbackAttr()}>
             <span class="gameday-player-row__main">
               <strong>${esc(p.nick || 'Гравець')}</strong>
-              <span><b class="gameday-rank-letter ${rankClass(p.rankAfter || p.rankLetter)}">${esc(fmtRank(p.rankAfter || p.rankLetter))}</b> · ${esc(String(p.pointsAfter ?? 0))} очок · ${esc(`${p.matches ?? 0} іг / ${p.wins ?? 0} пер`)} · <b class="gameday-player-row__mvp ${mvpTone}">MVP ${esc(String(mvpCount))}</b></span>
+              <span><b class="gameday-rank-letter ${rankClass(p.rankAfter || p.rankLetter)}">${esc(fmtRank(p.rankAfter || p.rankLetter))}</b> · ${esc(totalPoints === null ? '—' : String(totalPoints))} очок · ${esc(`${p.matches ?? 0} іг / ${p.wins ?? 0} пер`)} · <b class="gameday-player-row__mvp ${mvpTone}">MVP ${esc(String(mvpCount))}</b></span>
             </span>
             <span class="gameday-player-row__delta ${tone}">${esc(fmtDelta(delta))}</span>
           </a>`;

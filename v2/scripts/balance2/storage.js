@@ -4,6 +4,7 @@ import {
   computeSeriesSummary,
   syncSelectedMap,
   MAX_LOBBY_PLAYERS,
+  MAX_SERIES_ROUNDS,
 } from './state.js';
 
 const KEY = 'balance2:lobby';
@@ -70,10 +71,10 @@ export function restoreLobby() {
   };
 
   const matchState = data?.matchState || {};
-  state.matchState.seriesCount = Math.min(7, Math.max(3, Number(matchState.seriesCount || data?.seriesCount) || 3));
-  const restoredSeries = Array.isArray(matchState.series || data?.series) ? (matchState.series || data.series).slice(0, 7) : [];
+  state.matchState.seriesCount = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(matchState.seriesCount || data?.seriesCount) || 3));
+  const restoredSeries = Array.isArray(matchState.series || data?.series) ? (matchState.series || data.series).slice(0, MAX_SERIES_ROUNDS) : [];
   state.matchState.series = restoredSeries.map((v) => (['0', '1', '2'].includes(String(v)) ? String(v) : '-'));
-  while (state.matchState.series.length < 7) state.matchState.series.push('-');
+  while (state.matchState.series.length < MAX_SERIES_ROUNDS) state.matchState.series.push('-');
   state.matchState.seriesRounds = state.matchState.series.map((v) => (v === '-' ? null : Number(v)));
 
   const oldMatch = matchState.match || data?.match || {};

@@ -18,6 +18,7 @@ import {
   removePlayerFromTeam,
   removePlayerFromAllTeams,
   resolvePlayerByKey,
+  MAX_SERIES_ROUNDS,
 } from './state.js';
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { syncSelectedFromTeamsAndBench } from './manual.js';
@@ -364,8 +365,8 @@ function ensureActiveMatchState() {
 }
 
 function syncSeriesMirror() {
-  const rounds = Array.isArray(state.matchState.seriesRounds) ? state.matchState.seriesRounds.slice(0, 7) : Array(7).fill(null);
-  while (rounds.length < 7) rounds.push(null);
+  const rounds = Array.isArray(state.matchState.seriesRounds) ? state.matchState.seriesRounds.slice(0, MAX_SERIES_ROUNDS) : Array(MAX_SERIES_ROUNDS).fill(null);
+  while (rounds.length < MAX_SERIES_ROUNDS) rounds.push(null);
   state.matchState.seriesRounds = rounds;
   state.matchState.series = rounds.map((value) => (value === null ? '-' : String(value)));
 }
@@ -533,8 +534,8 @@ function mapTournamentResult() {
 }
 
 function resetMatchOnlyState() {
-  state.matchState.seriesRounds = Array(7).fill(null);
-  state.matchState.series = ['-', '-', '-', '-', '-', '-', '-'];
+  state.matchState.seriesRounds = Array(MAX_SERIES_ROUNDS).fill(null);
+  state.matchState.series = Array(MAX_SERIES_ROUNDS).fill('-');
   state.matchState.match.winner = '';
   state.matchState.match.series = '';
   MVP_IDS.forEach((id) => {
@@ -1016,8 +1017,8 @@ async function init() {
       renderAndSync();
     },
     onSeriesCount(count) {
-      state.matchState.seriesCount = Math.min(7, Math.max(3, Number(count) || 3));
-      for (let i = state.matchState.seriesCount; i < 7; i += 1) state.matchState.seriesRounds[i] = null;
+      state.matchState.seriesCount = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(count) || 3));
+      for (let i = state.matchState.seriesCount; i < MAX_SERIES_ROUNDS; i += 1) state.matchState.seriesRounds[i] = null;
       syncSeriesMirror();
       saveLobby();
       renderAndSync();

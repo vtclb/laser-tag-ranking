@@ -1,5 +1,7 @@
 import { rankFromPoints } from '../../core/rankRules.js';
 
+export const MAX_SERIES_ROUNDS = 10;
+
 export const state = {
   app: {
     league: 'kids',
@@ -30,8 +32,8 @@ export const state = {
   },
   matchState: {
     seriesCount: 3,
-    seriesRounds: Array(7).fill(null),
-    series: ['-', '-', '-', '-', '-', '-', '-'],
+    seriesRounds: Array(MAX_SERIES_ROUNDS).fill(null),
+    series: Array(MAX_SERIES_ROUNDS).fill('-'),
     match: { winner: '', series: '', mvp1: '', mvp2: '', mvp3: '', mvp1Key: '', mvp2Key: '', mvp3Key: '', penalties: {} },
   },
   activeMatch: {
@@ -203,8 +205,8 @@ export function getActiveMatchTeams() {
 export function computeSeriesSummary() {
   const { seriesRounds, series, seriesCount } = state.matchState;
   const hasRoundValues = Array.isArray(seriesRounds) && seriesRounds.some((value) => value !== null && value !== undefined);
-  const rounds = hasRoundValues ? seriesRounds.slice(0, 7) : (Array.isArray(series) ? series.slice(0, 7) : []);
-  const count = Math.min(7, Math.max(3, Number(seriesCount) || 3));
+  const rounds = hasRoundValues ? seriesRounds.slice(0, MAX_SERIES_ROUNDS) : (Array.isArray(series) ? series.slice(0, MAX_SERIES_ROUNDS) : []);
+  const count = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(seriesCount) || 3));
   const normalized = rounds.map((r) => {
     const value = Number(r);
     if (r === null || Number.isNaN(value)) return null;
@@ -212,7 +214,7 @@ export function computeSeriesSummary() {
     if (value >= 1 && value <= 4) return value;
     return null;
   });
-  while (normalized.length < 7) normalized.push(null);
+  while (normalized.length < MAX_SERIES_ROUNDS) normalized.push(null);
   const active = normalized.slice(0, count);
   const wins = {
     team1: active.filter((r) => r === 1).length,

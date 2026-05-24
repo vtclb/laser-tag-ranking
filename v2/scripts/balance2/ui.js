@@ -10,6 +10,7 @@ import {
   getPlayerKey,
   TEAM_KEYS,
   TEAM_COUNT_OPTIONS,
+  MAX_SERIES_ROUNDS,
   MAX_LOBBY_PLAYERS,
   normalizeTeamCount,
   getAssignedTeamId,
@@ -631,9 +632,9 @@ export function renderSeriesEditor() {
   const countRoot = document.getElementById('seriesCountOptions');
   if (!root) return;
 
-  const count = Math.min(7, Math.max(3, Number(state.matchState.seriesCount) || 3));
-  const rounds = state.matchState.seriesRounds.slice(0, 7);
-  while (rounds.length < 7) rounds.push(null);
+  const count = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(state.matchState.seriesCount) || 3));
+  const rounds = state.matchState.seriesRounds.slice(0, MAX_SERIES_ROUNDS);
+  while (rounds.length < MAX_SERIES_ROUNDS) rounds.push(null);
 
   if (countRoot) {
     countRoot.querySelectorAll('[data-series-count]').forEach((btn) => {

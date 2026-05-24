@@ -7,10 +7,34 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function toOptionalNumber(value) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 function toText(value, fallback = '—') {
   const text = String(value ?? '').trim();
   return text || fallback;
 }
+
+function parseScorePair(value = '') {
+  const text = String(value ?? '').trim();
+  const match = text.match(/(-?\d+)\s*[:\-]\s*(-?\d+)/);
+  if (!match) return null;
+  return { scoreA: toNumber(match[1]), scoreB: toNumber(match[2]) };
+}
+
+const TOURNAMENT_SCORE_OVERRIDES = {
+  TRN_SUN_20260524_124453: [
+    { a: 'Зірочки', b: 'Капалай', scoreA: 1, scoreB: 4 },
+    { a: 'макото сінкай', b: 'двіжуха', scoreA: 3, scoreB: 3 },
+    { a: 'Зірочки', b: 'макото сінкай', scoreA: 9, scoreB: 0 },
+    { a: 'Капалай', b: 'двіжуха', scoreA: 6, scoreB: 1 },
+    { a: 'Капалай', b: 'макото сінкай', scoreA: 5, scoreB: 0 },
+    { a: 'Зірочки', b: 'двіжуха', scoreA: 5, scoreB: 2 }
+  ]
+};
 
 function normalizeHeaderKey(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
@@ -166,6 +190,7 @@ function normalizeTournamentSheets({ tournamentsRows, teamsRows, gamesRows, play
   gamesRows.forEach((row) => {
     const tid = String(getCell(row, 'tournamentid', 'tournamentId') || '').trim();
     if (!tid || !byId[tid]) return;
+    const scorePair = parseScorePair(getCell(row, 'score', 'result', 'matchscore', 'series'));
     byId[tid].games.push({
       tournamentId: tid,
       gameId: toText(getCell(row, 'gameid', 'gameId'), ''),
@@ -174,6 +199,8 @@ function normalizeTournamentSheets({ tournamentsRows, teamsRows, gamesRows, play
       teamBId: toText(getCell(row, 'teambid', 'teamBId'), ''),
       winnerTeamId: toText(getCell(row, 'winnerteamid', 'winnerTeamId'), ''),
       isDraw: toText(getCell(row, 'isdraw', 'draw'), ''),
+      scoreA: toOptionalNumber(getCell(row, 'scorea', 'scoreA', 'teamascore', 'teamA score', 'teama_score') ?? scorePair?.scoreA),
+      scoreB: toOptionalNumber(getCell(row, 'scoreb', 'scoreB', 'teambscore', 'teamB score', 'teamb_score') ?? scorePair?.scoreB),
       mvpNick: toText(getCell(row, 'mvpnick', 'mvpNick'), ''),
       secondNick: toText(getCell(row, 'secondnick', 'secondNick'), ''),
       thirdNick: toText(getCell(row, 'thirdnick', 'thirdNick'), ''),
@@ -206,6 +233,11 @@ function normalizeTournamentSheets({ tournamentsRows, teamsRows, gamesRows, play
     const tid = String(getCell(row, 'tournamentid', 'tournamentId') || '').trim();
     if (!tid || !byId[tid]) return;
     byId[tid].config.push(row);
+  });
+
+  Object.values(byId).forEach((bucket) => {
+    applyTournamentScoreOverrides(bucket);
+    recalculateTournamentTeamScores(bucket);
   });
 
   return { tournaments, byId };
@@ -425,9 +457,7 @@ function getWinnerLabel(game, teamMap) {
 }
 
 function getMatchScoreLabel(game) {
-  const scoreA = Number(game?.scoreA);
-  const scoreB = Number(game?.scoreB);
-  if (Number.isFinite(scoreA) && Number.isFinite(scoreB)) return `${scoreA}:${scoreB}`;
+  if (hasGameScore(game)) return `${toNumber(game.scoreA)}:${toNumber(game.scoreB)}`;
   return '';
 }
 
@@ -532,6 +562,99 @@ function formatMmrDeltaSummary(game = {}, teamA = 'Команда A', teamB = '�
   return `${teamA} ${deltaA} · ${teamB} ${deltaB}`;
 }
 
+function hasGameScore(game = {}) {
+  return game?.scoreA !== null
+    && game?.scoreA !== undefined
+    && game?.scoreB !== null
+    && game?.scoreB !== undefined
+    && Number.isFinite(Number(game.scoreA))
+    && Number.isFinite(Number(game.scoreB));
+}
+
+function getTeamScorePoints(game = {}, teamId = '') {
+  const id = String(teamId || '').trim();
+  if (!id || !hasGameScore(game)) return null;
+  if (String(game?.teamAId || '').trim() === id) return toNumber(game.scoreA);
+  if (String(game?.teamBId || '').trim() === id) return toNumber(game.scoreB);
+  return null;
+}
+
+function recalculateTournamentTeamScores(bucket = {}) {
+  const teams = Array.isArray(bucket?.teams) ? bucket.teams : [];
+  const games = Array.isArray(bucket?.games) ? bucket.games : [];
+  if (!teams.length || !games.some(hasGameScore)) return;
+
+  const statsByTeam = new Map(teams.map((team) => [String(team?.teamId || '').trim(), {
+    points: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0
+  }]));
+
+  games.forEach((game) => {
+    if (!hasGameScore(game)) return;
+    const teamAId = String(game?.teamAId || '').trim();
+    const teamBId = String(game?.teamBId || '').trim();
+    const winnerId = String(game?.winnerTeamId || '').trim();
+    const scoreA = toNumber(game.scoreA);
+    const scoreB = toNumber(game.scoreB);
+    const isDrawGame = isTruthy(game?.isDraw) || scoreA === scoreB;
+
+    if (statsByTeam.has(teamAId)) statsByTeam.get(teamAId).points += scoreA;
+    if (statsByTeam.has(teamBId)) statsByTeam.get(teamBId).points += scoreB;
+
+    if (isDrawGame) {
+      if (statsByTeam.has(teamAId)) statsByTeam.get(teamAId).draws += 1;
+      if (statsByTeam.has(teamBId)) statsByTeam.get(teamBId).draws += 1;
+      return;
+    }
+
+    if (winnerId && statsByTeam.has(winnerId)) statsByTeam.get(winnerId).wins += 1;
+    const loserId = winnerId === teamAId ? teamBId : winnerId === teamBId ? teamAId : '';
+    if (loserId && statsByTeam.has(loserId)) statsByTeam.get(loserId).losses += 1;
+  });
+
+  teams.forEach((team) => {
+    const stats = statsByTeam.get(String(team?.teamId || '').trim());
+    if (!stats) return;
+    team.points = stats.points;
+    team.wins = stats.wins;
+    team.losses = stats.losses;
+    team.draws = stats.draws;
+  });
+}
+
+function normalizeTeamName(value = '') {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function applyTournamentScoreOverrides(bucket = {}) {
+  const tournamentId = String(bucket?.tournament?.tournamentId || '').trim();
+  const overrides = TOURNAMENT_SCORE_OVERRIDES[tournamentId];
+  const teams = Array.isArray(bucket?.teams) ? bucket.teams : [];
+  const games = Array.isArray(bucket?.games) ? bucket.games : [];
+  if (!Array.isArray(overrides) || !overrides.length || !teams.length || !games.length) return;
+
+  const teamIdByName = new Map(teams.map((team) => [
+    normalizeTeamName(team?.teamName || team?.teamId),
+    String(team?.teamId || '').trim()
+  ]));
+
+  overrides.forEach((override) => {
+    const teamAId = teamIdByName.get(normalizeTeamName(override.a));
+    const teamBId = teamIdByName.get(normalizeTeamName(override.b));
+    if (!teamAId || !teamBId) return;
+    const game = findHeadToHeadGame(games, teamAId, teamBId);
+    if (!game || hasGameScore(game)) return;
+    const storedAId = String(game.teamAId || '').trim();
+    const overrideAIsStoredA = storedAId === teamAId;
+    game.scoreA = overrideAIsStoredA ? override.scoreA : override.scoreB;
+    game.scoreB = overrideAIsStoredA ? override.scoreB : override.scoreA;
+    game.winnerTeamId = override.scoreA === override.scoreB ? '' : (override.scoreA > override.scoreB ? teamAId : teamBId);
+    game.isDraw = override.scoreA === override.scoreB ? 'TRUE' : '';
+  });
+}
+
 function findHeadToHeadGame(games = [], teamAId = '', teamBId = '') {
   const a = String(teamAId || '').trim();
   const b = String(teamBId || '').trim();
@@ -548,12 +671,15 @@ function getMatrixResult(game, rowTeamId = '') {
   const rowId = String(rowTeamId || '').trim();
   const winnerId = String(game?.winnerTeamId || '').trim();
   const isDraw = isTruthy(game?.isDraw) || (!winnerId && String(game?.isDraw || '').trim() !== '');
-  const score = getMatchScoreLabel(game);
+  const rowIsTeamA = String(game?.teamAId || '').trim() === rowId;
+  const rowScore = getTeamScorePoints(game, rowId);
+  const fallbackDelta = rowIsTeamA ? toNumber(game?.teamAMmrDelta) : toNumber(game?.teamBMmrDelta);
+  const pointsLabel = rowScore === null ? formatDelta(fallbackDelta) : String(rowScore);
 
-  if (isDraw) return { label: score || 'D', tone: 'draw' };
-  if (!winnerId) return { label: score || '-', tone: 'pending' };
-  if (winnerId === rowId) return { label: score || 'W', tone: 'win' };
-  return { label: score || 'L', tone: 'loss' };
+  if (isDraw) return { label: pointsLabel, tone: 'draw' };
+  if (!winnerId) return { label: '-', tone: 'pending' };
+  if (winnerId === rowId) return { label: pointsLabel, tone: 'win' };
+  return { label: pointsLabel, tone: 'loss' };
 }
 
 function formatDelta(value = 0) {
@@ -629,22 +755,29 @@ export async function initTournamentsPage(params = {}) {
 
     const selectedId = String(params.selected || params.id || '').trim();
     const grid = createElement('div', 'tournaments-page-active__list');
+    const picker = document.createElement('details');
+    picker.className = 'tournament-picker';
+    const pickerSummary = createElement('summary', 'tournament-picker__button', 'Обрати турнір');
+    picker.append(pickerSummary);
 
     tournaments.forEach((tournament) => {
       const card = createElement('article', 'tournament-card tournament-switcher__item');
       const tournamentId = String(tournament?.tournamentId || '').trim();
 
       card.setAttribute('data-tournament-id', tournamentId);
-      card.append(createElement('h3', 'tournament-card__title', toText(tournament?.name, 'Турнір')));
-
-      const meta = createElement('div', 'tournament-card__meta tournament-statline-group');
       const tournamentDataById = tournamentData.byId?.[tournamentId] || {};
       const teams = Array.isArray(tournamentDataById.teams) ? tournamentDataById.teams : [];
       const games = Array.isArray(tournamentDataById.games) ? tournamentDataById.games : [];
       const players = Array.isArray(tournamentDataById.players) ? tournamentDataById.players : [];
-      meta.append(createSimpleLine(`${getTournamentFormatLabel(tournament, teams, players)} · ${statusLabel(tournament?.status)} · ${formatTournamentDate(tournament?.dateStart)}`));
-      meta.append(createSimpleLine(`${teams.length} команд · ${games.length} матчів · ${players.length} гравців`));
-      card.append(meta);
+      card.classList.add(`tournament-card--${statusClass(tournament?.status).replace('is-', '')}`);
+
+      const head = createElement('div', 'tournament-card__head');
+      head.append(
+        createElement('h3', 'tournament-card__title', toText(tournament?.name, 'Турнір')),
+        createElement('span', `tournament-card__status ${statusClass(tournament?.status)}`, statusLabel(tournament?.status))
+      );
+
+      card.append(head);
 
       const actions = createElement('div', 'tournament-card__actions');
       const openBtn = createElement('button', 'tournament-open-btn', actionLabel(tournament?.status));
@@ -655,15 +788,15 @@ export async function initTournamentsPage(params = {}) {
 
       card.addEventListener('click', (event) => {
         if (event.target instanceof HTMLElement && event.target.closest('button')) return;
+        picker.open = false;
         openTournament(tournamentId, dashboard, grid, tournamentData.byId);
       });
 
       grid.append(card);
     });
 
-    if (tournaments.length > 1) {
-      listWrap.append(grid);
-    }
+    picker.append(grid);
+    listWrap.append(picker);
     const autoOpenId = pickAutoOpenTournament(tournaments, selectedId);
     if (autoOpenId) await openTournament(autoOpenId, dashboard, grid, tournamentData.byId, true);
   } catch (err) {
@@ -674,10 +807,15 @@ export async function initTournamentsPage(params = {}) {
 }
 
 function activateTournamentCard(listNode, nextId) {
+  let selectedCard = null;
   listNode?.querySelectorAll('.tournament-card').forEach((card) => {
     const selected = card.getAttribute('data-tournament-id') === nextId;
     card.classList.toggle('is-selected', selected);
+    if (selected) selectedCard = card;
   });
+  const title = selectedCard?.querySelector('.tournament-card__title')?.textContent?.trim();
+  const summary = listNode?.closest('.tournament-picker')?.querySelector('.tournament-picker__button');
+  if (summary && title) summary.textContent = `Турнір: ${title}`;
 }
 
 async function openTournament(tournamentId, dashboardNode, listNode, byId, silentHashUpdate = false) {
@@ -715,6 +853,8 @@ function renderTournamentDashboard(node, data) {
   const sortedTeams = [...teams].sort((a, b) => toNumber(b.points) - toNumber(a.points) || toNumber(b.wins) - toNumber(a.wins));
   const leader = sortedTeams[0] || null;
   const statusText = statusLabel(tournament?.status || 'ACTIVE');
+  const formatText = getTournamentFormatLabel(tournament, teams, players);
+  const leagueText = toText(tournament?.league, 'Ліга');
 
   clear(node);
 
@@ -723,7 +863,8 @@ function renderTournamentDashboard(node, data) {
   const headWrap = createElement('header', 'tournament-event__header');
   headWrap.append(
     createElement('h1', 'tournament-event__title', title),
-    createElement('p', 'tournament-event__meta', `${statusText} · Лідер: ${leader ? toText(leader.teamName, toText(leader.teamId)) : 'ще немає'} · Прогрес ${getTournamentProgressLabel(teams, games)}`)
+    createElement('p', 'tournament-event__meta', `${statusText} · ${leagueText} · ${teams.length} команд · ${games.length} матчів · ${players.length} гравців`),
+    createElement('p', 'tournament-event__summary', `${formatText} · Лідер: ${leader ? toText(leader.teamName, toText(leader.teamId)) : 'ще немає'} · Прогрес ${getTournamentProgressLabel(teams, games)}`)
   );
   headWrap.append(renderLatestMatchLine(games, teamMap));
   head.append(headWrap);
@@ -1115,6 +1256,8 @@ function renderTournamentMatchCards(node, games, teamMap, options = {}) {
   const recentGames = playedGames.slice(0, 3);
   const olderGames = playedGames.slice(3);
   const teamById = new Map((options?.teams || []).map((team) => [String(team?.teamId || '').trim(), team]));
+  const completedCount = playedGames.length;
+  const pendingCount = pendingGames.length;
 
   const renderTeamRoster = (teamId = '') => {
     const team = teamById.get(String(teamId || '').trim());
@@ -1189,6 +1332,20 @@ function renderTournamentMatchCards(node, games, teamMap, options = {}) {
   };
 
   const wrap = createElement('div', 'tournament-match-sections');
+  const matchHead = createElement('section', 'tournament-tab-brief tournament-tab-brief--matches');
+  const matchHeadCopy = createElement('div', 'tournament-tab-brief__copy');
+  matchHeadCopy.append(
+    createElement('strong', '', 'Матчі турніру'),
+    createElement('span', '', 'Хто з ким зіграв, рахунок, MVP і короткі деталі.')
+  );
+  const matchHeadStats = createElement('div', 'tournament-tab-brief__stats');
+  matchHeadStats.append(
+    createElement('span', '', `Зіграно ${completedCount}`),
+    createElement('span', '', `Очікує ${pendingCount}`),
+    createElement('span', '', `Усього ${sortedGames.length}`)
+  );
+  matchHead.append(matchHeadCopy, matchHeadStats);
+  wrap.append(matchHead);
   if (currentGame) {
     const section = createElement('section', 'tournament-match-section tournament-match-section--current');
     section.append(createElement('h3', 'tournament-match-section__title', 'Поточний матч'), renderMatchCard(currentGame, 0));
@@ -1241,19 +1398,35 @@ function renderPlayers(node, players, teamMap) {
   });
 
   const list = createElement('div', 'tournament-player-list');
+  const topImpact = sorted[0] || null;
+  const topMvp = [...players].sort((a, b) => toNumber(b.mvpCount) - toNumber(a.mvpCount) || toNumber(b.impactPoints) - toNumber(a.impactPoints))[0] || null;
+  const playerHead = createElement('section', 'tournament-tab-brief tournament-tab-brief--players');
+  const playerHeadCopy = createElement('div', 'tournament-tab-brief__copy');
+  playerHeadCopy.append(
+    createElement('strong', '', 'Гравці турніру'),
+    createElement('span', '', 'Impact, MVP і вклад кожного гравця без зайвого шуму.')
+  );
+  const playerHeadStats = createElement('div', 'tournament-tab-brief__stats');
+  playerHeadStats.append(
+    createElement('span', '', `${sorted.length} гравців`),
+    createElement('span', '', topImpact ? `Impact: ${toText(topImpact.playerNick, '—')}` : 'Impact: —'),
+    createElement('span', '', topMvp ? `MVP: ${toText(topMvp.playerNick, '—')}` : 'MVP: —')
+  );
+  playerHead.append(playerHeadCopy, playerHeadStats);
   sorted.forEach((player, index) => {
-    const row = createElement('article', `tournament-player-row${index === 0 ? ' is-leader' : ''}`);
+    const rowTone = index === 0 ? ' is-leader' : index < 3 ? ' is-top' : '';
+    const row = createElement('article', `tournament-player-row${rowTone}`);
     const teamName = teamMap.get(String(player?.teamId || '')) || toText(player?.teamId);
     const topLine = createElement('div', 'tournament-player-row__top');
     const identity = createElement('div', 'tournament-player-row__identity');
     identity.append(createElement('strong', '', toText(player.playerNick, 'Гравець')), createElement('small', '', teamName));
     const impact = createElement('div', 'tournament-player-row__impact');
     impact.append(createElement('b', '', formatDelta(player.impactPoints)), createElement('small', '', 'Impact'));
-    topLine.append(createElement('span', '', `#${index + 1}`), identity, impact);
+    topLine.append(createElement('span', 'tournament-player-row__place', `#${index + 1}`), identity, impact);
     row.append(topLine, createElement('p', 'tournament-player-row__meta', `${toNumber(player.games)} гри · ${toNumber(player.wins)} перемоги · ${toNumber(player.mvpCount)} MVP · MMR ${formatDelta(player.mmrChange)}`));
     list.append(row);
   });
-  node.append(list);
+  node.append(playerHead, list);
 }
 
 function renderOverview(node, teams, games, players, teamMap, options = {}) {
@@ -1272,6 +1445,19 @@ function renderOverview(node, teams, games, players, teamMap, options = {}) {
   const gamesUnavailable = Boolean(options?.gamesUnavailable);
 
   const wrap = createElement('div', 'tournament-overview');
+  const overviewHead = createElement('section', 'tournament-tab-brief tournament-tab-brief--overview');
+  const overviewHeadCopy = createElement('div', 'tournament-tab-brief__copy');
+  overviewHeadCopy.append(
+    createElement('strong', '', 'Огляд турніру'),
+    createElement('span', '', 'Стан турніру, лідери, прогрес і головні акценти.')
+  );
+  const overviewHeadStats = createElement('div', 'tournament-tab-brief__stats');
+  overviewHeadStats.append(
+    createElement('span', '', `${teams.length} команд`),
+    createElement('span', '', gamesUnavailable ? 'Матчі: —' : `Матчі ${playedGames}/${safeTotalGames || games.length || 0}`),
+    createElement('span', '', leader ? `Лідер: ${toText(leader.teamName, toText(leader.teamId))}` : 'Лідер: —')
+  );
+  overviewHead.append(overviewHeadCopy, overviewHeadStats);
 
   const statsSection = createElement('section', 'tournament-overview-section');
   statsSection.append(createElement('h3', 'tournament-overview-section__title', 'Турнір у цифрах'));
@@ -1341,6 +1527,6 @@ function renderOverview(node, teams, games, players, teamMap, options = {}) {
   barsGrid.append(teamBars, playerBars);
   barsSection.append(barsGrid);
 
-  wrap.append(statsSection, progressSection, leadersSection, barsSection);
+  wrap.append(overviewHead, statsSection, progressSection, leadersSection, barsSection);
   node.append(wrap);
 }

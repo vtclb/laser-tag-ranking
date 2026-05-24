@@ -509,6 +509,7 @@ function buildTournamentGamePayload() {
   const gameNumber = Number(state.tournamentState.nextGameNumber) || 1;
   const groupMatch = getCurrentGroupMatch();
   const gameId = groupMatch?.gameId || state.tournamentState.currentGameId || `G${String(gameNumber).padStart(3, '0')}`;
+  const summary = computeSeriesSummary();
   const result = mapTournamentResult();
   return {
     tournamentId: state.tournamentState.tournamentId,
@@ -517,6 +518,9 @@ function buildTournamentGamePayload() {
     teamAId: state.activeTeamAId,
     teamBId: state.activeTeamBId,
     result,
+    scoreA: summary.wins.team1,
+    scoreB: summary.wins.team2,
+    series: summary.series,
     mvp1: resolveMvpNick('mvp1'),
     mvp2: resolveMvpNick('mvp2'),
     mvp3: resolveMvpNick('mvp3'),

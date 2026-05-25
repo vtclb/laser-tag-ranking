@@ -24,11 +24,29 @@ export function validateSchoolTournament(eventState = {}) {
     if (!String(team?.schoolName || '').trim()) errors.push(`Команда ${team?.teamName || index + 1}: порожня назва школи.`);
   });
 
+  const playerSeen = new Set();
+  (eventState.teams || []).forEach((team) => {
+    (team?.players || []).forEach((player) => {
+      const pid = String(player?.id || '').trim();
+      if (!pid) return;
+      if (playerSeen.has(pid)) errors.push(`Duplicate player in teams: ${pid}.`);
+      playerSeen.add(pid);
+    });
+  });
+
   const groups = eventState.groups || {};
   if ((groups.A?.teamIds || []).length !== 5) errors.push('Група A має містити рівно 5 команд.');
   if ((groups.B?.teamIds || []).length !== 5) errors.push('Група B має містити рівно 5 команд.');
+  if (new Set(groups.A?.teamIds || []).size !== (groups.A?.teamIds || []).length) errors.push('Група A містить duplicate team.');
+  if (new Set(groups.B?.teamIds || []).size !== (groups.B?.teamIds || []).length) errors.push('Група B містить duplicate team.');
 
+  const groupPairSet = new Set();
   (eventState.groupMatches || []).forEach((match) => {
+    const pair = [match?.teamAId, match?.teamBId].filter(Boolean).sort().join('::');
+    if (pair) {
+      if (groupPairSet.has(pair)) errors.push(`Duplicate match pair: ${pair}.`);
+      groupPairSet.add(pair);
+    }
     if (!match?.teamAId || !match?.teamBId || match.teamAId === match.teamBId) errors.push(`Матч ${match?.title || match?.id || ''} має некоректні команди.`);
     if (match.status === 'completed') {
       if (normalizeManualPoints(match?.result?.pointsA) === null || normalizeManualPoints(match?.result?.pointsB) === null) errors.push(`Матч ${match?.title || match?.id || ''} має некоректні бали.`);
@@ -46,7 +64,13 @@ export function validateSchoolTournament(eventState = {}) {
     if (qualifierSet.has(wildcard.teamId)) errors.push('Wildcard команда не може бути direct qualifier.');
     if (!finalIds.includes(wildcard.teamId)) errors.push('Wildcard команда має входити до finalGroup.teamIds.');
   }
+  const finalPairSet = new Set();
   (eventState.finalGroup?.matches || []).forEach((match, idx) => {
+    const pair = [match?.teamAId, match?.teamBId].filter(Boolean).sort().join('::');
+    if (pair) {
+      if (finalPairSet.has(pair)) errors.push(`Duplicate match pair: ${pair}.`);
+      finalPairSet.add(pair);
+    }
     if (match.status === 'completed' && (normalizeManualPoints(match?.result?.pointsA) === null || normalizeManualPoints(match?.result?.pointsB) === null)) {
       errors.push(`${match?.title || `Фінальна група · Матч ${idx + 1}`} має некоректні бали.`);
     }

@@ -25,7 +25,7 @@ import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setTournamentStatus, clearTournamentStatus } from './ui.js';
 import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame, saveSchoolEvent } from './api.js';
-import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame, saveSchoolDraft, clearSchoolDraft } from './storage.js';
+import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame, saveSchoolDraft, clearSchoolDraft, peekSchoolDraft } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 import { validateSchoolEvent } from './validation.js';
 import { buildSchoolEventPayload } from './schoolPayload.js';
@@ -858,13 +858,29 @@ async function handleSaveRegularGame(retry = false) {
 
 
 
+
+function downloadSchoolPayloadJson(payload = {}, { fallbackId = '' } = {}) {
+  const eventId = String(payload?.eventId || fallbackId || 'draft').trim() || 'draft';
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `school-tournament-${eventId}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function handleSaveSchoolEvent(retry = false) {
   const payload = retry ? state.meta.lastPayload : buildSchoolEventPayload(state);
   state.meta.lastPayload = payload;
   const valid = validateSchoolEvent(payload);
   if (!valid.ok) {
-    const message = valid.errors[0] || 'Некоректні дані шкільного турніру';
-    setSaveFeedback('error', message, { renderNow: false });
+    const message = `Некоректні дані шкільного турніру:
+- ${valid.errors.join('
+- ')}`;
+    setSaveFeedback('error', valid.errors[0] || 'Некоректні дані шкільного турніру', { renderNow: false });
     setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: false });
     renderAndSync();
     return;
@@ -874,10 +890,14 @@ async function handleSaveSchoolEvent(retry = false) {
   setSaveFeedback('saving', 'Зберігаємо шкільний турнір...', { renderNow: false });
   renderAndSync();
   const res = await saveSchoolEvent(payload);
-  if (res.ok || res.fallback) {
+  if (res.ok) {
     clearSchoolDraft();
-    setSaveFeedback('success', res.fallback ? 'Збережено локально (backup).' : 'Шкільний турнір збережено.', { renderNow: false });
+    setSaveFeedback('success', 'Шкільний турнір збережено.', { renderNow: false });
     setStatus({ state: 'saved', text: 'School event збережено без оновлення рейтингу.', retryVisible: false });
+  } else if (res.fallback) {
+    clearSchoolDraft();
+    setSaveFeedback('success', 'Серверне збереження недоступне, локальна копія збережена.', { renderNow: false });
+    setStatus({ state: 'error', text: '⚠️ Серверне збереження недоступне, локальна копія збережена. Експортуйте JSON як резервну копію.', retryVisible: false });
   } else {
     setSaveFeedback('error', res.message || 'Не вдалося зберегти school event', { renderNow: false });
     setStatus({ state: 'error', text: `❌ ${res.message || 'Не вдалося зберегти school event'}`, retryVisible: true });
@@ -1002,8 +1022,38 @@ async function ensurePlayersLoaded({ force = false } = {}) {
 }
 
 async function init() {
-  if (peekLobbyRestore()) $('restoreCard')?.classList.remove('hidden');
-  else $('restoreCard')?.classList.add('hidden');
+  const hasLobbyDraft = !!peekLobbyRestore();
+  const hasSchoolDraft = !!peekSchoolDraft();
+  const restoreCard = $('restoreCard');
+  const restoreTitle = restoreCard?.querySelector('h3');
+  const restoreHint = restoreCard?.querySelector('.section-hint');
+  const restoreBtn = $('restoreBtn');
+  if (hasSchoolDraft) {
+    if (restoreTitle) restoreTitle.textContent = 'Чернетка шкільного турніру';
+    if (restoreHint) restoreHint.textContent = 'Знайдено незбережену чернетку шкільного турніру. Відновити?';
+    if (restoreBtn) restoreBtn.textContent = 'Відновити';
+    if (restoreCard) {
+      let deleteBtn = document.getElementById('deleteSchoolDraftBtn');
+      if (!deleteBtn) {
+        deleteBtn = document.createElement('button');
+        deleteBtn.id = 'deleteSchoolDraftBtn';
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'chip';
+        deleteBtn.textContent = 'Видалити чернетку';
+        restoreBtn?.insertAdjacentElement('afterend', deleteBtn);
+      }
+      restoreCard.classList.remove('hidden');
+    }
+  } else if (hasLobbyDraft) {
+    if (restoreTitle) restoreTitle.textContent = 'Відновлення';
+    if (restoreHint) restoreHint.textContent = 'Знайдено збережений стан лобі.';
+    if (restoreBtn) restoreBtn.textContent = 'Відновити лобі';
+    document.getElementById('deleteSchoolDraftBtn')?.remove();
+    restoreCard?.classList.remove('hidden');
+  } else {
+    document.getElementById('deleteSchoolDraftBtn')?.remove();
+    restoreCard?.classList.add('hidden');
+  }
 
   $('restoreBtn')?.addEventListener('click', async () => {
     if (!restoreLobby()) return;

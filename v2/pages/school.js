@@ -2,6 +2,19 @@ import { loadSchoolEvents } from '../scripts/balance2/api.js';
 
 function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
 function schoolLabel(row = {}) { return row.schoolNumber ? `Школа №${row.schoolNumber}` : 'Без номера'; }
+function exportSchoolEventJson(event = {}) {
+  const eventId = String(event?.eventId || 'draft').trim() || 'draft';
+  const blob = new Blob([JSON.stringify(event, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `school-tournament-${eventId}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 
 export async function initSchoolPage() {
   const root = document.getElementById('schoolPageRoot');
@@ -26,6 +39,10 @@ export async function initSchoolPage() {
     root.append(list);
 
     root.append(el('h3', '', `${latest.title || 'Шкільний турнір'} · ${latest.date || 'без дати'}`));
+    const exportBtn = el('button', 'chip', 'Експортувати JSON');
+    exportBtn.type = 'button';
+    exportBtn.addEventListener('click', () => exportSchoolEventJson(latest));
+    root.append(exportBtn);
 
     const teamsWrap = el('div', 'school-events-list');
     (latest.teams || []).forEach((team, idx) => {
@@ -58,6 +75,21 @@ export async function initSchoolPage() {
 
     renderStandings('Group A', latest.groupStandings?.A || []);
     renderStandings('Group B', latest.groupStandings?.B || []);
+
+    const renderMatches = (title, matches = []) => {
+      root.append(el('h3', '', title));
+      const wrap = el('div', 'school-events-list');
+      matches.forEach((match, idx) => {
+        const row = el('div', 'school-event-item');
+        row.append(el('strong', '', match.title || `${title} · Матч ${idx + 1}`));
+        row.append(el('div', '', `${match.teamAId} ${Number.isInteger(match?.result?.pointsA) ? match.result.pointsA : '—'} : ${Number.isInteger(match?.result?.pointsB) ? match.result.pointsB : '—'} ${match.teamBId} · ${match.status || 'pending'}`));
+        wrap.append(row);
+      });
+      root.append(wrap);
+    };
+
+    renderMatches('Group A матчі', (latest.groupMatches || []).filter((m) => m.groupId === 'A'));
+    renderMatches('Group B матчі', (latest.groupMatches || []).filter((m) => m.groupId === 'B'));
     renderStandings('Фінальна таблиця', latest.finalGroup?.standings || latest.standings || []);
     root.append(el('h3', '', 'Фінальні матчі'));
     const finalMatchesWrap = el('div', 'school-events-list');

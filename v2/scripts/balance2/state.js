@@ -1,13 +1,14 @@
 import { rankFromPoints } from '../../core/rankRules.js';
 
 export const MAX_SERIES_ROUNDS = 10;
-export const MAX_LOBBY_PLAYERS = 30;
+export const TOURNAMENT_MAX_PLAYERS = 50;
+export const MAX_LOBBY_PLAYERS = TOURNAMENT_MAX_PLAYERS;
 export const TEAM_KEYS = Array.from({ length: 12 }, (_, i) => `team${i + 1}`);
-export const TEAM_COUNT_OPTIONS = [2, 3, 4, 5, 6];
+export const TEAM_COUNT_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 export const SCHOOL_TEAM_COUNT = 10;
 export const MIN_TEAM_COUNT = 2;
 export const MAX_TEAM_COUNT = 12;
-export const TOURNAMENT_MAX_TEAM_COUNT = 6;
+export const TOURNAMENT_MAX_TEAM_COUNT = 12;
 
 export const state = {
   app: {
@@ -120,7 +121,7 @@ export function getMaxTeamCountForCurrentMode() {
 }
 
 export function getMaxLobbyPlayersForEventMode(eventMode = state.app.eventMode) {
-  return eventMode === 'school' ? 50 : MAX_LOBBY_PLAYERS;
+  return eventMode === 'school' ? 50 : TOURNAMENT_MAX_PLAYERS;
 }
 
 export function sortByPointsDesc(a, b) {

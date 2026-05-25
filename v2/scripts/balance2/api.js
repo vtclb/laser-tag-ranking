@@ -255,11 +255,13 @@ function readSchoolEventsLocal() {
 function writeSchoolEventsLocal(events = []) { localStorage.setItem(SCHOOL_EVENTS_STORAGE_KEY, JSON.stringify(events)); }
 
 export async function saveSchoolEvent(payload = {}) {
+  const server = await postTournament({ action: 'saveSchoolEvent', mode: 'school', eventMode: 'school', format: 'school_groups_final', payload });
+  if (server.ok) return server;
   const events = readSchoolEventsLocal();
   const filtered = events.filter((item) => item.eventId !== payload.eventId);
   const next = { ...payload, eventMode: 'school', affectsPlayerRating: false, updatedAt: new Date().toISOString() };
   writeSchoolEventsLocal([next, ...filtered]);
-  return { ok: false, fallback: true, message: 'Server save недоступний, локальна копія збережена.', data: next };
+  return { ok: false, fallback: true, message: 'Серверне збереження school event недоступне, але локальна копія збережена. Експортуйте JSON як резервну копію.', data: next };
 }
 
 export async function loadSchoolEvents() {

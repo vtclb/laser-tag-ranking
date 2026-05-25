@@ -1,15 +1,19 @@
 import { getEventModeLimits } from './config.js';
-import { normalizeManualPoints, calculateSchoolStandings } from './schoolMode.js';
+import { normalizeManualPoints } from './schoolMode.js';
 
 export function validateSchoolEvent(eventState = {}) {
+  return validateSchoolTournament(eventState);
+}
+
+export function validateSchoolTournament(eventState = {}) {
   const errors = [];
   const limits = getEventModeLimits('school');
   if (eventState.eventMode !== 'school') errors.push('Подія має бути в режимі school.');
   if (!eventState.eventId) errors.push('Не можна зберегти: відсутній eventId.');
   if (!String(eventState.title || '').trim()) errors.push('Не можна зберегти: назва події порожня.');
   if ((eventState.players || []).length > limits.maxPlayers) errors.push(`Не можна зберегти: гравців більше ${limits.maxPlayers}.`);
-  if ((eventState.teams || []).length > limits.maxTeams) errors.push(`Не можна зберегти: команд більше ${limits.maxTeams}.`);
-  if ((eventState.teams || []).length < 2) errors.push('Не можна зберегти: потрібно мінімум 2 команди.');
+  if ((eventState.teams || []).length !== limits.maxTeams) errors.push(`Потрібно рівно ${limits.maxTeams} команд.`);
+  if (eventState.format !== 'school_groups_final') errors.push('Формат має бути school_groups_final.');
   if (eventState.affectsPlayerRating !== false) errors.push('School event не може впливати на рейтинг гравців.');
 
   const teamIds = new Set();
@@ -20,21 +24,21 @@ export function validateSchoolEvent(eventState = {}) {
     if (!String(team?.schoolName || '').trim()) errors.push(`Команда ${team?.teamName || index + 1}: порожня назва школи.`);
   });
 
-  (eventState.battles || []).forEach((battle, index) => {
-    if (!battle?.id) errors.push(`Бій #${index + 1} не має id.`);
-    if (!Array.isArray(battle?.results) || battle.results.length < 2) errors.push(`Бій #${index + 1} має містити мінімум 2 результати.`);
-    const inBattle = new Set();
-    (battle?.results || []).forEach((result) => {
-      if (!result?.teamId) errors.push(`Бій #${index + 1}: teamId обов'язковий.`);
-      if (inBattle.has(result?.teamId)) errors.push(`Бій #${index + 1}: дубль teamId ${result?.teamId}.`);
-      inBattle.add(result?.teamId);
-      if (normalizeManualPoints(result?.points) === null) errors.push(`Бій #${index + 1}: некоректні бали для команди ${result?.teamId}.`);
-    });
+  const groups = eventState.groups || {};
+  if ((groups.A?.teamIds || []).length !== 5) errors.push('Група A має містити рівно 5 команд.');
+  if ((groups.B?.teamIds || []).length !== 5) errors.push('Група B має містити рівно 5 команд.');
+
+  (eventState.groupMatches || []).forEach((match) => {
+    if (!match?.teamAId || !match?.teamBId || match.teamAId === match.teamBId) errors.push(`Матч ${match?.title || match?.id || ''} має некоректні команди.`);
+    if (match.status === 'completed') {
+      if (normalizeManualPoints(match?.result?.pointsA) === null || normalizeManualPoints(match?.result?.pointsB) === null) errors.push(`Матч ${match?.title || match?.id || ''} має некоректні бали.`);
+    }
   });
 
-  const calculated = calculateSchoolStandings(eventState.teams || [], eventState.battles || []);
-  if (!Array.isArray(eventState.standings) || eventState.standings.length !== calculated.length) {
-    errors.push('Standings не перераховані після останньої зміни.');
+  const finalIds = eventState.finalGroup?.teamIds || [];
+  if (![4, 5].includes(finalIds.length)) errors.push('Фінальна група має містити 4 або 5 команд.');
+  if ((eventState.finalGroup?.matches || []).some((match) => match.status === 'completed' && (normalizeManualPoints(match?.result?.pointsA) === null || normalizeManualPoints(match?.result?.pointsB) === null))) {
+    errors.push('Фінальні матчі мають некоректні бали.');
   }
 
   return { ok: errors.length === 0, errors };

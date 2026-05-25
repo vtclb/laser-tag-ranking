@@ -46,8 +46,16 @@ export function validateSchoolTournament(eventState = {}) {
     if (qualifierSet.has(wildcard.teamId)) errors.push('Wildcard команда не може бути direct qualifier.');
     if (!finalIds.includes(wildcard.teamId)) errors.push('Wildcard команда має входити до finalGroup.teamIds.');
   }
-  if ((eventState.finalGroup?.matches || []).some((match) => match.status === 'completed' && (normalizeManualPoints(match?.result?.pointsA) === null || normalizeManualPoints(match?.result?.pointsB) === null))) {
-    errors.push('Фінальні матчі мають некоректні бали.');
+  (eventState.finalGroup?.matches || []).forEach((match, idx) => {
+    if (match.status === 'completed' && (normalizeManualPoints(match?.result?.pointsA) === null || normalizeManualPoints(match?.result?.pointsB) === null)) {
+      errors.push(`${match?.title || `Фінальна група · Матч ${idx + 1}`} має некоректні бали.`);
+    }
+  });
+  if (['completed', 'published'].includes(String(eventState.status || '').toLowerCase())) {
+    const finalMatches = eventState.finalGroup?.matches || [];
+    const allCompleted = finalMatches.length > 0 && finalMatches.every((m) => m?.status === 'completed');
+    if (!allCompleted) errors.push('Для completed/published події всі фінальні матчі мають бути завершені.');
+    if (!eventState.championTeamId && !eventState.finalGroup?.championTeamId) errors.push('Для completed/published події має бути визначений championTeamId.');
   }
 
   return { ok: errors.length === 0, errors };

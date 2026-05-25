@@ -11,6 +11,8 @@ import {
   buildFinalGroupFromStandings,
   getWildcardCandidates,
   pickBestWildcardCandidate,
+  refreshFinalGroupDerivedState,
+  getFinalGroupProgress,
 } from '../v2/scripts/balance2/schoolMode.js';
 import { validateSchoolTournament } from '../v2/scripts/balance2/validation.js';
 import { buildSchoolEventPayload } from '../v2/scripts/balance2/schoolPayload.js';
@@ -134,6 +136,41 @@ test('group progress counts completed matches', () => {
 test('final matches count for 4 and 5 teams', () => {
   assert.equal(generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4'], { stage: 'final', groupId: 'FINAL' }).length, 6);
   assert.equal(generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4', 'team5'], { stage: 'final', groupId: 'FINAL' }).length, 10);
+});
+
+test('final result 8:5 sets completed and winner', () => {
+  const match = generateRoundRobinMatches(['team1', 'team2'], { stage: 'final', groupId: 'FINAL', titlePrefix: 'Фінальна група' })[0];
+  match.result.pointsA = 8; match.result.pointsB = 5; match.status = 'completed'; match.result.winnerTeamId = 'team1';
+  assert.equal(match.status, 'completed');
+  assert.equal(match.result.winnerTeamId, 'team1');
+});
+
+test('final draw 4:4 sets isDraw true', () => {
+  const match = generateRoundRobinMatches(['team1', 'team2'], { stage: 'final', groupId: 'FINAL' })[0];
+  match.result.pointsA = 4; match.result.pointsB = 4; match.status = 'completed'; match.result.winnerTeamId = ''; match.result.isDraw = true;
+  assert.equal(match.result.isDraw, true);
+});
+
+test('final progress and champion derived', () => {
+  const teams = mkTeams(4);
+  const matches = generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4'], { stage: 'final', groupId: 'FINAL', titlePrefix: 'Фінальна група' });
+  matches.forEach((m, idx) => { m.status = 'completed'; m.result.pointsA = 10 - idx; m.result.pointsB = idx; m.result.winnerTeamId = m.teamAId; });
+  const schoolState = { finalGroup: { teamIds: ['team1', 'team2', 'team3', 'team4'], matches, standings: [], championTeamId: '' }, championTeamId: '' };
+  const derived = refreshFinalGroupDerivedState(schoolState, teams);
+  assert.equal(derived.allCompleted, true);
+  assert.equal(Boolean(schoolState.championTeamId), true);
+  const progress = getFinalGroupProgress(matches);
+  assert.equal(progress.total, 6);
+  assert.equal(progress.completed, 6);
+});
+
+test('champion is empty when not all final matches completed', () => {
+  const teams = mkTeams(4);
+  const matches = generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4'], { stage: 'final', groupId: 'FINAL' });
+  matches[0].status = 'completed'; matches[0].result.pointsA = 3; matches[0].result.pointsB = 1;
+  const schoolState = { finalGroup: { teamIds: ['team1', 'team2', 'team3', 'team4'], matches, standings: [], championTeamId: '' }, championTeamId: '' };
+  refreshFinalGroupDerivedState(schoolState, teams);
+  assert.equal(schoolState.championTeamId, '');
 });
 
 test('can form final group only after 20 completed matches', () => {

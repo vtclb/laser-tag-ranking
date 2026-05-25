@@ -16,7 +16,7 @@ import {
   getMaxLobbyPlayersForEventMode,
 } from './state.js';
 import { movePlayerToTeam } from './manual.js';
-import { formatSchoolDisplay, getSchoolGroupProgress, canFormSchoolFinalGroup, getWildcardCandidates } from './schoolMode.js';
+import { formatSchoolDisplay, getSchoolGroupProgress, canFormSchoolFinalGroup, getWildcardCandidates, getFinalGroupProgress } from './schoolMode.js';
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -554,7 +554,14 @@ function renderSchoolGroupMatches() {
     return row ? `<li>#${row.place} · ${escapeHtml(schoolTeamDisplay(teamId))} · TP ${row.tournamentPoints} · W ${row.wins} · Diff ${row.pointsDiff} · PF ${row.pointsFor}</li>` : '';
   }).join('')).join('');
   const wildcardRows = wildcardCandidates.map((row) => `<option value="${escapeAttr(row.teamId)}" ${row.teamId === wildcardSelected ? 'selected' : ''}>${escapeHtml(`Group ${row.groupId} · #${row.place} · ${schoolTeamDisplay(row.teamId)}`)}</option>`).join('');
-  return `<div class="school-group-stage"><div class="team-settings-actions"><button class="chip" type="button" data-school-generate-group-matches="1" ${canGenerate ? '' : 'disabled'}>Згенерувати матчі груп</button></div><h4>Групові матчі</h4>${error}<div class="tag">Груповий етап: Зіграно ${progress.completedTotal} / ${progress.total} · Група A: ${progress.completedA} / ${progress.totalA} · Група B: ${progress.completedB} / ${progress.totalB}</div><div class="tag">${progress.completedTotal === 20 ? 'Груповий етап завершено. Можна формувати фінальну групу.' : 'Завершіть усі групові матчі, щоб сформувати фінальну групу.'}</div>${groupBlock('A')}${groupBlock('B')}${standingsTable('A')}${standingsTable('B')}<div class="team-settings-actions"><button class="chip" type="button" data-school-form-final-group="1" ${canFormFinal ? '' : 'disabled'}>Сформувати фінальну групу</button></div>${canFormFinal ? '' : '<div class="tag">Фінальна група буде доступна після завершення всіх 20 групових матчів.</div>'}<div class="team-card"><h4>Фіналісти</h4><ol>${finalistsSection || '<li>Сформуйте фінальну групу.</li>'}</ol></div><div class="team-card"><h4>Wildcard</h4><button class="chip" type="button" data-school-suggest-wildcard="1">Запропонувати найкращу wildcard</button><label>Обрати wildcard вручну<select data-school-wildcard-select><option value="">Не вибрано</option>${wildcardRows}</select></label><label><input type="checkbox" data-school-wildcard-enabled ${state.schoolState?.wildcard?.enabled ? 'checked' : ''}/> Додати wildcard у фінальну групу</label></div><div class="team-card"><h4>Фінальна група</h4><div class="tag">Команд: ${(state.schoolState?.finalGroup?.teamIds || []).length || 0}</div><ul>${finalRows || '<li>Ще не сформовано.</li>'}</ul><div class="tag">Фінальні матчі будуть доступні на наступному етапі.</div></div></div>`;
+  const finalMatches = Array.isArray(state.schoolState?.finalGroup?.matches) ? state.schoolState.finalGroup.matches : [];
+  const finalCanGenerate = [4, 5].includes((state.schoolState?.finalGroup?.teamIds || []).length) && new Set(state.schoolState?.finalGroup?.teamIds || []).size === (state.schoolState?.finalGroup?.teamIds || []).length;
+  const finalProgress = getFinalGroupProgress(finalMatches);
+  const finalStandings = state.schoolState?.finalGroup?.standings || [];
+  const champion = finalStandings[0];
+  const finalMatchesHtml = finalMatches.map((match, idx) => `<div class="tournament-schedule-row"><div><strong>${escapeHtml(match.title || `Фінальна група · Матч ${idx + 1}`)}</strong><span>${escapeHtml(schoolTeamDisplay(match.teamAId))}${!qualifiers.has(match.teamAId) ? ' · Wildcard' : ''} vs ${escapeHtml(schoolTeamDisplay(match.teamBId))}${!qualifiers.has(match.teamBId) ? ' · Wildcard' : ''}</span></div><label>A <input type="number" min="0" max="10" step="1" data-school-final-score-a="${escapeAttr(match.id)}" value="${escapeAttr(match?.result?.pointsA ?? '')}"></label><label>B <input type="number" min="0" max="10" step="1" data-school-final-score-b="${escapeAttr(match.id)}" value="${escapeAttr(match?.result?.pointsB ?? '')}"></label><span class="tag">${escapeHtml(match.status || 'pending')}</span>${match.status === 'current' ? '<button class="chip" type="button" disabled>Поточний</button>' : `<button class="chip" type="button" data-school-final-current="${escapeAttr(match.id)}">Обрати як поточний</button>`}${(Number.isInteger(match?.result?.pointsA) || Number.isInteger(match?.result?.pointsB)) ? `<button class="chip" type="button" data-school-final-clear="${escapeAttr(match.id)}">Очистити результат</button>` : ''}</div>`).join('') || '<div class="tag">Фінальні матчі ще не згенеровано.</div>';
+  const finalStandingsHtml = `<table><thead><tr><th>Місце</th><th>Команда / школа</th><th>І</th><th>В</th><th>Н</th><th>П</th><th>Турнірні бали</th><th>Забито</th><th>Пропущено</th><th>Різниця</th></tr></thead><tbody>${finalStandings.map((r) => `<tr><td>${r.place}</td><td>${escapeHtml(schoolTeamDisplay(r.teamId))}</td><td>${r.matchesPlayed}</td><td>${r.wins}</td><td>${r.draws}</td><td>${r.losses}</td><td>${r.tournamentPoints}</td><td>${r.pointsFor}</td><td>${r.pointsAgainst}</td><td>${r.pointsDiff}</td></tr>`).join('')}</tbody></table>`;
+  return `<div class="school-group-stage"><div class="team-settings-actions"><button class="chip" type="button" data-school-generate-group-matches="1" ${canGenerate ? '' : 'disabled'}>Згенерувати матчі груп</button></div><h4>Групові матчі</h4>${error}<div class="tag">Груповий етап: Зіграно ${progress.completedTotal} / ${progress.total} · Група A: ${progress.completedA} / ${progress.totalA} · Група B: ${progress.completedB} / ${progress.totalB}</div><div class="tag">${progress.completedTotal === 20 ? 'Груповий етап завершено. Можна формувати фінальну групу.' : 'Завершіть усі групові матчі, щоб сформувати фінальну групу.'}</div>${groupBlock('A')}${groupBlock('B')}${standingsTable('A')}${standingsTable('B')}<div class="team-settings-actions"><button class="chip" type="button" data-school-form-final-group="1" ${canFormFinal ? '' : 'disabled'}>Сформувати фінальну групу</button></div>${canFormFinal ? '' : '<div class="tag">Фінальна група буде доступна після завершення всіх 20 групових матчів.</div>'}<div class="team-card"><h4>Фіналісти</h4><ol>${finalistsSection || '<li>Сформуйте фінальну групу.</li>'}</ol></div><div class="team-card"><h4>Wildcard</h4><button class="chip" type="button" data-school-suggest-wildcard="1">Запропонувати найкращу wildcard</button><label>Обрати wildcard вручну<select data-school-wildcard-select><option value="">Не вибрано</option>${wildcardRows}</select></label><label><input type="checkbox" data-school-wildcard-enabled ${state.schoolState?.wildcard?.enabled ? 'checked' : ''}/> Додати wildcard у фінальну групу</label></div><div class="team-card"><h4>Фінальна група</h4><div class="tag">Команд: ${(state.schoolState?.finalGroup?.teamIds || []).length || 0}</div><ul>${finalRows || '<li>Ще не сформовано.</li>'}</ul><button class="chip" type="button" data-school-generate-final-matches="1" ${finalCanGenerate ? '' : 'disabled'}>Згенерувати фінальні матчі</button></div><div class="team-card"><h4>Фінальні матчі</h4>${finalMatchesHtml}</div><div class="team-card"><h4>Фінальний етап</h4><div class="tag">Зіграно: ${finalProgress.completed} / ${finalProgress.total || ((state.schoolState?.finalGroup?.teamIds || []).length === 5 ? 10 : 6)}</div><div class="tag">${finalProgress.total > 0 && finalProgress.completed === finalProgress.total ? 'Фінальний етап завершено. Чемпіон визначений.' : 'Чемпіон буде визначений після завершення всіх фінальних матчів.'}</div></div><div class="team-card"><h4>Фінальна таблиця</h4>${finalStandingsHtml}</div><div class="team-card"><h4>Чемпіон шкільного турніру</h4>${champion && finalProgress.total > 0 && finalProgress.completed === finalProgress.total ? `<div>${escapeHtml(schoolTeamDisplay(champion.teamId))}</div><div class="tag">TP ${champion.tournamentPoints} · W ${champion.wins} · Diff ${champion.pointsDiff} · PF ${champion.pointsFor}</div>` : '<div class="tag">Чемпіон буде визначений після завершення всіх фінальних матчів.</div>'}</div></div>`;
 }
 
 export function renderTeams() {
@@ -894,6 +901,9 @@ export function bindUiEvents(handlers) {
     const schoolClear = e.target.closest('[data-school-group-clear]')?.dataset.schoolGroupClear;
     const schoolFormFinalGroup = e.target.closest('[data-school-form-final-group]');
     const schoolSuggestWildcard = e.target.closest('[data-school-suggest-wildcard]');
+    const schoolGenerateFinalMatches = e.target.closest('[data-school-generate-final-matches]');
+    const schoolFinalCurrent = e.target.closest('[data-school-final-current]')?.dataset.schoolFinalCurrent;
+    const schoolFinalClear = e.target.closest('[data-school-final-clear]')?.dataset.schoolFinalClear;
 
     if (toggle) {
       const alreadySelected = state.playersState.selectedMap.has(toggle);
@@ -962,6 +972,9 @@ export function bindUiEvents(handlers) {
     if (schoolClear) handlers.onSchoolGroupMatchClearResult(schoolClear);
     if (schoolFormFinalGroup) handlers.onSchoolFormFinalGroup();
     if (schoolSuggestWildcard) handlers.onSchoolSuggestWildcard();
+    if (schoolGenerateFinalMatches) handlers.onSchoolGenerateFinalMatches();
+    if (schoolFinalCurrent) handlers.onSchoolFinalMatchSetCurrent(schoolFinalCurrent);
+    if (schoolFinalClear) handlers.onSchoolFinalMatchClearResult(schoolFinalClear);
   });
 
   document.addEventListener('input', (e) => {
@@ -980,6 +993,14 @@ export function bindUiEvents(handlers) {
       const inputA = document.querySelector(`[data-school-group-score-a="${escapeAttr(matchId)}"]`);
       const inputB = document.querySelector(`[data-school-group-score-b="${escapeAttr(matchId)}"]`);
       handlers.onSchoolGroupMatchScoreChange(matchId, inputA?.value ?? '', inputB?.value ?? '');
+    }
+    const finalA = e.target.closest('[data-school-final-score-a]');
+    const finalB = e.target.closest('[data-school-final-score-b]');
+    if (finalA || finalB) {
+      const matchId = finalA?.dataset.schoolFinalScoreA || finalB?.dataset.schoolFinalScoreB;
+      const inputA = document.querySelector(`[data-school-final-score-a="${escapeAttr(matchId)}"]`);
+      const inputB = document.querySelector(`[data-school-final-score-b="${escapeAttr(matchId)}"]`);
+      handlers.onSchoolFinalMatchScoreChange(matchId, inputA?.value ?? '', inputB?.value ?? '');
     }
     const wildcardSelect = e.target.closest('[data-school-wildcard-select]');
     if (wildcardSelect) handlers.onSchoolWildcardSelect(wildcardSelect.value);

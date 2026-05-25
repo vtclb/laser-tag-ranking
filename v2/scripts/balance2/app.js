@@ -38,6 +38,7 @@ import {
   buildFinalGroupFromStandings,
   getWildcardCandidates,
   pickBestWildcardCandidate,
+  refreshFinalGroupDerivedState,
 } from './schoolMode.js';
 import { debugLog } from '../../core/debug.js';
 
@@ -496,6 +497,38 @@ function resetSchoolFinalPhaseState() {
 function refreshSchoolGroupStandings() {
   const payload = buildSchoolEventPayload(state);
   state.schoolState.groupStandings = payload.groupStandings || { A: [], B: [] };
+}
+
+function getSchoolTeamsPayload() {
+  const playersMap = new Map((state.playersState.players || []).map((p) => [getPlayerKey(p), p]));
+  return TEAM_KEYS.slice(0, 10).map((teamKey, idx) => {
+    const meta = state.schoolState.teamMeta?.[teamKey] || {};
+    const teamName = String(meta.teamName || `Команда ${idx + 1}`).trim() || `Команда ${idx + 1}`;
+    return { id: teamKey, teamName, schoolName: String(meta.schoolName || '').trim(), schoolNumber: String(meta.schoolNumber || '').trim(), players: (state.teamsState.teams[teamKey] || []).map((key) => playersMap.get(key)).filter(Boolean) };
+  });
+}
+
+function applySchoolFinalMatchPoints(matchId, pointsAValue, pointsBValue) {
+  const matches = Array.isArray(state.schoolState.finalGroup?.matches) ? state.schoolState.finalGroup.matches : [];
+  const match = matches.find((item) => item.id === matchId);
+  if (!match) return { ok: false, error: 'Фінальний матч не знайдено.' };
+  const pointsA = pointsAValue === '' ? null : normalizeManualPoints(pointsAValue);
+  const pointsB = pointsBValue === '' ? null : normalizeManualPoints(pointsBValue);
+  if (pointsAValue !== '' && pointsA === null) return { ok: false, error: `${match.title || `Фінальна група · Матч ${match.matchIndex || ''}`} має некоректні бали.` };
+  if (pointsBValue !== '' && pointsB === null) return { ok: false, error: `${match.title || `Фінальна група · Матч ${match.matchIndex || ''}`} має некоректні бали.` };
+  match.result = { ...(match.result || {}), teamAId: match.teamAId, teamBId: match.teamBId, pointsA, pointsB };
+  if (Number.isInteger(pointsA) && Number.isInteger(pointsB)) {
+    match.status = 'completed';
+    match.result.isDraw = pointsA === pointsB;
+    match.result.winnerTeamId = pointsA > pointsB ? match.teamAId : (pointsB > pointsA ? match.teamBId : '');
+  } else {
+    match.result.isDraw = false;
+    match.result.winnerTeamId = '';
+    if (match.status === 'completed') match.status = 'pending';
+  }
+  match.updatedAt = new Date().toISOString();
+  refreshFinalGroupDerivedState(state.schoolState, getSchoolTeamsPayload());
+  return { ok: true };
 }
 
 function applySchoolGroupMatchPoints(matchId, pointsAValue, pointsBValue) {
@@ -1293,6 +1326,49 @@ async function init() {
         state.schoolState.finalGroup.teamIds = base;
       }
       resetSchoolFinalPhaseState();
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolGenerateFinalMatches() {
+      if (state.app.eventMode !== 'school') return;
+      const ids = state.schoolState?.finalGroup?.teamIds || [];
+      const unique = new Set(ids);
+      const validTeamSet = new Set(TEAM_KEYS.slice(0, 10));
+      const canGenerate = [4, 5].includes(ids.length) && unique.size === ids.length && ids.every((id) => validTeamSet.has(id));
+      if (!canGenerate) return;
+      const hasResults = (state.schoolState.finalGroup.matches || []).some((m) => Number.isInteger(m?.result?.pointsA) || Number.isInteger(m?.result?.pointsB));
+      if (hasResults && !window.confirm('Фінальні матчі вже створені. Перегенерація видалить введені результати.')) return;
+      state.schoolState.finalGroup.matches = generateRoundRobinMatches(ids, { stage: 'final', groupId: 'FINAL', titlePrefix: 'Фінальна група' });
+      state.schoolState.finalGroup.standings = [];
+      state.schoolState.finalGroup.championTeamId = '';
+      state.schoolState.championTeamId = '';
+      state.schoolState.lastError = '';
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolFinalMatchScoreChange(matchId, pointsAValue, pointsBValue) {
+      if (state.app.eventMode !== 'school') return;
+      const result = applySchoolFinalMatchPoints(matchId, pointsAValue, pointsBValue);
+      state.schoolState.lastError = result.ok ? '' : result.error;
+      if (!result.ok) setStatus({ state: 'error', text: result.error, retryVisible: false });
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolFinalMatchSetCurrent(matchId) {
+      const matches = Array.isArray(state.schoolState.finalGroup?.matches) ? state.schoolState.finalGroup.matches : [];
+      const target = matches.find((m) => m.id === matchId);
+      if (!target) return;
+      if (target.status === 'completed') { setStatus({ state: 'error', text: 'Завершений матч не можна зробити поточним.', retryVisible: false }); return; }
+      matches.forEach((match) => { if (match.status !== 'completed') match.status = match.id === matchId ? 'current' : 'pending'; });
+      target.updatedAt = new Date().toISOString();
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolFinalMatchClearResult(matchId) {
+      const matches = Array.isArray(state.schoolState.finalGroup?.matches) ? state.schoolState.finalGroup.matches : [];
+      const target = matches.find((m) => m.id === matchId);
+      if (!target) return;
+      if (!window.confirm('Очистити результат цього фінального матчу?')) return;
+      target.result = { ...(target.result || {}), teamAId: target.teamAId, teamBId: target.teamBId, pointsA: null, pointsB: null, winnerTeamId: '', isDraw: false };
+      target.status = 'pending';
+      target.updatedAt = new Date().toISOString();
+      refreshFinalGroupDerivedState(state.schoolState, getSchoolTeamsPayload());
       saveLobby(); saveSchoolDraftState(); renderAndSync();
     },
     onPlayerSourceMode(sourceMode) {

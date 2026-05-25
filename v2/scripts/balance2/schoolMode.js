@@ -256,3 +256,23 @@ export function pickBestWildcardCandidate(candidates = []) {
   ));
   return sorted[0] || null;
 }
+
+export function getSchoolWorkflowStage(schoolState = {}) {
+  if (!schoolState || typeof schoolState !== 'object') return 'setup';
+  const teams = Array.isArray(schoolState.teams) ? schoolState.teams : [];
+  const hasTeams = teams.length > 0;
+  if (!hasTeams) return 'setup';
+  const groupA = schoolState?.groups?.A?.teamIds || [];
+  const groupB = schoolState?.groups?.B?.teamIds || [];
+  if (!groupA.length && !groupB.length) return 'teams';
+  const groupMatches = Array.isArray(schoolState.groupMatches) ? schoolState.groupMatches : [];
+  if (!groupMatches.length) return 'groups';
+  const groupAllCompleted = groupMatches.length > 0 && groupMatches.every((m) => m?.status === 'completed');
+  if (!groupAllCompleted) return 'group_matches';
+  const finalIds = Array.isArray(schoolState?.finalGroup?.teamIds) ? schoolState.finalGroup.teamIds : [];
+  if (!finalIds.length) return 'final_group';
+  const finalMatches = Array.isArray(schoolState?.finalGroup?.matches) ? schoolState.finalGroup.matches : [];
+  const finalAllCompleted = finalMatches.length > 0 && finalMatches.every((m) => m?.status === 'completed');
+  if (!finalAllCompleted) return 'final_matches';
+  return schoolState.championTeamId || schoolState?.finalGroup?.championTeamId ? 'completed' : 'final_matches';
+}

@@ -707,7 +707,7 @@ function markScheduledMatchPlayed(resultSummary) {
 }
 
 async function doSave(retry = false) {
-  const eventMode = state.app?.eventMode === 'school' ? 'school' : 'tournament';
+  const eventMode = state.app?.eventMode;
   debugLog('[balance2:save] mode', eventMode);
   const error = validateSave();
   if (error) {
@@ -723,12 +723,15 @@ async function doSave(retry = false) {
     return;
   }
 
-  if (eventMode === 'tournament') {
-    await handleSaveTournamentGame(retry);
-    return;
+  if (eventMode === 'school') {
+    return handleSaveSchoolEvent(retry);
   }
 
-  await handleSaveSchoolEvent(retry);
+  if (eventMode === 'tournament') {
+    return handleSaveTournamentGame(retry);
+  }
+
+  return handleSaveRegularGame(retry);
 }
 
 async function handleSaveTournamentGame(retry = false) {
@@ -878,9 +881,7 @@ async function handleSaveSchoolEvent(retry = false) {
   state.meta.lastPayload = payload;
   const valid = validateSchoolEvent(payload);
   if (!valid.ok) {
-    const message = `Некоректні дані шкільного турніру:
-- ${valid.errors.join('
-- ')}`;
+    const message = `Некоректні дані шкільного турніру:\n- ${valid.errors.join('\n- ')}`;
     setSaveFeedback('error', valid.errors[0] || 'Некоректні дані шкільного турніру', { renderNow: false });
     setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: false });
     renderAndSync();

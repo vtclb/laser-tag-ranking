@@ -12,6 +12,7 @@ import {
   getActiveMatchTeams,
   getTeamLabel,
   MAX_LOBBY_PLAYERS,
+  getMaxLobbyPlayersForEventMode,
   TEAM_KEYS,
   ensureTeamsForManualAssignment,
   assignPlayerToTeam,
@@ -79,9 +80,9 @@ function setSaveFeedback(saveStatus = 'idle', saveMessage = '', { renderNow = tr
 }
 
 function normalizeEventAndSourceState(nextEventMode = state.app.eventMode, nextSourceMode = state.app.playerSourceMode) {
-  const eventMode = nextEventMode === 'tournament' ? 'tournament' : 'regular';
+  const eventMode = nextEventMode === 'school' ? 'school' : 'tournament';
   let playerSourceMode = normalizePlayerSourceMode(nextSourceMode, eventMode);
-  if (eventMode === 'regular' && playerSourceMode === 'mixed') {
+  if (eventMode === 'school' && playerSourceMode === 'mixed') {
     playerSourceMode = 'sundaygames';
   }
   if (eventMode === 'tournament' && !['sundaygames', 'kids', 'mixed'].includes(playerSourceMode)) {
@@ -618,7 +619,7 @@ function markScheduledMatchPlayed(resultSummary) {
 }
 
 async function doSave(retry = false) {
-  const eventMode = state.app?.eventMode === 'tournament' ? 'tournament' : 'regular';
+  const eventMode = state.app?.eventMode === 'school' ? 'school' : 'tournament';
   debugLog('[balance2:save] mode', eventMode);
   const error = validateSave();
   if (error) {
@@ -772,7 +773,7 @@ function toggleSelectedPlayer(nick) {
   if (state.playersState.selectedMap.has(nick)) {
     state.playersState.selected = state.playersState.selected.filter((n) => n !== nick);
     removePlayerFromAllTeams(nick);
-  } else if (state.playersState.selected.length < MAX_LOBBY_PLAYERS) {
+  } else if (state.playersState.selected.length < getMaxLobbyPlayersForEventMode(state.app.eventMode)) {
     state.playersState.selected = [...state.playersState.selected, nick];
   }
   syncSelectedMap();
@@ -1068,7 +1069,7 @@ async function init() {
     },
     onEventMode(mode) {
       state.uiState.flowStarted = true;
-      const nextEventMode = mode === 'tournament' ? 'tournament' : 'regular';
+      const nextEventMode = mode === 'tournament' ? 'tournament' : 'school';
       const changed = nextEventMode !== state.app.eventMode;
       normalizeEventAndSourceState(nextEventMode, state.app.playerSourceMode);
       localStorage.setItem(LEAGUE_KEY, state.app.playerSourceMode);
@@ -1080,7 +1081,7 @@ async function init() {
         ? '⚠️ Тип події змінено — перевір lobby перед балансуванням.'
         : 'Обери джерело гравців і завантаж список';
       setStatus({ state: changed && state.playersState.selected.length > 0 ? 'error' : 'idle', text: statusText, retryVisible: false });
-      if (state.app.eventMode === 'regular') clearTournamentStatus();
+      if (state.app.eventMode !== 'tournament') clearTournamentStatus();
       syncSaveButtonState();
       saveLobby();
       renderAndSync();

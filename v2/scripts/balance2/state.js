@@ -1,6 +1,12 @@
 import { rankFromPoints } from '../../core/rankRules.js';
 
 export const MAX_SERIES_ROUNDS = 10;
+export const MAX_LOBBY_PLAYERS = 30;
+export const TEAM_KEYS = Array.from({ length: 12 }, (_, i) => `team${i + 1}`);
+export const TEAM_COUNT_OPTIONS = [2, 3, 4, 5, 6];
+export const MIN_TEAM_COUNT = 2;
+export const MAX_TEAM_COUNT = 12;
+export const TOURNAMENT_MAX_TEAM_COUNT = 6;
 
 export const state = {
   app: {
@@ -20,15 +26,8 @@ export const state = {
   },
   teamsState: {
     teamCount: 2,
-    teams: { team1: [], team2: [], team3: [], team4: [], team5: [], team6: [] },
-    teamNames: {
-      team1: 'Команда 1',
-      team2: 'Команда 2',
-      team3: 'Команда 3',
-      team4: 'Команда 4',
-      team5: 'Команда 5',
-      team6: 'Команда 6',
-    },
+    teams: Object.fromEntries(TEAM_KEYS.map((key) => [key, []])),
+    teamNames: Object.fromEntries(TEAM_KEYS.map((key, idx) => [key, `Команда ${idx + 1}`])),
   },
   matchState: {
     seriesCount: 3,
@@ -64,6 +63,18 @@ export const state = {
     lastRequestStatus: '',
     lastErrorMessage: '',
   },
+  schoolState: {
+    eventId: '',
+    title: 'Шкільний турнір',
+    date: '',
+    status: 'draft',
+    teamMeta: Object.fromEntries(TEAM_KEYS.map((key, idx) => [key, { schoolName: '', schoolNumber: '', teamName: `Команда ${idx + 1}` }])),
+    battles: [],
+    standings: [],
+    changeLog: [],
+    lastDraftSavedAt: '',
+    lastError: '',
+  },
   activeTeamAId: 'team1',
   activeTeamBId: 'team2',
   requireMvp: true,
@@ -76,14 +87,28 @@ export const state = {
   },
 };
 
-export const MAX_LOBBY_PLAYERS = 30;
-export const TEAM_KEYS = ['team1', 'team2', 'team3', 'team4', 'team5', 'team6'];
-export const TEAM_COUNT_OPTIONS = [2, 3, 4, 5, 6];
-export const MIN_TEAM_COUNT = 2;
-export const MAX_TEAM_COUNT = 6;
-
 export function normalizeTeamCount(value) {
   return Math.min(MAX_TEAM_COUNT, Math.max(MIN_TEAM_COUNT, Number(value) || MIN_TEAM_COUNT));
+}
+
+
+
+export function getTeamCountOptionsForEventMode(eventMode = state.app.eventMode) {
+  const maxCount = eventMode === 'school' ? MAX_TEAM_COUNT : TOURNAMENT_MAX_TEAM_COUNT;
+  return Array.from({ length: maxCount - MIN_TEAM_COUNT + 1 }, (_, idx) => MIN_TEAM_COUNT + idx);
+}
+
+export function getAvailableTeamKeysForEventMode(eventMode = state.app.eventMode) {
+  const count = Math.min(normalizeTeamCount(state.teamsState.teamCount), eventMode === 'school' ? MAX_TEAM_COUNT : TOURNAMENT_MAX_TEAM_COUNT);
+  return TEAM_KEYS.slice(0, count);
+}
+
+export function getMaxTeamCountForCurrentMode() {
+  return state.app.eventMode === 'school' ? MAX_TEAM_COUNT : TOURNAMENT_MAX_TEAM_COUNT;
+}
+
+export function getMaxLobbyPlayersForEventMode(eventMode = state.app.eventMode) {
+  return eventMode === 'school' ? 50 : MAX_LOBBY_PLAYERS;
 }
 
 export function sortByPointsDesc(a, b) {
@@ -143,7 +168,7 @@ export function getParticipants() {
 }
 
 export function getAvailableTeamKeys() {
-  return TEAM_KEYS.slice(0, normalizeTeamCount(state.teamsState.teamCount));
+  return getAvailableTeamKeysForEventMode(state.app.eventMode);
 }
 
 export function ensureTeamsForManualAssignment(rawTeamCount = state.teamsState.teamCount) {

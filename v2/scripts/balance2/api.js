@@ -5,6 +5,7 @@ import { debugLog } from '../../core/debug.js';
 const PROXY_ORIGIN = 'https://laser-proxy.vartaclub.workers.dev';
 const TOURNAMENT_PROXY_JSON_ENDPOINT = `${PROXY_ORIGIN}/json`;
 const TOURNAMENT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
+const SCHOOL_EVENTS_STORAGE_KEY = 'balance2_school_events';
 
 function toFormUrlEncoded(obj = {}) {
   return Object.entries(obj).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`).join('&');
@@ -246,4 +247,26 @@ export function listTournaments({ league, status } = {}) {
     league: league ? normalizeLeague(league) : '',
     status: status || '',
   });
+}
+
+function readSchoolEventsLocal() {
+  try { return JSON.parse(localStorage.getItem(SCHOOL_EVENTS_STORAGE_KEY) || '[]'); } catch { return []; }
+}
+function writeSchoolEventsLocal(events = []) { localStorage.setItem(SCHOOL_EVENTS_STORAGE_KEY, JSON.stringify(events)); }
+
+export async function saveSchoolEvent(payload = {}) {
+  const events = readSchoolEventsLocal();
+  const filtered = events.filter((item) => item.eventId !== payload.eventId);
+  const next = { ...payload, eventMode: 'school', affectsPlayerRating: false, updatedAt: new Date().toISOString() };
+  writeSchoolEventsLocal([next, ...filtered]);
+  return { ok: false, fallback: true, message: 'Server save недоступний, локальна копія збережена.', data: next };
+}
+
+export async function loadSchoolEvents() {
+  return { ok: true, data: readSchoolEventsLocal() };
+}
+
+export async function loadSchoolEvent(eventId) {
+  const item = readSchoolEventsLocal().find((event) => event.eventId === eventId) || null;
+  return { ok: !!item, data: item, message: item ? '' : 'Подію не знайдено' };
 }

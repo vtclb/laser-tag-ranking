@@ -3,13 +3,16 @@ import {
   normalizeLeague,
   computeSeriesSummary,
   syncSelectedMap,
-  MAX_LOBBY_PLAYERS,
+  getMaxLobbyPlayersForEventMode,
+  getMaxTeamCountForCurrentMode,
+  TEAM_KEYS,
   MAX_SERIES_ROUNDS,
 } from './state.js';
 
 const KEY = 'balance2:lobby';
 const PLAYERS_KEY = 'balance2:playersCache';
 const LAST_GAME_KEY = 'balance2:lastSavedGame';
+export const SCHOOL_DRAFT_KEY = 'balance2_school_draft';
 
 export function saveLobby() {
   const data = {
@@ -46,30 +49,16 @@ export function restoreLobby() {
   state.app.query = '';
 
   state.playersState.selected = Array.isArray(data?.playersState?.selected || data?.selected)
-    ? (data.playersState?.selected || data.selected).slice(0, MAX_LOBBY_PLAYERS)
+    ? (data.playersState?.selected || data.selected).slice(0, getMaxLobbyPlayersForEventMode(state.app.eventMode))
     : [];
   syncSelectedMap();
 
-  state.teamsState.teamCount = Math.min(6, Math.max(2, Number(data?.teamsState?.teamCount || data?.teamCount || data?.teamsCount) || 2));
+  state.teamsState.teamCount = Math.min(getMaxTeamCountForCurrentMode(), Math.max(2, Number(data?.teamsState?.teamCount || data?.teamCount || data?.teamsCount) || 2));
   const restoredTeams = data?.teamsState?.teams || data?.teams || {};
-  state.teamsState.teams = {
-    team1: Array.isArray(restoredTeams.team1) ? restoredTeams.team1 : [],
-    team2: Array.isArray(restoredTeams.team2) ? restoredTeams.team2 : [],
-    team3: Array.isArray(restoredTeams.team3) ? restoredTeams.team3 : [],
-    team4: Array.isArray(restoredTeams.team4) ? restoredTeams.team4 : [],
-    team5: Array.isArray(restoredTeams.team5) ? restoredTeams.team5 : [],
-    team6: Array.isArray(restoredTeams.team6) ? restoredTeams.team6 : [],
-  };
+  state.teamsState.teams = Object.fromEntries(TEAM_KEYS.map((key) => [key, Array.isArray(restoredTeams[key]) ? restoredTeams[key] : []]));
 
   const names = data?.teamsState?.teamNames || data?.teamNames || {};
-  state.teamsState.teamNames = {
-    team1: String(names.team1 || 'Команда 1').trim() || 'Команда 1',
-    team2: String(names.team2 || 'Команда 2').trim() || 'Команда 2',
-    team3: String(names.team3 || 'Команда 3').trim() || 'Команда 3',
-    team4: String(names.team4 || 'Команда 4').trim() || 'Команда 4',
-    team5: String(names.team5 || 'Команда 5').trim() || 'Команда 5',
-    team6: String(names.team6 || 'Команда 6').trim() || 'Команда 6',
-  };
+  state.teamsState.teamNames = Object.fromEntries(TEAM_KEYS.map((key, idx) => [key, String(names[key] || `Команда ${idx + 1}`).trim() || `Команда ${idx + 1}`]));
 
   const matchState = data?.matchState || {};
   state.matchState.seriesCount = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(matchState.seriesCount || data?.seriesCount) || 3));
@@ -157,3 +146,9 @@ export function readLastSavedGame() {
     return null;
   }
 }
+
+export function saveSchoolDraft(draft) { localStorage.setItem(SCHOOL_DRAFT_KEY, JSON.stringify(draft || null)); }
+export function loadSchoolDraft() { try { return JSON.parse(localStorage.getItem(SCHOOL_DRAFT_KEY) || 'null'); } catch { return null; } }
+export function peekSchoolDraft() { return loadSchoolDraft(); }
+export function clearSchoolDraft() { localStorage.removeItem(SCHOOL_DRAFT_KEY); }
+export function restoreSchoolDraft() { return loadSchoolDraft(); }

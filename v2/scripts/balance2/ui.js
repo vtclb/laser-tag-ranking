@@ -9,11 +9,11 @@ import {
   syncSelectedMap,
   getPlayerKey,
   TEAM_KEYS,
-  TEAM_COUNT_OPTIONS,
   MAX_SERIES_ROUNDS,
-  MAX_LOBBY_PLAYERS,
   normalizeTeamCount,
   getAssignedTeamId,
+  getTeamCountOptionsForEventMode,
+  getMaxLobbyPlayersForEventMode,
 } from './state.js';
 import { movePlayerToTeam } from './manual.js';
 
@@ -291,7 +291,7 @@ export function renderSavePreview() {
   const root = getSavePreviewRoot();
   if (!root) return;
 
-  const eventMode = state.app.eventMode === 'tournament' ? 'tournament' : 'regular';
+  const eventMode = state.app.eventMode === 'tournament' ? 'tournament' : 'school';
   const [teamA, teamB] = eventMode === 'tournament'
     ? [state.activeTeamAId || 'team1', state.activeTeamBId || 'team2']
     : getActiveMatchTeams();
@@ -349,8 +349,8 @@ export function renderLeagueControls() {
       <section class="balance-step balance-step--event">
         <h3>1. Тип події</h3>
         <div class="event-mode-switch">
-          <button type="button" class="chip event-mode-button ${state.app.eventMode === 'regular' ? 'active' : ''}" data-event-mode="regular">Рейтинговий матч</button>
           <button type="button" class="chip event-mode-button ${state.app.eventMode === 'tournament' ? 'active' : ''}" data-event-mode="tournament">Турнір</button>
+          <button type="button" class="chip event-mode-button ${state.app.eventMode === 'school' ? 'active' : ''}" data-event-mode="school">Школа</button>
         </div>
       </section>
       <section class="balance-step balance-step--source">
@@ -416,7 +416,7 @@ export function renderTeamSettings() {
       <div class="team-settings-group" data-team-count-slot>
         <label class="team-count-select-label">Кількість команд
           <select class="chip team-count-select" data-role="team-count-select">
-            ${TEAM_COUNT_OPTIONS.map((count) => `<option value="${escapeAttr(count)}" ${count === state.teamsState.teamCount ? 'selected' : ''}>${count} ${count < 5 ? 'команди' : 'команд'}</option>`).join('')}
+            ${getTeamCountOptionsForEventMode(state.app.eventMode).map((count) => `<option value="${escapeAttr(count)}" ${count === state.teamsState.teamCount ? 'selected' : ''}>${count} ${count < 5 ? 'команди' : 'команд'}</option>`).join('')}
           </select>
         </label>
       </div>
@@ -444,7 +444,7 @@ export function renderPlayers() {
   const players = sortPlayers(filtered);
 
   count.textContent = `Гравців: ${players.length}`;
-  selectedCount.textContent = `Обрано: ${state.playersState.selected.length} / ${MAX_LOBBY_PLAYERS}`;
+  selectedCount.textContent = `Обрано: ${state.playersState.selected.length} / ${getMaxLobbyPlayersForEventMode(state.app.eventMode)}`;
 
   list.innerHTML = players.map((player) => {
     const key = getPlayerKey(player);
@@ -534,7 +534,7 @@ export function renderTeams() {
 export function renderMatchConfig() {
   const root = document.getElementById('activeMatchConfig');
   if (!root) return;
-  const eventMode = state.app.eventMode === 'tournament' ? 'tournament' : 'regular';
+  const eventMode = state.app.eventMode === 'tournament' ? 'tournament' : 'school';
   const keys = getAvailableTeamKeys();
   const [teamA, teamB] = eventMode === 'tournament'
     ? [state.activeTeamAId || 'team1', state.activeTeamBId || 'team2']
@@ -561,7 +561,7 @@ export function renderMatchConfig() {
   `;
 
   root.innerHTML = `
-    ${eventMode === 'regular' ? regularContent : `
+    ${eventMode === 'school' ? regularContent : `
       <div class="tournament-panel">
         <div class="tag">Змішаний турнір завантажує гравців з дорослої та дитячої ліги.</div>
         <label>Назва турніру <input class="search-input" data-tournament-name type="text" value="${escapeAttr(state.tournamentState.tournamentName || '')}" placeholder="Весняний турнір"></label>

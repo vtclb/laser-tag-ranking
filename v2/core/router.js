@@ -2,7 +2,7 @@ import { ensureGlobalStyles } from '../pages/global-styles.js';
 import { normalizeLeague } from './naming.js';
 
 const templateCache = new Map();
-const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments']);
+const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments', 'school']);
 
 function getView() {
   return document.getElementById('view');
@@ -248,6 +248,12 @@ async function renderRoute() {
       await runPageInit(route, initTournamentsPage, {
         selected: queryParams.selected || queryParams.id || ''
       });
+      return;
+    }
+    if (route === 'school') {
+      await mountTemplate('./pages/school.html');
+      const { initSchoolPage } = await import('../pages/school.js');
+      await runPageInit(route, initSchoolPage);
       return;
     }
 

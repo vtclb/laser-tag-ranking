@@ -7,7 +7,7 @@ export const state = {
     league: 'kids',
     playerSourceMode: 'kids',
     mode: 'auto',
-    eventMode: 'regular',
+    eventMode: 'tournament',
     sortMode: 'points_desc',
     query: '',
   },
@@ -101,7 +101,7 @@ export function normalizeLeague(league) {
   return key === 'kids' ? 'kids' : 'sundaygames';
 }
 
-export function normalizePlayerSourceMode(mode, eventMode = 'regular') {
+export function normalizePlayerSourceMode(mode, eventMode = 'tournament') {
   const key = String(mode || '').trim().toLowerCase();
   if (key === 'kids') return 'kids';
   if (key === 'mixed') return eventMode === 'tournament' ? 'mixed' : 'sundaygames';

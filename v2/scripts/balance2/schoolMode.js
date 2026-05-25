@@ -189,3 +189,12 @@ export function calculateSchoolStandings(teams = [], battles = []) {
 
   return rows.map((row, index) => ({ ...row, place: index + 1 }));
 }
+
+
+export function getSchoolGroupProgress(groupMatches = []) {
+  const matches = Array.isArray(groupMatches) ? groupMatches : [];
+  const completedTotal = matches.filter((m) => m?.status === 'completed').length;
+  const completedA = matches.filter((m) => m?.groupId === 'A' && m?.status === 'completed').length;
+  const completedB = matches.filter((m) => m?.groupId === 'B' && m?.status === 'completed').length;
+  return { completedTotal, total: 20, completedA, totalA: 10, completedB, totalB: 10 };
+}

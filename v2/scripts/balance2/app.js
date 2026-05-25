@@ -29,7 +29,7 @@ import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastS
 import { setStatus, lockSaveButton } from './status.js';
 import { validateSchoolEvent } from './validation.js';
 import { buildSchoolEventPayload } from './schoolPayload.js';
-import { balanceIntoSchoolTeams, generateSchoolGroups } from './schoolMode.js';
+import { balanceIntoSchoolTeams, generateSchoolGroups, generateRoundRobinMatches, normalizeManualPoints, calculateSchoolGroupStandings } from './schoolMode.js';
 import { debugLog } from '../../core/debug.js';
 
 const $ = (id) => document.getElementById(id);
@@ -474,6 +474,35 @@ function renderAndSync() {
 function saveSchoolDraftState() {
   if (state.app.eventMode !== 'school') return;
   saveSchoolDraft(buildSchoolEventPayload(state));
+}
+
+
+function refreshSchoolGroupStandings() {
+  const payload = buildSchoolEventPayload(state);
+  state.schoolState.groupStandings = payload.groupStandings || { A: [], B: [] };
+}
+
+function applySchoolGroupMatchPoints(matchId, pointsAValue, pointsBValue) {
+  const matches = Array.isArray(state.schoolState.groupMatches) ? state.schoolState.groupMatches : [];
+  const match = matches.find((item) => item.id === matchId);
+  if (!match) return { ok: false, error: 'Матч не знайдено.' };
+  const pointsA = pointsAValue === '' ? null : normalizeManualPoints(pointsAValue);
+  const pointsB = pointsBValue === '' ? null : normalizeManualPoints(pointsBValue);
+  if (pointsAValue !== '' && pointsA === null) return { ok: false, error: `Матч ${match.title || match.id} має некоректні бали.` };
+  if (pointsBValue !== '' && pointsB === null) return { ok: false, error: `Матч ${match.title || match.id} має некоректні бали.` };
+  match.result = { ...(match.result || {}), teamAId: match.teamAId, teamBId: match.teamBId, pointsA, pointsB };
+  if (Number.isInteger(pointsA) && Number.isInteger(pointsB)) {
+    match.status = 'completed';
+    match.result.isDraw = pointsA === pointsB;
+    match.result.winnerTeamId = pointsA > pointsB ? match.teamAId : (pointsB > pointsA ? match.teamBId : '');
+  } else {
+    match.result.isDraw = false;
+    match.result.winnerTeamId = '';
+    if (match.status === 'completed') match.status = 'pending';
+  }
+  match.updatedAt = new Date().toISOString();
+  refreshSchoolGroupStandings();
+  return { ok: true };
 }
 
 function buildPayload() {
@@ -1140,6 +1169,51 @@ async function init() {
       if (state.app.eventMode !== 'school') return;
       if ((state.schoolState?.groups?.A?.teamIds?.length || 0) + (state.schoolState?.groups?.B?.teamIds?.length || 0) > 0 && !window.confirm('Перегенерувати групи?')) return;
       state.schoolState.groups = generateSchoolGroups(TEAM_KEYS.slice(0, 10));
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolGenerateGroupMatches() {
+      if (state.app.eventMode !== 'school') return;
+      const groupA = state.schoolState?.groups?.A?.teamIds || [];
+      const groupB = state.schoolState?.groups?.B?.teamIds || [];
+      if (groupA.length !== 5 || groupB.length !== 5) return;
+      const hasResults = (state.schoolState.groupMatches || []).some((match) => Number.isInteger(match?.result?.pointsA) || Number.isInteger(match?.result?.pointsB));
+      if (hasResults && !window.confirm('Матчі груп уже створені. Перегенерація видалить введені результати.')) return;
+      const matchesA = generateRoundRobinMatches(groupA, { stage: 'group', groupId: 'A', titlePrefix: 'Група A' });
+      const matchesB = generateRoundRobinMatches(groupB, { stage: 'group', groupId: 'B', titlePrefix: 'Група B' });
+      state.schoolState.groupMatches = [...matchesA, ...matchesB];
+      refreshSchoolGroupStandings();
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolGroupMatchScoreChange(matchId, pointsAValue, pointsBValue) {
+      if (state.app.eventMode !== 'school') return;
+      const result = applySchoolGroupMatchPoints(matchId, pointsAValue, pointsBValue);
+      state.schoolState.lastError = result.ok ? '' : result.error;
+      if (!result.ok) setStatus({ state: 'error', text: result.error, retryVisible: false });
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolGroupMatchSetCurrent(matchId) {
+      const matches = Array.isArray(state.schoolState.groupMatches) ? state.schoolState.groupMatches : [];
+      const target = matches.find((m) => m.id === matchId);
+      if (!target) return;
+      if (target.status === 'completed') {
+        setStatus({ state: 'error', text: 'Завершений матч не можна зробити поточним.', retryVisible: false });
+        return;
+      }
+      matches.forEach((match) => {
+        if (match.status !== 'completed') match.status = match.id === matchId ? 'current' : 'pending';
+      });
+      target.updatedAt = new Date().toISOString();
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolGroupMatchClearResult(matchId) {
+      const matches = Array.isArray(state.schoolState.groupMatches) ? state.schoolState.groupMatches : [];
+      const target = matches.find((m) => m.id === matchId);
+      if (!target) return;
+      if (!window.confirm('Очистити результат цього матчу?')) return;
+      target.result = { ...(target.result || {}), teamAId: target.teamAId, teamBId: target.teamBId, pointsA: null, pointsB: null, winnerTeamId: '', isDraw: false };
+      target.status = 'pending';
+      target.updatedAt = new Date().toISOString();
+      refreshSchoolGroupStandings();
       saveLobby(); saveSchoolDraftState(); renderAndSync();
     },
     onSchoolMetaChange(teamKey, field, value) {

@@ -59,6 +59,15 @@ export async function initSchoolPage() {
     renderStandings('Group A', latest.groupStandings?.A || []);
     renderStandings('Group B', latest.groupStandings?.B || []);
     renderStandings('Фінальна таблиця', latest.finalGroup?.standings || latest.standings || []);
+    root.append(el('h3', '', 'Фінальні матчі'));
+    const finalMatchesWrap = el('div', 'school-events-list');
+    (latest.finalGroup?.matches || []).forEach((match, idx) => {
+      const row = el('div', 'school-event-item');
+      row.append(el('strong', '', match.title || `Фінальна група · Матч ${idx + 1}`));
+      row.append(el('div', '', `${match.teamAId} ${Number.isInteger(match?.result?.pointsA) ? match.result.pointsA : '—'} : ${Number.isInteger(match?.result?.pointsB) ? match.result.pointsB : '—'} ${match.teamBId} · ${match.status || 'pending'}`));
+      finalMatchesWrap.append(row);
+    });
+    root.append(finalMatchesWrap);
 
     const qualifiers = el('div', 'school-event-item');
     qualifiers.append(el('strong', '', 'Фіналісти'));

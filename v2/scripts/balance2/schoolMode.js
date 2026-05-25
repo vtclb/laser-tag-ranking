@@ -135,6 +135,26 @@ export function calculateSchoolGroupStandings(teams = [], groupMatches = [], gro
   return calculateSchoolRoundRobinStandings(teams.filter((t) => groupTeamIds.has(t.id)), groupMatches.filter((m) => m.groupId === groupId));
 }
 
+export function refreshFinalGroupDerivedState(schoolState = {}, teams = []) {
+  const finalGroup = schoolState.finalGroup || { teamIds: [], matches: [] };
+  const teamIds = Array.isArray(finalGroup.teamIds) ? finalGroup.teamIds : [];
+  const finalTeams = (teams || []).filter((t) => teamIds.includes(t.id));
+  const matches = Array.isArray(finalGroup.matches) ? finalGroup.matches : [];
+  const standings = calculateSchoolRoundRobinStandings(finalTeams, matches);
+  const allCompleted = matches.length > 0 && matches.every((m) => m?.status === 'completed');
+  const championTeamId = allCompleted && standings[0] ? standings[0].teamId : '';
+  schoolState.finalGroup.standings = standings;
+  schoolState.finalGroup.championTeamId = championTeamId;
+  schoolState.championTeamId = championTeamId;
+  return { standings, championTeamId, allCompleted };
+}
+
+export function getFinalGroupProgress(matches = []) {
+  const all = Array.isArray(matches) ? matches : [];
+  const completed = all.filter((m) => m?.status === 'completed').length;
+  return { completed, total: all.length };
+}
+
 export function calculateSchoolStandings(teams = [], battles = []) {
   const map = new Map(teams.map((team) => [team.id, {
     teamId: team.id,

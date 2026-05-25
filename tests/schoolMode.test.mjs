@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getEventModeLimits } from '../v2/scripts/balance2/config.js';
+import { getTeamCountOptionsForEventMode } from '../v2/scripts/balance2/state.js';
 import {
   normalizeManualPoints,
   generateRoundRobinMatches,
@@ -13,6 +14,7 @@ import {
   pickBestWildcardCandidate,
   refreshFinalGroupDerivedState,
   getFinalGroupProgress,
+  getSchoolWorkflowStage,
 } from '../v2/scripts/balance2/schoolMode.js';
 import { validateSchoolTournament } from '../v2/scripts/balance2/validation.js';
 import { buildSchoolEventPayload } from '../v2/scripts/balance2/schoolPayload.js';
@@ -197,4 +199,46 @@ test('wildcard candidates exclude qualifiers and auto suggest works', () => {
   const candidates = getWildcardCandidates(schoolState);
   assert.equal(candidates.some((c) => ['team1', 'team2', 'team6', 'team7'].includes(c.teamId)), false);
   assert.equal(pickBestWildcardCandidate(candidates)?.teamId, 'team8');
+});
+
+test('payload includes full export structure', () => {
+  const state = { schoolState: { eventId: 'school_x', format: 'school_groups_final', title: 'T', date: '2026-05-25', groups: { A: { teamIds: ['team1', 'team2', 'team3', 'team4', 'team5'] }, B: { teamIds: ['team6', 'team7', 'team8', 'team9', 'team10'] } }, groupMatches: [], finalGroup: { teamIds: ['team1', 'team2', 'team6', 'team7'], matches: [] }, teamMeta: {} }, teamsState: { teams: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`team${i + 1}`, []])) }, playersState: { players: [] } };
+  const payload = buildSchoolEventPayload(state);
+  ['eventId', 'eventMode', 'format', 'teams', 'groups', 'groupMatches', 'finalGroup', 'championTeamId'].forEach((k) => assert.ok(k in payload));
+});
+
+test('draft status does not require champion', () => {
+  const payload = { eventMode: 'school', eventId: 'e1', title: 'x', players: [], format: 'school_groups_final', affectsPlayerRating: false, status: 'draft', teams: mkTeams(10), groups: { A: { teamIds: ['team1', 'team2', 'team3', 'team4', 'team5'] }, B: { teamIds: ['team6', 'team7', 'team8', 'team9', 'team10'] } }, groupMatches: [], finalGroup: { teamIds: ['team1', 'team2', 'team6', 'team7'], matches: [] }, championTeamId: '' };
+  assert.equal(validateSchoolTournament(payload).ok, true);
+});
+
+test('completed status requires champion and final matches completed', () => {
+  const base = { eventMode: 'school', eventId: 'e1', title: 'x', players: [], format: 'school_groups_final', affectsPlayerRating: false, status: 'completed', teams: mkTeams(10), groups: { A: { teamIds: ['team1', 'team2', 'team3', 'team4', 'team5'] }, B: { teamIds: ['team6', 'team7', 'team8', 'team9', 'team10'] } }, groupMatches: [], finalGroup: { teamIds: ['team1', 'team2', 'team6', 'team7'], matches: [{ teamAId: 'team1', teamBId: 'team2', status: 'pending', result: {} }] }, championTeamId: '' };
+  const v = validateSchoolTournament(base);
+  assert.equal(v.ok, false);
+  assert.equal(v.errors.some((e) => e.includes('всі фінальні матчі')), true);
+  assert.equal(v.errors.some((e) => e.includes('championTeamId')), true);
+});
+
+test('validation catches duplicate player/team/match pair', () => {
+  const teams = mkTeams(10);
+  teams[0].players = [{ id: 'p1' }];
+  teams[1].players = [{ id: 'p1' }];
+  teams[2].id = 'team1';
+  const payload = { eventMode: 'school', eventId: 'e1', title: 'x', players: [], format: 'school_groups_final', affectsPlayerRating: false, teams, groups: { A: { teamIds: ['team1', 'team1', 'team3', 'team4', 'team5'] }, B: { teamIds: ['team6', 'team7', 'team8', 'team9', 'team10'] } }, groupMatches: [{ teamAId: 'team1', teamBId: 'team2', status: 'pending' }, { teamAId: 'team2', teamBId: 'team1', status: 'pending' }], finalGroup: { teamIds: ['team1', 'team2', 'team6', 'team7'], matches: [] } };
+  const v = validateSchoolTournament(payload);
+  assert.equal(v.errors.some((e) => e.includes('Duplicate player in teams')), true);
+  assert.equal(v.errors.some((e) => e.includes('Duplicate team id')), true);
+  assert.equal(v.errors.some((e) => e.includes('duplicate team')), true);
+  assert.equal(v.errors.some((e) => e.includes('Duplicate match pair')), true);
+});
+
+test('getSchoolWorkflowStage resolves expected flow', () => {
+  assert.equal(getSchoolWorkflowStage({ teams: [] }), 'setup');
+  assert.equal(getSchoolWorkflowStage({ teams: [{}], groups: { A: { teamIds: [] }, B: { teamIds: [] } } }), 'teams');
+  assert.equal(getSchoolWorkflowStage({ teams: [{}], groups: { A: { teamIds: ['team1'] }, B: { teamIds: ['team2'] } }, groupMatches: [] }), 'groups');
+});
+
+test('tournament mode options unchanged', () => {
+  assert.deepEqual(getTeamCountOptionsForEventMode('tournament'), [2, 3, 4, 5, 6]);
 });

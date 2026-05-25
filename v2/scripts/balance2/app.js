@@ -39,6 +39,7 @@ import {
   getWildcardCandidates,
   pickBestWildcardCandidate,
   refreshFinalGroupDerivedState,
+  getSchoolWorkflowStage,
 } from './schoolMode.js';
 import { debugLog } from '../../core/debug.js';
 
@@ -1056,7 +1057,17 @@ async function init() {
   }
 
   $('restoreBtn')?.addEventListener('click', async () => {
-    if (!restoreLobby()) return;
+    if (hasSchoolDraft) {
+      const draft = peekSchoolDraft();
+      if (!draft) return;
+      state.app.eventMode = 'school';
+      state.schoolState = {
+        ...state.schoolState,
+        ...draft,
+        eventMode: 'school',
+      };
+      state.uiState.schoolWorkflowStage = getSchoolWorkflowStage(state.schoolState);
+    } else if (!restoreLobby()) return;
     normalizeEventAndSourceState(state.app.eventMode, state.app.playerSourceMode);
     $('sortMode').value = state.app.sortMode;
     await ensurePlayersLoaded();

@@ -9,7 +9,19 @@ export function normalizeSchoolMeta(input = {}) {
   return {
     teamName,
     schoolName,
-    schoolNumber: schoolNumberRaw || 'Без номера',
+    schoolNumber: schoolNumberRaw,
+  };
+}
+
+export function formatSchoolDisplay(meta = {}, fallbackTeamName = 'Команда') {
+  const normalized = normalizeSchoolMeta({ ...meta, teamName: meta?.teamName || fallbackTeamName });
+  const schoolPrefix = normalized.schoolNumber
+    ? `Школа №${normalized.schoolNumber}`
+    : 'Без номера';
+  const schoolLabel = normalized.schoolName ? `${schoolPrefix} · ${normalized.schoolName}` : `${schoolPrefix} · Без назви`;
+  return {
+    schoolLabel,
+    teamLabel: normalized.teamName || fallbackTeamName,
   };
 }
 

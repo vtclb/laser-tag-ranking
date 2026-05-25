@@ -24,9 +24,11 @@ import {
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setTournamentStatus, clearTournamentStatus } from './ui.js';
-import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js';
-import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame } from './storage.js';
+import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame, saveSchoolEvent } from './api.js';
+import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame, saveSchoolDraft, clearSchoolDraft } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
+import { validateSchoolEvent } from './validation.js';
+import { buildSchoolEventPayload } from './schoolPayload.js';
 import { debugLog } from '../../core/debug.js';
 
 const $ = (id) => document.getElementById(id);
@@ -529,6 +531,8 @@ function buildTournamentGamePayload() {
   };
 }
 
+
+
 function mapTournamentResult() {
   const summary = computeSeriesSummary();
   if (summary.played < 1) return '';
@@ -640,7 +644,7 @@ async function doSave(retry = false) {
     return;
   }
 
-  await handleSaveRegularGame(retry);
+  await handleSaveSchoolEvent(retry);
 }
 
 async function handleSaveTournamentGame(retry = false) {
@@ -769,6 +773,36 @@ async function handleSaveRegularGame(retry = false) {
   syncSaveButtonState();
 }
 
+
+
+async function handleSaveSchoolEvent(retry = false) {
+  const payload = retry ? state.meta.lastPayload : buildSchoolEventPayload(state);
+  state.meta.lastPayload = payload;
+  const valid = validateSchoolEvent(payload);
+  if (!valid.ok) {
+    const message = valid.errors[0] || 'Некоректні дані шкільного турніру';
+    setSaveFeedback('error', message, { renderNow: false });
+    setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: false });
+    renderAndSync();
+    return;
+  }
+  saveLocked = true;
+  lockSaveButton(true);
+  setSaveFeedback('saving', 'Зберігаємо шкільний турнір...', { renderNow: false });
+  renderAndSync();
+  const res = await saveSchoolEvent(payload);
+  if (res.ok || res.fallback) {
+    clearSchoolDraft();
+    setSaveFeedback('success', res.fallback ? 'Збережено локально (backup).' : 'Шкільний турнір збережено.', { renderNow: false });
+    setStatus({ state: 'saved', text: 'School event збережено без оновлення рейтингу.', retryVisible: false });
+  } else {
+    setSaveFeedback('error', res.message || 'Не вдалося зберегти school event', { renderNow: false });
+    setStatus({ state: 'error', text: `❌ ${res.message || 'Не вдалося зберегти school event'}`, retryVisible: true });
+  }
+  saveLocked = false;
+  lockSaveButton(false);
+  renderAndSync();
+}
 function toggleSelectedPlayer(nick) {
   if (state.playersState.selectedMap.has(nick)) {
     state.playersState.selected = state.playersState.selected.filter((n) => n !== nick);

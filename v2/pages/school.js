@@ -26,25 +26,22 @@ export async function initSchoolPage() {
     root.append(list);
 
     const standings = el('table', 'school-standings');
-    standings.innerHTML = '<thead><tr><th>Місце</th><th>Школа</th><th>Номер</th><th>Команда</th><th>Гравці</th><th>Бої</th><th>Бали</th><th>Сер.</th><th>Перемоги</th><th>Найкращий бій</th></tr></thead>';
+    const thead = el('thead');
+    const headTr = el('tr');
+    ['Місце', 'Школа', 'Номер', 'Команда', 'І', 'В', 'Н', 'П', 'РМ', 'О'].forEach((h) => headTr.append(el('th', '', h)));
+    thead.append(headTr);
+    standings.append(thead);
     const tbody = el('tbody');
-    (latest.standings || []).forEach((row) => {
+    ((latest.finalGroup?.standings || latest.standings || [])).forEach((row) => {
       const tr = document.createElement('tr');
-      [row.place, row.schoolName || '—', row.schoolNumber || '—', row.teamName || '—', row.playersCount || 0, row.battlesPlayed || 0, row.totalPoints || 0, row.averagePoints || 0, row.winsByBattle || 0, row.bestBattlePoints || 0]
+      [row.place, row.schoolName || '—', row.schoolNumber || '—', row.teamName || '—', row.matchesPlayed || 0, row.wins || 0, row.draws || 0, row.losses || 0, row.pointsDiff || 0, row.tournamentPoints || 0]
         .forEach((v) => tr.append(el('td', '', String(v))));
       tbody.append(tr);
     });
     standings.append(tbody);
     root.append(standings);
 
-    const battles = el('div', 'school-battles');
-    (latest.battles || []).forEach((battle, idx) => {
-      const card = el('div', 'school-battle-item');
-      card.append(el('strong', '', battle.title || `Бій ${idx + 1}`));
-      (battle.results || []).forEach((r) => card.append(el('div', '', `${schoolLabel((latest.teams || []).find((t) => t.id === r.teamId) || {})} — ${r.points}`)));
-      battles.append(card);
-    });
-    root.append(battles);
+    root.append(el('h3', '', `Чемпіон: ${latest.championTeamId || latest.finalGroup?.championTeamId || '—'}`));
   } catch {
     root.textContent = 'Не вдалося завантажити шкільні турніри.';
   }

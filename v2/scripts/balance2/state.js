@@ -4,6 +4,7 @@ export const MAX_SERIES_ROUNDS = 10;
 export const MAX_LOBBY_PLAYERS = 30;
 export const TEAM_KEYS = Array.from({ length: 12 }, (_, i) => `team${i + 1}`);
 export const TEAM_COUNT_OPTIONS = [2, 3, 4, 5, 6];
+export const SCHOOL_TEAM_COUNT = 10;
 export const MIN_TEAM_COUNT = 2;
 export const MAX_TEAM_COUNT = 12;
 export const TOURNAMENT_MAX_TEAM_COUNT = 6;
@@ -68,9 +69,17 @@ export const state = {
     title: 'Шкільний турнір',
     date: '',
     status: 'draft',
+    format: 'school_groups_final',
+    scoringMode: 'manualPoints',
+    affectsPlayerRating: false,
     teamMeta: Object.fromEntries(TEAM_KEYS.map((key, idx) => [key, { schoolName: '', schoolNumber: '', teamName: `Команда ${idx + 1}` }])),
-    battles: [],
-    standings: [],
+    groups: { A: { id: 'A', name: 'Група A', teamIds: [] }, B: { id: 'B', name: 'Група B', teamIds: [] } },
+    groupMatches: [],
+    groupStandings: { A: [], B: [] },
+    qualifiers: { A: [], B: [] },
+    wildcard: { enabled: false, teamId: '', selectedByAdmin: false, reason: '' },
+    finalGroup: { id: 'FINAL', name: 'Фінальна група', teamIds: [], matches: [], standings: [], championTeamId: '' },
+    championTeamId: '',
     changeLog: [],
     lastDraftSavedAt: '',
     lastError: '',
@@ -94,17 +103,20 @@ export function normalizeTeamCount(value) {
 
 
 export function getTeamCountOptionsForEventMode(eventMode = state.app.eventMode) {
-  const maxCount = eventMode === 'school' ? MAX_TEAM_COUNT : TOURNAMENT_MAX_TEAM_COUNT;
+  if (eventMode === 'school') return [SCHOOL_TEAM_COUNT];
+  const maxCount = TOURNAMENT_MAX_TEAM_COUNT;
   return Array.from({ length: maxCount - MIN_TEAM_COUNT + 1 }, (_, idx) => MIN_TEAM_COUNT + idx);
 }
 
 export function getAvailableTeamKeysForEventMode(eventMode = state.app.eventMode) {
-  const count = Math.min(normalizeTeamCount(state.teamsState.teamCount), eventMode === 'school' ? MAX_TEAM_COUNT : TOURNAMENT_MAX_TEAM_COUNT);
+  const count = eventMode === 'school'
+    ? SCHOOL_TEAM_COUNT
+    : Math.min(normalizeTeamCount(state.teamsState.teamCount), TOURNAMENT_MAX_TEAM_COUNT);
   return TEAM_KEYS.slice(0, count);
 }
 
 export function getMaxTeamCountForCurrentMode() {
-  return state.app.eventMode === 'school' ? MAX_TEAM_COUNT : TOURNAMENT_MAX_TEAM_COUNT;
+  return state.app.eventMode === 'school' ? SCHOOL_TEAM_COUNT : TOURNAMENT_MAX_TEAM_COUNT;
 }
 
 export function getMaxLobbyPlayersForEventMode(eventMode = state.app.eventMode) {

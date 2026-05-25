@@ -40,6 +40,7 @@ export function createSchoolEventDraft() {
   const rand = Math.random().toString(36).slice(2, 6);
   return {
     eventId: `school_${stamp}_${rand}`,
+    format: 'school_groups_final',
     eventMode: 'school',
     scoringMode: 'manualPoints',
     affectsPlayerRating: false,
@@ -47,12 +48,66 @@ export function createSchoolEventDraft() {
     date: now.slice(0, 10),
     status: 'draft',
     teams: [],
-    battles: [],
-    standings: [],
+    groups: { A: { id: 'A', name: 'Група A', teamIds: [] }, B: { id: 'B', name: 'Група B', teamIds: [] } },
+    groupMatches: [],
+    groupStandings: { A: [], B: [] },
+    qualifiers: { A: [], B: [] },
+    wildcard: { enabled: false, teamId: '', selectedByAdmin: false, reason: '' },
+    finalGroup: { id: 'FINAL', name: 'Фінальна група', teamIds: [], matches: [], standings: [], championTeamId: '' },
+    championTeamId: '',
     changeLog: [],
     createdAt: now,
     updatedAt: now,
   };
+}
+
+export function generateRoundRobinMatches(teamIds = [], { stage = 'group', groupId = 'A', titlePrefix = 'Група A' } = {}) {
+  const now = nowIso();
+  const matches = [];
+  let matchIndex = 1;
+  for (let i = 0; i < teamIds.length; i += 1) {
+    for (let j = i + 1; j < teamIds.length; j += 1) {
+      matches.push({
+        id: `${stage}_${groupId}_${teamIds[i]}_${teamIds[j]}`,
+        stage,
+        groupId,
+        title: `${titlePrefix} · Матч ${matchIndex}`,
+        matchIndex,
+        teamAId: teamIds[i],
+        teamBId: teamIds[j],
+        status: 'pending',
+        result: { teamAId: teamIds[i], teamBId: teamIds[j], pointsA: null, pointsB: null, winnerTeamId: '', isDraw: false },
+        createdAt: now,
+        updatedAt: now,
+      });
+      matchIndex += 1;
+    }
+  }
+  return matches;
+}
+
+export function calculateSchoolRoundRobinStandings(teams = [], matches = []) {
+  const map = new Map(teams.map((t) => [t.id, { place: 0, teamId: t.id, teamName: t.teamName || 'Команда', schoolName: t.schoolName || '', schoolNumber: t.schoolNumber || '', matchesPlayed: 0, wins: 0, draws: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, pointsDiff: 0, tournamentPoints: 0, averagePointsFor: 0, bestMatchPoints: 0 }]));
+  matches.forEach((m) => {
+    if (m?.status !== 'completed') return;
+    const a = map.get(m.teamAId); const b = map.get(m.teamBId);
+    const pa = Number(m?.result?.pointsA); const pb = Number(m?.result?.pointsB);
+    if (!a || !b || !Number.isInteger(pa) || !Number.isInteger(pb)) return;
+    a.matchesPlayed += 1; b.matchesPlayed += 1;
+    a.pointsFor += pa; a.pointsAgainst += pb; b.pointsFor += pb; b.pointsAgainst += pa;
+    a.bestMatchPoints = Math.max(a.bestMatchPoints, pa); b.bestMatchPoints = Math.max(b.bestMatchPoints, pb);
+    if (pa > pb) { a.wins += 1; b.losses += 1; a.tournamentPoints += 3; }
+    else if (pb > pa) { b.wins += 1; a.losses += 1; b.tournamentPoints += 3; }
+    else { a.draws += 1; b.draws += 1; a.tournamentPoints += 1; b.tournamentPoints += 1; }
+  });
+  const rows = [...map.values()].map((r) => ({ ...r, pointsDiff: r.pointsFor - r.pointsAgainst, averagePointsFor: r.matchesPlayed ? Number((r.pointsFor / r.matchesPlayed).toFixed(2)) : 0 }));
+  rows.sort((a, b) => b.tournamentPoints - a.tournamentPoints || b.wins - a.wins || b.pointsDiff - a.pointsDiff || b.pointsFor - a.pointsFor || b.bestMatchPoints - a.bestMatchPoints || String(a.schoolNumber).localeCompare(String(b.schoolNumber), 'uk') || String(a.schoolName).localeCompare(String(b.schoolName), 'uk') || String(a.teamName).localeCompare(String(b.teamName), 'uk'));
+  return rows.map((row, idx) => ({ ...row, place: idx + 1 }));
+}
+
+export function calculateSchoolGroupStandings(teams = [], groupMatches = [], groupId = 'A') {
+  const groupTeamIds = new Set(groupMatches.filter((m) => m.groupId === groupId).flatMap((m) => [m.teamAId, m.teamBId]));
+  return calculateSchoolRoundRobinStandings(teams.filter((t) => groupTeamIds.has(t.id)), groupMatches.filter((m) => m.groupId === groupId));
 }
 
 export function calculateSchoolStandings(teams = [], battles = []) {

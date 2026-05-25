@@ -16,6 +16,7 @@ import {
   getMaxLobbyPlayersForEventMode,
 } from './state.js';
 import { movePlayerToTeam } from './manual.js';
+import { formatSchoolDisplay, getSchoolGroupProgress } from './schoolMode.js';
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -515,6 +516,31 @@ function renderTournamentSchedule() {
   `;
 }
 
+function schoolTeamDisplay(teamId) {
+  const meta = state.schoolState?.teamMeta?.[teamId] || {};
+  const fallbackTeamName = state.teamsState.teamNames?.[teamId] || `Команда ${String(teamId || '').replace('team', '')}`;
+  const labels = formatSchoolDisplay(meta, fallbackTeamName);
+  return `${labels.schoolLabel} · ${labels.teamLabel}`;
+}
+
+function renderSchoolGroupMatches() {
+  if (state.app.eventMode !== 'school') return '';
+  const matches = Array.isArray(state.schoolState.groupMatches) ? state.schoolState.groupMatches : [];
+  const byGroup = (gid) => matches.filter((m) => m.groupId === gid);
+  const error = state.schoolState?.lastError ? `<div class="tag">${escapeHtml(state.schoolState.lastError)}</div>` : '';
+  const canGenerate = (state.schoolState?.groups?.A?.teamIds?.length || 0) === 5 && (state.schoolState?.groups?.B?.teamIds?.length || 0) === 5;
+  const groupBlock = (gid) => `<div class="team-card"><h4>Група ${gid} — матчі</h4>${byGroup(gid).map((match, idx) => {
+    const title = match.title || `Група ${gid} · Матч ${idx + 1}`;
+    return `<div class="tournament-schedule-row"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(schoolTeamDisplay(match.teamAId))} vs ${escapeHtml(schoolTeamDisplay(match.teamBId))}</span></div><label>A <input type="number" min="0" max="10" step="1" data-school-group-score-a="${escapeAttr(match.id)}" value="${escapeAttr(match?.result?.pointsA ?? '')}"></label><label>B <input type="number" min="0" max="10" step="1" data-school-group-score-b="${escapeAttr(match.id)}" value="${escapeAttr(match?.result?.pointsB ?? '')}"></label><span class="tag">${escapeHtml(match.status || 'pending')}</span>${match.status === 'current' ? '<button class="chip" type="button" disabled>Поточний</button>' : `<button class="chip" type="button" data-school-group-current="${escapeAttr(match.id)}">Обрати як поточний</button>`}${(Number.isInteger(match?.result?.pointsA) || Number.isInteger(match?.result?.pointsB)) ? `<button class="chip" type="button" data-school-group-clear="${escapeAttr(match.id)}">Очистити результат</button>` : ''}</div>`;
+  }).join('') || '<div class="tag">Матчі ще не згенеровано.</div>'}</div>`;
+  const standingsTable = (gid) => {
+    const rows = state.schoolState?.groupStandings?.[gid] || [];
+    return `<div class="team-card"><h4>Таблиця Групи ${gid}</h4><table><thead><tr><th>Місце</th><th>Команда / школа</th><th>І</th><th>В</th><th>Н</th><th>П</th><th>Турнірні бали</th><th>Забито</th><th>Пропущено</th><th>Різниця</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r.place}</td><td>${escapeHtml(schoolTeamDisplay(r.teamId))}</td><td>${r.matchesPlayed}</td><td>${r.wins}</td><td>${r.draws}</td><td>${r.losses}</td><td>${r.tournamentPoints}</td><td>${r.pointsFor}</td><td>${r.pointsAgainst}</td><td>${r.pointsDiff}</td></tr>`).join('')}</tbody></table></div>`;
+  };
+  const progress = getSchoolGroupProgress(matches);
+  return `<div class="school-group-stage"><div class="team-settings-actions"><button class="chip" type="button" data-school-generate-group-matches="1" ${canGenerate ? '' : 'disabled'}>Згенерувати матчі груп</button></div><h4>Групові матчі</h4>${error}<div class="tag">Груповий етап: Зіграно ${progress.completedTotal} / ${progress.total} · Група A: ${progress.completedA} / ${progress.totalA} · Група B: ${progress.completedB} / ${progress.totalB}</div><div class="tag">${progress.completedTotal === 20 ? 'Груповий етап завершено. Можна формувати фінальну групу.' : 'Завершіть усі групові матчі, щоб сформувати фінальну групу.'}</div>${groupBlock('A')}${groupBlock('B')}${standingsTable('A')}${standingsTable('B')}<div class="tag">${progress.completedTotal === 20 ? '' : 'Фінальна група буде доступна після завершення групового етапу.'}</div></div>`;
+}
+
 export function renderTeams() {
   const grid = document.getElementById('teamsGrid');
   if (!grid) return;
@@ -543,6 +569,7 @@ export function renderTeams() {
     const groupA = state.schoolState?.groups?.A?.teamIds || [];
     const groupB = state.schoolState?.groups?.B?.teamIds || [];
     preview.innerHTML = `<div class="tag">Група A: ${groupA.length} команд</div><div class="tag">Група B: ${groupB.length} команд</div><div class="tag">${groupA.length === 5 && groupB.length === 5 ? '✅ 5/5' : '⚠️ Очікується 5/5'}</div>`;
+    preview.insertAdjacentHTML('beforeend', renderSchoolGroupMatches());
   }
 }
 
@@ -846,6 +873,9 @@ export function bindUiEvents(handlers) {
     const removeFromTeam = e.target.closest('[data-role="remove-player-from-team"]');
     const schoolBuildTeams = e.target.closest('[data-school-build-teams]');
     const schoolBuildGroups = e.target.closest('[data-school-build-groups]');
+    const schoolGenerateGroupMatches = e.target.closest('[data-school-generate-group-matches]');
+    const schoolCurrent = e.target.closest('[data-school-group-current]')?.dataset.schoolGroupCurrent;
+    const schoolClear = e.target.closest('[data-school-group-clear]')?.dataset.schoolGroupClear;
 
     if (toggle) {
       const alreadySelected = state.playersState.selectedMap.has(toggle);
@@ -909,6 +939,9 @@ export function bindUiEvents(handlers) {
     if (removeFromTeam) handlers.onRemovePlayerFromTeam(removeFromTeam.dataset.playerKey, removeFromTeam.dataset.teamId);
     if (schoolBuildTeams) handlers.onSchoolBuildTeams();
     if (schoolBuildGroups) handlers.onSchoolBuildGroups();
+    if (schoolGenerateGroupMatches) handlers.onSchoolGenerateGroupMatches();
+    if (schoolCurrent) handlers.onSchoolGroupMatchSetCurrent(schoolCurrent);
+    if (schoolClear) handlers.onSchoolGroupMatchClearResult(schoolClear);
   });
 
   document.addEventListener('input', (e) => {
@@ -920,6 +953,14 @@ export function bindUiEvents(handlers) {
     if (schoolDate) handlers.onSchoolDateChange(schoolDate.value);
     const schoolMetaInput = e.target.closest('[data-school-meta]');
     if (schoolMetaInput) handlers.onSchoolMetaChange(schoolMetaInput.dataset.schoolMeta, schoolMetaInput.dataset.schoolMetaField, schoolMetaInput.value);
+    const scoreA = e.target.closest('[data-school-group-score-a]');
+    const scoreB = e.target.closest('[data-school-group-score-b]');
+    if (scoreA || scoreB) {
+      const matchId = scoreA?.dataset.schoolGroupScoreA || scoreB?.dataset.schoolGroupScoreB;
+      const inputA = document.querySelector(`[data-school-group-score-a="${escapeAttr(matchId)}"]`);
+      const inputB = document.querySelector(`[data-school-group-score-b="${escapeAttr(matchId)}"]`);
+      handlers.onSchoolGroupMatchScoreChange(matchId, inputA?.value ?? '', inputB?.value ?? '');
+    }
   });
 
   document.addEventListener('keydown', (e) => {

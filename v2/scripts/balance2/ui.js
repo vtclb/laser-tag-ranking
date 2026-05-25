@@ -965,18 +965,18 @@ export function bindUiEvents(handlers) {
     if (createTournament) handlers.onCreateTournament();
     if (saveTeams) handlers.onSaveTournamentTeams();
     if (removeFromTeam) handlers.onRemovePlayerFromTeam(removeFromTeam.dataset.playerKey, removeFromTeam.dataset.teamId);
-    if (schoolBuildTeams) handlers.onSchoolBuildTeams();
-    if (schoolBuildGroups) handlers.onSchoolBuildGroups();
-    if (schoolGenerateGroupMatches) handlers.onSchoolGenerateGroupMatches();
-    if (schoolCurrent) handlers.onSchoolGroupMatchSetCurrent(schoolCurrent);
-    if (schoolClear) handlers.onSchoolGroupMatchClearResult(schoolClear);
-    if (schoolFormFinalGroup) handlers.onSchoolFormFinalGroup();
-    if (schoolSuggestWildcard) handlers.onSchoolSuggestWildcard();
-    if (schoolGenerateFinalMatches) handlers.onSchoolGenerateFinalMatches();
-    if (schoolFinalCurrent) handlers.onSchoolFinalMatchSetCurrent(schoolFinalCurrent);
-    if (schoolFinalClear) handlers.onSchoolFinalMatchClearResult(schoolFinalClear);
+    if (schoolBuildTeams) handlers.onSchoolBuildTeams?.();
+    if (schoolBuildGroups) handlers.onSchoolBuildGroups?.();
+    if (schoolGenerateGroupMatches) handlers.onSchoolGenerateGroupMatches?.();
+    if (schoolCurrent) handlers.onSchoolGroupMatchSetCurrent?.(schoolCurrent);
+    if (schoolClear) handlers.onSchoolGroupMatchClearResult?.(schoolClear);
+    if (schoolFormFinalGroup) handlers.onSchoolFormFinalGroup?.();
+    if (schoolSuggestWildcard) handlers.onSchoolSuggestWildcard?.();
+    if (schoolGenerateFinalMatches) handlers.onSchoolGenerateFinalMatches?.();
+    if (schoolFinalCurrent) handlers.onSchoolFinalMatchSetCurrent?.(schoolFinalCurrent);
+    if (schoolFinalClear) handlers.onSchoolFinalMatchClearResult?.(schoolFinalClear);
     const schoolExport = e.target.closest('[data-school-export-json]');
-    if (schoolExport) handlers.onSchoolExportJson();
+    if (schoolExport) handlers.onSchoolExportJson?.();
   });
 
   document.addEventListener('input', (e) => {
@@ -984,17 +984,17 @@ export function bindUiEvents(handlers) {
     if (tournamentNameInput) handlers.onTournamentName(tournamentNameInput.value);
     const schoolTitle = e.target.closest('[data-school-title]');
     const schoolDate = e.target.closest('[data-school-date]');
-    if (schoolTitle) handlers.onSchoolTitleChange(schoolTitle.value);
-    if (schoolDate) handlers.onSchoolDateChange(schoolDate.value);
+    if (schoolTitle) handlers.onSchoolTitleChange?.(schoolTitle.value);
+    if (schoolDate) handlers.onSchoolDateChange?.(schoolDate.value);
     const schoolMetaInput = e.target.closest('[data-school-meta]');
-    if (schoolMetaInput) handlers.onSchoolMetaChange(schoolMetaInput.dataset.schoolMeta, schoolMetaInput.dataset.schoolMetaField, schoolMetaInput.value);
+    if (schoolMetaInput) handlers.onSchoolMetaChange?.(schoolMetaInput.dataset.schoolMeta, schoolMetaInput.dataset.schoolMetaField, schoolMetaInput.value);
     const scoreA = e.target.closest('[data-school-group-score-a]');
     const scoreB = e.target.closest('[data-school-group-score-b]');
     if (scoreA || scoreB) {
       const matchId = scoreA?.dataset.schoolGroupScoreA || scoreB?.dataset.schoolGroupScoreB;
       const inputA = document.querySelector(`[data-school-group-score-a="${escapeAttr(matchId)}"]`);
       const inputB = document.querySelector(`[data-school-group-score-b="${escapeAttr(matchId)}"]`);
-      handlers.onSchoolGroupMatchScoreChange(matchId, inputA?.value ?? '', inputB?.value ?? '');
+      handlers.onSchoolGroupMatchScoreChange?.(matchId, inputA?.value ?? '', inputB?.value ?? '');
     }
     const finalA = e.target.closest('[data-school-final-score-a]');
     const finalB = e.target.closest('[data-school-final-score-b]');
@@ -1002,12 +1002,12 @@ export function bindUiEvents(handlers) {
       const matchId = finalA?.dataset.schoolFinalScoreA || finalB?.dataset.schoolFinalScoreB;
       const inputA = document.querySelector(`[data-school-final-score-a="${escapeAttr(matchId)}"]`);
       const inputB = document.querySelector(`[data-school-final-score-b="${escapeAttr(matchId)}"]`);
-      handlers.onSchoolFinalMatchScoreChange(matchId, inputA?.value ?? '', inputB?.value ?? '');
+      handlers.onSchoolFinalMatchScoreChange?.(matchId, inputA?.value ?? '', inputB?.value ?? '');
     }
     const wildcardSelect = e.target.closest('[data-school-wildcard-select]');
-    if (wildcardSelect) handlers.onSchoolWildcardSelect(wildcardSelect.value);
+    if (wildcardSelect) handlers.onSchoolWildcardSelect?.(wildcardSelect.value);
     const wildcardToggle = e.target.closest('[data-school-wildcard-enabled]');
-    if (wildcardToggle) handlers.onSchoolWildcardToggle(Boolean(wildcardToggle.checked));
+    if (wildcardToggle) handlers.onSchoolWildcardToggle?.(Boolean(wildcardToggle.checked));
   });
 
   document.addEventListener('keydown', (e) => {

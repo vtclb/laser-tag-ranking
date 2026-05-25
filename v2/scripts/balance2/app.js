@@ -31,6 +31,7 @@ import { validateSchoolEvent } from './validation.js';
 import { buildSchoolEventPayload } from './schoolPayload.js';
 import {
   balanceIntoSchoolTeams,
+  createSchoolEventDraft,
   generateSchoolGroups,
   generateRoundRobinMatches,
   normalizeManualPoints,
@@ -111,6 +112,24 @@ function setTournamentDirty(message = 'Команди змінено — збе�
   state.tournamentState.teamsSaved = false;
   state.tournamentState.savedTournamentTeamIds = [];
   setTournamentStatus(message, 'warning');
+}
+
+function ensureSchoolState() {
+  if (!state.schoolState || typeof state.schoolState !== 'object') {
+    state.schoolState = createSchoolEventDraft();
+    return;
+  }
+  const fallback = createSchoolEventDraft();
+  state.schoolState = {
+    ...fallback,
+    ...state.schoolState,
+    groups: { ...fallback.groups, ...(state.schoolState.groups || {}) },
+    groupStandings: { ...fallback.groupStandings, ...(state.schoolState.groupStandings || {}) },
+    qualifiers: { ...fallback.qualifiers, ...(state.schoolState.qualifiers || {}) },
+    wildcard: { ...fallback.wildcard, ...(state.schoolState.wildcard || {}) },
+    finalGroup: { ...fallback.finalGroup, ...(state.schoolState.finalGroup || {}) },
+    teamMeta: state.schoolState.teamMeta && typeof state.schoolState.teamMeta === 'object' ? state.schoolState.teamMeta : {},
+  };
 }
 
 function generateRoundRobinSchedule(teamIds = []) {
@@ -706,7 +725,9 @@ function markScheduledMatchPlayed(resultSummary) {
 }
 
 async function doSave(retry = false) {
-  const eventMode = state.app?.eventMode === 'school' ? 'school' : 'tournament';
+  const eventMode = state.app?.eventMode === 'school'
+    ? 'school'
+    : (state.app?.eventMode === 'tournament' ? 'tournament' : 'default');
   debugLog('[balance2:save] mode', eventMode);
   const error = validateSave();
   if (error) {
@@ -722,12 +743,29 @@ async function doSave(retry = false) {
     return;
   }
 
+  if (eventMode === 'school') {
+    await handleSaveSchoolEvent(retry);
+    return;
+  }
+
   if (eventMode === 'tournament') {
     await handleSaveTournamentGame(retry);
     return;
   }
 
-  await handleSaveSchoolEvent(retry);
+  const payload = retry ? state.meta.lastPayload : buildPayload();
+  state.meta.lastPayload = payload;
+  const res = await saveMatch(payload);
+  if (!res?.ok) {
+    const msg = res?.message || 'Невідома помилка';
+    setSaveFeedback('error', msg, { renderNow: false });
+    setStatus({ state: 'error', text: `❌ ${msg}`, retryVisible: true });
+    renderAndSync();
+    return;
+  }
+  setSaveFeedback('success', 'Гру успішно збережено', { renderNow: false });
+  setStatus({ state: 'saved', text: '✅ Гру збережено', retryVisible: false });
+  renderAndSync();
 }
 
 async function handleSaveTournamentGame(retry = false) {
@@ -877,9 +915,7 @@ async function handleSaveSchoolEvent(retry = false) {
   state.meta.lastPayload = payload;
   const valid = validateSchoolEvent(payload);
   if (!valid.ok) {
-    const message = `Некоректні дані шкільного турніру:
-- ${valid.errors.join('
-- ')}`;
+    const message = `Некоректні дані шкільного турніру:\n- ${valid.errors.join('\n- ')}`;
     setSaveFeedback('error', valid.errors[0] || 'Некоректні дані шкільного турніру', { renderNow: false });
     setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: false });
     renderAndSync();
@@ -1056,7 +1092,24 @@ async function init() {
   }
 
   $('restoreBtn')?.addEventListener('click', async () => {
-    if (!restoreLobby()) return;
+    const schoolDraft = peekSchoolDraft();
+    if ((schoolDraft?.eventMode === 'school' || schoolDraft?.type === 'school') && schoolDraft?.schoolState) {
+      if (!restoreLobby()) {
+        setStatus({ state: 'error', text: '❌ Не вдалося відновити lobby для school draft', retryVisible: false });
+        return;
+      }
+      try {
+        state.app.eventMode = 'school';
+        state.schoolState = schoolDraft.schoolState;
+        ensureSchoolState();
+      } catch {
+        setStatus({ state: 'error', text: '❌ Чернетка school пошкоджена. Видали чернетку та спробуй знову.', retryVisible: false });
+        return;
+      }
+    } else if (!restoreLobby()) {
+      return;
+    }
+    ensureSchoolState();
     normalizeEventAndSourceState(state.app.eventMode, state.app.playerSourceMode);
     $('sortMode').value = state.app.sortMode;
     await ensurePlayersLoaded();
@@ -1655,6 +1708,7 @@ async function init() {
   });
 
   normalizeEventAndSourceState(state.app.eventMode, localStorage.getItem(LEAGUE_KEY) || state.app.playerSourceMode);
+  ensureSchoolState();
   state.lastSavedGame = readLastSavedGame();
   $('sortMode').value = state.app.sortMode;
   syncSelectedMap();

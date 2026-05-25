@@ -909,11 +909,26 @@ async function handleSaveSchoolEvent(retry = false) {
   renderAndSync();
 }
 function toggleSelectedPlayer(nick) {
-  if (state.playersState.selectedMap.has(nick)) {
-    state.playersState.selected = state.playersState.selected.filter((n) => n !== nick);
-    removePlayerFromAllTeams(nick);
+  const playerKey = String(nick || '').trim();
+  if (!playerKey) {
+    debugLog('[balance2:lobby] add failed: playerId missing');
+    setStatus({ state: 'error', text: 'Не вдалося додати гравця: playerId відсутній.', retryVisible: false });
+    return;
+  }
+  if (!resolvePlayerByKey(playerKey) && !state.playersState.selectedMap.has(playerKey)) {
+    debugLog('[balance2:lobby] add failed: player not found in loaded list', { playerKey });
+    setStatus({ state: 'error', text: 'Не вдалося додати гравця: не знайдено у завантаженому списку.', retryVisible: false });
+    return;
+  }
+  if (state.playersState.selectedMap.has(playerKey)) {
+    state.playersState.selected = state.playersState.selected.filter((n) => n !== playerKey);
+    removePlayerFromAllTeams(playerKey);
   } else if (state.playersState.selected.length < getMaxLobbyPlayersForEventMode(state.app.eventMode)) {
-    state.playersState.selected = [...state.playersState.selected, nick];
+    state.playersState.selected = [...state.playersState.selected, playerKey];
+  } else {
+    const maxPlayers = getMaxLobbyPlayersForEventMode(state.app.eventMode);
+    debugLog('[balance2:lobby] add blocked: lobby limit reached', { maxPlayers, eventMode: state.app.eventMode });
+    setStatus({ state: 'error', text: `Лобі заповнене. Максимум ${maxPlayers} гравців.`, retryVisible: false });
   }
   syncSelectedMap();
   setTournamentDirty();
@@ -1014,7 +1029,9 @@ async function ensurePlayersLoaded({ force = false } = {}) {
     renderAndSync();
   } catch (error) {
     state.playersState.playersLoaded = false;
+    debugLog('[balance2] load players failed', { sourceMode, eventMode, error: error?.message || String(error) });
     setStatus({ state: 'error', text: `❌ ${error.message || 'Не вдалося отримати відповідь від сервера'}`, retryVisible: false });
+    renderAndSync();
   } finally {
     if (btn) {
       btn.disabled = false;

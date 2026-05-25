@@ -409,6 +409,7 @@ export function renderTeamSettings() {
   const primaryActionLabel = state.app.mode === 'manual' ? 'Ручне формування' : 'Сформувати команди';
   const primaryActionMode = state.app.mode === 'manual' ? 'manual' : 'auto';
 
+  const isSchool = state.app.eventMode === 'school';
   settings.innerHTML = `
     <h3>3. Налаштування команд</h3>
     <p class="section-hint">Обери кількість команд і режим балансу до формування lobby.</p>
@@ -425,8 +426,10 @@ export function renderTeamSettings() {
       </div>
     </div>
     <div class="team-settings-actions">
-      <button class="chip balance-primary-action" type="button" data-role="balance-primary-action" data-balance-primary="${escapeAttr(primaryActionMode)}">${escapeHtml(primaryActionLabel)}</button>
+      ${isSchool ? '<button class="chip" type="button" data-school-build-teams="1">Сформувати 10 команд</button>' : `<button class="chip balance-primary-action" type="button" data-role="balance-primary-action" data-balance-primary="${escapeAttr(primaryActionMode)}">${escapeHtml(primaryActionLabel)}</button>`}
     </div>
+    ${isSchool ? '<div class="team-settings-actions"><button class="chip" type="button" data-school-build-groups="1">Сформувати групи</button></div><div id="schoolGroupsPreview"></div>' : ''}
+    ${isSchool ? `<div class="school-event-meta"><label>Назва турніру <input class="search-input" data-school-title="1" value="${escapeAttr(state.schoolState?.title || 'Шкільний турнір')}"></label><label>Дата турніру <input class="search-input" type="date" data-school-date="1" value="${escapeAttr(state.schoolState?.date || new Date().toISOString().slice(0, 10))}"></label></div>` : ''}
   `;
   settings.querySelector('[data-balance-mode-slot]')?.appendChild(modeControl);
 }
@@ -516,7 +519,7 @@ export function renderTeams() {
   const grid = document.getElementById('teamsGrid');
   if (!grid) return;
 
-  const keys = TEAM_KEYS.slice(0, state.teamsState.teamCount);
+  const keys = state.app.eventMode === 'school' ? TEAM_KEYS.slice(0, 10) : TEAM_KEYS.slice(0, state.teamsState.teamCount);
   const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
   const cards = keys.map((key) => {
     const playerKeys = state.teamsState.teams[key] || [];
@@ -525,10 +528,22 @@ export function renderTeams() {
       const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
       return `<div class="team-player">${playerMetaHtml(player)}<button class="team-player-remove" type="button" data-role="remove-player-from-team" data-player-key="${escapeAttr(playerKey)}" data-team-id="${escapeAttr(key)}">Прибрати</button></div>`;
     }).join('') || '<div class="team-empty-state">Додай гравців із lobby</div>';
-    return `<div class="team-card"><h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${members}</div>`;
+    const teamMeta = state.schoolState?.teamMeta?.[key] || {};
+    const schoolFields = state.app.eventMode === 'school' ? `<div class="school-meta-grid">
+      <input class="search-input" data-school-meta="${escapeAttr(key)}" data-school-meta-field="schoolName" placeholder="Назва школи" value="${escapeAttr(teamMeta.schoolName || '')}">
+      <input class="search-input" data-school-meta="${escapeAttr(key)}" data-school-meta-field="schoolNumber" placeholder="Номер школи" value="${escapeAttr(teamMeta.schoolNumber || '')}">
+      <input class="search-input" data-school-meta="${escapeAttr(key)}" data-school-meta-field="teamName" placeholder="Назва команди" value="${escapeAttr(teamMeta.teamName || `Команда ${key.replace('team', '')}`)}">
+    </div>` : '';
+    return `<div class="team-card"><h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${schoolFields}${members}</div>`;
   });
 
   grid.innerHTML = cards.join('');
+  const preview = document.getElementById('schoolGroupsPreview');
+  if (preview && state.app.eventMode === 'school') {
+    const groupA = state.schoolState?.groups?.A?.teamIds || [];
+    const groupB = state.schoolState?.groups?.B?.teamIds || [];
+    preview.innerHTML = `<div class="tag">Група A: ${groupA.length} команд</div><div class="tag">Група B: ${groupB.length} команд</div><div class="tag">${groupA.length === 5 && groupB.length === 5 ? '✅ 5/5' : '⚠️ Очікується 5/5'}</div>`;
+  }
 }
 
 export function renderMatchConfig() {
@@ -829,6 +844,8 @@ export function bindUiEvents(handlers) {
     const nextTournamentMatch = e.target.closest('[data-tournament-next-match]');
     const loadPlayers = e.target.closest('[data-load-players]');
     const removeFromTeam = e.target.closest('[data-role="remove-player-from-team"]');
+    const schoolBuildTeams = e.target.closest('[data-school-build-teams]');
+    const schoolBuildGroups = e.target.closest('[data-school-build-groups]');
 
     if (toggle) {
       const alreadySelected = state.playersState.selectedMap.has(toggle);
@@ -890,11 +907,19 @@ export function bindUiEvents(handlers) {
     if (createTournament) handlers.onCreateTournament();
     if (saveTeams) handlers.onSaveTournamentTeams();
     if (removeFromTeam) handlers.onRemovePlayerFromTeam(removeFromTeam.dataset.playerKey, removeFromTeam.dataset.teamId);
+    if (schoolBuildTeams) handlers.onSchoolBuildTeams();
+    if (schoolBuildGroups) handlers.onSchoolBuildGroups();
   });
 
   document.addEventListener('input', (e) => {
     const tournamentNameInput = e.target.closest('[data-tournament-name]');
     if (tournamentNameInput) handlers.onTournamentName(tournamentNameInput.value);
+    const schoolTitle = e.target.closest('[data-school-title]');
+    const schoolDate = e.target.closest('[data-school-date]');
+    if (schoolTitle) handlers.onSchoolTitleChange(schoolTitle.value);
+    if (schoolDate) handlers.onSchoolDateChange(schoolDate.value);
+    const schoolMetaInput = e.target.closest('[data-school-meta]');
+    if (schoolMetaInput) handlers.onSchoolMetaChange(schoolMetaInput.dataset.schoolMeta, schoolMetaInput.dataset.schoolMetaField, schoolMetaInput.value);
   });
 
   document.addEventListener('keydown', (e) => {

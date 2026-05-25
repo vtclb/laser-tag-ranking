@@ -29,6 +29,7 @@ import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastS
 import { setStatus, lockSaveButton } from './status.js';
 import { validateSchoolEvent } from './validation.js';
 import { buildSchoolEventPayload } from './schoolPayload.js';
+import { balanceIntoSchoolTeams, generateSchoolGroups } from './schoolMode.js';
 import { debugLog } from '../../core/debug.js';
 
 const $ = (id) => document.getElementById(id);
@@ -469,6 +470,10 @@ function renderAndSync() {
   syncSaveButtonState();
   render();
   syncSaveButtonState();
+}
+function saveSchoolDraftState() {
+  if (state.app.eventMode !== 'school') return;
+  saveSchoolDraft(buildSchoolEventPayload(state));
 }
 
 function buildPayload() {
@@ -1118,7 +1123,39 @@ async function init() {
       if (state.app.eventMode !== 'tournament') clearTournamentStatus();
       syncSaveButtonState();
       saveLobby();
+      saveSchoolDraftState();
       renderAndSync();
+    },
+    onSchoolBuildTeams() {
+      if (state.app.eventMode !== 'school') return;
+      const selected = getSelectedPlayers();
+      if (selected.length < 10) { setStatus({ state: 'error', text: 'Для school mode потрібно мінімум 10 гравців.', retryVisible: false }); return; }
+      if (selected.length > 50) { setStatus({ state: 'error', text: 'Для school mode максимум 50 гравців.', retryVisible: false }); return; }
+      const teams = balanceIntoSchoolTeams(selected);
+      TEAM_KEYS.forEach((key, idx) => { state.teamsState.teams[key] = idx < 10 ? (teams[key] || []).map((p) => getPlayerKey(p)) : []; });
+      state.teamsState.teamCount = 10;
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolBuildGroups() {
+      if (state.app.eventMode !== 'school') return;
+      if ((state.schoolState?.groups?.A?.teamIds?.length || 0) + (state.schoolState?.groups?.B?.teamIds?.length || 0) > 0 && !window.confirm('Перегенерувати групи?')) return;
+      state.schoolState.groups = generateSchoolGroups(TEAM_KEYS.slice(0, 10));
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolMetaChange(teamKey, field, value) {
+      if (state.app.eventMode !== 'school' || !TEAM_KEYS.includes(teamKey)) return;
+      if (!state.schoolState.teamMeta[teamKey]) state.schoolState.teamMeta[teamKey] = { schoolName: '', schoolNumber: '', teamName: '' };
+      if (['schoolName', 'schoolNumber', 'teamName'].includes(field)) state.schoolState.teamMeta[teamKey][field] = String(value || '').trimStart();
+      if (field === 'teamName') state.teamsState.teamNames[teamKey] = String(value || '').trim() || `Команда ${teamKey.replace('team', '')}`;
+      saveLobby(); saveSchoolDraftState();
+    },
+    onSchoolTitleChange(value) {
+      state.schoolState.title = String(value || '').trimStart() || 'Шкільний турнір';
+      saveLobby(); saveSchoolDraftState();
+    },
+    onSchoolDateChange(value) {
+      state.schoolState.date = String(value || '').trim() || new Date().toISOString().slice(0, 10);
+      saveLobby(); saveSchoolDraftState();
     },
     onPlayerSourceMode(sourceMode) {
       state.uiState.flowStarted = true;

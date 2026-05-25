@@ -34,6 +34,31 @@ export function normalizeManualPoints(value) {
   return parsed;
 }
 
+export function balanceIntoSchoolTeams(players = []) {
+  const limits = getEventModeLimits('school');
+  const teamCount = limits.maxTeams;
+  const sorted = [...players].sort((a, b) => ((Number(b.pts ?? b.points) || 0) - (Number(a.pts ?? a.points) || 0)));
+  const teams = Object.fromEntries(Array.from({ length: teamCount }, (_, i) => [`team${i + 1}`, []]));
+  const targets = Array.from({ length: teamCount }, (_, i) => Math.floor(sorted.length / teamCount) + (i < sorted.length % teamCount ? 1 : 0));
+  const sum = (arr) => arr.reduce((acc, p) => acc + (Number(p.pts ?? p.points) || 0), 0);
+  sorted.forEach((player) => {
+    const idx = Array.from({ length: teamCount }, (_, i) => i)
+      .filter((i) => teams[`team${i + 1}`].length < targets[i])
+      .sort((a, b) => sum(teams[`team${a + 1}`]) - sum(teams[`team${b + 1}`]))[0] ?? 0;
+    teams[`team${idx + 1}`].push(player);
+  });
+  return teams;
+}
+
+export function generateSchoolGroups(teamKeys = []) {
+  const clean = [...new Set(teamKeys)].filter((k) => /^team([1-9]|10)$/.test(k));
+  const ordered = clean.sort((a, b) => Number(a.replace('team', '')) - Number(b.replace('team', '')));
+  return {
+    A: { id: 'A', name: 'Група A', teamIds: ordered.filter((_, idx) => idx % 2 === 0).slice(0, 5) },
+    B: { id: 'B', name: 'Група B', teamIds: ordered.filter((_, idx) => idx % 2 === 1).slice(0, 5) },
+  };
+}
+
 export function createSchoolEventDraft() {
   const now = nowIso();
   const stamp = now.replaceAll('-', '').replaceAll(':', '').replace('T', '_').slice(0, 15);

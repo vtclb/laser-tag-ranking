@@ -29,7 +29,16 @@ import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastS
 import { setStatus, lockSaveButton } from './status.js';
 import { validateSchoolEvent } from './validation.js';
 import { buildSchoolEventPayload } from './schoolPayload.js';
-import { balanceIntoSchoolTeams, generateSchoolGroups, generateRoundRobinMatches, normalizeManualPoints, calculateSchoolGroupStandings } from './schoolMode.js';
+import {
+  balanceIntoSchoolTeams,
+  generateSchoolGroups,
+  generateRoundRobinMatches,
+  normalizeManualPoints,
+  canFormSchoolFinalGroup,
+  buildFinalGroupFromStandings,
+  getWildcardCandidates,
+  pickBestWildcardCandidate,
+} from './schoolMode.js';
 import { debugLog } from '../../core/debug.js';
 
 const $ = (id) => document.getElementById(id);
@@ -474,6 +483,13 @@ function renderAndSync() {
 function saveSchoolDraftState() {
   if (state.app.eventMode !== 'school') return;
   saveSchoolDraft(buildSchoolEventPayload(state));
+}
+
+function resetSchoolFinalPhaseState() {
+  state.schoolState.finalGroup.matches = [];
+  state.schoolState.finalGroup.standings = [];
+  state.schoolState.finalGroup.championTeamId = '';
+  state.schoolState.championTeamId = '';
 }
 
 
@@ -1230,6 +1246,54 @@ async function init() {
     onSchoolDateChange(value) {
       state.schoolState.date = String(value || '').trim() || new Date().toISOString().slice(0, 10);
       saveLobby(); saveSchoolDraftState();
+    },
+    onSchoolFormFinalGroup() {
+      if (state.app.eventMode !== 'school' || !canFormSchoolFinalGroup(state.schoolState)) return;
+      const hasFinalData = (state.schoolState.finalGroup?.teamIds || []).length > 0 || (state.schoolState.finalGroup?.matches || []).length > 0;
+      if (hasFinalData && !window.confirm('Фінальна група вже сформована. Перегенерація може скинути wildcard і фінальні матчі. Продовжити?')) return;
+      const formed = buildFinalGroupFromStandings(state.schoolState);
+      state.schoolState.qualifiers = formed.qualifiers;
+      state.schoolState.finalGroup.teamIds = formed.teamIds;
+      state.schoolState.wildcard = { enabled: false, teamId: '', selectedByAdmin: false, reason: '' };
+      resetSchoolFinalPhaseState();
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolSuggestWildcard() {
+      if (state.app.eventMode !== 'school') return;
+      const best = pickBestWildcardCandidate(getWildcardCandidates(state.schoolState));
+      if (!best) return;
+      state.schoolState.wildcard.teamId = best.teamId;
+      state.schoolState.wildcard.selectedByAdmin = false;
+      state.schoolState.wildcard.reason = 'auto_suggested_best_non_qualifier';
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolWildcardSelect(teamId) {
+      if (state.app.eventMode !== 'school') return;
+      const allowed = new Set(getWildcardCandidates(state.schoolState).map((row) => row.teamId));
+      if (teamId && !allowed.has(teamId)) return;
+      state.schoolState.wildcard.teamId = teamId || '';
+      state.schoolState.wildcard.selectedByAdmin = !!teamId;
+      state.schoolState.wildcard.reason = teamId ? 'manual_admin_choice' : '';
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
+    },
+    onSchoolWildcardToggle(enabled) {
+      if (state.app.eventMode !== 'school') return;
+      const base = [...(state.schoolState.qualifiers?.A || []), ...(state.schoolState.qualifiers?.B || [])];
+      if (enabled) {
+        if (!state.schoolState.wildcard.teamId) {
+          setStatus({ state: 'error', text: 'Спочатку оберіть wildcard-команду.', retryVisible: false });
+          renderAndSync();
+          return;
+        }
+        if (base.includes(state.schoolState.wildcard.teamId)) return;
+        state.schoolState.wildcard.enabled = true;
+        state.schoolState.finalGroup.teamIds = [...base, state.schoolState.wildcard.teamId];
+      } else {
+        state.schoolState.wildcard.enabled = false;
+        state.schoolState.finalGroup.teamIds = base;
+      }
+      resetSchoolFinalPhaseState();
+      saveLobby(); saveSchoolDraftState(); renderAndSync();
     },
     onPlayerSourceMode(sourceMode) {
       state.uiState.flowStarted = true;

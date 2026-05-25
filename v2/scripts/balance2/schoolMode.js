@@ -198,3 +198,41 @@ export function getSchoolGroupProgress(groupMatches = []) {
   const completedB = matches.filter((m) => m?.groupId === 'B' && m?.status === 'completed').length;
   return { completedTotal, total: 20, completedA, totalA: 10, completedB, totalB: 10 };
 }
+
+export function canFormSchoolFinalGroup(schoolState = {}) {
+  const matches = Array.isArray(schoolState.groupMatches) ? schoolState.groupMatches : [];
+  const completedAll = matches.length === 20 && matches.every((m) => m?.status === 'completed');
+  const rowsA = Array.isArray(schoolState?.groupStandings?.A) ? schoolState.groupStandings.A : [];
+  const rowsB = Array.isArray(schoolState?.groupStandings?.B) ? schoolState.groupStandings.B : [];
+  return completedAll && rowsA.length >= 5 && rowsB.length >= 5;
+}
+
+export function buildFinalGroupFromStandings(schoolState = {}) {
+  const topA = (schoolState?.groupStandings?.A || []).slice(0, 2).map((row) => row.teamId).filter(Boolean);
+  const topB = (schoolState?.groupStandings?.B || []).slice(0, 2).map((row) => row.teamId).filter(Boolean);
+  return {
+    qualifiers: { A: topA, B: topB },
+    teamIds: [...topA, ...topB],
+  };
+}
+
+export function getWildcardCandidates(schoolState = {}) {
+  const qualifiers = new Set([...(schoolState?.qualifiers?.A || []), ...(schoolState?.qualifiers?.B || [])]);
+  return ['A', 'B']
+    .flatMap((groupId) => (schoolState?.groupStandings?.[groupId] || []).map((row) => ({ ...row, groupId })))
+    .filter((row) => row?.teamId && !qualifiers.has(row.teamId));
+}
+
+export function pickBestWildcardCandidate(candidates = []) {
+  const sorted = [...candidates].sort((a, b) => (
+    (b.tournamentPoints || 0) - (a.tournamentPoints || 0)
+    || (b.wins || 0) - (a.wins || 0)
+    || (b.pointsDiff || 0) - (a.pointsDiff || 0)
+    || (b.pointsFor || 0) - (a.pointsFor || 0)
+    || (a.place || 999) - (b.place || 999)
+    || String(a.schoolNumber || '').localeCompare(String(b.schoolNumber || ''), 'uk')
+    || String(a.schoolName || '').localeCompare(String(b.schoolName || ''), 'uk')
+    || String(a.teamName || '').localeCompare(String(b.teamName || ''), 'uk')
+  ));
+  return sorted[0] || null;
+}

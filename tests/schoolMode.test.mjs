@@ -7,6 +7,10 @@ import {
   calculateSchoolRoundRobinStandings,
   calculateSchoolGroupStandings,
   getSchoolGroupProgress,
+  canFormSchoolFinalGroup,
+  buildFinalGroupFromStandings,
+  getWildcardCandidates,
+  pickBestWildcardCandidate,
 } from '../v2/scripts/balance2/schoolMode.js';
 import { validateSchoolTournament } from '../v2/scripts/balance2/validation.js';
 import { buildSchoolEventPayload } from '../v2/scripts/balance2/schoolPayload.js';
@@ -130,4 +134,30 @@ test('group progress counts completed matches', () => {
 test('final matches count for 4 and 5 teams', () => {
   assert.equal(generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4'], { stage: 'final', groupId: 'FINAL' }).length, 6);
   assert.equal(generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4', 'team5'], { stage: 'final', groupId: 'FINAL' }).length, 10);
+});
+
+test('can form final group only after 20 completed matches', () => {
+  const schoolState = { groupMatches: Array.from({ length: 20 }, () => ({ status: 'completed' })), groupStandings: { A: Array.from({ length: 5 }, (_, i) => ({ teamId: `team${i + 1}` })), B: Array.from({ length: 5 }, (_, i) => ({ teamId: `team${i + 6}` })) } };
+  assert.equal(canFormSchoolFinalGroup(schoolState), true);
+  schoolState.groupMatches[0].status = 'pending';
+  assert.equal(canFormSchoolFinalGroup(schoolState), false);
+});
+
+test('final group is top-2 A + top-2 B', () => {
+  const formed = buildFinalGroupFromStandings({ groupStandings: { A: [{ teamId: 'team1' }, { teamId: 'team3' }], B: [{ teamId: 'team6' }, { teamId: 'team8' }] } });
+  assert.deepEqual(formed.qualifiers, { A: ['team1', 'team3'], B: ['team6', 'team8'] });
+  assert.deepEqual(formed.teamIds, ['team1', 'team3', 'team6', 'team8']);
+});
+
+test('wildcard candidates exclude qualifiers and auto suggest works', () => {
+  const schoolState = {
+    qualifiers: { A: ['team1', 'team2'], B: ['team6', 'team7'] },
+    groupStandings: {
+      A: [{ teamId: 'team1', place: 1 }, { teamId: 'team2', place: 2 }, { teamId: 'team3', place: 3, tournamentPoints: 6, wins: 2, pointsDiff: 2, pointsFor: 12, schoolNumber: '13', schoolName: 'A', teamName: 'T3' }],
+      B: [{ teamId: 'team6', place: 1 }, { teamId: 'team7', place: 2 }, { teamId: 'team8', place: 3, tournamentPoints: 7, wins: 2, pointsDiff: 3, pointsFor: 13, schoolNumber: '8', schoolName: 'B', teamName: 'T8' }],
+    },
+  };
+  const candidates = getWildcardCandidates(schoolState);
+  assert.equal(candidates.some((c) => ['team1', 'team2', 'team6', 'team7'].includes(c.teamId)), false);
+  assert.equal(pickBestWildcardCandidate(candidates)?.teamId, 'team8');
 });

@@ -37,6 +37,15 @@ export function validateSchoolTournament(eventState = {}) {
 
   const finalIds = eventState.finalGroup?.teamIds || [];
   if (![4, 5].includes(finalIds.length)) errors.push('Фінальна група має містити 4 або 5 команд.');
+  const qualifiersA = eventState.qualifiers?.A || [];
+  const qualifiersB = eventState.qualifiers?.B || [];
+  const qualifierSet = new Set([...qualifiersA, ...qualifiersB]);
+  const wildcard = eventState.wildcard || {};
+  if (wildcard.enabled) {
+    if (!wildcard.teamId) errors.push('Увімкнений wildcard має містити teamId.');
+    if (qualifierSet.has(wildcard.teamId)) errors.push('Wildcard команда не може бути direct qualifier.');
+    if (!finalIds.includes(wildcard.teamId)) errors.push('Wildcard команда має входити до finalGroup.teamIds.');
+  }
   if ((eventState.finalGroup?.matches || []).some((match) => match.status === 'completed' && (normalizeManualPoints(match?.result?.pointsA) === null || normalizeManualPoints(match?.result?.pointsB) === null))) {
     errors.push('Фінальні матчі мають некоректні бали.');
   }

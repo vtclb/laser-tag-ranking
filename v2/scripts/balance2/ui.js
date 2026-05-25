@@ -902,7 +902,7 @@ export function bindUiEvents(handlers) {
     const tournamentType = e.target.closest('[data-tournament-type]')?.dataset.tournamentType;
     const schedulePick = e.target.closest('[data-tournament-schedule-pick]')?.dataset.tournamentSchedulePick;
     const nextTournamentMatch = e.target.closest('[data-tournament-next-match]');
-    const loadPlayers = e.target.closest('[data-load-players]');
+    const loadPlayers = e.target.closest('[data-load-players]') || e.target.closest('#loadPlayersBtn');
     const removeFromTeam = e.target.closest('[data-role="remove-player-from-team"]');
     const schoolBuildTeams = e.target.closest('[data-school-build-teams]');
     const schoolBuildGroups = e.target.closest('[data-school-build-groups]');
@@ -916,28 +916,36 @@ export function bindUiEvents(handlers) {
     const schoolFinalClear = e.target.closest('[data-school-final-clear]')?.dataset.schoolFinalClear;
 
     if (toggle) {
-      const alreadySelected = state.playersState.selectedMap.has(toggle);
-      if (alreadySelected) {
-        state.playersState.selected = state.playersState.selected.filter((n) => n !== toggle);
-        Object.keys(state.teamsState.teams).forEach((key) => {
-          state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== toggle);
-        });
-      } else if (state.playersState.selected.length >= MAX_LOBBY_PLAYERS) {
-        window.alert(`Лобі заповнене. Максимум ${MAX_LOBBY_PLAYERS} гравців.`);
-        return;
+      if (typeof handlers.onTogglePlayer === 'function') {
+        handlers.onTogglePlayer(toggle);
       } else {
-        state.playersState.selected = [...state.playersState.selected, toggle];
+        const alreadySelected = state.playersState.selectedMap.has(toggle);
+        const maxPlayers = getMaxLobbyPlayersForEventMode(state.app.eventMode);
+        if (alreadySelected) {
+          state.playersState.selected = state.playersState.selected.filter((n) => n !== toggle);
+          Object.keys(state.teamsState.teams).forEach((key) => {
+            state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== toggle);
+          });
+        } else if (state.playersState.selected.length >= maxPlayers) {
+          window.alert(`Лобі заповнене. Максимум ${maxPlayers} гравців.`);
+          return;
+        } else {
+          state.playersState.selected = [...state.playersState.selected, toggle];
+        }
+        syncSelectedMap();
+        handlers.onChanged();
       }
-      syncSelectedMap();
-      handlers.onChanged();
     }
     if (remove) {
-      state.playersState.selected = state.playersState.selected.filter((n) => n !== remove);
-      Object.keys(state.teamsState.teams).forEach((key) => {
-        state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== remove);
-      });
-      syncSelectedMap();
-      handlers.onChanged();
+      if (typeof handlers.onRemove === 'function') handlers.onRemove(remove);
+      else {
+        state.playersState.selected = state.playersState.selected.filter((n) => n !== remove);
+        Object.keys(state.teamsState.teams).forEach((key) => {
+          state.teamsState.teams[key] = state.teamsState.teams[key].filter((n) => n !== remove);
+        });
+        syncSelectedMap();
+        handlers.onChanged();
+      }
     }
     if (moveBtn) {
       const playerKey = moveBtn.dataset.movePlayerKey || '';

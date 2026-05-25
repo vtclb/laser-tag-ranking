@@ -1,10 +1,7 @@
-import { state, syncSelectedMap, MAX_LOBBY_PLAYERS } from './state.js';
+import { state, syncSelectedMap, getMaxLobbyPlayersForEventMode, TEAM_KEYS } from './state.js';
 
 export function clearTeams() {
-  state.teamsState.teams.team1 = [];
-  state.teamsState.teams.team2 = [];
-  state.teamsState.teams.team3 = [];
-  state.teamsState.teams.team4 = [];
+  TEAM_KEYS.forEach((teamKey) => { state.teamsState.teams[teamKey] = []; });
 }
 
 export function syncSelectedFromTeamsAndBench() {
@@ -13,7 +10,7 @@ export function syncSelectedFromTeamsAndBench() {
   for (const nick of state.playersState.selected) {
     if (!inTeams.has(nick)) withBench.push(nick);
   }
-  state.playersState.selected = [...new Set(withBench)].slice(0, MAX_LOBBY_PLAYERS);
+  state.playersState.selected = [...new Set(withBench)].slice(0, getMaxLobbyPlayersForEventMode(state.app.eventMode));
   syncSelectedMap();
 }
 

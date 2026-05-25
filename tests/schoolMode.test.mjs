@@ -240,5 +240,5 @@ test('getSchoolWorkflowStage resolves expected flow', () => {
 });
 
 test('tournament mode options unchanged', () => {
-  assert.deepEqual(getTeamCountOptionsForEventMode('tournament'), [2, 3, 4, 5, 6]);
+  assert.deepEqual(getTeamCountOptionsForEventMode('tournament'), [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 });

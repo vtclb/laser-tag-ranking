@@ -35,9 +35,9 @@ export function autoBalance2(players) {
 }
 
 export function balanceIntoNTeams(players, n) {
-  const teamCount = Math.min(6, Math.max(2, Number(n) || 2));
+  const teamCount = Math.min(12, Math.max(2, Number(n) || 2));
   const sorted = [...players].sort((a, b) => ((Number(b.pts ?? b.points) || 0) - (Number(a.pts ?? a.points) || 0)) || a.nick.localeCompare(b.nick, 'uk'));
-  const teams = { team1: [], team2: [], team3: [], team4: [], team5: [], team6: [] };
+  const teams = Object.fromEntries(Array.from({ length: 12 }, (_, idx) => [`team${idx + 1}`, []]));
   const targets = Array.from({ length: teamCount }, (_, i) => Math.floor(players.length / teamCount) + (i < players.length % teamCount ? 1 : 0));
 
   for (const player of sorted) {

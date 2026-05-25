@@ -73,3 +73,14 @@ test('manual points normalization', () => {
   assert.equal(normalizeManualPoints(10), 10);
   assert.equal(normalizeManualPoints(11), null);
 });
+
+test('group match generation gives 20 matches for 2x5 groups', () => {
+  const groupA = generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4', 'team5'], { stage: 'group', groupId: 'A' });
+  const groupB = generateRoundRobinMatches(['team6', 'team7', 'team8', 'team9', 'team10'], { stage: 'group', groupId: 'B' });
+  assert.equal(groupA.length + groupB.length, 20);
+});
+
+test('final matches count for 4 and 5 teams', () => {
+  assert.equal(generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4'], { stage: 'final', groupId: 'FINAL' }).length, 6);
+  assert.equal(generateRoundRobinMatches(['team1', 'team2', 'team3', 'team4', 'team5'], { stage: 'final', groupId: 'FINAL' }).length, 10);
+});

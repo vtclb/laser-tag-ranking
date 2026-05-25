@@ -25,21 +25,48 @@ export async function initSchoolPage() {
     });
     root.append(list);
 
-    const standings = el('table', 'school-standings');
-    const thead = el('thead');
-    const headTr = el('tr');
-    ['Місце', 'Школа', 'Номер', 'Команда', 'І', 'В', 'Н', 'П', 'РМ', 'О'].forEach((h) => headTr.append(el('th', '', h)));
-    thead.append(headTr);
-    standings.append(thead);
-    const tbody = el('tbody');
-    ((latest.finalGroup?.standings || latest.standings || [])).forEach((row) => {
-      const tr = document.createElement('tr');
-      [row.place, row.schoolName || '—', row.schoolNumber || '—', row.teamName || '—', row.matchesPlayed || 0, row.wins || 0, row.draws || 0, row.losses || 0, row.pointsDiff || 0, row.tournamentPoints || 0]
-        .forEach((v) => tr.append(el('td', '', String(v))));
-      tbody.append(tr);
+    root.append(el('h3', '', `${latest.title || 'Шкільний турнір'} · ${latest.date || 'без дати'}`));
+
+    const teamsWrap = el('div', 'school-events-list');
+    (latest.teams || []).forEach((team, idx) => {
+      const row = el('div', 'school-event-item');
+      const schoolInfo = `${schoolLabel(team)} · ${team.schoolName || 'Без назви'} · ${team.teamName || `Команда ${idx + 1}`}`;
+      row.append(el('strong', '', schoolInfo));
+      row.append(el('div', '', `Гравців: ${(team.players || []).length} · Сила: ${Number(team.strengthPoints || 0)}`));
+      teamsWrap.append(row);
     });
-    standings.append(tbody);
-    root.append(standings);
+    root.append(teamsWrap);
+
+    const renderStandings = (title, rows = []) => {
+      root.append(el('h3', '', title));
+      const standings = el('table', 'school-standings');
+      const thead = el('thead');
+      const headTr = el('tr');
+      ['Місце', 'Школа', 'Номер', 'Команда', 'І', 'В', 'Н', 'П', 'РМ', 'О'].forEach((h) => headTr.append(el('th', '', h)));
+      thead.append(headTr);
+      standings.append(thead);
+      const tbody = el('tbody');
+      rows.forEach((row) => {
+        const tr = document.createElement('tr');
+        [row.place, row.schoolName || '—', row.schoolNumber || '—', row.teamName || '—', row.matchesPlayed || 0, row.wins || 0, row.draws || 0, row.losses || 0, row.pointsDiff || 0, row.tournamentPoints || 0]
+          .forEach((v) => tr.append(el('td', '', String(v))));
+        tbody.append(tr);
+      });
+      standings.append(tbody);
+      root.append(standings);
+    };
+
+    renderStandings('Group A', latest.groupStandings?.A || []);
+    renderStandings('Group B', latest.groupStandings?.B || []);
+    renderStandings('Фінальна таблиця', latest.finalGroup?.standings || latest.standings || []);
+
+    const qualifiers = el('div', 'school-event-item');
+    qualifiers.append(el('strong', '', 'Фіналісти'));
+    qualifiers.append(el('div', '', `Group A: ${(latest.qualifiers?.A || []).join(', ') || '—'} · Group B: ${(latest.qualifiers?.B || []).join(', ') || '—'}`));
+    if (latest.wildcard?.enabled && latest.wildcard?.teamId) {
+      qualifiers.append(el('div', '', `Wildcard: ${latest.wildcard.teamId}`));
+    }
+    root.append(qualifiers);
 
     root.append(el('h3', '', `Чемпіон: ${latest.championTeamId || latest.finalGroup?.championTeamId || '—'}`));
   } catch {

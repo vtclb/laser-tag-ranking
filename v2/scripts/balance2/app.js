@@ -49,6 +49,10 @@ const MVP_IDS = ['mvp1', 'mvp2', 'mvp3'];
 const MIXED_MVP_DUPLICATE_WARNING = 'Уточни MVP: є кілька гравців з таким ніком у різних лігах';
 const MIXED_MVP_SAVE_BLOCK = 'Уточни MVP: вибери гравця зі списку';
 let saveLocked = false;
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
 let saveStatusResetTimer = 0;
 
 function escapeAttr(value = '') {
@@ -1077,7 +1081,11 @@ async function init() {
   $('restoreBtn')?.addEventListener('click', async () => {
     if (hasSchoolDraft) {
       const draft = peekSchoolDraft();
-      if (!draft) return;
+      if (!isPlainObject(draft)) {
+        setStatus({ state: 'error', text: 'Чернетка шкільного турніру пошкоджена. Видаліть чернетку або почніть заново.', retryVisible: false });
+        renderAndSync();
+        return;
+      }
       state.app.eventMode = 'school';
       state.schoolState = {
         ...state.schoolState,
@@ -1099,8 +1107,6 @@ async function init() {
     renderAndSync();
   });
 
-  $('balanceBtn')?.addEventListener('click', () => { runBalance(); renderAndSync(); });
-  $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; ensureTeamsForManualAssignment(); syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
   $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearAllTeams(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
 
   const debouncedSearch = (() => {

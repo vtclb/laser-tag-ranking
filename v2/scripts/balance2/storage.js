@@ -1,6 +1,7 @@
 import {
   state,
   normalizeLeague,
+  normalizePlayerSourceMode,
   computeSeriesSummary,
   syncSelectedMap,
   getMaxLobbyPlayersForEventMode,
@@ -13,6 +14,70 @@ const KEY = 'balance2:lobby';
 const PLAYERS_KEY = 'balance2:playersCache';
 const LAST_GAME_KEY = 'balance2:lastSavedGame';
 export const SCHOOL_DRAFT_KEY = 'balance2_school_draft';
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function pickString(value, fallback = '') {
+  return value === undefined || value === null ? fallback : String(value);
+}
+
+function pickBoolean(value, fallback = false) {
+  return value === undefined ? fallback : value === true;
+}
+
+function sanitizeTournamentStatus(value, fallback = { message: '', type: 'idle' }) {
+  if (!isPlainObject(value)) return { ...fallback };
+  return {
+    message: pickString(value.message, fallback.message || ''),
+    type: pickString(value.type, fallback.type || 'idle') || 'idle',
+  };
+}
+
+function pickCollection(value, fallback) {
+  if (Array.isArray(value)) return value;
+  if (isPlainObject(value)) return value;
+  if (Array.isArray(fallback) || isPlainObject(fallback)) return fallback;
+  return undefined;
+}
+
+function sanitizeTournamentState(restoredTournamentState) {
+  const fallback = isPlainObject(state.tournamentState) ? { ...state.tournamentState } : {};
+  const restored = isPlainObject(restoredTournamentState) ? restoredTournamentState : {};
+  const definedRestored = Object.fromEntries(Object.entries(restored).filter(([, value]) => value !== undefined));
+  const games = pickCollection(restored.games, fallback.games);
+  const teams = pickCollection(restored.teams, fallback.teams);
+
+  const next = {
+    ...fallback,
+    ...definedRestored,
+    tournamentId: pickString(restored.tournamentId, fallback.tournamentId || ''),
+    tournamentTitle: pickString(restored.tournamentTitle, fallback.tournamentTitle || restored.tournamentName || fallback.tournamentName || ''),
+    tournamentName: pickString(restored.tournamentName ?? restored.tournamentTitle, fallback.tournamentName || ''),
+    gameMode: ['DM', 'TR', 'KT'].includes(restored.gameMode) ? restored.gameMode : (fallback.gameMode || 'DM'),
+    teamsSaved: pickBoolean(restored.teamsSaved, fallback.teamsSaved === true),
+    savedTournamentTeamIds: Array.isArray(restored.savedTournamentTeamIds)
+      ? restored.savedTournamentTeamIds.filter((key) => TEAM_KEYS.includes(key))
+      : (Array.isArray(fallback.savedTournamentTeamIds) ? fallback.savedTournamentTeamIds : []),
+    tournamentType: restored.tournamentType === 'group' ? 'group' : (restored.tournamentType === 'custom' ? 'custom' : (fallback.tournamentType || 'custom')),
+    tournamentSchedule: Array.isArray(restored.tournamentSchedule) ? restored.tournamentSchedule : (Array.isArray(fallback.tournamentSchedule) ? fallback.tournamentSchedule : []),
+    currentScheduleGameId: pickString(restored.currentScheduleGameId, fallback.currentScheduleGameId || ''),
+    gamesCreated: pickBoolean(restored.gamesCreated, fallback.gamesCreated === true),
+    currentGameId: pickString(restored.currentGameId, fallback.currentGameId || ''),
+    nextGameNumber: Math.max(1, Number(restored.nextGameNumber ?? fallback.nextGameNumber) || 1),
+    isSaving: false,
+    status: sanitizeTournamentStatus(restored.status, fallback.status),
+    lastAction: pickString(restored.lastAction, fallback.lastAction || ''),
+    lastRequestStatus: pickString(restored.lastRequestStatus, fallback.lastRequestStatus || ''),
+    lastErrorMessage: pickString(restored.lastErrorMessage, fallback.lastErrorMessage || ''),
+    createdAt: pickString(restored.createdAt, fallback.createdAt || ''),
+    updatedAt: pickString(restored.updatedAt, fallback.updatedAt || ''),
+  };
+  if (games !== undefined) next.games = games;
+  if (teams !== undefined) next.teams = teams;
+  return next;
+}
 
 export function saveLobby() {
   const data = {
@@ -46,6 +111,7 @@ export function restoreLobby() {
     : 'points_desc';
   const restoredEventMode = data?.app?.eventMode;
   state.app.eventMode = (restoredEventMode === 'school' ? 'school' : 'tournament');
+  state.app.playerSourceMode = normalizePlayerSourceMode(data?.app?.playerSourceMode || data?.playerSourceMode || state.app.playerSourceMode, state.app.eventMode);
   state.app.query = '';
 
   state.playersState.selected = Array.isArray(data?.playersState?.selected || data?.selected)
@@ -74,6 +140,9 @@ export function restoreLobby() {
     mvp1: oldMatch.mvp1 || '',
     mvp2: oldMatch.mvp2 || '',
     mvp3: oldMatch.mvp3 || '',
+    mvp1Key: oldMatch.mvp1Key || '',
+    mvp2Key: oldMatch.mvp2Key || '',
+    mvp3Key: oldMatch.mvp3Key || '',
     penalties: oldMatch.penalties && typeof oldMatch.penalties === 'object' ? oldMatch.penalties : {},
   };
 
@@ -84,20 +153,15 @@ export function restoreLobby() {
     schedule: Array.isArray(data?.activeMatch?.schedule) ? data.activeMatch.schedule : [],
     selectedScheduleMatchId: data?.activeMatch?.selectedScheduleMatchId || '',
   };
-  const tournamentState = data?.tournamentState || {};
-  state.tournamentState = {
-    tournamentId: tournamentState.tournamentId || '',
-    tournamentName: tournamentState.tournamentName || '',
-    gameMode: ['DM', 'TR', 'KT'].includes(tournamentState.gameMode) ? tournamentState.gameMode : 'DM',
-    teamsSaved: tournamentState.teamsSaved === true,
-    gamesCreated: tournamentState.gamesCreated === true,
-    currentGameId: tournamentState.currentGameId || '',
-    nextGameNumber: Math.max(1, Number(tournamentState.nextGameNumber) || 1),
-  };
-  state.activeTeamAId = data?.activeTeamAId || 'team1';
-  state.activeTeamBId = data?.activeTeamBId || 'team2';
+  state.tournamentState = sanitizeTournamentState(data?.tournamentState);
+  state.activeTeamAId = TEAM_KEYS.includes(data?.activeTeamAId) ? data.activeTeamAId : 'team1';
+  state.activeTeamBId = TEAM_KEYS.includes(data?.activeTeamBId) ? data.activeTeamBId : 'team2';
 
-  state.uiState.penaltiesCollapsed = data?.uiState?.penaltiesCollapsed !== false;
+  state.uiState = {
+    ...state.uiState,
+    ...(isPlainObject(data?.uiState) ? data.uiState : {}),
+    penaltiesCollapsed: data?.uiState?.penaltiesCollapsed !== false,
+  };
 
   const summary = computeSeriesSummary();
   state.matchState.match.winner = summary.winner;

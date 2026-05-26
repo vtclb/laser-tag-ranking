@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VARTA CLUB Rating System / Brutalist Concept</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;650;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --panel: #121212;
+      --panel-2: #181818;
+      --text: #ececea;
+      --muted: #aaa9a2;
+      --line: rgba(236, 236, 234, .18);
+      --red: #e61919;
+      --green: #4af626;
+      --s: #ffd84d;
+      --a: #ff6565;
+      --b: #5ba8ff;
+      --c: #50dfca;
+      --d: #a47eff;
+      --e: #8da2c9;
+      --f: #6b7384;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px),
+        var(--bg);
+      background-size: 36px 36px;
+      color: var(--text);
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.045) 1px, transparent 1px, transparent 8px);
+      opacity: .14;
+      mix-blend-mode: screen;
+    }
+
+    a { color: inherit; }
+    .page {
+      width: min(1180px, 100% - 28px);
+      margin: 0 auto;
+      padding: 14px 0 64px;
+    }
+
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 54px;
+      border: 1px solid var(--line);
+      background: rgba(10, 10, 10, .9);
+      backdrop-filter: blur(10px);
+      padding: 8px 10px;
+    }
+
+    .brand, .nav, .kicker, .mono {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .78rem;
+      text-decoration: none;
+    }
+
+    .brand::before, .live::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      background: var(--red);
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      font-size: .68rem;
+    }
+
+    .nav a, .btn {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      background: rgba(18, 18, 18, .84);
+      padding: 9px 11px;
+      text-decoration: none;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: .76rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .btn.primary {
+      border-color: rgba(230, 25, 25, .72);
+      background: rgba(230, 25, 25, .16);
+    }
+
+    .hero, .section {
+      position: relative;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      background: rgba(10, 10, 10, .78);
+      overflow: hidden;
+    }
+
+    .hero {
+      display: grid;
+      gap: 18px;
+      min-height: min(760px, calc(100vh - 92px));
+      padding: clamp(20px, 5vw, 48px);
+    }
+
+    .hero::before, .section::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(120deg, rgba(230, 25, 25, .13), transparent 28%),
+        linear-gradient(300deg, rgba(80, 223, 202, .08), transparent 30%);
+      opacity: .85;
+    }
+
+    .hero > *, .section > * { position: relative; z-index: 1; }
+    .hero-copy {
+      display: grid;
+      align-content: center;
+      gap: 18px;
+    }
+
+    .kicker {
+      margin: 0;
+      color: var(--muted);
+      font-size: .72rem;
+      line-height: 1.3;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1, h2 {
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    h1 {
+      max-width: 12ch;
+      font-size: clamp(2.45rem, 10vw, 6rem);
+      font-weight: 900;
+      line-height: .92;
+    }
+
+    h2 {
+      font-size: clamp(1.45rem, 4.4vw, 2.55rem);
+      font-weight: 850;
+      line-height: 1.05;
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 850;
+      line-height: 1.2;
+    }
+
+    .lead {
+      max-width: 62ch;
+      color: rgba(236, 236, 234, .84);
+      font-size: clamp(1rem, 2.4vw, 1.18rem);
+      line-height: 1.55;
+    }
+
+    .actions, .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .hero-panel, .card, .leader, .rank-row, .player, .tournament {
+      border: 1px solid rgba(236, 236, 234, .16);
+      background: rgba(18, 18, 18, .88);
+    }
+
+    .hero-panel {
+      align-self: end;
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: .72rem;
+    }
+
+    .live::before {
+      background: var(--green);
+      animation: blink 1.2s steps(2, end) infinite;
+    }
+
+    @keyframes blink { 50% { opacity: .3; } }
+
+    .hero-leader {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid rgba(236, 236, 234, .2);
+      text-decoration: none;
+    }
+
+    img.avatar {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      background: #050505;
+    }
+
+    .hero-leader strong, .player strong, .leader strong, .tournament strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    small, .muted {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric, .card {
+      display: grid;
+      gap: 4px;
+      padding: 11px;
+    }
+
+    .metric span, .metric small {
+      color: var(--muted);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: .65rem;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      overflow: hidden;
+      font-size: clamp(1.25rem, 4vw, 1.9rem);
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .section {
+      display: grid;
+      gap: 16px;
+      padding: clamp(18px, 4vw, 30px);
+    }
+
+    .section-head {
+      display: grid;
+      gap: 8px;
+    }
+
+    .section-head .muted {
+      max-width: 70ch;
+    }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: 12px;
+    }
+
+    .leader {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-left: 4px solid var(--b);
+      text-decoration: none;
+    }
+
+    .leader.adults { border-left-color: var(--c); }
+    .leader.kids { border-left-color: var(--b); }
+
+    .leader-main {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .leader-score {
+      font-size: 1.5rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .league {
+      display: grid;
+      gap: 9px;
+      padding: 12px;
+      border: 1px solid rgba(236, 236, 234, .16);
+      background: rgba(18, 18, 18, .86);
+    }
+
+    .league header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .players {
+      display: grid;
+      gap: 1px;
+    }
+
+    .player {
+      display: grid;
+      grid-template-columns: 38px 32px 38px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+      padding: 9px 0;
+      border-width: 0 0 1px;
+      background: transparent;
+      text-decoration: none;
+    }
+
+    .place, .score {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: .8rem;
+    }
+
+    .place { color: var(--muted); }
+
+    .rank {
+      display: inline-grid;
+      place-items: center;
+      min-width: 30px;
+      height: 30px;
+      border: 1px solid currentColor;
+      background: rgba(255, 255, 255, .05);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-weight: 900;
+    }
+
+    .rank-S { color: var(--s); }
+    .rank-A { color: var(--a); }
+    .rank-B { color: var(--b); }
+    .rank-C { color: var(--c); }
+    .rank-D { color: var(--d); }
+    .rank-E { color: var(--e); }
+    .rank-F { color: var(--f); }
+
+    .rank-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) minmax(82px, .8fr) 34px;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-width: 0 0 1px;
+      background: transparent;
+    }
+
+    .track {
+      height: 10px;
+      border: 1px solid rgba(236,236,234,.14);
+      background: #070707;
+    }
+
+    .track i {
+      display: block;
+      height: 100%;
+      background: currentColor;
+    }
+
+    .tournament {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border-left: 4px solid var(--red);
+      text-decoration: none;
+    }
+
+    .status {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 1px dashed rgba(236,236,234,.22);
+      color: var(--muted);
+    }
+
+    @media (min-width: 760px) {
+      .hero {
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, .72fr);
+      }
+
+      .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 620px) {
+      .page { width: min(100% - 18px, 1180px); }
+      .top { align-items: flex-start; flex-direction: column; }
+      .nav { justify-content: flex-start; }
+      .hero { min-height: auto; padding: 18px; }
+      .section { padding: 16px; }
+      h1 { max-width: 11ch; }
+      .metrics { grid-template-columns: 1fr; }
+      .hero-leader { grid-template-columns: 48px minmax(0, 1fr) auto; }
+      .player { grid-template-columns: 32px 30px minmax(0, 1fr) auto; }
+      .player img { display: none; }
+      .rank-row { grid-template-columns: auto minmax(0, 1fr) 28px; }
+      .track { grid-column: 2 / 4; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .live::before { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <a class="brand" href="./#main">VARTA CLUB RATING</a>
+      <nav class="nav" aria-label="Секції сторінки">
+        <a href="#rating">Рейтинг</a>
+        <a href="#ranks">Ранги</a>
+        <a href="#system">Система</a>
+        <a href="#tournaments">Турніри</a>
+      </nav>
+    </header>
+
+    <div id="app">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="kicker">SYNC / LIVE SHEETS / RATING ENGINE</p>
+          <h1>Командна гра з живим рейтингом.</h1>
+          <p class="lead">Завантажуємо поточні ліги, матчі, ранги та турніри. Ця сторінка є окремим концептом і не змінює основну версію сайту.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from './core/dataHub.js';
+    import { leagueLabelUA } from './core/naming.js';
+    import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate } from './pages/tournaments.js';
+    import { makeDataStatus, resolveDataStatusTone } from './core/dataStatus.js';
+
+    const app = document.getElementById('app');
+    const fallbackAvatar = './assets/default-avatar.svg';
+    const ranks = [
+      ['S', 1200, 'Еліта сезону'],
+      ['A', 1000, 'Стабільні лідери'],
+      ['B', 800, 'Верхня сітка'],
+      ['C', 600, 'Сильна база'],
+      ['D', 400, 'Вхід у ритм'],
+      ['E', 200, 'Перший досвід'],
+      ['F', 0, 'Старт']
+    ];
+
+    const esc = (value = '') => String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+
+    const num = (value, fallback = 0) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const rankOf = (player = {}) => String(player.rankLetter || player.rank || rankFromPoints(num(player.points)) || 'F').toUpperCase();
+    const rankBadge = (rank) => `<span class="rank rank-${esc(rank)}">${esc(rank)}</span>`;
+    const avatar = (player = {}) => esc(player.avatarUrl || player.avatar || fallbackAvatar);
+    const profileHref = (league, nick) => `./#player?league=${encodeURIComponent(league || 'sundaygames')}&nick=${encodeURIComponent(nick || '')}`;
+    const leagueHref = (league) => `./#league-stats?league=${encodeURIComponent(league)}`;
+    const gameDayHref = (league, date = '') => `./#gameday?league=${encodeURIComponent(league || 'sundaygames')}${date ? `&date=${encodeURIComponent(date)}` : ''}`;
+
+    function activePlayers(live = {}) {
+      const source = Array.isArray(live.activePlayers) ? live.activePlayers : live.players || [];
+      return source
+        .filter((player) => player && (player.isSeasonActive !== false || num(player.matches) > 0))
+        .sort((a, b) => num(b.points) - num(a.points) || num(b.wins) - num(a.wins) || String(a.nickname || '').localeCompare(String(b.nickname || ''), 'uk'));
+    }
+
+    function formatUpdated(value = '') {
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return 'оновлення перевіряється';
+      return date.toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function latestDay(lives = []) {
+      return lives
+        .map((live) => ({ ...live?.lastGameDay, league: live?.league }))
+        .filter((day) => day.date)
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0] || null;
+    }
+
+    function rankCounts(players = []) {
+      const counts = Object.fromEntries(ranks.map(([rank]) => [rank, 0]));
+      players.forEach((player) => { counts[rankOf(player)] = (counts[rankOf(player)] || 0) + 1; });
+      return counts;
+    }
+
+    function metric(label, value, note = '') {
+      return `<article class="metric"><span>${esc(label)}</span><strong>${esc(value)}</strong>${note ? `<small>${esc(note)}</small>` : ''}</article>`;
+    }
+
+    function leaderCard(league, player, className) {
+      if (!player) {
+        return `<article class="leader ${className}"><p class="kicker">${esc(leagueLabelUA(league))}</p><strong>Дані накопичуються</strong><small>Після ігрового дня тут буде лідер.</small></article>`;
+      }
+      const rank = rankOf(player);
+      return `<a class="leader ${className}" href="${profileHref(league, player.nickname)}">
+        <p class="kicker">${esc(leagueLabelUA(league))}</p>
+        <div class="leader-main">
+          <img class="avatar" src="${avatar(player)}" alt="${esc(player.nickname)}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackAvatar}'">
+          <span><strong>${esc(player.nickname)}</strong><small>${num(player.matches)} ігор · ${num(player.wins)} перемог · ${num(player.mvpTotal)} MVP · WR ${num(player.winRate).toFixed(1)}%</small></span>
+          ${rankBadge(rank)}
+        </div>
+        <b class="leader-score">${num(player.points)} <small>очок</small></b>
+      </a>`;
+    }
+
+    function leagueTable(league, players) {
+      const rows = players.slice(0, 8).map((player, index) => {
+        const rank = rankOf(player);
+        return `<a class="player" href="${profileHref(league, player.nickname)}">
+          <span class="place">#${index + 1}</span>
+          ${rankBadge(rank)}
+          <img class="avatar" src="${avatar(player)}" alt="${esc(player.nickname)}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackAvatar}'">
+          <span><strong>${esc(player.nickname)}</strong><small>${num(player.matches)} ігор · ${num(player.wins)}-${num(player.losses)} · ${num(player.mvpTotal)} MVP</small></span>
+          <b class="score">${num(player.points)}</b>
+        </a>`;
+      }).join('');
+
+      return `<article class="league">
+        <header><span>${esc(leagueLabelUA(league))}</span><a href="${leagueHref(league)}">Вся таблиця</a></header>
+        <div class="players">${rows || '<p class="muted">Немає активних гравців у live-даних.</p>'}</div>
+      </article>`;
+    }
+
+    function renderRanks(players) {
+      const counts = rankCounts(players);
+      const max = Math.max(...Object.values(counts), 1);
+      return ranks.map(([rank, min, label]) => {
+        const count = counts[rank] || 0;
+        const width = Math.max(4, Math.round((count / max) * 100));
+        return `<article class="rank-row rank-${rank}">
+          ${rankBadge(rank)}
+          <span><strong>${esc(label)}</strong><small>${min}+ очок</small></span>
+          <div class="track"><i style="width:${width}%"></i></div>
+          <b>${count}</b>
+        </article>`;
+      }).join('');
+    }
+
+    function tournamentCard(item = {}) {
+      const meta = [getTournamentFormatLabel(item) || 'Турнір', String(item.status || '').trim() || 'планується', formatTournamentDate(item.dateStart)].filter(Boolean).join(' · ');
+      return `<a class="tournament" href="./#tournaments${item.tournamentId ? `?selected=${encodeURIComponent(item.tournamentId)}` : ''}">
+        <span class="mono muted">${esc(meta)}</span>
+        <strong>${esc(item.name || item.tournamentId || 'Турнір')}</strong>
+        <small>${num(item.teamsCount)} команд · ${num(item.gamesCount)} матчів · ${num(item.playersCount)} гравців</small>
+      </a>`;
+    }
+
+    function render(model) {
+      const { adultsLive, kidsLive, tournaments } = model;
+      const adults = activePlayers(adultsLive);
+      const kids = activePlayers(kidsLive);
+      const allPlayers = [...adults, ...kids];
+      const leader = adults[0] || kids[0] || {};
+      const day = latestDay([adultsLive, kidsLive]);
+      const status = makeDataStatus([adultsLive?.dataStatus, kidsLive?.dataStatus].filter(Boolean).sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''))[0]);
+      const tone = resolveDataStatusTone(status);
+      const total = [adultsLive, kidsLive].reduce((acc, live) => {
+        acc.players += num(live?.summary?.activePlayersCount, activePlayers(live).length);
+        acc.matches += num(live?.summary?.matchesCount);
+        acc.battles += num(live?.summary?.battlesCount);
+        acc.mvp += num(live?.summary?.totalMvp);
+        return acc;
+      }, { players: 0, matches: 0, battles: 0, mvp: 0 });
+
+      app.innerHTML = `
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="kicker">VARTA CLUB / LIVE RATING</p>
+            <h1>Командна гра з живим рейтингом.</h1>
+            <p class="lead">Лазертаг-ліга, де кожен матч рухає сезон: команда перемагає разом, рейтинг фіксує форму, MVP показує внесок, а ранги швидко пояснюють рівень гравця.</p>
+            <div class="actions">
+              <a class="btn primary" href="${leagueHref('sundaygames')}">Доросла ліга</a>
+              <a class="btn" href="${leagueHref('kids')}">Дитяча ліга</a>
+              <a class="btn" href="./#rules">Правила</a>
+            </div>
+          </div>
+          <aside class="hero-panel">
+            <div class="live">${esc(tone.label)} / ${esc(formatUpdated(status.updatedAt))}</div>
+            <a class="hero-leader" href="${profileHref(leader.league || 'sundaygames', leader.nickname || '')}">
+              <img class="avatar" src="${avatar(leader)}" alt="${esc(leader.nickname || 'Лідер сезону')}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackAvatar}'">
+              <span><small>Лідер зараз</small><strong>${esc(leader.nickname || 'сезон триває')}</strong><small>${num(leader.points)} очок · ${num(leader.matches)} ігор</small></span>
+              ${rankBadge(rankOf(leader))}
+            </a>
+            <div class="metrics">
+              ${metric('Активні гравці', total.players, 'дві ліги')}
+              ${metric('Матчі сезону', total.matches, `${total.battles} раундів`)}
+              ${metric('MVP записів', total.mvp, 'форма сезону')}
+              ${metric('Останній день', day?.date ? `${day.date}` : 'очікується', day?.mvp ? `MVP: ${day.mvp}` : '')}
+            </div>
+          </aside>
+        </section>
+
+        <section class="section" id="rating">
+          <div class="section-head">
+            <p class="kicker">RATING TABLES</p>
+            <h2>Дві ліги, одна логіка сезону.</h2>
+            <p class="muted">Головна задача сторінки: швидко пояснити, що це змагальна командна система, і дати перейти в повну таблицю без зайвого шуму.</p>
+          </div>
+          <div class="grid-2">
+            ${leaderCard('sundaygames', adults[0], 'adults')}
+            ${leaderCard('kids', kids[0], 'kids')}
+          </div>
+          <div class="grid-2">
+            ${leagueTable('sundaygames', adults)}
+            ${leagueTable('kids', kids)}
+          </div>
+        </section>
+
+        <section class="section" id="ranks">
+          <div class="section-head">
+            <p class="kicker">RANK MAP</p>
+            <h2>Ранги як кольорова мапа прогресу.</h2>
+            <p class="muted">S/A/B/C/D/E/F використовують палітру рейтингу, але лишаються в суворій brutalist-системі: колір тільки там, де він допомагає читати дані.</p>
+          </div>
+          <div>${renderRanks(allPlayers)}</div>
+        </section>
+
+        <section class="section" id="system">
+          <div class="section-head">
+            <p class="kicker">HOW IT WORKS</p>
+            <h2>Що бачить новий гравець.</h2>
+          </div>
+          <div class="grid-4">
+            <article class="card"><h3>Команда</h3><p class="muted">Гравець заходить у склад, а результат матчу впливає на рейтинг через командну перемогу або поразку.</p></article>
+            <article class="card"><h3>Форма</h3><p class="muted">Сезон показує активних гравців: очки, win rate, матчі, MVP і стабільність у live-таблиці.</p></article>
+            <article class="card"><h3>Ігровий день</h3><p class="muted">${day?.date ? `Останній день: ${day.date}, ${day.matchesCount || 0} матчів, MVP: ${day.mvp || 'ще не визначено'}.` : 'Після матчу тут зʼявляється дата, матчі, раунди та MVP дня.'}</p><a href="${gameDayHref(day?.league || 'sundaygames', day?.date || '')}">Відкрити день</a></article>
+            <article class="card"><h3>Архів</h3><p class="muted">Минулі сезони потрібні для історії гравця: прогрес, піковий рейтинг, місця й нагороди.</p><a href="./#seasons">Архів сезонів</a></article>
+          </div>
+        </section>
+
+        <section class="section" id="tournaments">
+          <div class="section-head">
+            <p class="kicker">TOURNAMENT MODE</p>
+            <h2>Турніри не змішуються з лігою.</h2>
+            <p class="muted">Якщо в Google Sheets є активний турнір, концепт показує його окремим блоком і веде в турнірний режим основного сайту.</p>
+          </div>
+          <div class="grid-3">
+            ${tournaments.length ? tournaments.slice(0, 3).map(tournamentCard).join('') : '<article class="status">Активний турнір ще не знайдено. Блок готовий під дані з tournament sheets.</article>'}
+          </div>
+        </section>
+      `;
+    }
+
+    async function init() {
+      try {
+        const [adults, kids, tournaments] = await Promise.allSettled([
+          getCurrentLeagueLiveStats('sundaygames'),
+          getCurrentLeagueLiveStats('kids'),
+          loadTournamentsList()
+        ]);
+        if (adults.status !== 'fulfilled' && kids.status !== 'fulfilled') {
+          throw adults.reason || kids.reason || new Error('Live data unavailable');
+        }
+        render({
+          adultsLive: adults.status === 'fulfilled' ? adults.value : null,
+          kidsLive: kids.status === 'fulfilled' ? kids.value : null,
+          tournaments: tournaments.status === 'fulfilled' && Array.isArray(tournaments.value) ? tournaments.value : []
+        });
+      } catch (error) {
+        app.innerHTML = `<section class="hero"><div class="hero-copy"><p class="kicker">DATA LINK</p><h1>Дані не підтягнулися.</h1><p class="lead">${esc(safeErrorMessage(error, 'Спробуй оновити сторінку за кілька секунд.'))}</p><a class="btn primary" href="./#main">Повернутись на головну</a></div></section>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

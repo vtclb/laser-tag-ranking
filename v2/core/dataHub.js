@@ -1223,6 +1223,28 @@ function parseLogs(sheet) {
   }).filter((entry) => entry.nick && (entry.delta !== null || entry.newPoints !== null));
 }
 
+function deriveLogDeltas(entries = []) {
+  const sorted = [...(Array.isArray(entries) ? entries : [])]
+    .sort((a, b) => (a.tsMs || 0) - (b.tsMs || 0) || String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+  const lastPointsByPlayer = new Map();
+
+  return sorted.map((entry) => {
+    const key = `${entry.league || ''}:${normalizeHeader(entry.nick)}`;
+    const explicitDelta = entry.delta === null || entry.delta === undefined ? NaN : Number(entry.delta);
+    const newPoints = entry.newPoints === null || entry.newPoints === undefined ? NaN : Number(entry.newPoints);
+    const previousPoints = lastPointsByPlayer.get(key);
+    const delta = Number.isFinite(explicitDelta)
+      ? explicitDelta
+      : (Number.isFinite(newPoints) && Number.isFinite(previousPoints) ? newPoints - previousPoints : null);
+
+    if (Number.isFinite(newPoints)) {
+      lastPointsByPlayer.set(key, newPoints);
+    }
+
+    return { ...entry, delta };
+  });
+}
+
 
 
 function findHeaderIndex(header = [], variants = []) {
@@ -1329,7 +1351,7 @@ function normalizeLogs(rows = [], header = []) {
       tsMs: Number.isFinite(tsMs) ? tsMs : null,
       league: league || '',
       nickname,
-      delta: Number.isFinite(delta) ? delta : 0,
+      delta: Number.isFinite(delta) ? delta : null,
       newPoints: Number.isFinite(newPoints) ? newPoints : null
     };
   }).filter((entry) => entry.timestamp && entry.league && entry.nickname);
@@ -1513,7 +1535,7 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
 
   const liveGames = parseMatches(gamesSheet || { header: [], rows: [] })
     .filter((match) => match.league === league && inDateRange(match.date, seasonStart, seasonEnd));
-  const liveLogs = parseLogs(logsSheet || { header: [], rows: [] })
+  const liveLogs = deriveLogDeltas(parseLogs(logsSheet || { header: [], rows: [] }))
     .filter((entry) => entry.league === league && inDateRange(entry.date, seasonStart, seasonEnd));
 
   liveGames.forEach((game) => {
@@ -1551,7 +1573,8 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     const key = normalizeHeader(entry.nick);
     const row = statsByNick.get(key);
     if (!row) return;
-    row.delta += Number(entry.delta) || 0;
+    const delta = Number(entry.delta);
+    if (Number.isFinite(delta)) row.delta += delta;
   });
 
   const playersWithSeasonState = [...statsByNick.values()]
@@ -1672,7 +1695,15 @@ export async function getLeagueLiveData(leagueId = 'kids') {
   ]);
 
   const players = parseLeagueTableForLive(leagueSheet?.rows || [], leagueSheet?.header || [], avatarsMap);
-  const recentLogs = normalizeLogs(logsSheet?.rows || [], logsSheet?.header || [])
+  const recentLogs = deriveLogDeltas(normalizeLogs(logsSheet?.rows || [], logsSheet?.header || []).map((entry) => ({
+    timestamp: entry.timestamp,
+    tsMs: entry.tsMs,
+    date: parseDateOnly(entry.timestamp),
+    league: entry.league,
+    nick: entry.nickname,
+    delta: entry.delta,
+    newPoints: entry.newPoints
+  })))
     .filter((entry) => entry.league === league)
     .sort((a, b) => (b.tsMs || 0) - (a.tsMs || 0));
   const recentGames = normalizeGames(gamesSheet?.rows || [], gamesSheet?.header || [])
@@ -1681,9 +1712,10 @@ export async function getLeagueLiveData(leagueId = 'kids') {
 
   const logsDeltaByNick = new Map();
   recentLogs.forEach((entry) => {
-    const key = String(entry.nickname || '').trim().toLowerCase();
+    const key = String(entry.nick || '').trim().toLowerCase();
     if (!key) return;
-    logsDeltaByNick.set(key, (logsDeltaByNick.get(key) || 0) + (Number(entry.delta) || 0));
+    const delta = Number(entry.delta);
+    if (Number.isFinite(delta)) logsDeltaByNick.set(key, (logsDeltaByNick.get(key) || 0) + delta);
   });
   const mvpByNick = new Map();
   recentGames.forEach((game) => {
@@ -2570,8 +2602,9 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     .sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
   const availableDates = [...new Set(allLeagueMatches.map((m) => m.date).filter(Boolean))].sort().reverse();
   const selectedDate = (dateYMD && availableDates.includes(dateYMD)) ? dateYMD : (availableDates[0] || '');
+  const allLogs = deriveLogDeltas(parseLogs(logsSheet || { header: [], rows: [] }));
   const dayMatches = allLeagueMatches.filter((m) => m.date === selectedDate);
-  const dayLogs = parseLogs(logsSheet || { header: [], rows: [] }).filter((entry) => entry.league === league && entry.date === selectedDate);
+  const dayLogs = allLogs.filter((entry) => entry.league === league && entry.date === selectedDate);
 
   const leagueSheetMissing = !Array.isArray(leagueSheet?.rows) || !leagueSheet.rows.length;
   if (leagueSheetMissing) {
@@ -2583,13 +2616,13 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const deltaByNick = new Map();
   dayLogs.forEach((entry) => {
     const key = normalizeHeader(entry.nick);
-    const delta = Number(entry.delta);
+    const delta = entry.delta === null || entry.delta === undefined ? NaN : Number(entry.delta);
     if (Number.isFinite(delta)) {
       deltaByNick.set(key, (deltaByNick.get(key) || 0) + delta);
     }
   });
   const latestPointsBeforeDay = new Map();
-  parseLogs(logsSheet || { header: [], rows: [] }).forEach((entry) => {
+  allLogs.forEach((entry) => {
     const key = normalizeHeader(entry.nick);
     if (!key || entry.league !== league || !Number.isFinite(entry.newPoints) || !entry.date || entry.date >= selectedDate) return;
     const current = latestPointsBeforeDay.get(key);
@@ -2639,8 +2672,8 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       const key = normalizeHeader(entry.nick);
       const exact = exactByNick.get(key);
       if (!exact) return entry;
-      const exactDelta = Number(exact.delta);
-      const exactNewPoints = Number(exact.newPoints);
+      const exactDelta = exact.delta === null || exact.delta === undefined ? NaN : Number(exact.delta);
+      const exactNewPoints = exact.newPoints === null || exact.newPoints === undefined ? NaN : Number(exact.newPoints);
       const pointsBefore = runningPointsByNick.get(key);
       const resolvedDelta = Number.isFinite(exactDelta)
         ? exactDelta
@@ -2711,7 +2744,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     });
     const exactChanges = localChanges.map((entry) => ({
       nick: entry.nick,
-      delta: Number.isFinite(Number(entry.delta)) ? Number(entry.delta) : null,
+      delta: entry.delta === null || entry.delta === undefined ? null : Number(entry.delta),
       newPoints: Number.isFinite(Number(entry.newPoints)) ? Number(entry.newPoints) : null,
       source: 'logs'
     }));

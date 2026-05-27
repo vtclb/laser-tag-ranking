@@ -14,7 +14,9 @@
       --panel-2: #181818;
       --text: #ececea;
       --muted: #aaa9a2;
+      --soft: rgba(236, 236, 234, .74);
       --line: rgba(236, 236, 234, .18);
+      --line-strong: rgba(236, 236, 234, .28);
       --red: #e61919;
       --green: #4af626;
       --s: #ffd84d;
@@ -32,12 +34,13 @@
     body {
       margin: 0;
       background:
-        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.026) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255,255,255,.018) 1px, transparent 1px),
         var(--bg);
-      background-size: 36px 36px;
+      background-size: 40px 40px;
       color: var(--text);
       font-family: Inter, system-ui, sans-serif;
+      text-rendering: geometricPrecision;
     }
 
     body::after {
@@ -46,7 +49,7 @@
       inset: 0;
       pointer-events: none;
       background: repeating-linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.045) 1px, transparent 1px, transparent 8px);
-      opacity: .14;
+      opacity: .08;
       mix-blend-mode: screen;
     }
 
@@ -54,7 +57,7 @@
     .page {
       width: min(1180px, 100% - 28px);
       margin: 0 auto;
-      padding: 14px 0 64px;
+      padding: 12px 0 64px;
     }
 
     .top {
@@ -65,11 +68,11 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      min-height: 54px;
+      min-height: 52px;
       border: 1px solid var(--line);
-      background: rgba(10, 10, 10, .9);
+      background: rgba(10, 10, 10, .94);
       backdrop-filter: blur(10px);
-      padding: 8px 10px;
+      padding: 7px 9px;
     }
 
     .brand, .nav, .kicker, .mono {
@@ -99,14 +102,14 @@
       flex-wrap: wrap;
       justify-content: flex-end;
       gap: 8px;
-      font-size: .68rem;
+      font-size: .66rem;
     }
 
     .nav a, .btn {
       min-height: 38px;
       border: 1px solid var(--line);
-      background: rgba(18, 18, 18, .84);
-      padding: 9px 11px;
+      background: rgba(18, 18, 18, .72);
+      padding: 8px 10px;
       text-decoration: none;
     }
 
@@ -127,19 +130,24 @@
       background: rgba(230, 25, 25, .16);
     }
 
+    .nav a:hover, .btn:hover, .league header a:hover, .card a:hover {
+      border-color: var(--line-strong);
+      background: rgba(236, 236, 234, .06);
+    }
+
     .hero, .section {
       position: relative;
       margin-top: 14px;
       border: 1px solid var(--line);
-      background: rgba(10, 10, 10, .78);
+      background: rgba(10, 10, 10, .88);
       overflow: hidden;
     }
 
     .hero {
       display: grid;
-      gap: 18px;
-      min-height: min(760px, calc(100vh - 92px));
-      padding: clamp(20px, 5vw, 48px);
+      gap: 20px;
+      min-height: min(680px, calc(100vh - 86px));
+      padding: clamp(22px, 5vw, 52px);
     }
 
     .hero::before, .section::before {
@@ -148,22 +156,22 @@
       inset: 0;
       pointer-events: none;
       background:
-        linear-gradient(120deg, rgba(230, 25, 25, .13), transparent 28%),
-        linear-gradient(300deg, rgba(80, 223, 202, .08), transparent 30%);
-      opacity: .85;
+        linear-gradient(120deg, rgba(230, 25, 25, .08), transparent 30%),
+        linear-gradient(300deg, rgba(80, 223, 202, .055), transparent 34%);
+      opacity: .9;
     }
 
     .hero > *, .section > * { position: relative; z-index: 1; }
     .hero-copy {
       display: grid;
       align-content: center;
-      gap: 18px;
+      gap: 16px;
     }
 
     .kicker {
       margin: 0;
       color: var(--muted);
-      font-size: .72rem;
+      font-size: .68rem;
       line-height: 1.3;
     }
 
@@ -175,28 +183,28 @@
 
     h1 {
       max-width: 12ch;
-      font-size: clamp(2.45rem, 10vw, 6rem);
-      font-weight: 900;
-      line-height: .92;
+      font-size: clamp(2.35rem, 8.2vw, 5.35rem);
+      font-weight: 850;
+      line-height: .96;
     }
 
     h2 {
-      font-size: clamp(1.45rem, 4.4vw, 2.55rem);
-      font-weight: 850;
-      line-height: 1.05;
+      font-size: clamp(1.38rem, 3.6vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.1;
     }
 
     h3 {
       font-size: 1rem;
-      font-weight: 850;
+      font-weight: 800;
       line-height: 1.2;
     }
 
     .lead {
       max-width: 62ch;
-      color: rgba(236, 236, 234, .84);
+      color: var(--soft);
       font-size: clamp(1rem, 2.4vw, 1.18rem);
-      line-height: 1.55;
+      line-height: 1.5;
     }
 
     .actions, .chips {
@@ -213,8 +221,8 @@
     .hero-panel {
       align-self: end;
       display: grid;
-      gap: 12px;
-      padding: 14px;
+      gap: 10px;
+      padding: 12px;
     }
 
     .live {
@@ -223,7 +231,7 @@
       gap: 8px;
       color: var(--muted);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: .72rem;
+      font-size: .68rem;
     }
 
     .live::before {
@@ -235,10 +243,10 @@
 
     .hero-leader {
       display: grid;
-      grid-template-columns: 58px minmax(0, 1fr) auto;
+      grid-template-columns: 54px minmax(0, 1fr) auto;
       align-items: center;
-      gap: 12px;
-      padding: 12px;
+      gap: 10px;
+      padding: 10px;
       border: 1px solid rgba(236, 236, 234, .2);
       text-decoration: none;
     }
@@ -267,19 +275,19 @@
     .metrics {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      gap: 7px;
     }
 
     .metric, .card {
       display: grid;
       gap: 4px;
-      padding: 11px;
+      padding: 10px;
     }
 
     .metric span, .metric small {
       color: var(--muted);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: .65rem;
+      font-size: .62rem;
       text-transform: uppercase;
     }
 
@@ -294,7 +302,7 @@
     .section {
       display: grid;
       gap: 16px;
-      padding: clamp(18px, 4vw, 30px);
+      padding: clamp(18px, 4vw, 28px);
     }
 
     .section-head {
@@ -313,9 +321,9 @@
 
     .leader {
       display: grid;
-      gap: 12px;
-      padding: 14px;
-      border-left: 4px solid var(--b);
+      gap: 10px;
+      padding: 12px;
+      border-left: 3px solid var(--b);
       text-decoration: none;
     }
 
@@ -324,13 +332,13 @@
 
     .leader-main {
       display: grid;
-      grid-template-columns: 54px minmax(0, 1fr) auto;
+      grid-template-columns: 50px minmax(0, 1fr) auto;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .leader-score {
-      font-size: 1.5rem;
+      font-size: 1.42rem;
       font-weight: 900;
       line-height: 1;
     }
@@ -338,7 +346,7 @@
     .league {
       display: grid;
       gap: 9px;
-      padding: 12px;
+      padding: 11px;
       border: 1px solid rgba(236, 236, 234, .16);
       background: rgba(18, 18, 18, .86);
     }
@@ -350,7 +358,7 @@
       gap: 8px;
       color: var(--muted);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: .72rem;
+      font-size: .68rem;
       font-weight: 800;
       letter-spacing: .08em;
       text-transform: uppercase;
@@ -363,10 +371,10 @@
 
     .player {
       display: grid;
-      grid-template-columns: 38px 32px 38px minmax(0, 1fr) auto;
-      gap: 9px;
+      grid-template-columns: 36px 30px 36px minmax(0, 1fr) auto;
+      gap: 8px;
       align-items: center;
-      padding: 9px 0;
+      padding: 8px 0;
       border-width: 0 0 1px;
       background: transparent;
       text-decoration: none;
@@ -383,10 +391,11 @@
       display: inline-grid;
       place-items: center;
       min-width: 30px;
-      height: 30px;
+      height: 28px;
       border: 1px solid currentColor;
       background: rgba(255, 255, 255, .05);
       font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: .78rem;
       font-weight: 900;
     }
 
@@ -400,10 +409,10 @@
 
     .rank-row {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) minmax(82px, .8fr) 34px;
+      grid-template-columns: auto minmax(0, 1fr) minmax(82px, .8fr) 32px;
       align-items: center;
-      gap: 10px;
-      padding: 10px 0;
+      gap: 9px;
+      padding: 9px 0;
       border-width: 0 0 1px;
       background: transparent;
     }
@@ -423,8 +432,8 @@
     .tournament {
       display: grid;
       gap: 6px;
-      padding: 14px;
-      border-left: 4px solid var(--red);
+      padding: 12px;
+      border-left: 3px solid var(--red);
       text-decoration: none;
     }
 
@@ -439,6 +448,7 @@
     @media (min-width: 760px) {
       .hero {
         grid-template-columns: minmax(0, 1.08fr) minmax(320px, .72fr);
+        align-items: stretch;
       }
 
       .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -447,18 +457,41 @@
     }
 
     @media (max-width: 620px) {
-      .page { width: min(100% - 18px, 1180px); }
+      .page {
+        width: min(100% - 18px, 1180px);
+        padding-top: 8px;
+      }
       .top { align-items: flex-start; flex-direction: column; }
-      .nav { justify-content: flex-start; }
+      .nav {
+        width: 100%;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+      .nav a { white-space: nowrap; }
       .hero { min-height: auto; padding: 18px; }
       .section { padding: 16px; }
-      h1 { max-width: 11ch; }
+      h1 {
+        max-width: 12ch;
+        font-size: clamp(2.15rem, 13vw, 3.25rem);
+      }
       .metrics { grid-template-columns: 1fr; }
       .hero-leader { grid-template-columns: 48px minmax(0, 1fr) auto; }
-      .player { grid-template-columns: 32px 30px minmax(0, 1fr) auto; }
+      .player { grid-template-columns: 31px 30px minmax(0, 1fr) auto; }
       .player img { display: none; }
       .rank-row { grid-template-columns: auto minmax(0, 1fr) 28px; }
       .track { grid-column: 2 / 4; }
+    }
+
+    @media (max-width: 390px) {
+      .brand { font-size: .72rem; }
+      .btn { width: 100%; }
+      .actions { width: 100%; }
+      .hero-leader, .leader-main {
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+      }
+      .leader-score { font-size: 1.24rem; }
     }
 
     @media (prefers-reduced-motion: reduce) {

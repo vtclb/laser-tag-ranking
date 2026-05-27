@@ -184,6 +184,36 @@ test('restoreLobby keeps old snapshots backward compatible', () => {
   assert.deepEqual(state.tournamentState.savedTournamentTeamIds, []);
 });
 
+test('restoreLobby defaults old rating snapshots to regular mode', () => {
+  resetBalanceState();
+  writeLobbySnapshot({
+    selected: ['p1', 'p2', 'p3'],
+    teamCount: 2,
+    teams: { team1: ['p1', 'p2'], team2: ['p3'] },
+    match: { mvp1: 'Rating MVP' },
+  });
+
+  assert.equal(restoreLobby(), true);
+  assert.equal(state.app.eventMode, 'regular');
+  assert.equal(state.app.playerSourceMode, 'kids');
+  assert.equal(state.playersState.selected.length, 3);
+  assert.deepEqual(state.teamsState.teams.team1, ['p1', 'p2']);
+  assert.deepEqual(state.teamsState.teams.team2, ['p3']);
+  assert.equal(state.matchState.match.mvp1, 'Rating MVP');
+});
+
+test('restoreLobby preserves explicit regular mode and strips mixed source', () => {
+  resetBalanceState();
+  writeLobbySnapshot({
+    app: { eventMode: 'regular', playerSourceMode: 'mixed' },
+    playersState: { selected: ['p1'] },
+  });
+
+  assert.equal(restoreLobby(), true);
+  assert.equal(state.app.eventMode, 'regular');
+  assert.equal(state.app.playerSourceMode, 'sundaygames');
+});
+
 test('restoreLobby ignores corrupted tournamentState safely', () => {
   resetBalanceState();
   writeLobbySnapshot({

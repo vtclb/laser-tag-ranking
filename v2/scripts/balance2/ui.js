@@ -292,7 +292,7 @@ export function renderSavePreview() {
   const root = getSavePreviewRoot();
   if (!root) return;
 
-  const eventMode = state.app.eventMode === 'tournament' ? 'tournament' : 'school';
+  const eventMode = ['regular', 'tournament', 'school'].includes(state.app.eventMode) ? state.app.eventMode : 'regular';
   const [teamA, teamB] = eventMode === 'tournament'
     ? [state.activeTeamAId || 'team1', state.activeTeamBId || 'team2']
     : getActiveMatchTeams();
@@ -350,6 +350,7 @@ export function renderLeagueControls() {
       <section class="balance-step balance-step--event">
         <h3>1. Тип події</h3>
         <div class="event-mode-switch">
+          <button type="button" class="chip event-mode-button ${state.app.eventMode === 'regular' ? 'active' : ''}" data-event-mode="regular">Рейтингові ігри</button>
           <button type="button" class="chip event-mode-button ${state.app.eventMode === 'tournament' ? 'active' : ''}" data-event-mode="tournament">Турнір</button>
           <button type="button" class="chip event-mode-button ${state.app.eventMode === 'school' ? 'active' : ''}" data-event-mode="school">Школа</button>
         </div>
@@ -609,7 +610,7 @@ export function renderTeams() {
 export function renderMatchConfig() {
   const root = document.getElementById('activeMatchConfig');
   if (!root) return;
-  const eventMode = state.app.eventMode === 'tournament' ? 'tournament' : 'school';
+  const eventMode = ['regular', 'tournament', 'school'].includes(state.app.eventMode) ? state.app.eventMode : 'regular';
   const keys = getAvailableTeamKeys();
   const [teamA, teamB] = eventMode === 'tournament'
     ? [state.activeTeamAId || 'team1', state.activeTeamBId || 'team2']
@@ -636,7 +637,7 @@ export function renderMatchConfig() {
   `;
 
   root.innerHTML = `
-    ${eventMode === 'school' ? regularContent : `
+    ${eventMode !== 'tournament' ? regularContent : `
       <div class="tournament-panel">
         <div class="tag">Змішаний турнір завантажує гравців з дорослої та дитячої ліги.</div>
         <label>Назва турніру <input class="search-input" data-tournament-name type="text" value="${escapeAttr(state.tournamentState.tournamentName || '')}" placeholder="Весняний турнір"></label>

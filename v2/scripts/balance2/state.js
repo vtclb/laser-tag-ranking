@@ -15,7 +15,7 @@ export const state = {
     league: 'kids',
     playerSourceMode: 'kids',
     mode: 'auto',
-    eventMode: 'tournament',
+    eventMode: 'regular',
     sortMode: 'points_desc',
     query: '',
   },

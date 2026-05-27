@@ -98,9 +98,9 @@ function setSaveFeedback(saveStatus = 'idle', saveMessage = '', { renderNow = tr
 }
 
 function normalizeEventAndSourceState(nextEventMode = state.app.eventMode, nextSourceMode = state.app.playerSourceMode) {
-  const eventMode = nextEventMode === 'school' ? 'school' : 'tournament';
+  const eventMode = ['regular', 'tournament', 'school'].includes(nextEventMode) ? nextEventMode : 'regular';
   let playerSourceMode = normalizePlayerSourceMode(nextSourceMode, eventMode);
-  if (eventMode === 'school' && playerSourceMode === 'mixed') {
+  if (eventMode !== 'tournament' && playerSourceMode === 'mixed') {
     playerSourceMode = 'sundaygames';
   }
   if (eventMode === 'tournament' && !['sundaygames', 'kids', 'mixed'].includes(playerSourceMode)) {
@@ -1271,7 +1271,7 @@ async function init() {
     },
     onEventMode(mode) {
       state.uiState.flowStarted = true;
-      const nextEventMode = mode === 'tournament' ? 'tournament' : 'school';
+      const nextEventMode = ['regular', 'tournament', 'school'].includes(mode) ? mode : 'regular';
       const changed = nextEventMode !== state.app.eventMode;
       normalizeEventAndSourceState(nextEventMode, state.app.playerSourceMode);
       localStorage.setItem(LEAGUE_KEY, state.app.playerSourceMode);

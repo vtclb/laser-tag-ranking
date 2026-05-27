@@ -15,6 +15,7 @@ let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 const GAME_WIN_POINTS = 20;
 const MVP_BONUS_POINTS = { mvp1: 12, mvp2: 7, mvp3: 3 };
 const RANK_POINT_PENALTIES = { F: 0, E: -4, D: -6, C: -8, B: -10, A: -12, S: -14 };
+const MAX_SAFE_LOG_ROWS = 1500;
 
 const TTL = {
   home: 60_000,
@@ -32,7 +33,7 @@ const SHEET_RANGES = {
   kids: 'A1:Z10000',
   sundaygames: 'A1:Z10000',
   games: 'A1:Z10000',
-  logs: 'A1:Z10000',
+  logs: 'A1:Z1500',
   avatars: 'A1:Z2000',
   autumn2025: 'A1:Z5000',
   ocinb2025: 'A1:Z5000',
@@ -702,10 +703,13 @@ async function tryReadSheetVariant(sheetName, options = {}) {
     if (range) {
       const rangeMatch = String(range).match(/:([A-Z]+)(\d+)$/i);
       const rangeLimitRows = rangeMatch ? Number(rangeMatch[2]) : undefined;
-      const effectiveLimitRows = Math.max(
+      const requestedEffectiveLimitRows = Math.max(
         Number.isFinite(rangeLimitRows) && rangeLimitRows > 0 ? rangeLimitRows : 0,
         Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? requestedLimitRows : 0
       );
+      const effectiveLimitRows = canonical === 'logs'
+        ? Math.min(requestedEffectiveLimitRows || MAX_SAFE_LOG_ROWS, MAX_SAFE_LOG_ROWS)
+        : requestedEffectiveLimitRows;
       payload = await gasGetJsonp({ action: 'getSheetRaw', sheet: sheetName, limitRows: effectiveLimitRows || undefined });
     } else {
       payload = await readSheetAll(sheetName);
@@ -1245,6 +1249,23 @@ function deriveLogDeltas(entries = []) {
   });
 }
 
+function buildSeasonBaselineByNick(entries = [], league = '', seasonStart = '', seasonEnd = '') {
+  const baseline = new Map();
+  deriveLogDeltas(entries)
+    .filter((entry) => entry.league === league && inDateRange(entry.date, seasonStart, seasonEnd))
+    .sort((a, b) => (a.tsMs || 0) - (b.tsMs || 0) || String(a.timestamp || '').localeCompare(String(b.timestamp || '')))
+    .forEach((entry) => {
+      const key = normalizeHeader(entry.nick);
+      if (!key || baseline.has(key)) return;
+      const newPoints = Number(entry.newPoints);
+      const delta = Number(entry.delta);
+      if (Number.isFinite(newPoints) && Number.isFinite(delta)) {
+        baseline.set(key, newPoints - delta);
+      }
+    });
+  return baseline;
+}
+
 
 
 function findHeaderIndex(header = [], variants = []) {
@@ -1509,7 +1530,7 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
   const leagueSheet = await fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 4000, limitCols: 40 }));
   const [gamesSheet, logsSheet, avatarsMap] = await Promise.all([
     fetchOptional('games-sheet', () => readSheet('games', { limitRows: 8000, limitCols: 40 }), { header: [], rows: [] }),
-    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: MAX_SAFE_LOG_ROWS, limitCols: 30 }), { header: [], rows: [] }),
     fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
 
@@ -1537,6 +1558,7 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     .filter((match) => match.league === league && inDateRange(match.date, seasonStart, seasonEnd));
   const liveLogs = deriveLogDeltas(parseLogs(logsSheet || { header: [], rows: [] }))
     .filter((entry) => entry.league === league && inDateRange(entry.date, seasonStart, seasonEnd));
+  const seasonBaselineByNick = buildSeasonBaselineByNick(parseLogs(logsSheet || { header: [], rows: [] }), league, seasonStart, seasonEnd);
 
   liveGames.forEach((game) => {
     const teams = { team1: game.team1 || [], team2: game.team2 || [], team3: game.team3 || [], team4: game.team4 || [] };
@@ -1575,6 +1597,14 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     if (!row) return;
     const delta = Number(entry.delta);
     if (Number.isFinite(delta)) row.delta += delta;
+  });
+
+  statsByNick.forEach((row, key) => {
+    const baseline = seasonBaselineByNick.get(key);
+    const points = Number(row.points);
+    if (Number.isFinite(points) && Number.isFinite(baseline)) {
+      row.delta = points - baseline;
+    }
   });
 
   const playersWithSeasonState = [...statsByNick.values()]
@@ -1689,7 +1719,7 @@ export async function getLeagueLiveData(leagueId = 'kids') {
 
   const leagueSheet = await fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }));
   const [logsSheet, gamesSheet, avatarsMap] = await Promise.all([
-    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 6000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: MAX_SAFE_LOG_ROWS, limitCols: 30 }), { header: [], rows: [] }),
     fetchOptional('games-sheet', () => readSheet('games', { limitRows: 6000, limitCols: 40 }), { header: [], rows: [] }),
     fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
@@ -1711,6 +1741,7 @@ export async function getLeagueLiveData(leagueId = 'kids') {
     .sort((a, b) => (b.tsMs || 0) - (a.tsMs || 0));
 
   const logsDeltaByNick = new Map();
+  const baselineByNick = buildSeasonBaselineByNick(recentLogs, league, '', '');
   recentLogs.forEach((entry) => {
     const key = String(entry.nick || '').trim().toLowerCase();
     if (!key) return;
@@ -1728,7 +1759,9 @@ export async function getLeagueLiveData(leagueId = 'kids') {
     const key = player.nickname.toLowerCase().trim();
     return {
       ...player,
-      delta: player.delta || logsDeltaByNick.get(key) || 0,
+      delta: Number.isFinite(Number(baselineByNick.get(key)))
+        ? (Number(player.points) || 0) - Number(baselineByNick.get(key))
+        : (player.delta || logsDeltaByNick.get(key) || 0),
       mvp: player.mvp || mvpByNick.get(key) || 0
     };
   });
@@ -1779,7 +1812,7 @@ export async function getHomeLiveData() {
     fetchCritical('kids-sheet', () => readSheet('kids', { limitRows: 2000, limitCols: 30 }))
   ]);
   const [logsSheet, gamesSheet, avatarsMap] = await Promise.all([
-    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: 5000, limitCols: 30 }), { header: [], rows: [] }),
+    fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: MAX_SAFE_LOG_ROWS, limitCols: 30 }), { header: [], rows: [] }),
     fetchOptional('games-sheet', () => readSheet('games', { limitRows: 5000, limitCols: 30 }), { header: [], rows: [] }),
     fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
   ]);
@@ -2590,7 +2623,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const games = await loadCritical('games', () => readSheet('games', { limitRows: 8000, limitCols: 40 }));
   const [leagueSheet, logs, avatars] = await Promise.all([
     loadSoftCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }), null),
-    loadOptional('logs', () => readSheet('logs', { limitRows: 8000, limitCols: 30 }), { header: [], rows: [] }),
+    loadOptional('logs', () => readSheet('logs', { limitRows: MAX_SAFE_LOG_ROWS, limitCols: 30 }), { header: [], rows: [] }),
     loadOptional('avatars', () => getAvatarsMap(), new Map())
   ]);
   const gamesSheet = games || { header: [], rows: [] };
@@ -2714,7 +2747,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
         avatarUrl: avatarsMap.get(key) || '',
         pointsBefore,
         pointsAfter,
-        delta,
+        delta: 0,
         rankBefore: rankFromPoints(pointsBefore),
         rankAfter: rankFromPoints(pointsAfter),
         placeBefore: beforePlace.get(key) || null,
@@ -2751,10 +2784,14 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     const fallbackChanges = buildFallbackMatchChanges(teams, winner, m);
     const pointsChanges = mergeMatchChanges(exactChanges, fallbackChanges);
     applyRunningPoints(pointsChanges);
+    const changeByNick = new Map(pointsChanges.map((entry) => [normalizeHeader(entry.nick), entry]));
 
     Object.entries(teams).forEach(([teamKey, members]) => {
       members.forEach((nick) => {
         const row = touch(nick);
+        const playerChange = changeByNick.get(normalizeHeader(nick));
+        const playerDelta = Number(playerChange?.delta);
+        if (Number.isFinite(playerDelta)) row.delta += playerDelta;
         row.matches += 1;
         if (winner === 'tie') row.draws += 1;
         else if (winner === teamKey) row.wins += 1;

@@ -8,7 +8,7 @@ import { makeDataStatus } from './dataStatus.js';
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260517-logs1500-matchdelta';
+const SHEET_CACHE_VERSION = 'sheets-20260527-rows10000-delta';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 
@@ -29,10 +29,10 @@ const TTL = {
 };
 
 const SHEET_RANGES = {
-  kids: 'A1:Z600',
-  sundaygames: 'A1:Z600',
-  games: 'A1:Z5000',
-  logs: 'A1:Z1500',
+  kids: 'A1:Z10000',
+  sundaygames: 'A1:Z10000',
+  games: 'A1:Z10000',
+  logs: 'A1:Z10000',
   avatars: 'A1:Z2000',
   autumn2025: 'A1:Z5000',
   ocinb2025: 'A1:Z5000',
@@ -699,7 +699,17 @@ async function tryReadSheetVariant(sheetName, options = {}) {
     : requestedLimitRows;
   let payload = null;
   try {
-    payload = range ? await readSheetRange(sheetName, range) : await readSheetAll(sheetName);
+    if (range) {
+      const rangeMatch = String(range).match(/:([A-Z]+)(\d+)$/i);
+      const rangeLimitRows = rangeMatch ? Number(rangeMatch[2]) : undefined;
+      const effectiveLimitRows = Math.max(
+        Number.isFinite(rangeLimitRows) && rangeLimitRows > 0 ? rangeLimitRows : 0,
+        Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? requestedLimitRows : 0
+      );
+      payload = await gasGetJsonp({ action: 'getSheetRaw', sheet: sheetName, limitRows: effectiveLimitRows || undefined });
+    } else {
+      payload = await readSheetAll(sheetName);
+    }
 
     if (isArchiveSheet && Number.isFinite(safeLimitRows) && safeLimitRows > 0 && payload && typeof payload === 'object') {
       if (Array.isArray(payload.values)) payload.values = payload.values.slice(0, safeLimitRows + 1);
@@ -729,7 +739,13 @@ async function readSheet(sheetName, options = {}) {
   const normalized = normalizeHeader(sheetName).replace(/\s+/g, '');
   const aliases = SHEET_ALIASES[normalized] || SHEET_ALIASES[normalizeHeader(sheetName)] || [];
   const variants = [sheetName, ...aliases].slice(0, 3);
-  const key = `sheet:${SHEET_CACHE_VERSION}:${variants.join('|')}`;
+  const requestedLimitRows = Number(options.limitRows);
+  const requestedLimitCols = Number(options.limitCols);
+  const optionKey = [
+    Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? `r${requestedLimitRows}` : 'r0',
+    Number.isFinite(requestedLimitCols) && requestedLimitCols > 0 ? `c${requestedLimitCols}` : 'c0'
+  ].join(':');
+  const key = `sheet:${SHEET_CACHE_VERSION}:${variants.join('|')}:${optionKey}`;
   const cached = readCache(key, TTL.sheet) || readStorageCache(key, 10 * 60_000);
   if (cached) return cached;
   if (inFlight.has(key)) return inFlight.get(key);
@@ -2567,7 +2583,10 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const deltaByNick = new Map();
   dayLogs.forEach((entry) => {
     const key = normalizeHeader(entry.nick);
-    deltaByNick.set(key, (deltaByNick.get(key) || 0) + (Number(entry.delta) || 0));
+    const delta = Number(entry.delta);
+    if (Number.isFinite(delta)) {
+      deltaByNick.set(key, (deltaByNick.get(key) || 0) + delta);
+    }
   });
   const latestPointsBeforeDay = new Map();
   parseLogs(logsSheet || { header: [], rows: [] }).forEach((entry) => {
@@ -2617,12 +2636,21 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       .filter((entry) => normalizeHeader(entry.nick))
       .map((entry) => [normalizeHeader(entry.nick), entry]));
     return (Array.isArray(fallbackChanges) ? fallbackChanges : []).map((entry) => {
-      const exact = exactByNick.get(normalizeHeader(entry.nick));
+      const key = normalizeHeader(entry.nick);
+      const exact = exactByNick.get(key);
       if (!exact) return entry;
+      const exactDelta = Number(exact.delta);
+      const exactNewPoints = Number(exact.newPoints);
+      const pointsBefore = runningPointsByNick.get(key);
+      const resolvedDelta = Number.isFinite(exactDelta)
+        ? exactDelta
+        : (Number.isFinite(exactNewPoints) && Number.isFinite(pointsBefore)
+          ? exactNewPoints - pointsBefore
+          : entry.delta);
       return {
         nick: exact.nick || entry.nick,
-        delta: Number.isFinite(Number(exact.delta)) ? Number(exact.delta) : entry.delta,
-        newPoints: Number.isFinite(Number(exact.newPoints)) ? Number(exact.newPoints) : entry.newPoints,
+        delta: resolvedDelta,
+        newPoints: Number.isFinite(exactNewPoints) ? exactNewPoints : entry.newPoints,
         source: 'logs'
       };
     });
@@ -2683,7 +2711,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     });
     const exactChanges = localChanges.map((entry) => ({
       nick: entry.nick,
-      delta: Number.isFinite(Number(entry.delta)) ? Number(entry.delta) : 0,
+      delta: Number.isFinite(Number(entry.delta)) ? Number(entry.delta) : null,
       newPoints: Number.isFinite(Number(entry.newPoints)) ? Number(entry.newPoints) : null,
       source: 'logs'
     }));

@@ -1,7 +1,7 @@
 const seasonsConfig = {
   currentSeasonId: 'spring_2026',
   endpoints: {
-    gasUrl: 'https://script.google.com/macros/s/AKfycbyDdfnyXW_RPX3TWN-WLK5whqS366ZhacX1nYJ4tVkfx898_CHhAZDB13eTYKgn5n7Q/exec'
+    gasUrl: 'https://script.google.com/macros/s/AKfycbzIuGIL5xC2gIhHKypLzTcz6ORApWZ-Q3uOqSlEZvZ6DriCmOSC24NgjXSYmZVP_QLgeA/exec'
   },
   leagues: {
     kids: { label: 'Молодша', aliases: [] },

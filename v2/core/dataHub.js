@@ -8,14 +8,14 @@ import { makeDataStatus } from './dataStatus.js';
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260527-rows10000-delta';
+const SHEET_CACHE_VERSION = 'sheets-20260601-gas-logs5000';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 
 const GAME_WIN_POINTS = 20;
 const MVP_BONUS_POINTS = { mvp1: 12, mvp2: 7, mvp3: 3 };
 const RANK_POINT_PENALTIES = { F: 0, E: -4, D: -6, C: -8, B: -10, A: -12, S: -14 };
-const MAX_SAFE_LOG_ROWS = 1500;
+const MAX_SAFE_LOG_ROWS = 5000;
 
 const TTL = {
   home: 60_000,
@@ -33,7 +33,7 @@ const SHEET_RANGES = {
   kids: 'A1:Z10000',
   sundaygames: 'A1:Z10000',
   games: 'A1:Z10000',
-  logs: 'A1:Z1500',
+  logs: 'A1:Z5000',
   avatars: 'A1:Z2000',
   autumn2025: 'A1:Z5000',
   ocinb2025: 'A1:Z5000',
@@ -60,7 +60,7 @@ const RANK_META = {
 const RANK_PRIORITY = { S: 0, A: 1, B: 2, C: 3, D: 4, E: 5, F: 6 };
 const MAX_BATTLES_PER_GAME = 7;
 const ARCHIVE_LIMIT_ROWS = 1000;
-const SEASON_MASTER_API_URL = 'https://script.google.com/macros/s/AKfycbyDdfnyXW_RPX3TWN-WLK5whqS366ZhacX1nYJ4tVkfx898_CHhAZDB13eTYKgn5n7Q/exec';
+const SEASON_MASTER_API_URL = 'https://script.google.com/macros/s/AKfycbzIuGIL5xC2gIhHKypLzTcz6ORApWZ-Q3uOqSlEZvZ6DriCmOSC24NgjXSYmZVP_QLgeA/exec';
 const seasonCache = {};
 
 

@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-06-01T16:23:43.635Z",
+  "gasUrl": "https://script.google.com/macros/s/AKfycbzIuGIL5xC2gIhHKypLzTcz6ORApWZ-Q3uOqSlEZvZ6DriCmOSC24NgjXSYmZVP_QLgeA/exec",
+  "sourceRows": {
+    "games": 273,
+    "logs": 2114
+  },
+  "corrections": [
+    {
+      "league": "sundaygames",
+      "type": "trimmed_roster_nickname",
+      "row": 67,
+      "rawNick": "Пупсінь ",
+      "nick": "Пупсінь"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 43,
+      "rawNick": "виделка ",
+      "nick": "виделка"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 44,
+      "rawNick": "квадробер ",
+      "nick": "квадробер"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 45,
+      "rawNick": "сємочка ",
+      "nick": "сємочка"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 59,
+      "rawNick": "Sniper ",
+      "nick": "Sniper"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 65,
+      "rawNick": "Variy ",
+      "nick": "Variy"
+    }
+  ],
+  "warnings": [
+    {
+      "league": "sundaygames",
+      "type": "player_has_games_without_logs",
+      "nick": "Пупсінь",
+      "computedDelta": 80,
+      "games": 7,
+      "wins": 4,
+      "losses": 3
+    }
+  ]
+}

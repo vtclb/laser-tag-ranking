@@ -428,6 +428,65 @@ function normalizeSeasonMasterPayload(payload, seasonId = '') {
   };
 }
 
+function normalizeStaticSeasonMaster(staticData = {}, seasonId = '') {
+  if (!staticData || typeof staticData !== 'object') return null;
+  if (staticData.sections && typeof staticData.sections === 'object') {
+    return normalizeSeasonMasterPayload({
+      seasonId: staticData.seasonId || seasonId,
+      sections: staticData.sections
+    }, seasonId);
+  }
+
+  const league_summary = [];
+  const awards = [];
+  const players = [];
+  Object.entries(staticData.leagues || {}).forEach(([leagueId, leagueData]) => {
+    const league = normalizeLeague(leagueId);
+    if (!league || !leagueData || typeof leagueData !== 'object') return;
+    league_summary.push({ ...(leagueData.summary || {}), league });
+    if (Array.isArray(leagueData.awards)) {
+      leagueData.awards.forEach((row) => awards.push({ ...(row || {}), league: normalizeLeague(row?.league || league) || league }));
+    }
+    (Array.isArray(leagueData.table) ? leagueData.table : []).forEach((row) => {
+      players.push({
+        Season: staticData.seasonId || seasonId,
+        League: league,
+        Nickname: row.nick || row.nickname || row.Nickname,
+        Place: row.place || row.finalPlace,
+        Points: row.points,
+        Rating_start: row.ratingStart,
+        Rating_end: row.ratingEnd || row.points,
+        Rating_delta: row.ratingDelta ?? row.delta,
+        Games: row.games || row.matches,
+        Wins: row.wins,
+        Losses: row.losses,
+        Draws: row.draws,
+        Winrate: row.winRate ?? row.winrate,
+        MVP1: row.mvp1 ?? row.mvp,
+        MVP2: row.mvp2,
+        MVP3: row.mvp3,
+        MVP_total: row.mvpTotal,
+        Rank: row.rankLetter || row.rank?.label
+      });
+    });
+  });
+
+  return normalizeSeasonMasterPayload({
+    seasonId: staticData.seasonId || seasonId,
+    sections: {
+      season_meta: staticData.sections?.season_meta || {
+        season: staticData.seasonId || seasonId,
+        title: staticData.seasonTitle || seasonId,
+        ...(staticData.period || {})
+      },
+      league_summary,
+      awards,
+      series_summary: [],
+      players
+    }
+  }, seasonId);
+}
+
 
 export function rankFromPoints(points = 0) {
   return rankFromPointsByRules(points);
@@ -635,15 +694,23 @@ function normalizeGetSheetRawResponse(payload = {}, sheetName = '') {
 async function readStaticSeason(seasonId) {
   if (!seasonId || typeof fetch !== 'function') return null;
   if (STATIC_SEASON_CACHE.has(seasonId)) return STATIC_SEASON_CACHE.get(seasonId);
-  try {
-    const response = await fetch(`../data/seasons/${encodeURIComponent(seasonId)}.json`, { cache: 'force-cache' });
-    if (!response.ok) return null;
-    const data = await response.json();
-    STATIC_SEASON_CACHE.set(seasonId, data);
-    return data;
-  } catch {
-    return null;
+  const candidates = [...new Set([
+    String(seasonId),
+    String(seasonId).replaceAll('_', '-'),
+    String(seasonId).replaceAll('-', '_')
+  ])];
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(`../data/seasons/${encodeURIComponent(candidate)}.json`, { cache: 'force-cache' });
+      if (!response.ok) continue;
+      const data = await response.json();
+      STATIC_SEASON_CACHE.set(seasonId, data);
+      return data;
+    } catch {
+      // Try the next known archive filename convention.
+    }
   }
+  return null;
 }
 
 export async function loadSeasonsConfig() {
@@ -2243,6 +2310,9 @@ export async function listSeasonMasters() {
   const key = 'season-masters:list';
   const cached = readCache(key, TTL.seasonDashboard);
   if (cached) return cached;
+  const cfg = await loadSeasonsConfig();
+  const configured = cfg.seasons.filter((s) => s.enabled !== false).map((s) => s.id);
+  const staticIds = cfg.seasons.filter((s) => s.enabled !== false && s.isStatic).map((s) => s.id);
 
   try {
     const payload = await fetchSeasonMasterApi({ action: 'listSeasonMasters' });
@@ -2255,24 +2325,43 @@ export async function listSeasonMasters() {
         })
         .filter(Boolean)
       : [];
-    if (list.length) return writeCache(key, list);
+    if (list.length) return writeCache(key, [...new Set([...staticIds, ...list])]);
   } catch (error) {
     console.debug('[dataHub] listSeasonMasters fallback', String(error?.message || error));
   }
-  const cfg = await loadSeasonsConfig();
-  const fallback = cfg.seasons.filter((s) => s.enabled !== false).map((s) => s.id);
-  return writeCache(key, fallback);
+  return writeCache(key, configured);
 }
 
 export async function getSeasonMaster(seasonId) {
   const season = String(seasonId || '').trim();
   if (!season) throw new Error('seasonId is required');
   if (seasonCache[season]) return seasonCache[season];
+  const cfg = await loadSeasonsConfig();
+  const configuredSeason = cfg.seasons.find((item) => item.id === season);
 
-  const payload = await fetchSeasonMasterApi({ action: 'getSeasonMaster', season });
-  const normalized = normalizeSeasonMasterPayload(payload, season);
-  seasonCache[season] = normalized;
-  return normalized;
+  if (configuredSeason?.isStatic) {
+    const staticData = await readStaticSeason(season);
+    const staticMaster = normalizeStaticSeasonMaster(staticData, season);
+    if (staticMaster) {
+      seasonCache[season] = staticMaster;
+      return staticMaster;
+    }
+  }
+
+  try {
+    const payload = await fetchSeasonMasterApi({ action: 'getSeasonMaster', season });
+    const normalized = normalizeSeasonMasterPayload(payload, season);
+    seasonCache[season] = normalized;
+    return normalized;
+  } catch (error) {
+    const staticData = await readStaticSeason(season);
+    const staticMaster = normalizeStaticSeasonMaster(staticData, season);
+    if (staticMaster) {
+      seasonCache[season] = staticMaster;
+      return staticMaster;
+    }
+    throw error;
+  }
 }
 
 export async function getSeasonSection(seasonId, sectionName) {

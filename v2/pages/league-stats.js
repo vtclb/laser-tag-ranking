@@ -549,9 +549,15 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   setupRowNavigation(rankingTable);
 
   expandBtn.addEventListener('click', () => {
+    const wasFullOpen = state.isFullOpen;
     state.isFullOpen = !state.isFullOpen;
     expandBtn.textContent = state.isFullOpen ? '\u0421\u0445\u043e\u0432\u0430\u0442\u0438 \u043f\u043e\u0432\u043d\u0438\u0439 \u0441\u043f\u0438\u0441\u043e\u043a' : '\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456\u0445 \u0433\u0440\u0430\u0432\u0446\u0456\u0432';
     renderTables();
+    if (wasFullOpen && !state.isFullOpen) {
+      requestAnimationFrame(() => {
+        (tableTitle || rankingTable)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
+    }
   });
 
   searchInput.addEventListener('input', () => {

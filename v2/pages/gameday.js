@@ -152,6 +152,31 @@ function getPlayerTotalPoints(player = {}) {
   );
 }
 
+function summarizeMvpPlaces(matches = [], summary = {}) {
+  const places = [
+    { key: 'mvp1', label: '1' },
+    { key: 'mvp2', label: '2' },
+    { key: 'mvp3', label: '3' }
+  ];
+  const resolved = places.map((place) => {
+    const counts = new Map();
+    (Array.isArray(matches) ? matches : []).forEach((match) => {
+      const nick = String(match?.[place.key] || '').trim();
+      if (!nick) return;
+      const key = canonicalNick(nick);
+      const item = counts.get(key) || { nick, count: 0 };
+      item.count += 1;
+      counts.set(key, item);
+    });
+    const leader = [...counts.values()].sort((a, b) => b.count - a.count || a.nick.localeCompare(b.nick, 'uk'))[0];
+    return { ...place, nick: leader?.nick || '', count: leader?.count || 0 };
+  });
+  if (resolved.some((item) => item.nick)) return resolved;
+
+  const fallback = (typeof summary.mvpDay === 'string' ? summary.mvpDay : summary.mvpDay?.nick) || '';
+  return fallback ? [{ key: 'mvp1', label: '1', nick: fallback, count: 1 }] : [];
+}
+
 function teamLabel(teamKey = 'team1') {
   const n = Number(String(teamKey).replace('team', ''));
   return Number.isFinite(n) && n > 0 ? `Команда ${n}` : 'Команда';
@@ -297,7 +322,7 @@ function buildMatchCard(match = {}, roster = new Map()) {
     { label: 'MVP 3', nick: match.mvp3, tone: 'bronze' }
   ].filter((item) => item.nick);
   const mvpLabel = mvpRows.length
-    ? mvpRows.map((row) => row.nick).filter(Boolean).join(' · ')
+    ? mvpRows.map((row, index) => `${index + 1}. ${row.nick}`).filter(Boolean).join(' · ')
     : 'MVP ще не визначено';
   const hasPointChanges = Array.isArray(match.pointsChanges) && match.pointsChanges.length > 0;
   const teamTotals = teams.map(([key, members]) => {
@@ -384,7 +409,10 @@ function render(root, payload, filters) {
     : '<p class="px-card__text">Таблиця ліги зараз недоступна, тому показуємо лише базовий лог ігрового дня.</p>';
   const gamesCount = Number(summary.matches ?? payload.gamesCount ?? matches.length ?? 0);
   const playersCount = Number(summary.participants ?? players.length ?? 0);
-  const mvpDay = (typeof summary.mvpDay === 'string' ? summary.mvpDay : summary.mvpDay?.nick) || 'MVP ще не визначено';
+  const mvpPlaces = summarizeMvpPlaces(matches, summary);
+  const mvpDayMarkup = mvpPlaces.length
+    ? `<span class="gameday-summary-mvp-list">${mvpPlaces.map((item) => `<span><em>${esc(item.label)}</em>${esc(item.nick)}${item.count > 1 ? ` <small>x${esc(String(item.count))}</small>` : ''}</span>`).join('')}</span>`
+    : '<b>MVP ще не визначено</b>';
   const bestGrowthNick = summary.bestDelta?.nick || summary.bestGain?.nick || '';
   const bestGrowthDelta = summary.bestDelta?.delta ?? summary.bestGain?.delta;
   const bestGrowth = bestGrowthNick ? `${bestGrowthNick} ${fmtDelta(bestGrowthDelta)}` : 'Приріст ще не розраховано';
@@ -401,7 +429,7 @@ function render(root, payload, filters) {
       <div class="gameday-summary-grid">
         <div class="gameday-summary-card"><span>Ігор</span><b>${esc(String(gamesCount))}</b></div>
         <div class="gameday-summary-card"><span>Гравців</span><b>${esc(String(playersCount))}</b></div>
-        <div class="gameday-summary-card gameday-summary-card--mvp"><span>MVP дня</span><b>${esc(mvpDay)}</b></div>
+        <div class="gameday-summary-card gameday-summary-card--mvp"><span>MVP дня</span>${mvpDayMarkup}</div>
         <div class="gameday-summary-card gameday-summary-card--growth"><span>Найбільший приріст</span><b>${esc(bestGrowth)}</b></div>
       </div>
       ${partialNote}

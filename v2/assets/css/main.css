@@ -13667,6 +13667,57 @@ body.theme-game .profile-share__summary span {
   background: transparent;
 }
 
+/* Small UX follow-ups: league return, GameDay MVP clarity, profile season places */
+body.theme-game .gameday-v2 .gameday-summary-mvp-list {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+body.theme-game .gameday-v2 .gameday-summary-mvp-list > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  color: #ffd84a !important;
+  font-size: .76rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+body.theme-game .gameday-v2 .gameday-summary-mvp-list em {
+  color: rgba(255, 216, 74, .72);
+  font-style: normal;
+}
+
+body.theme-game .gameday-v2 .gameday-summary-mvp-list small {
+  color: rgba(205, 222, 248, .62);
+  font-size: .62rem;
+}
+
+body.theme-game .gameday-v2 .gameday-match-head__eyebrow {
+  font-size: .82rem !important;
+  line-height: 1.05 !important;
+}
+
+body.theme-game .profile-season-tab__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+body.theme-game .profile-season-tab__place {
+  color: #72ff7a;
+  font-size: .62rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
 @media (max-width: 720px) {
   body.theme-game .profile-metrics-grid,
   body.theme-game .profile-season-grid,

@@ -563,7 +563,10 @@ function renderSeasonTabs(container, tabs, selectedId) {
       aria-selected="${tab.id === selectedId ? 'true' : 'false'}"
     >
       <span class="profile-season-tab__title">${esc(tab.label)}</span>
-      ${tab.current ? '<em class="profile-season-tab__meta">поточний</em>' : ''}
+      <span class="profile-season-tab__details">
+        ${num(tab.place) !== null ? `<em class="profile-season-tab__place">#${esc(tab.place)} місце</em>` : ''}
+        ${tab.current ? '<em class="profile-season-tab__meta">поточний</em>' : ''}
+      </span>
     </button>
   `).join('');
 
@@ -582,12 +585,13 @@ function renderSeasonSummary(season, allTime) {
   const seasonDelta = season.delta ?? season.ratingDelta;
   const start = season.ratingStart;
   const finish = season.ratingEnd ?? season.points;
+  const place = season.place ?? season.finalPlace;
   const trendWidth = Math.min(100, Math.max(8, num(seasonDelta) === null ? 8 : Math.abs(Number(seasonDelta)) / 2));
 
   return `
       <section class="profile-season-panel">
         <h3>${esc(formatSeasonTitleUA(season.seasonTitle ?? season.id))}</h3>
-        <p class="profile-muted">${esc(leagueLabelUA(season.league ?? 'kids'))}</p>
+        <p class="profile-muted">${esc(leagueLabelUA(season.league ?? 'kids'))}${num(place) !== null ? ` · #${esc(place)} місце в сезоні` : ''}</p>
 
         <div class="profile-season-grid">
           ${metricMini({ label: 'Старт', value: start })}
@@ -597,7 +601,7 @@ function renderSeasonSummary(season, allTime) {
           ${metricMini({ label: 'Ігри', value: season.matches ?? season.games })}
           ${metricMini({ label: 'MVP', value: season.mvpTotal })}
           ${metricMini({ label: 'Ранг', value: season.rank, tone: 'is-accent' })}
-          ${metricMini({ label: 'Місце', value: num(season.place ?? season.finalPlace) !== null ? `#${season.place ?? season.finalPlace}` : '—' })}
+          ${metricMini({ label: 'Місце', value: num(place) !== null ? `#${place}` : '—' })}
         </div>
 
         <div class="profile-season-grid profile-season-grid--compact">
@@ -756,7 +760,8 @@ export async function initProfilePage(params = {}) {
           id: season.seasonId,
           label: formatSeasonTitleUA(meta?.title || season.seasonTitle || season.seasonId),
           current: season.seasonId === currentSeason?.id,
-          dateFrom: meta?.dateFrom
+          dateFrom: meta?.dateFrom,
+          place: season.place ?? season.finalPlace
         };
       })
       .filter((tab) => !isMissing(tab.id));

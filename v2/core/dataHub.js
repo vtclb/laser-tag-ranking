@@ -9,6 +9,7 @@ const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
 const SHEET_CACHE_VERSION = 'sheets-20260601-gas-logs5000';
+const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260602';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 
@@ -701,7 +702,8 @@ async function readStaticSeason(seasonId) {
   ])];
   for (const candidate of candidates) {
     try {
-      const response = await fetch(`../data/seasons/${encodeURIComponent(candidate)}.json`, { cache: 'force-cache' });
+      const archiveUrl = new URL(`../data/seasons/${encodeURIComponent(candidate)}.json?v=${STATIC_SEASON_CACHE_VERSION}`, import.meta.url);
+      const response = await fetch(archiveUrl.href, { cache: 'force-cache' });
       if (!response.ok) continue;
       const data = await response.json();
       STATIC_SEASON_CACHE.set(seasonId, data);
@@ -2336,6 +2338,14 @@ export async function getSeasonMaster(seasonId) {
   const season = String(seasonId || '').trim();
   if (!season) throw new Error('seasonId is required');
   if (seasonCache[season]) return seasonCache[season];
+  if (season === 'spring_2026') {
+    const staticData = await readStaticSeason(season);
+    const staticMaster = normalizeStaticSeasonMaster(staticData, season);
+    if (staticMaster) {
+      seasonCache[season] = staticMaster;
+      return staticMaster;
+    }
+  }
   const cfg = await loadSeasonsConfig();
   const configuredSeason = cfg.seasons.find((item) => item.id === season);
 

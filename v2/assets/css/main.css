@@ -16722,3 +16722,65 @@ body.theme-game .season-archive-loading {
     min-width: 640px;
   }
 }
+
+/* Season archive final cleanup: keep archive UI rectangular and data-first. */
+body.theme-game .seasons-archive-page :is(.season-archive-card, .season-archive-league, .season-archive-card__open, .season-archive-link),
+body.theme-game .season-detail-page :is(.season-detail-hero, .season-back, .season-league-tabs a, .season-kpi, .season-story, .season-award, .season-section, .season-audit, .season-rank, select) {
+  border-radius: 6px !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-card__eyebrow {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-card {
+  padding: 12px !important;
+  box-shadow: inset 3px 0 0 rgba(114, 255, 122, .72), 0 14px 30px rgba(0, 0, 0, .22) !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-card__stats {
+  border-color: rgba(118, 158, 218, .14) !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-card__stats div {
+  border: 0 !important;
+  border-right: 1px solid rgba(255, 255, 255, .06) !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-card__stats div:last-child {
+  border-right: 0 !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-card__open,
+body.theme-game .seasons-archive-page .season-archive-link,
+body.theme-game .season-detail-page .season-back,
+body.theme-game .season-detail-page .season-league-tabs a {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-league {
+  border: 0 !important;
+  box-shadow: inset 3px 0 0 rgba(75, 220, 255, .72) !important;
+}
+
+body.theme-game .seasons-archive-page .season-archive-league__leader strong {
+  white-space: normal;
+}
+
+@media (max-width: 460px) {
+  body.theme-game .seasons-archive-page .season-archive-card__stats strong {
+    font-size: 22px;
+  }
+
+  body.theme-game .seasons-archive-page .season-archive-card__stats div {
+    padding: 9px 8px;
+  }
+}

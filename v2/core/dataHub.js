@@ -159,7 +159,7 @@ function normalizeSeasonPlayerRow(row = {}) {
     ...source,
     league,
     nickname,
-    matches: toNumber(pickFirst(getField('matches'), source.matches, source.Matches), null),
+    matches: toNumber(pickFirst(getField('matches', 'games', 'played'), source.matches, source.Matches, source.games, source.Games), null),
     wins,
     draws,
     losses,
@@ -170,8 +170,8 @@ function normalizeSeasonPlayerRow(row = {}) {
     mvp_total: Number.isFinite(mvpTotal) ? mvpTotal : [mvp1, mvp2, mvp3].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0),
     rounds: toNumber(pickFirst(getField('rounds'), source.rounds, source.Rounds), null),
     rating_start: toNumber(pickFirst(getField('rating_start'), source.rating_start, source.Rating_start), null),
-    rating_end: toNumber(pickFirst(getField('rating_end', 'rating'), source.rating_end, source.Rating_end, source.rating, source.Rating), null),
-    rating_delta: toNumber(pickFirst(getField('rating_delta'), source.rating_delta, source.Rating_delta), null),
+    rating_end: toNumber(pickFirst(getField('rating_end', 'rating', 'points'), source.rating_end, source.Rating_end, source.rating, source.Rating, source.points, source.Points), null),
+    rating_delta: toNumber(pickFirst(getField('rating_delta', 'delta', 'points_delta'), source.rating_delta, source.Rating_delta, source.delta, source.Delta), null),
     place: toNumber(pickFirst(getField('place', 'place_final', 'final_place'), source.place, source.Place, source.finalPlace), null),
     rank_final: toNumber(pickFirst(getField('rank_final', 'rank'), source.rank_final, source.Rank_final, source.rank, source.Rank), null)
   };

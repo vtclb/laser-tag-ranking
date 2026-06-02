@@ -1,142 +1,273 @@
 import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 
-const DEFAULT_SEASON_ID = 'winter_2025_2026';
+const RANK_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 
-function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
-function seasonTitle(seasonId) { return String(seasonId || 'Сезон').replaceAll('_', ' '); }
-function num(v, fb = null) { const n = Number(v); return Number.isFinite(n) ? n : fb; }
-function rankBadge(rank) { const label = String(rank || '—').toUpperCase(); return `<span class="rank-badge rank--${label}">${label}</span>`; }
-
-function sortPlayers(players, sortKey = 'rating') {
-  const get = (p) => ({
-    rating: num(p.rating_end, -1e9),
-    matches: num(p.matches, 0),
-    mvp: num(p.mvp_total, 0),
-    delta: num(p.rating_delta, -1e9)
-  }[sortKey] ?? num(p.rating_end, -1e9));
-  return [...players].sort((a, b) => get(b) - get(a) || String(a.nickname).localeCompare(String(b.nickname), 'uk'));
+function esc(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 }
 
-function getTop10(players = []) {
-  return [...players].sort((a, b) => {
-    const rankA = num(a.rank_final, null);
-    const rankB = num(b.rank_final, null);
-    if (rankA !== null || rankB !== null) {
-      if (rankA === null) return 1;
-      if (rankB === null) return -1;
-      return rankA - rankB;
-    }
-    return (num(b.rating_end, 0) - num(a.rating_end, 0));
-  }).slice(0, 10);
+function num(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
 }
 
-function summaryMetrics(summaryRow = {}, players = []) {
-  const matches = num(summaryRow.matches ?? summaryRow.games, players.reduce((s, p) => s + (p.matches || 0), 0)) || 0;
-  const activePlayers = num(summaryRow.players ?? summaryRow.active_players, players.length) || 0;
-  const avgRating = num(summaryRow.avg_rating ?? summaryRow.average_rating, null);
-  const mvpTotal = players.reduce((sum, player) => sum + (num(player.mvp_total, 0) || 0), 0);
-  return { matches, activePlayers, avgRating, mvpTotal };
+function signed(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '—';
+  return `${n > 0 ? '+' : ''}${n}`;
 }
 
-function updateHash(season, league) {
-  location.hash = `#season?season=${encodeURIComponent(season)}&league=${league}`;
+function pct(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? `${n.toFixed(1)}%` : '—';
+}
+
+function titleFromId(id = '') {
+  const known = {
+    spring_2026: 'Весна 2026',
+    winter_2025_2026: 'Зима 2025–2026',
+    autumn_2025: 'Осінь 2025',
+    summer_2025: 'Літо 2025'
+  };
+  return known[id] || String(id || 'Сезон').replaceAll('_', ' ');
+}
+
+function periodText(meta = {}) {
+  const start = meta.dateStart || meta.date_start || meta.Date_start || meta.start || '';
+  const end = meta.dateEnd || meta.date_end || meta.Date_end || meta.end || '';
+  if (start && end) return `${start} - ${end}`;
+  return meta.period || meta.date_range || meta.dateRange || 'Архівний сезон';
+}
+
+function playerName(player = {}) {
+  return player.nickname || player.nick || player.Nickname || '—';
+}
+
+function ratingEnd(player = {}) {
+  return num(player.rating_end ?? player.ratingEnd ?? player.points, 0);
+}
+
+function ratingDelta(player = {}) {
+  return num(player.rating_delta ?? player.ratingDelta ?? player.delta, 0);
+}
+
+function mvpTotal(player = {}) {
+  return num(player.mvp_total ?? player.mvpTotal ?? player.mvp, 0);
+}
+
+function rank(player = {}) {
+  return String(player.rank_final || player.rankLetter || player.Rank || player.rank?.label || 'F').toUpperCase();
+}
+
+function sortByRating(players = []) {
+  return [...players].sort((a, b) => ratingEnd(b) - ratingEnd(a) || num(b.wins) - num(a.wins) || playerName(a).localeCompare(playerName(b), 'uk'));
+}
+
+function sortBy(players = [], key = 'rating') {
+  const getters = {
+    rating: ratingEnd,
+    delta: ratingDelta,
+    mvp: mvpTotal,
+    games: (p) => num(p.matches ?? p.games, 0),
+    wr: (p) => num(p.win_rate ?? p.winRate ?? p.winrate, 0)
+  };
+  const getter = getters[key] || ratingEnd;
+  return [...players].sort((a, b) => getter(b) - getter(a) || ratingEnd(b) - ratingEnd(a));
+}
+
+function profileLink(league, player) {
+  return `#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(playerName(player))}`;
+}
+
+function kpi(label, value, meta = '', tone = 'neutral') {
+  return `<article class="season-kpi season-kpi--${esc(tone)}">
+    <span>${esc(label)}</span>
+    <strong>${esc(value)}</strong>
+    ${meta ? `<em>${esc(meta)}</em>` : ''}
+  </article>`;
+}
+
+function awardCard(label, player, value, meta = '', tone = 'cyan') {
+  return `<article class="season-award season-award--${esc(tone)}">
+    <span>${esc(label)}</span>
+    <strong>${esc(player || '—')}</strong>
+    <em>${esc(value || '—')}${meta ? ` · ${esc(meta)}` : ''}</em>
+  </article>`;
+}
+
+function rankStrip(players = []) {
+  const total = Math.max(players.length, 1);
+  return `<div class="season-rank-strip">
+    ${RANK_ORDER.map((rankName) => {
+      const count = players.filter((player) => rank(player) === rankName).length;
+      const width = Math.max(4, Math.round((count / total) * 100));
+      return `<span class="season-rank-strip__seg season-rank-strip__seg--${rankName.toLowerCase()}" style="width:${width}%">
+        <b>${rankName}</b><small>${count}</small>
+      </span>`;
+    }).join('')}
+  </div>`;
+}
+
+function playersTable(players = [], league = 'sundaygames', limit = null) {
+  const rows = (limit ? players.slice(0, limit) : players);
+  if (!rows.length) return '<div class="season-empty">Немає даних по гравцях.</div>';
+  return `<div class="season-table-wrap">
+    <table class="season-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Гравець</th>
+          <th>Очки</th>
+          <th>Δ</th>
+          <th>Ігри</th>
+          <th>W/L</th>
+          <th>WR</th>
+          <th>MVP</th>
+          <th>Ранг</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((player, index) => {
+          const place = num(player.place ?? player.finalPlace, index + 1);
+          const delta = ratingDelta(player);
+          const deltaClass = delta >= 0 ? 'is-positive' : 'is-negative';
+          return `<tr>
+            <td class="season-table__place">#${place}</td>
+            <td class="season-table__player"><a href="${profileLink(league, player)}">${esc(playerName(player))}</a></td>
+            <td class="season-table__points">${ratingEnd(player)}</td>
+            <td class="season-table__delta ${deltaClass}">${signed(delta)}</td>
+            <td>${num(player.matches ?? player.games, 0)}</td>
+            <td>${num(player.wins, 0)} / ${num(player.losses, 0)}</td>
+            <td>${pct(player.win_rate ?? player.winRate ?? player.winrate)}</td>
+            <td>${mvpTotal(player)} <small>${num(player.mvp1, 0)}/${num(player.mvp2, 0)}/${num(player.mvp3, 0)}</small></td>
+            <td><span class="season-rank season-rank--${rank(player).toLowerCase()}">${esc(rank(player))}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function auditBlock(master = {}, league = 'sundaygames') {
+  const warnings = (master.audit?.warnings || []).filter((item) => !item.league || normalizeLeague(item.league) === league);
+  if (!warnings.length) return '';
+  return `<section class="season-audit">
+    <h2>Audit сезону</h2>
+    ${warnings.map((item) => {
+      if (item.type === 'player_has_games_without_logs') {
+        return `<p><strong>${esc(item.nick)}</strong>: є ${num(item.games)} ігор без записаних логів, архів дорахував ${signed(item.computedDelta)} за результатами матчів.</p>`;
+      }
+      return `<p>${esc(item.type || 'warning')}: ${esc(item.nick || '')}</p>`;
+    }).join('')}
+  </section>`;
+}
+
+function renderSeason(root, { seasonId, league, master, seasons }) {
+  const sections = master?.sections || {};
+  const meta = sections.season_meta || {};
+  const title = meta.title || meta.seasonTitle || titleFromId(seasonId);
+  const players = sortByRating((Array.isArray(sections.players) ? sections.players : [])
+    .filter((player) => normalizeLeague(player.league) === league));
+  const summary = sections.league_summary?.[league] || {};
+  const activePlayers = players.filter((player) => num(player.matches ?? player.games, 0) > 0);
+  const leader = players[0];
+  const impact = sortBy(players, 'delta')[0];
+  const mvp = sortBy(players, 'mvp')[0];
+  const wr = sortBy(activePlayers.filter((p) => num(p.matches ?? p.games, 0) >= 5), 'wr')[0];
+  const totalGames = num(summary.matches ?? summary.games, activePlayers.reduce((sum, p) => sum + num(p.matches ?? p.games, 0), 0));
+  const totalMvp = activePlayers.reduce((sum, player) => sum + mvpTotal(player), 0);
+
+  root.innerHTML = `<section class="season-detail-page">
+    <header class="season-detail-hero">
+      <a href="#seasons" class="season-back">← Всі сезони</a>
+      <p>АРХІВ СЕЗОНУ</p>
+      <h1>${esc(title)}</h1>
+      <span>${esc(periodText(meta))} · ${esc(leagueLabelUA(league))}</span>
+      <div class="season-detail-switchers">
+        <select id="seasonArchiveSelect" aria-label="Сезон">
+          ${seasons.map((id) => `<option value="${esc(id)}" ${id === seasonId ? 'selected' : ''}>${esc(titleFromId(id))}</option>`).join('')}
+        </select>
+        <div class="season-league-tabs">
+          <a href="#season?season=${encodeURIComponent(seasonId)}&league=sundaygames" class="${league === 'sundaygames' ? 'is-active' : ''}">Доросла</a>
+          <a href="#season?season=${encodeURIComponent(seasonId)}&league=kids" class="${league === 'kids' ? 'is-active' : ''}">Дитяча</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="season-kpi-grid">
+      ${kpi('Матчів', totalGames, 'за сезон', 'cyan')}
+      ${kpi('Активних', activePlayers.length, `${players.length} записів`, 'green')}
+      ${kpi('MVP записів', totalMvp, '1/2/3 місця', 'yellow')}
+      ${kpi('Лідер', playerName(leader), `${ratingEnd(leader)} очок`, 'blue')}
+    </section>
+
+    <section class="season-story">
+      <div>
+        <h2>Підсумок ліги</h2>
+        <p>${esc(playerName(leader))} завершує сезон на першому місці. Найбільший impact: ${esc(playerName(impact))} (${signed(ratingDelta(impact))}). MVP лідер: ${esc(playerName(mvp))} (${mvpTotal(mvp)} записів).</p>
+      </div>
+      ${rankStrip(players)}
+    </section>
+
+    <section class="season-awards-grid">
+      ${awardCard('Чемпіон сезону', playerName(leader), `${ratingEnd(leader)} очок`, `#${num(leader?.place, 1)}`, 'green')}
+      ${awardCard('Найбільший приріст', playerName(impact), signed(ratingDelta(impact)), `${ratingEnd(impact)} очок`, 'cyan')}
+      ${awardCard('MVP сезону', playerName(mvp), `${mvpTotal(mvp)} MVP`, `${num(mvp?.mvp1, 0)} перших`, 'yellow')}
+      ${awardCard('Найкращий WR', playerName(wr), pct(wr?.win_rate ?? wr?.winRate ?? wr?.winrate), `${num(wr?.matches ?? wr?.games, 0)} ігор`, 'blue')}
+    </section>
+
+    <section class="season-section">
+      <div class="season-section__head">
+        <h2>Top-10 сезону</h2>
+        <span>Фінальний рейтинг</span>
+      </div>
+      ${playersTable(players, league, 10)}
+    </section>
+
+    <section class="season-section">
+      <div class="season-section__head">
+        <h2>Повна таблиця</h2>
+        <span>${activePlayers.length} активних гравців</span>
+      </div>
+      ${playersTable(players, league)}
+    </section>
+
+    ${auditBlock(master, league)}
+  </section>`;
+
+  root.querySelector('#seasonArchiveSelect')?.addEventListener('change', (event) => {
+    const next = event.currentTarget.value;
+    location.hash = `#season?season=${encodeURIComponent(next)}&league=${encodeURIComponent(league)}`;
+  });
 }
 
 export async function initSeasonPage(params = {}) {
   const root = document.getElementById('seasonPageRoot') || document.getElementById('view');
   if (!root) return;
 
-  root.innerHTML = `<section class="season-header px-card px-card--accent"><h1 id="seasonPageTitle">Сезон</h1><p id="seasonPeriod" class="px-card__text">Період: —</p><p id="seasonUpdated" class="px-card__text">Оновлення: —</p></section>
-<section class="px-card"><div class="season-controls-row"><select id="seasonSelect" class="search-input"></select><div class="league-toggle"><label><input type="radio" name="leagueToggle" value="kids"> Дитяча ліга</label><label><input type="radio" name="leagueToggle" value="sundaygames"> Доросла ліга</label></div><select id="seasonSort" class="search-input"><option value="rating">Сортувати: рейтинг</option><option value="matches">Сортувати: ігри</option><option value="mvp">Сортувати: MVP</option><option value="delta">Сортувати: Δ рейтингу</option></select></div><p id="seasonState" class="px-card__text"></p></section>
-<section class="season-league-summary px-card"><h2>Summary ліги</h2><div id="seasonLeagueSummary"></div></section>
-<section class="season-awards px-card"><h2>Герої сезону</h2><div id="seasonAwards"></div></section>
-<section class="season-top10 px-card"><h2>ТОП-10 гравців сезону</h2><div id="seasonTop10"></div></section>
-<section class="season-players px-card"><h2>Всі гравці ліги</h2><div id="seasonPlayers"></div></section>
-<section class="season-series px-card"><h2>Series summary</h2><div id="seasonSeries"></div></section>
-<section class="px-card"><h2>Інфографіка сезону</h2><div id="seasonChart"></div></section>`;
+  root.innerHTML = '<section class="season-detail-loading">Завантаження архіву сезону...</section>';
 
-  const select = document.getElementById('seasonSelect');
-  const state = document.getElementById('seasonState');
-  const sort = document.getElementById('seasonSort');
-  if (!select || !state || !sort) return;
-
-  let seasons = [];
-  try { seasons = await listSeasonMasters(); } catch { seasons = []; }
-  if (!seasons.length) seasons = [DEFAULT_SEASON_ID];
-
-  let selectedSeason = seasons.includes(params.season) ? params.season : (seasons[0] || DEFAULT_SEASON_ID);
-  let selectedLeague = normalizeLeague(params.league) || 'kids';
-
-  select.innerHTML = seasons.map((seasonId) => `<option value="${esc(seasonId)}">${esc(seasonTitle(seasonId))}</option>`).join('');
-  select.value = selectedSeason;
-  root.querySelector(`input[name="leagueToggle"][value="${selectedLeague}"]`)?.setAttribute('checked', 'checked');
-
-  async function load() {
-    state.textContent = 'Завантаження сезону…';
-    try {
-      const master = await getSeasonMaster(selectedSeason);
-      const sections = master?.sections || {};
-      const meta = sections.season_meta || {};
-      const players = (Array.isArray(sections.players) ? sections.players : []).filter((player) => normalizeLeague(player.league) === selectedLeague);
-      const summaryRow = sections.league_summary?.[selectedLeague] || {};
-      const awards = Array.isArray(sections.awards?.[selectedLeague]) ? sections.awards[selectedLeague] : [];
-      const series = Array.isArray(sections.series_summary?.[selectedLeague]) ? sections.series_summary[selectedLeague] : [];
-      const top10 = getTop10(players);
-      const metrics = summaryMetrics(summaryRow, players);
-
-      document.getElementById('seasonPageTitle').textContent = `${seasonTitle(selectedSeason)} · ${leagueLabelUA(selectedLeague)}`;
-      document.getElementById('seasonPeriod').textContent = `Період: ${meta.period || meta.date_range || meta.dateRange || 'Немає даних'}`;
-      document.getElementById('seasonUpdated').textContent = `Оновлення: ${meta.updated_at || meta.updated || 'Немає даних'}`;
-
-      document.getElementById('seasonLeagueSummary').innerHTML = `<div class="season-stat-card"><p>Ігри: <strong>${metrics.matches}</strong></p><p>Гравці: <strong>${metrics.activePlayers}</strong></p><p>Середній рейтинг: <strong>${metrics.avgRating ?? 'Немає даних'}</strong></p></div>`;
-
-      const awardsMap = { mvp: 'MVP сезону', progress: 'Найкращий прогрес', active: 'Найактивніший', stable: 'Найстабільніший' };
-      document.getElementById('seasonAwards').innerHTML = awards.length
-        ? `<div class="hero-grid">${awards.map((item) => {
-          const key = String(item.award || item.type || item.category || '').toLowerCase();
-          const title = awardsMap[key] || item.award || item.type || 'Нагорода';
-          return `<article class="px-card"><h3>${esc(title)}</h3><p>${esc(item.nickname || item.player || item.nick || '—')}</p></article>`;
-        }).join('')}</div>`
-        : '<p class="px-card__text">Нагороди ще не сформовані</p>';
-
-      const renderTable = (rows) => `<div class="season-table-wrap"><table class="season-table"><thead><tr><th>#</th><th>Нік</th><th>Ігри</th><th>Перемоги</th><th>Нічиї</th><th>Поразки</th><th>MVP</th><th>Фін. рейтинг</th><th>Δ рейтингу</th><th>Ранг</th></tr></thead><tbody>${rows.map((p, idx) => `<tr><td>${idx + 1}</td><td>${esc(p.nickname || '—')}</td><td>${p.matches ?? '—'}</td><td>${p.wins ?? '—'}</td><td>${p.draws ?? '—'}</td><td>${p.losses ?? '—'}</td><td>${p.mvp_total ?? '—'}</td><td>${p.rating_end ?? '—'}</td><td>${(p.rating_delta > 0 ? '+' : '')}${p.rating_delta ?? 0}</td><td>${rankBadge(p.rank_final)}</td></tr>`).join('')}</tbody></table></div>`;
-      document.getElementById('seasonTop10').innerHTML = top10.length ? renderTable(top10) : '<p class="px-card__text">Немає даних</p>';
-      document.getElementById('seasonPlayers').innerHTML = players.length ? renderTable(sortPlayers(players, sort.value)) : '<p class="px-card__text">Немає даних</p>';
-
-      document.getElementById('seasonSeries').innerHTML = series.length
-        ? `<ul>${series.map((item) => `<li>${esc(item.format || item.series || 'Серія')}: <strong>${esc(item.count ?? item.total ?? '—')}</strong>${item.percent || item.share ? ` (${esc(item.percent || item.share)}%)` : ''}</li>`).join('')}</ul>`
-        : '<p class="px-card__text">Немає даних</p>';
-
-      const rankDist = players.reduce((acc, p) => {
-        const key = String(p.rank_final || '—').toUpperCase();
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {});
-      const rankList = Object.entries(rankDist).sort(([a], [b]) => a.localeCompare(b));
-      document.getElementById('seasonChart').innerHTML = `<p>Ігри: <strong>${metrics.matches}</strong></p><p>Активні гравці: <strong>${metrics.activePlayers}</strong></p><p>Середній рейтинг: <strong>${metrics.avgRating ?? 'Немає даних'}</strong></p><p>Загальні MVP: <strong>${metrics.mvpTotal}</strong></p>${rankList.length ? `<div>${rankList.map(([rank, count]) => `<span class="tag">${rank}: ${count}</span>`).join(' ')}</div>` : '<p>Rank distribution: Немає даних</p>'}`;
-
-      state.textContent = '';
-    } catch (error) {
-      state.textContent = safeErrorMessage(error, 'Не вдалося завантажити сезон');
-    }
-  }
-
-  select.addEventListener('change', () => {
-    selectedSeason = select.value;
-    updateHash(selectedSeason, selectedLeague);
-    load();
-  });
-
-  sort.addEventListener('change', load);
-
-  root.querySelectorAll('input[name="leagueToggle"]').forEach((radio) => {
-    radio.addEventListener('change', () => {
-      selectedLeague = normalizeLeague(radio.value) || 'kids';
-      updateHash(selectedSeason, selectedLeague);
-      load();
+  try {
+    const seasons = await listSeasonMasters();
+    const selectedSeason = seasons.includes(params.season) ? params.season : (seasons[0] || 'spring_2026');
+    const selectedLeague = normalizeLeague(params.league) || 'sundaygames';
+    const master = await getSeasonMaster(selectedSeason);
+    renderSeason(root, {
+      seasonId: selectedSeason,
+      league: selectedLeague,
+      master,
+      seasons: seasons.length ? seasons : [selectedSeason]
     });
-  });
-
-  await load();
+  } catch (error) {
+    root.innerHTML = `<section class="season-detail-loading">
+      <strong>Архів недоступний</strong>
+      <span>${esc(safeErrorMessage(error, 'Не вдалося завантажити сезон'))}</span>
+      <a href="#seasons">Повернутися до сезонів</a>
+    </section>`;
+  }
 }

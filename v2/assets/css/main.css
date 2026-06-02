@@ -16276,3 +16276,449 @@ body.theme-game .tournaments-page-v2 .tournament-match-detail-block {
     grid-template-columns: minmax(76px, 1fr) minmax(86px, 1.2fr) 26px;
   }
 }
+/* Season archive pages */
+body.theme-game .seasons-archive-page,
+body.theme-game .season-detail-page {
+  --season-bg: rgba(5, 12, 26, .82);
+  --season-line: rgba(118, 158, 218, .22);
+  --season-cyan: #4bdcff;
+  --season-green: #72ff7a;
+  --season-yellow: #ffd84a;
+  --season-red: #ff7c7c;
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+}
+
+body.theme-game .season-archive-hero,
+body.theme-game .season-detail-hero {
+  position: relative;
+  padding: 18px;
+  border: 1px solid var(--season-line);
+  border-left: 3px solid var(--season-cyan);
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(75, 220, 255, .14), rgba(8, 16, 32, .82) 45%, rgba(114, 255, 122, .08)),
+    var(--season-bg);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .25);
+}
+
+body.theme-game .season-archive-hero p,
+body.theme-game .season-detail-hero p,
+body.theme-game .season-archive-card__eyebrow {
+  margin: 0 0 5px;
+  color: var(--season-cyan);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+body.theme-game .season-archive-hero h1,
+body.theme-game .season-detail-hero h1 {
+  margin: 0;
+  color: #f2f7ff;
+  font-size: clamp(28px, 7vw, 46px);
+  line-height: .95;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+body.theme-game .season-archive-hero span,
+body.theme-game .season-detail-hero span,
+body.theme-game .season-archive-card__head span {
+  display: block;
+  margin-top: 8px;
+  color: rgba(218, 230, 255, .78);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+body.theme-game .season-archive-list {
+  display: grid;
+  gap: 14px;
+}
+
+body.theme-game .season-archive-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(118, 158, 218, .18);
+  border-left: 3px solid var(--season-green);
+  border-radius: 6px;
+  background: linear-gradient(145deg, rgba(7, 17, 34, .92), rgba(5, 10, 23, .82));
+}
+
+body.theme-game .season-archive-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body.theme-game .season-archive-card__head h2 {
+  margin: 0;
+  color: #f2f7ff;
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+body.theme-game .season-archive-card__open,
+body.theme-game .season-archive-link,
+body.theme-game .season-back,
+body.theme-game .season-league-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid rgba(75, 220, 255, .32);
+  border-radius: 4px;
+  color: #e9f8ff;
+  background: rgba(75, 220, 255, .08);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+body.theme-game .season-archive-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+body.theme-game .season-archive-card__stats div,
+body.theme-game .season-kpi {
+  padding: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .01));
+}
+
+body.theme-game .season-archive-card__stats strong,
+body.theme-game .season-kpi strong {
+  display: block;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+}
+
+body.theme-game .season-archive-card__stats span,
+body.theme-game .season-kpi span,
+body.theme-game .season-archive-league__top span,
+body.theme-game .season-archive-league__leader span {
+  color: rgba(190, 207, 236, .72);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+body.theme-game .season-archive-card__leagues {
+  display: grid;
+  gap: 10px;
+}
+
+body.theme-game .season-archive-league {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background: rgba(4, 10, 22, .46);
+  box-shadow: inset 3px 0 0 rgba(75, 220, 255, .72);
+}
+
+body.theme-game .season-archive-league__top,
+body.theme-game .season-archive-league__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+body.theme-game .season-archive-league__top strong {
+  color: var(--season-green);
+}
+
+body.theme-game .season-archive-league__leader strong {
+  display: block;
+  margin-top: 2px;
+  color: #f8fbff;
+  font-size: 18px;
+}
+
+body.theme-game .season-archive-league__leader em,
+body.theme-game .season-archive-league__meta,
+body.theme-game .season-kpi em {
+  color: rgba(218, 230, 255, .74);
+  font-size: 12px;
+  font-style: normal;
+}
+
+body.theme-game .season-detail-switchers {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+body.theme-game .season-detail-switchers select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(118, 158, 218, .26);
+  border-radius: 4px !important;
+  color: #f2f7ff;
+  background: rgba(4, 10, 22, .72);
+}
+
+body.theme-game .season-league-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+body.theme-game .season-league-tabs a.is-active {
+  border-color: rgba(114, 255, 122, .68);
+  color: var(--season-green);
+  background: rgba(114, 255, 122, .10);
+}
+
+body.theme-game .season-kpi-grid,
+body.theme-game .season-awards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.theme-game .season-kpi {
+  border-left: 3px solid rgba(75, 220, 255, .62);
+  border-radius: 6px;
+}
+
+body.theme-game .season-kpi--green { border-left-color: var(--season-green); }
+body.theme-game .season-kpi--yellow { border-left-color: var(--season-yellow); }
+body.theme-game .season-kpi--blue { border-left-color: #8ab8ff; }
+
+body.theme-game .season-story,
+body.theme-game .season-section,
+body.theme-game .season-audit {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(118, 158, 218, .16);
+  border-radius: 6px;
+  background: rgba(5, 12, 26, .72);
+}
+
+body.theme-game .season-story h2,
+body.theme-game .season-section h2,
+body.theme-game .season-audit h2 {
+  margin: 0;
+  color: #f2f7ff;
+  font-size: 19px;
+  text-transform: uppercase;
+}
+
+body.theme-game .season-story p {
+  margin: 0;
+  color: rgba(218, 230, 255, .82);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+body.theme-game .season-rank-strip {
+  display: flex;
+  min-height: 42px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .18);
+}
+
+body.theme-game .season-rank-strip__seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  color: #fff;
+  font-size: 10px;
+}
+
+body.theme-game .season-rank-strip__seg--s { background: rgba(171, 109, 255, .28); }
+body.theme-game .season-rank-strip__seg--a { background: rgba(255, 90, 120, .24); }
+body.theme-game .season-rank-strip__seg--b { background: rgba(255, 216, 74, .24); }
+body.theme-game .season-rank-strip__seg--c { background: rgba(114, 255, 122, .20); }
+body.theme-game .season-rank-strip__seg--d { background: rgba(75, 220, 255, .18); }
+body.theme-game .season-rank-strip__seg--e { background: rgba(138, 184, 255, .16); }
+body.theme-game .season-rank-strip__seg--f { background: rgba(190, 207, 236, .12); }
+
+body.theme-game .season-award {
+  min-height: 94px;
+  padding: 12px;
+  border-radius: 6px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012));
+  box-shadow: inset 3px 0 0 rgba(75, 220, 255, .62);
+}
+
+body.theme-game .season-award--green { box-shadow: inset 3px 0 0 var(--season-green); }
+body.theme-game .season-award--yellow { box-shadow: inset 3px 0 0 var(--season-yellow); }
+body.theme-game .season-award--blue { box-shadow: inset 3px 0 0 #8ab8ff; }
+
+body.theme-game .season-award span {
+  display: block;
+  color: rgba(190, 207, 236, .72);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+body.theme-game .season-award strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff;
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+body.theme-game .season-award em {
+  display: block;
+  margin-top: 5px;
+  color: rgba(218, 230, 255, .76);
+  font-size: 12px;
+  font-style: normal;
+}
+
+body.theme-game .season-section__head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+body.theme-game .season-section__head span {
+  color: rgba(190, 207, 236, .72);
+  font-size: 12px;
+}
+
+body.theme-game .season-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(118, 158, 218, .16);
+  border-radius: 6px;
+  background: rgba(3, 8, 18, .44);
+}
+
+body.theme-game .season-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+body.theme-game .season-table th,
+body.theme-game .season-table td {
+  padding: 9px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  color: rgba(231, 239, 255, .88);
+}
+
+body.theme-game .season-table th {
+  color: rgba(190, 207, 236, .78);
+  font-size: 10px;
+  text-transform: uppercase;
+  background: rgba(75, 220, 255, .07);
+}
+
+body.theme-game .season-table__player a {
+  color: #f8fbff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+body.theme-game .season-table__points,
+body.theme-game .season-table__place {
+  color: #fff !important;
+  font-weight: 900;
+}
+
+body.theme-game .season-table__delta.is-positive { color: var(--season-green) !important; font-weight: 900; }
+body.theme-game .season-table__delta.is-negative { color: var(--season-red) !important; font-weight: 900; }
+
+body.theme-game .season-rank {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: 900;
+  text-align: center;
+  background: rgba(118, 158, 218, .18);
+}
+
+body.theme-game .season-rank--s { color: #d9bdff; }
+body.theme-game .season-rank--a { color: #ff9cad; }
+body.theme-game .season-rank--b { color: #ffe37c; }
+body.theme-game .season-rank--c { color: #8eff98; }
+body.theme-game .season-rank--d { color: #77e5ff; }
+body.theme-game .season-rank--e { color: #a8c9ff; }
+
+body.theme-game .season-audit {
+  border-left: 3px solid var(--season-yellow);
+}
+
+body.theme-game .season-audit p,
+body.theme-game .season-empty,
+body.theme-game .season-detail-loading,
+body.theme-game .season-archive-loading {
+  margin: 0;
+  color: rgba(218, 230, 255, .82);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (min-width: 720px) {
+  body.theme-game .season-archive-card__leagues {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.theme-game .season-detail-switchers {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  body.theme-game .season-kpi-grid,
+  body.theme-game .season-awards-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  body.theme-game .season-archive-card,
+  body.theme-game .season-story,
+  body.theme-game .season-section,
+  body.theme-game .season-audit {
+    padding: 12px;
+  }
+
+  body.theme-game .season-archive-card__head {
+    display: grid;
+  }
+
+  body.theme-game .season-archive-card__open,
+  body.theme-game .season-archive-link {
+    width: 100%;
+  }
+
+  body.theme-game .season-kpi-grid,
+  body.theme-game .season-awards-grid {
+    gap: 8px;
+  }
+
+  body.theme-game .season-kpi strong {
+    font-size: 19px;
+  }
+
+  body.theme-game .season-table {
+    min-width: 640px;
+  }
+}

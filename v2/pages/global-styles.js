@@ -44,6 +44,7 @@ function ensureBottomNav() {
     adults: `<svg ${iconAttrs}><path d="M12 3.5 19 6.2v5.4c0 4-2.9 7.4-7 8.9-4.1-1.5-7-4.9-7-8.9V6.2z"/><path d="m8.2 10.2 3.8-2.2 3.8 2.2"/><path d="m8.2 13.6 3.8-2.2 3.8 2.2"/></svg>`,
     kids: `<svg ${iconAttrs}><path d="M12 3.5 19 6.2v5.4c0 4-2.9 7.4-7 8.9-4.1-1.5-7-4.9-7-8.9V6.2z"/><path d="m12 8.4 1.2 2.2 2.4.3-1.8 1.7.4 2.4-2.2-1.1-2.2 1.1.4-2.4-1.8-1.7 2.4-.3z"/></svg>`,
     gameday: `<svg ${iconAttrs}><rect x="4" y="5" width="16" height="15" rx="2.4"/><path d="M8 3.8v2.6M16 3.8v2.6M4 9.2h16"/><path d="m10.2 12 4 2.2-4 2.2z"/></svg>`,
+    seasons: `<svg ${iconAttrs}><path d="M4.5 7.2h15l-1.1-2.7H5.6z"/><path d="M5.2 7.2v12.3h13.6V7.2"/><path d="M8.2 11h7.6"/><path d="M9.5 14.2h5"/></svg>`,
     rules: `<svg ${iconAttrs}><path d="M7.2 4.4h9.6l1.9 1.9v13.3H5.3V6.3z"/><path d="M16.8 4.4v2h1.9"/><path d="m8.7 10.9 1.3 1.3 2.4-2.4"/><path d="M8.7 15.3h6.5"/></svg>`
   };
   nav.innerHTML = `
@@ -51,6 +52,7 @@ function ensureBottomNav() {
     <a class="v2-nav-btn nav-item" data-route="#league-stats?league=sundaygames" href="#league-stats?league=sundaygames"><span class="v2-nav-btn__icon">${NAV_ICONS.adults}</span><small class="v2-nav-btn__label">ДОРОСЛІ</small></a>
     <a class="v2-nav-btn nav-item" data-route="#league-stats?league=kids" href="#league-stats?league=kids"><span class="v2-nav-btn__icon">${NAV_ICONS.kids}</span><small class="v2-nav-btn__label">ДИТЯЧА</small></a>
     <a class="v2-nav-btn nav-item" data-route="#gameday?league=sundaygames" href="#gameday?league=sundaygames"><span class="v2-nav-btn__icon">${NAV_ICONS.gameday}</span><small class="v2-nav-btn__label">ІГРИ</small></a>
+    <a class="v2-nav-btn nav-item" data-route="#seasons" href="#seasons"><span class="v2-nav-btn__icon">${NAV_ICONS.seasons}</span><small class="v2-nav-btn__label">АРХІВ</small></a>
     <a class="v2-nav-btn nav-item" data-route="#rules" href="#rules"><span class="v2-nav-btn__icon">${NAV_ICONS.rules}</span><small class="v2-nav-btn__label">ПРАВИЛА</small></a>
   `;
 
@@ -145,6 +147,7 @@ function updateTopNavActiveState() {
       const isCurrent = (
         (route === 'main' && linkRoute === 'main')
         || (route === 'rules' && linkRoute === 'rules')
+        || ((route === 'seasons' || route === 'season') && linkRoute === 'seasons')
         || (route === 'league-stats' && linkRoute === 'league-stats' && (!linkLeague || linkLeague === league))
         || (route === 'gameday' && linkRoute === 'gameday' && (!linkLeague || linkLeague === league))
       );

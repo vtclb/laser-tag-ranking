@@ -1,13 +1,31 @@
 ﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js';
+import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
-import { formatDataUpdatedAt, makeDataStatus } from '../core/dataStatus.js';
+import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
 
 const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
-const FALLBACK_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%22%23121a2a%22/%3E%3Ccircle cx=%2224%22 cy=%2218%22 r=%229%22 fill=%22%235b6c89%22/%3E%3Crect x=%2211%22 y=%2230%22 width=%2226%22 height=%2212%22 fill=%22%235b6c89%22/%3E%3C/svg%3E';
+const FALLBACK_AVATAR = './assets/default-avatar.svg';
 
 function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
+function renderDataQualityPanel(dataQuality) {
+  const warnings = Array.isArray(dataQuality?.warnings) ? dataQuality.warnings : [];
+  if (!DEBUG || warnings.length === 0) return '';
+  const visible = warnings.slice(0, 5);
+  const more = warnings.length - visible.length;
+  return `<section class="admin-quality-panel" aria-label="Data quality warnings">
+    <h3>Data quality warnings</h3>
+    <div class="admin-quality-panel__list">
+      ${visible.map((warning) => `<div class="admin-quality-panel__item admin-quality-panel__item--${esc(warning.severity || 'warning')}">
+        <strong>${esc(warning.severity || 'warning')} · ${esc(warning.type || 'UNKNOWN')}</strong>
+        <span>${esc(warning.message || '')}</span>
+      </div>`).join('')}
+    </div>
+    ${more > 0 ? `<div class="admin-quality-panel__more">+${more} ще</div>` : ''}
+  </section>`;
+}
 function rankClass(rank) { return `rank-${String(rank || 'F').trim().toLowerCase()}`; }
+function avatarFallbackAttr() { return `onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}';"`; }
 function winRateText(value) { return value === null || value === undefined ? '—' : `${Number(value).toFixed(1)}%`; }
 function fmtSigned(v) {
   const n = Number(v);
@@ -23,7 +41,11 @@ function clampPercent(value) {
 function isSeasonActive(player = {}) {
   const hasActiveFlag = Object.prototype.hasOwnProperty.call(player || {}, 'active');
   const activeFlag = hasActiveFlag ? Boolean(player.active) : true;
-  return activeFlag && Number(player.matches || 0) > 0;
+  const matches = Number(player.matches || 0);
+  const points = Number(player.points || 0);
+  const delta = Number(player.delta || 0);
+  const mvp = Number(player.mvpTotal ?? player.mvp ?? 0);
+  return activeFlag && (matches > 0 || points > 0 || delta !== 0 || mvp > 0);
 }
 
 const SORTERS = {
@@ -70,7 +92,7 @@ function tableRowMarkup(player, league) {
     <td class="league-ranking-table__cell league-ranking-table__cell--player">
       <span class="league-player-cell">
         <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
-        <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname)}"></span>
+        <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname || 'Аватар гравця')}" loading="lazy" ${avatarFallbackAttr()}></span>
         <span class="league-player-cell__name">${esc(player.nickname)}</span>
       </span>
     </td>
@@ -198,15 +220,11 @@ function getSmallestPositiveGrowth(players = []) {
 
 function renderHero(root, league, data) {
   const dataStatus = makeDataStatus(data?.dataStatus);
-  const updatedAt = formatDataUpdatedAt(dataStatus.updatedAt);
-  const statusText = dataStatus.ok && updatedAt
-    ? `Дані оновлено: ${updatedAt}`
-    : 'Дані тимчасово недоступні';
-  const statusClass = dataStatus.ok && updatedAt ? 'data-status-line--ok' : 'data-status-line--error';
+  const statusTone = resolveDataStatusTone(dataStatus);
   root.innerHTML = `<div class="league-hero__eyebrow">\u0416\u0438\u0432\u0438\u0439 \u0441\u0435\u0437\u043e\u043d</div>
   <h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
   <p class="px-card__text league-season-title">\u041f\u043e\u0442\u043e\u0447\u043d\u0438\u0439 \u0441\u0435\u0437\u043e\u043d: <strong>${esc(data.seasonLabel)}</strong></p>
-  <p class="data-status-line ${statusClass}">${esc(statusText)}</p>`;
+  <p class="data-status-line ${statusTone.className}">${esc(statusTone.label)}</p>`;
 }
 
 function renderGameDaySection(lastGameDay, league) {
@@ -435,7 +453,7 @@ export async function initLeagueStatsPage(params = {}) {
 
 export async function initPage(root, params = {}) {
   if (!root) return;
-  console.log('[league-stats] init start');
+  debugLog('[league-stats] init start');
   try {
     await safeInitLeagueStatsPage(root, params);
   } catch (err) {
@@ -452,14 +470,14 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   const league = resolveLeague(params);
   renderLoading(root, league);
   const data = await getCurrentLeagueLiveStats(league);
-  console.log('[league-stats] data loaded', data);
+  debugLog('[league-stats] data loaded', data);
   if (!data) {
-    console.warn('[league-stats] no data, rendering empty state');
+    debugWarn('[league-stats] no data, rendering empty state');
     root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u043b\u0456\u0433\u0438</h1><p class="px-card__text">\u041d\u0435\u043c\u0430\u0454 \u0434\u0430\u043d\u0438\u0445 \u0434\u043b\u044f \u0432\u0456\u0434\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u043d\u044f.</p></section>`;
     return;
   }
   const currentSeason = await getCurrentSeason().catch((error) => {
-    console.warn('[league-stats] optional season context unavailable', error);
+    debugWarn('[league-stats] optional season context unavailable', error);
     return null;
   });
   const remainingGameDays = calculateRemainingGameDays(data, currentSeason);
@@ -483,7 +501,7 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   const sortHeaders = root.querySelectorAll('.league-sort-header[data-sort]');
 
   if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !searchInput || !sortHeaders.length) {
-    console.warn('[league-stats] template nodes missing, rendering empty state');
+    debugWarn('[league-stats] template nodes missing, rendering empty state');
     root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u043b\u0456\u0433\u0438</h1><p class="px-card__text">\u041d\u0435\u043c\u0430\u0454 \u0434\u0430\u043d\u0438\u0445 \u0434\u043b\u044f \u0432\u0456\u0434\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u043d\u044f.</p></section>`;
     return;
   }
@@ -533,6 +551,7 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   };
 
   renderHero(hero, league, safeData);
+  hero.insertAdjacentHTML('afterend', renderDataQualityPanel(safeData.dataQuality));
   renderInfographic(infographic, safeData, remainingGameDays, league);
   searchInput.disabled = false;
   searchInput.placeholder = '\u041d\u0456\u043a\u043d\u0435\u0439\u043c \u0433\u0440\u0430\u0432\u0446\u044f';
@@ -549,15 +568,9 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   setupRowNavigation(rankingTable);
 
   expandBtn.addEventListener('click', () => {
-    const wasFullOpen = state.isFullOpen;
     state.isFullOpen = !state.isFullOpen;
     expandBtn.textContent = state.isFullOpen ? '\u0421\u0445\u043e\u0432\u0430\u0442\u0438 \u043f\u043e\u0432\u043d\u0438\u0439 \u0441\u043f\u0438\u0441\u043e\u043a' : '\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456\u0445 \u0433\u0440\u0430\u0432\u0446\u0456\u0432';
     renderTables();
-    if (wasFullOpen && !state.isFullOpen) {
-      requestAnimationFrame(() => {
-        (tableTitle || rankingTable)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      });
-    }
   });
 
   searchInput.addEventListener('input', () => {

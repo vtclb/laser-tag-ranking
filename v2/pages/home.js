@@ -34,7 +34,10 @@ function isCurrentSeasonActive(player = null) {
   if (player.isSeasonActive === false) return false;
   if (player.isSeasonActive === true) return true;
   const matches = Number(player.matches || 0);
-  return matches > 0;
+  const points = Number(player.points || 0);
+  const delta = Number(player.delta || 0);
+  const mvp = Number(player.mvpTotal ?? player.mvp ?? 0);
+  return matches > 0 || points > 0 || delta !== 0 || mvp > 0;
 }
 
 function byPointsDesc(a = {}, b = {}) {
@@ -397,7 +400,7 @@ function setHomeLoadingLifecycle(root) {
   const logLines = [
     { status: 'boot', text: '[BOOT] VTCLB ranking node' },
     { status: 'ok', text: '[ OK ] Ініціалізація ядра' },
-    { status: 'ok', text: '[ OK ] Підключення сезону Весна 2026' },
+    { status: 'ok', text: '[ OK ] Підключення активного сезону' },
     { status: 'load', text: '[ ... ] Завантаження дорослої ліги' },
     { status: 'load', text: '[ ... ] Завантаження дитячої ліги' },
     { status: 'wait', text: '[ WAIT ] Синхронізація таблиці лідерів' },

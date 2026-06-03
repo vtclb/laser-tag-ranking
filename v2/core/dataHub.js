@@ -8,7 +8,7 @@ import { makeDataStatus } from './dataStatus.js';
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260601-gas-logs5000';
+const SHEET_CACHE_VERSION = 'sheets-20260603-summer2026';
 const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260602';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
@@ -1680,11 +1680,15 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     .map((player) => {
       const totalMatches = player.wins + player.draws + player.losses;
       const mvpTotal = player.mvp1 + player.mvp2 + player.mvp3;
+      const hasSeasonSignal = totalMatches > 0
+        || Number(player.points || 0) > 0
+        || Number(player.delta || 0) !== 0
+        || mvpTotal > 0;
       return {
         ...player,
         mvpTotal,
         winRate: totalMatches > 0 ? Number(((player.wins / totalMatches) * 100).toFixed(1)) : null,
-        isSeasonActive: totalMatches > 0
+        isSeasonActive: hasSeasonSignal
       };
     });
 

@@ -18947,3 +18947,19 @@ body.theme-game .v2-bottom-nav .v2-nav-btn__icon {
   width: 22px;
   height: 22px;
 }
+
+/* Current season ranking: active players first, inactive players muted. */
+.league-page .league-ranking-table__row--inactive {
+  opacity: .46;
+  filter: grayscale(.34) saturate(.72);
+}
+
+.league-page .league-ranking-table__row--inactive:hover,
+.league-page .league-ranking-table__row--inactive:focus-visible {
+  opacity: .68;
+}
+
+.league-page .league-ranking-table__row--inactive .league-rank-badge,
+.league-page .league-ranking-table__row--inactive .league-avatar-wrap {
+  opacity: .78;
+}

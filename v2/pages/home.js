@@ -34,10 +34,11 @@ function isCurrentSeasonActive(player = null) {
   if (player.isSeasonActive === false) return false;
   if (player.isSeasonActive === true) return true;
   const matches = Number(player.matches || 0);
-  const points = Number(player.points || 0);
-  const delta = Number(player.delta || 0);
-  const mvp = Number(player.mvpTotal ?? player.mvp ?? 0);
-  return matches > 0 || points > 0 || delta !== 0 || mvp > 0;
+  const wins = Number(player.wins || 0);
+  const draws = Number(player.draws || 0);
+  const losses = Number(player.losses || 0);
+  const battles = Number(player.battles || 0);
+  return matches > 0 || wins > 0 || draws > 0 || losses > 0 || battles > 0;
 }
 
 function byPointsDesc(a = {}, b = {}) {

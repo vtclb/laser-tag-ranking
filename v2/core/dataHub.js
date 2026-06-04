@@ -1687,15 +1687,12 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     .map((player) => {
       const totalMatches = player.wins + player.draws + player.losses;
       const mvpTotal = player.mvp1 + player.mvp2 + player.mvp3;
-      const hasSeasonSignal = totalMatches > 0
-        || Number(player.points || 0) > 0
-        || Number(player.delta || 0) !== 0
-        || mvpTotal > 0;
+      const hasSeasonParticipation = totalMatches > 0 || Number(player.battles || 0) > 0;
       return {
         ...player,
         mvpTotal,
         winRate: totalMatches > 0 ? Number(((player.wins / totalMatches) * 100).toFixed(1)) : null,
-        isSeasonActive: hasSeasonSignal
+        isSeasonActive: hasSeasonParticipation
       };
     });
 
@@ -1705,7 +1702,7 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     .map((player, index) => ({ ...player, place: index + 1 }));
 
   const inactivePlayers = playersWithSeasonState
-    .filter((player) => !player.isSeasonActive)
+    .filter((player) => !player.isSeasonActive && Number(player.points || 0) > 0)
     .sort((a, b) => b.points - a.points || b.wins - a.wins || a.nickname.localeCompare(b.nickname, 'uk'));
 
   const players = [...activePlayers, ...inactivePlayers.map((player) => ({ ...player, place: null }))];

@@ -39,13 +39,16 @@ function clampPercent(value) {
 }
 
 function isSeasonActive(player = {}) {
-  const hasActiveFlag = Object.prototype.hasOwnProperty.call(player || {}, 'active');
-  const activeFlag = hasActiveFlag ? Boolean(player.active) : true;
   const matches = Number(player.matches || 0);
-  const points = Number(player.points || 0);
-  const delta = Number(player.delta || 0);
-  const mvp = Number(player.mvpTotal ?? player.mvp ?? 0);
-  return activeFlag && (matches > 0 || points > 0 || delta !== 0 || mvp > 0);
+  const wins = Number(player.wins || 0);
+  const draws = Number(player.draws || 0);
+  const losses = Number(player.losses || 0);
+  const battles = Number(player.battles || 0);
+  return matches > 0 || wins > 0 || draws > 0 || losses > 0 || battles > 0 || Boolean(player.isSeasonActive);
+}
+
+function seasonStatValue(player = {}, key = '') {
+  return isSeasonActive(player) ? esc(player?.[key] ?? 0) : '—';
 }
 
 const SORTERS = {
@@ -87,7 +90,9 @@ function tableRowMarkup(player, league) {
   const href = playerProfileHash(league, player.nickname);
   const deltaValue = Number(player.delta || 0);
   const deltaClass = deltaValue >= 0 ? 'is-positive' : 'is-negative';
-  return `<tr class="league-ranking-table__row league-ranking-table__row--rank-${rankKey}" data-href="${href}" tabindex="0" role="link" aria-label="Профіль ${esc(player.nickname)}">
+  const isInactive = !isSeasonActive(player);
+  const deltaText = isInactive ? '—' : fmtSigned(deltaValue);
+  return `<tr class="league-ranking-table__row league-ranking-table__row--rank-${rankKey}${isInactive ? ' league-ranking-table__row--inactive' : ''}" data-href="${href}" tabindex="0" role="link" aria-label="Профіль ${esc(player.nickname)}">
     <td class="league-ranking-table__cell league-ranking-table__cell--place">${player.place ? `#${player.place}` : '—'}</td>
     <td class="league-ranking-table__cell league-ranking-table__cell--player">
       <span class="league-player-cell">
@@ -97,13 +102,13 @@ function tableRowMarkup(player, league) {
       </span>
     </td>
     <td class="league-ranking-table__cell league-ranking-table__cell--points">${esc(player.points ?? 0)}</td>
-    <td class="league-ranking-table__cell league-ranking-table__cell--num">${esc(player.matches ?? 0)}</td>
-    <td class="league-ranking-table__cell league-ranking-table__cell--num">${esc(player.battles ?? 0)}</td>
-    <td class="league-ranking-table__cell league-ranking-table__cell--num">${esc(winRateText(player.winRate))}</td>
-    <td class="league-ranking-table__cell league-ranking-table__cell--num">${esc(player.mvp1 ?? 0)}</td>
-    <td class="league-ranking-table__cell league-ranking-table__cell--num">${esc(player.mvp2 ?? 0)}</td>
-    <td class="league-ranking-table__cell league-ranking-table__cell--num">${esc(player.mvp3 ?? 0)}</td>
-    <td class="league-ranking-table__cell league-ranking-table__cell--num league-ranking-table__cell--delta ${deltaClass}">${esc(fmtSigned(deltaValue))}</td>
+    <td class="league-ranking-table__cell league-ranking-table__cell--num">${seasonStatValue(player, 'matches')}</td>
+    <td class="league-ranking-table__cell league-ranking-table__cell--num">${seasonStatValue(player, 'battles')}</td>
+    <td class="league-ranking-table__cell league-ranking-table__cell--num">${isInactive ? '—' : esc(winRateText(player.winRate))}</td>
+    <td class="league-ranking-table__cell league-ranking-table__cell--num">${seasonStatValue(player, 'mvp1')}</td>
+    <td class="league-ranking-table__cell league-ranking-table__cell--num">${seasonStatValue(player, 'mvp2')}</td>
+    <td class="league-ranking-table__cell league-ranking-table__cell--num">${seasonStatValue(player, 'mvp3')}</td>
+    <td class="league-ranking-table__cell league-ranking-table__cell--num league-ranking-table__cell--delta ${deltaClass}">${esc(deltaText)}</td>
   </tr>`;
 }
 
@@ -412,17 +417,26 @@ function renderLoading(root, league) {
 
 function sortPlayers(players, sortBy, direction = 'desc') {
   const byName = (a, b) => String(a.nickname || '').localeCompare(String(b.nickname || ''), 'uk');
-  if (sortBy === 'default') {
-    return [...players].sort((a, b) => (a.place || Number.MAX_SAFE_INTEGER) - (b.place || Number.MAX_SAFE_INTEGER)
+  const sortGroup = (rows = []) => {
+    if (sortBy === 'default') {
+      return [...rows].sort((a, b) => (a.place || Number.MAX_SAFE_INTEGER) - (b.place || Number.MAX_SAFE_INTEGER)
+        || SORTERS.points(a, b)
+        || byName(a, b));
+    }
+
+    const sorter = SORTERS[sortBy] || SORTERS.points;
+    const sign = direction === 'asc' ? -1 : 1;
+    return [...rows].sort((a, b) => (sorter(a, b) * sign)
       || SORTERS.points(a, b)
       || byName(a, b));
-  }
-
-  const sorter = SORTERS[sortBy] || SORTERS.points;
-  const sign = direction === 'asc' ? -1 : 1;
-  return [...players].sort((a, b) => (sorter(a, b) * sign)
-    || SORTERS.points(a, b)
-    || byName(a, b));
+  };
+  const activeRows = [];
+  const inactiveRows = [];
+  (Array.isArray(players) ? players : []).forEach((player) => {
+    if (isSeasonActive(player)) activeRows.push(player);
+    else if (Number(player.points || 0) > 0) inactiveRows.push(player);
+  });
+  return [...sortGroup(activeRows), ...sortGroup(inactiveRows)];
 }
 
 function filterPlayers(players, searchTerm) {
@@ -512,10 +526,10 @@ async function safeInitLeagueStatsPage(root, params = {}) {
     sortBy: 'default',
     sortDirection: 'desc'
   };
-  const activePlayersBase = [...(safeData.players || [])].filter((player) => isSeasonActive(player));
+  const playersBase = [...(safeData.players || [])].filter((player) => isSeasonActive(player) || Number(player.points || 0) > 0);
 
   const renderTables = () => {
-    const filtered = filterPlayers(activePlayersBase, state.searchTerm);
+    const filtered = filterPlayers(playersBase, state.searchTerm);
     const sorted = sortPlayers(filtered, state.sortBy, state.sortDirection);
     const visible = state.isFullOpen ? sorted : sorted.slice(0, 10);
     rankingTable.innerHTML = visible.map((player) => tableRowMarkup(player, league)).join('')

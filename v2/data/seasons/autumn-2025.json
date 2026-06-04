@@ -421,8 +421,9 @@
         }
       ],
       "summary": {
-        "games": 1369,
-        "rounds": 5491,
+        "games": 486,
+        "matches": 486,
+        "rounds": 1892,
         "wins": 695,
         "losses": 674,
         "draws": 0,

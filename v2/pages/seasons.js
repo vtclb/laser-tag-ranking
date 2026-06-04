@@ -5,6 +5,10 @@ import { rankFromPoints } from '../core/rankRules.js';
 
 const LEAGUES = ['sundaygames', 'kids'];
 const NO_DATA = 'Немає даних';
+const SEASON_MATCH_OVERRIDES = {
+  summer_2025: { total: 322, sundaygames: 322 },
+  autumn_2025: { total: 486, sundaygames: 486 }
+};
 
 function esc(value) {
   return String(value ?? '')
@@ -78,10 +82,12 @@ function allPlayers(master = {}) {
 }
 
 function playerName(player = {}) {
+  player = player || {};
   return player.nickname || player.nick || player.Nickname || NO_DATA;
 }
 
 function playerLeague(player = {}) {
+  player = player || {};
   return normalizeLeague(player.league ?? player.League ?? '');
 }
 
@@ -98,18 +104,22 @@ function leagueSummary(master = {}, league = 'sundaygames') {
 }
 
 function ratingEnd(player = {}) {
+  player = player || {};
   return num(player.rating_end ?? player.ratingEnd ?? player.points ?? player.Points, 0);
 }
 
 function ratingDelta(player = {}) {
+  player = player || {};
   return num(player.rating_delta ?? player.ratingDelta ?? player.delta ?? player.Rating_delta, 0);
 }
 
 function mvpTotal(player = {}) {
+  player = player || {};
   return num(player.mvp_total ?? player.mvpTotal ?? player.mvp ?? player.MVP_total, 0);
 }
 
 function rankOf(player = {}) {
+  player = player || {};
   const raw = player.rank?.label || player.rankLetter || player.rank || player.Rank || player.rank_final || '';
   const value = String(raw || '').trim().toUpperCase().slice(0, 1);
   if ('SABCDEF'.includes(value)) return value;
@@ -117,6 +127,7 @@ function rankOf(player = {}) {
 }
 
 function playerGames(player = {}) {
+  player = player || {};
   return num(player.matches ?? player.games ?? player.Games, 0);
 }
 
@@ -132,6 +143,11 @@ function realNumber(value) {
 function confirmedLeagueMatches(summary = {}) {
   const explicit = realNumber(summary.matches ?? summary.Matches);
   if (Number.isFinite(explicit)) return { value: explicit, source: 'league_summary.matches', trusted: true };
+  const legacyGames = realNumber(summary.games ?? summary.Games);
+  const rounds = realNumber(summary.rounds ?? summary.Rounds);
+  if (Number.isFinite(legacyGames) && (!Number.isFinite(rounds) || legacyGames === rounds)) {
+    return { value: legacyGames, source: 'league_summary.games', trusted: true };
+  }
   return { value: null, source: 'missing', trusted: false };
 }
 
@@ -158,7 +174,11 @@ function normalizeLeagueStats(master = {}, league = 'sundaygames') {
   const summary = leagueSummary(master, league);
   const leader = topBy(players, ratingEnd);
   const mvp = topBy(players, mvpTotal);
-  const matches = confirmedLeagueMatches(summary);
+  const seasonId = master?.seasonId || master?.season || '';
+  const matchesOverride = realNumber(SEASON_MATCH_OVERRIDES[seasonId]?.[league]);
+  const matches = Number.isFinite(matchesOverride)
+    ? { value: matchesOverride, source: 'archive_match_override', trusted: true }
+    : confirmedLeagueMatches(summary);
 
   return {
     label: leagueLabelUA(league),
@@ -180,8 +200,11 @@ function normalizeSeasonStats([seasonId, master], index = 0) {
   const meta = sections.season_meta || {};
   const adult = normalizeLeagueStats(master, 'sundaygames');
   const kids = normalizeLeagueStats(master, 'kids');
+  const overrideTotal = realNumber(SEASON_MATCH_OVERRIDES[seasonId]?.total);
   const confirmedMatches = [adult.matches, kids.matches].filter(Number.isFinite);
-  const totalMatches = confirmedMatches.length === LEAGUES.length
+  const totalMatches = Number.isFinite(overrideTotal)
+    ? overrideTotal
+    : confirmedMatches.length > 0
     ? confirmedMatches.reduce((sum, value) => sum + value, 0)
     : null;
   const active = activePlayers(allPlayers(master));
@@ -213,7 +236,7 @@ function hasSeasonData(master) {
 function validateSeasonStats(stats) {
   if (!stats) return;
   if (!stats.totalMatchesTrusted && stats.totalPlayerVolume > 1000) {
-    debugWarn('[season stats warning] totalMatches not confirmed; using participation records', {
+    debugWarn('[season stats warning] totalMatches not confirmed; participation records skipped as match count', {
       season: stats.id,
       participationRecords: stats.totalPlayerVolume
     });
@@ -254,9 +277,6 @@ function previewMetric(stats = {}) {
   if (stats.totalMatchesTrusted) {
     return { value: stats.totalMatches, label: 'ігор' };
   }
-  if (stats.totalPlayerVolume > 0) {
-    return { value: stats.totalPlayerVolume, label: 'ігор' };
-  }
   return { value: '—', label: 'ігор' };
 }
 
@@ -289,7 +309,7 @@ function renderArchiveSummary(statsList = []) {
   const first = statsList[0];
   const last = statsList[statsList.length - 1];
   const period = first && last ? `${first.title} — ${last.title}` : 'архів сезонів';
-  const gamesTotal = statsList.reduce((sum, stats) => sum + (stats.totalMatchesTrusted ? stats.totalMatches : stats.totalPlayerVolume), 0);
+  const gamesTotal = statsList.reduce((sum, stats) => sum + (stats.totalMatchesTrusted ? stats.totalMatches : 0), 0);
 
   return `<section class="sx-archive-summary">
     <strong>${totals.seasons} сезони</strong>

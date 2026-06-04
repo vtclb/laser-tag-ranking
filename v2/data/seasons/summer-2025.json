@@ -420,13 +420,14 @@
         }
       ],
       "summary": {
-        "games": 1422,
+        "games": 322,
+        "matches": 322,
         "rounds": 1269,
         "wins": 0,
         "losses": 0,
         "draws": 0,
         "pointsDelta": 14040,
-        "players": 20,
+        "players": 88,
         "mvp": "Laston"
       },
       "days": []

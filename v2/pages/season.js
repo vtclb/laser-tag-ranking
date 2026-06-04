@@ -1,4 +1,4 @@
-import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js';
+import { listSeasonMasters, getSeasonMaster, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 
 const RANK_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
@@ -147,11 +147,17 @@ function winRate(player = {}) {
 }
 
 function rank(player = {}) {
-  return String(valueOf(player, ['rank_final', 'Rank', 'rankLetter', 'rank'], 'F')).toUpperCase();
+  const raw = valueOf(player, ['rank_final', 'Rank', 'rankLetter', 'rank'], '');
+  const value = raw && typeof raw === 'object'
+    ? valueOf(raw, ['label', 'rank', 'value'], '')
+    : raw;
+  const letter = String(value || '').trim().toUpperCase().match(/[SABCDEF]/)?.[0];
+  return letter || rankFromPoints(ratingEnd(player)) || 'F';
 }
 
 function playerPlace(player = {}, index = 0) {
-  return num(valueOf(player, ['place', 'Place', 'finalPlace'], index + 1), index + 1);
+  const place = num(valueOf(player, ['place', 'Place', 'finalPlace'], null), null);
+  return Number.isFinite(place) && place > 0 ? place : index + 1;
 }
 
 function sortByRating(players = []) {

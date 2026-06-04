@@ -155,6 +155,13 @@ function normalizeSeasonPlayerRow(row = {}) {
   const mvp2 = toNumber(pickFirst(getField('mvp2'), source.mvp2, source.MVP2), null);
   const mvp3 = toNumber(pickFirst(getField('mvp3'), source.mvp3, source.MVP3), null);
   const mvpTotal = toNumber(pickFirst(getField('mvp_total', 'mvp'), source.mvp_total, source.MVP_total, source.MVP, source.mvp), null);
+  const ratingEndValue = toNumber(pickFirst(getField('rating_end', 'rating', 'points'), source.rating_end, source.Rating_end, source.rating, source.Rating, source.points, source.Points), null);
+  const rawPlace = toNumber(pickFirst(getField('place', 'place_final', 'final_place'), source.place, source.Place, source.finalPlace), null);
+  const rawRank = pickFirst(getField('rank_final', 'rank', 'rank_letter'), source.rank_final, source.Rank_final, source.rankLetter, source.rank, source.Rank);
+  const rankValue = rawRank && typeof rawRank === 'object'
+    ? pickFirst(rawRank.label, rawRank.rank, rawRank.value)
+    : rawRank;
+  const rankFinal = parseRankLetter(rankValue) || (Number.isFinite(ratingEndValue) ? rankFromPoints(ratingEndValue) : null);
 
   return {
     ...source,
@@ -171,10 +178,10 @@ function normalizeSeasonPlayerRow(row = {}) {
     mvp_total: Number.isFinite(mvpTotal) ? mvpTotal : [mvp1, mvp2, mvp3].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0),
     rounds: toNumber(pickFirst(getField('rounds'), source.rounds, source.Rounds), null),
     rating_start: toNumber(pickFirst(getField('rating_start'), source.rating_start, source.Rating_start), null),
-    rating_end: toNumber(pickFirst(getField('rating_end', 'rating', 'points'), source.rating_end, source.Rating_end, source.rating, source.Rating, source.points, source.Points), null),
+    rating_end: ratingEndValue,
     rating_delta: toNumber(pickFirst(getField('rating_delta', 'delta', 'points_delta'), source.rating_delta, source.Rating_delta, source.delta, source.Delta), null),
-    place: toNumber(pickFirst(getField('place', 'place_final', 'final_place'), source.place, source.Place, source.finalPlace), null),
-    rank_final: toNumber(pickFirst(getField('rank_final', 'rank'), source.rank_final, source.Rank_final, source.rank, source.Rank), null)
+    place: Number.isFinite(rawPlace) && rawPlace > 0 ? rawPlace : null,
+    rank_final: rankFinal
   };
 }
 
@@ -182,8 +189,8 @@ function dedupeSeasonPlayers(players = []) {
   const rows = Array.isArray(players) ? players : [];
   const map = new Map();
   const pickBetter = (a, b) => {
-    const aRank = Number.isFinite(a.rank_final);
-    const bRank = Number.isFinite(b.rank_final);
+    const aRank = Boolean(parseRankLetter(a.rank_final));
+    const bRank = Boolean(parseRankLetter(b.rank_final));
     if (aRank !== bRank) return aRank ? a : b;
     const ratingDiff = (a.rating_end ?? -1e9) - (b.rating_end ?? -1e9);
     if (ratingDiff !== 0) return ratingDiff > 0 ? a : b;

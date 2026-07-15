@@ -51,7 +51,10 @@ window.window = window;
 
 globalThis.location = window.location;
 
-globalThis.navigator = { userAgent: 'node' };
+Object.defineProperty(globalThis, 'navigator', {
+  configurable: true,
+  value: { userAgent: 'node' }
+});
 
 globalThis.localStorage = {
   getItem() { return null; },

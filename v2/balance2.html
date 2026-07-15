@@ -4,26 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LaserTag v2 · Балансер</title>
-  <script type="module" src="./pages/global-styles.js?v=20260525a"></script>
-  <link rel="stylesheet" href="./assets/styles.css?v=20260525a">
-  <link rel="stylesheet" href="./styles/balance2.css?v=20260525a">
+  <script type="module" src="./pages/global-styles.js"></script>
+  <link rel="stylesheet" href="./assets/styles.css">
+  <link rel="stylesheet" href="./styles/balance2.css">
 </head>
 <body>
-  <main class="balance2-root">
-    <section class="card status-card" id="statusBox" data-state="idle">
+  <main class="balance2-root" aria-labelledby="balance2Title">
+    <header class="balance2-hero">
+      <p class="balance2-hero__eyebrow">LaserTag Arena</p>
+      <h1 id="balance2Title">Балансер команд</h1>
+      <p>Збери лобі, сформуй команди та збережи результат матчу.</p>
+    </header>
+
+    <section class="card status-card" id="statusBox" data-state="idle" role="status" aria-live="polite" aria-atomic="true">
       <strong>Статус:</strong>
       <span id="statusText">Готово</span>
       <button id="retrySaveBtn" class="chip hidden" type="button">Повторити</button>
     </section>
 
     <section class="card hidden" id="restoreCard">
-      <h3>Відновлення</h3>
+      <h2>Відновлення</h2>
       <p class="section-hint">Знайдено збережений стан лобі.</p>
       <button id="restoreBtn" class="chip" type="button">Відновити лобі</button>
     </section>
 
     <section class="card">
-      <h3>Ліга</h3>
+      <h2>Ліга</h2>
       <p class="section-hint">Оберіть лігу і завантажте актуальний список гравців.</p>
       <div class="league-controls">
         <label class="league-label" for="leagueSelect">Ліга</label>
@@ -36,11 +42,11 @@
     </section>
 
     <section class="card">
-      <h3>Гравці</h3>
+      <h2>Гравці</h2>
       <p class="section-hint">Пошук лише по ніку. Відсортуй і додай у лобі.</p>
       <div class="search-row">
-        <input id="searchInput" class="search-input" type="search" placeholder="Пошук по ніку...">
-        <select id="sortMode" class="chip">
+        <input id="searchInput" class="search-input" type="search" placeholder="Пошук по ніку..." aria-label="Пошук гравця за ніком">
+          <select id="sortMode" class="chip" aria-label="Сортування списку гравців">
           <option value="points_desc">Очки ↓</option>
           <option value="points_asc">Очки ↑</option>
           <option value="name_asc">А→Я</option>
@@ -56,7 +62,7 @@
 
     <section class="card">
       <div class="section-head">
-        <h3>Лобі</h3>
+        <h2>Лобі</h2>
         <button id="clearLobbyBtn" class="chip" type="button">Очистити</button>
       </div>
       <p class="section-hint">До 15 гравців для балансування та матчу.</p>
@@ -64,16 +70,16 @@
     </section>
 
     <section class="card" id="teamsCard">
-      <h3>Команди</h3>
+      <h2>Команди</h2>
       <p class="section-hint">Команди з’являться після дії в блоці “Налаштування команд”.</p>
       <div id="teamsGrid" class="teams-grid"></div>
     </section>
 
     <section class="card" id="matchCard">
-      <h3>Матч</h3>
+      <h2>Матч</h2>
       <p class="section-hint">Відміть серію, MVP і штрафи, потім збережи.</p>
       <div id="activeMatchConfig" class="match-config"></div>
-      <h4 id="activeMatchLabel">Команда 1 vs Команда 2</h4>
+      <h3 id="activeMatchLabel">Команда 1 vs Команда 2</h3>
       <div id="matchTeamsPreview" class="teams-grid"></div>
 
       <div class="series-count" id="seriesCountOptions">
@@ -84,9 +90,6 @@
           <button class="chip" type="button" data-series-count="5">5</button>
           <button class="chip" type="button" data-series-count="6">6</button>
           <button class="chip" type="button" data-series-count="7">7</button>
-          <button class="chip" type="button" data-series-count="8">8</button>
-          <button class="chip" type="button" data-series-count="9">9</button>
-          <button class="chip" type="button" data-series-count="10">10</button>
           <button class="chip" type="button" data-series-reset="1">Очистити</button>
         </div>
       </div>
@@ -107,7 +110,7 @@
       </div>
 
       <div>
-        <h4>Остання збережена гра</h4>
+        <h3>Остання збережена гра</h3>
         <div id="lastSavedGame" class="match-summary"></div>
       </div>
 
@@ -115,6 +118,6 @@
     </section>
   </main>
 
-  <script type="module" src="./scripts/balance2/app.js?v=20260527a"></script>
+  <script type="module" src="./scripts/balance2/app.js?v=20260713-ux2"></script>
 </body>
 </html>

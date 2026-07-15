@@ -1,8 +1,32 @@
-import { ensureGlobalStyles } from '../pages/global-styles.js';
+import { ensureGlobalStyles } from '../pages/global-styles.js?v=20260715-clean5';
+import { debugInfo, debugLog } from './debug.js';
 import { normalizeLeague } from './naming.js';
 
 const templateCache = new Map();
-const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments', 'school']);
+const TEMPLATE_TIMEOUT_MS = 10_000;
+let routeRenderSequence = 0;
+const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments']);
+const routeTitles = {
+  main: 'Головна',
+  seasons: 'Архів сезонів',
+  season: 'Статистика сезону',
+  'league-stats': 'Статистика ліги',
+  player: 'Профіль гравця',
+  gameday: 'Ігровий день',
+  rules: 'Правила',
+  tournaments: 'Турніри'
+};
+
+function updateRouteContext(route, queryParams = {}) {
+  const baseTitle = routeTitles[route] || 'Лазертаг рейтинг';
+  const pageTitle = route === 'player' && queryParams.nick
+    ? `${queryParams.nick} | ${baseTitle}`
+    : baseTitle;
+  document.title = `${pageTitle} | Варта`;
+
+  const routeStatus = document.getElementById('routeStatus');
+  if (routeStatus) routeStatus.textContent = `Відкрито: ${pageTitle}`;
+}
 
 function getView() {
   return document.getElementById('view');
@@ -84,16 +108,31 @@ function rewriteLinks(scope = document) {
 
 async function fetchTemplate(path) {
   if (!templateCache.has(path)) {
-    templateCache.set(path, fetch(path).then((response) => {
-      if (!response.ok) throw new Error(`Template load failed: ${path}`);
-      return response.text();
-    }));
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TEMPLATE_TIMEOUT_MS);
+    const request = fetch(path, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Template load failed: ${path}`);
+        return response.text();
+      })
+      .catch((error) => {
+        templateCache.delete(path);
+        if (error?.name === 'AbortError') throw new Error(`Template load timeout: ${path}`);
+        throw error;
+      })
+      .finally(() => clearTimeout(timer));
+    templateCache.set(path, request);
   }
   return templateCache.get(path);
 }
 
-async function mountTemplate(path) {
+function isCurrentRouteRender(renderId) {
+  return renderId === routeRenderSequence;
+}
+
+async function mountTemplate(path, renderId) {
   const html = await fetchTemplate(path);
+  if (!isCurrentRouteRender(renderId)) return false;
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const view = getView();
   if (!view) throw new Error('View container is missing');
@@ -102,6 +141,7 @@ async function mountTemplate(path) {
   const source = doc.querySelector('main') || doc.body;
   view.innerHTML = source ? source.innerHTML : '';
   rewriteLinks(view);
+  return true;
 }
 
 function ensureShell() {
@@ -139,6 +179,7 @@ function ensureShell() {
     view.id = 'view';
     container.appendChild(view);
   }
+  view.tabIndex = -1;
 
   ensureGlobalStyles();
 }
@@ -150,6 +191,33 @@ function animateRouteView() {
   view.classList.add('route-enter');
   requestAnimationFrame(() => {
     view.classList.add('route-enter-active');
+  });
+}
+
+function focusRouteContent({ onlyWhenIdle = false } = {}) {
+  const view = getView();
+  if (!view) return;
+  const active = document.activeElement;
+  if (onlyWhenIdle && active
+    && active !== document.body
+    && active !== document.documentElement
+    && active !== view
+    && active.dataset?.routeFocusTarget !== '1') return;
+  const heading = view.querySelector('h1');
+  const target = heading instanceof HTMLElement ? heading : view;
+  if (target !== view && !target.hasAttribute('tabindex')) {
+    target.tabIndex = -1;
+    target.dataset.routeFocusTarget = '1';
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  target.focus({ preventScroll: true });
+}
+
+function stabilizeRouteFocus(renderId) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (isCurrentRouteRender(renderId)) focusRouteContent({ onlyWhenIdle: true });
+    });
   });
 }
 
@@ -165,27 +233,32 @@ function routeInitErrorCard(route, message) {
   view.innerHTML = `<section class="px-card px-card--accent"><h1 class="px-card__title">Сторінка тимчасово недоступна</h1><p class="px-card__text">[${route}] ${message}</p><div class="px-card__actions"><a class="btn" href="#main">Повернутися на головну</a></div></section>`;
 }
 
-async function runPageInit(route, initFn, params = {}) {
-  console.log('[router] loading route:', route);
+async function runPageInit(route, initFn, params = {}, renderId) {
+  if (!isCurrentRouteRender(renderId)) return;
+  debugLog('[router] loading route:', route);
   if (typeof initFn !== 'function') {
     console.error('INIT FUNCTION NOT FOUND');
-    routeInitErrorCard(route, 'INIT FUNCTION NOT FOUND');
+    if (isCurrentRouteRender(renderId)) routeInitErrorCard(route, 'INIT FUNCTION NOT FOUND');
     return;
   }
   try {
-    console.info('[router] init:start', { route, params });
+    debugInfo('[router] init:start', { route, params });
     await initFn(params);
-    console.info('[router] init:ok', { route });
+    if (isCurrentRouteRender(renderId)) debugInfo('[router] init:ok', { route });
   } catch (error) {
+    if (!isCurrentRouteRender(renderId)) return;
     console.error('[router] init:fail', { route, error });
     routeInitErrorCard(route, error?.message || 'Помилка ініціалізації сторінки');
   }
 }
 
 async function renderRoute() {
+  const renderId = ++routeRenderSequence;
+  const startedAt = performance.now();
   ensureShell();
   const { route, queryParams } = parseHashRoute();
-  console.info('[router] render:start', { hash: location.hash, route, queryParams });
+  updateRouteContext(route, queryParams);
+  debugInfo('[router] render:start', { hash: location.hash, route, queryParams });
 
   try {
     if (!location.hash || String(location.hash || '').replace(/^#/, '').split('?')[0].replace(/^\/+/, '').toLowerCase() !== route) {
@@ -194,74 +267,75 @@ async function renderRoute() {
     }
 
     if (route === 'main') {
-      await mountTemplate('./pages/index.html');
-      const { initHomePage } = await import('../pages/home.js');
-      await runPageInit(route, initHomePage);
+      if (!await mountTemplate('./pages/index.html', renderId)) return;
+      const { initHomePage } = await import('../pages/home.js?v=20260715-clean5');
+      await runPageInit(route, initHomePage, {}, renderId);
       return;
     }
 
     if (route === 'seasons') {
-      await mountTemplate('./pages/seasons.html');
-      const { initSeasonsPage } = await import('../pages/seasons.js');
-      await runPageInit(route, initSeasonsPage);
+      if (!await mountTemplate('./pages/seasons.html', renderId)) return;
+      const { initSeasonsPage } = await import('../pages/seasons.js?v=20260715-clean5');
+      await runPageInit(route, initSeasonsPage, {}, renderId);
       return;
     }
 
     if (route === 'season') {
-      await mountTemplate('./pages/season.html');
-      const { initSeasonPage } = await import('../pages/season.js');
-      await runPageInit(route, initSeasonPage, { season: queryParams.season, league: queryParams.league });
+      if (!await mountTemplate('./pages/season.html', renderId)) return;
+      const { initSeasonPage } = await import('../pages/season.js?v=20260715-clean5');
+      await runPageInit(route, initSeasonPage, { season: queryParams.season, league: queryParams.league }, renderId);
       return;
     }
 
     if (route === 'league-stats') {
-      await mountTemplate('./pages/league.html');
-      const { initLeagueStatsPage } = await import('../pages/league-stats.js');
-      await runPageInit(route, initLeagueStatsPage, { league: queryParams.league });
+      if (!await mountTemplate('./pages/league.html?v=20260715-clean5', renderId)) return;
+      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260715-clean5');
+      await runPageInit(route, initLeagueStatsPage, { league: queryParams.league }, renderId);
       return;
     }
 
     if (route === 'gameday') {
-      await mountTemplate('./pages/gameday.html');
-      const { initGameDayPage } = await import('../pages/gameday.js');
-      await runPageInit(route, initGameDayPage, { league: queryParams.league, date: queryParams.date });
+      if (!await mountTemplate('./pages/gameday.html', renderId)) return;
+      const { initGameDayPage } = await import('../pages/gameday.js?v=20260715-clean5');
+      await runPageInit(route, initGameDayPage, { league: queryParams.league, date: queryParams.date }, renderId);
       return;
     }
 
     if (route === 'player') {
-      await mountTemplate('./pages/profile.html');
-      const { initProfilePage } = await import('../pages/profile.js');
-      await runPageInit(route, initProfilePage, { league: queryParams.league, nick: queryParams.nick });
+      if (!await mountTemplate('./pages/profile.html', renderId)) return;
+      const { initProfilePage } = await import('../pages/profile.js?v=20260715-clean5');
+      await runPageInit(route, initProfilePage, { league: queryParams.league, nick: queryParams.nick }, renderId);
       return;
     }
 
     if (route === 'rules') {
-      await mountTemplate('./pages/rules.html');
-      const { initRulesPage } = await import('../pages/rules.js');
-      await runPageInit(route, initRulesPage);
+      if (!await mountTemplate('./pages/rules.html', renderId)) return;
+      const { initRulesPage } = await import('../pages/rules.js?v=20260714-archive2');
+      await runPageInit(route, initRulesPage, {}, renderId);
       return;
     }
 
     if (route === 'tournaments') {
-      await mountTemplate('./pages/tournaments.html');
-      const { initTournamentsPage } = await import('../pages/tournaments.js');
+      if (!await mountTemplate('./pages/tournaments.html', renderId)) return;
+      const { initTournamentsPage } = await import('../pages/tournaments.js?v=20260715-clean5');
       await runPageInit(route, initTournamentsPage, {
         selected: queryParams.selected || queryParams.id || ''
-      });
-      return;
-    }
-    if (route === 'school') {
-      await mountTemplate('./pages/school.html');
-      const { initSchoolPage } = await import('../pages/school.js');
-      await runPageInit(route, initSchoolPage);
+      }, renderId);
       return;
     }
 
     location.replace(buildHash('main'));
+  } catch (error) {
+    if (!isCurrentRouteRender(renderId)) return;
+    throw error;
   } finally {
-    console.info('[router] render:end', { route });
-    animateRouteView();
-    window.dispatchEvent(new CustomEvent('v2:route-rendered', { detail: { route } }));
+    if (isCurrentRouteRender(renderId)) {
+      debugInfo('[router] render:end', { route, durationMs: Math.round(performance.now() - startedAt) });
+      animateRouteView();
+      focusRouteContent();
+      stabilizeRouteFocus(renderId);
+      window.dispatchEvent(new CustomEvent('v2:route-rendered', { detail: { route } }));
+    }
   }
 }
 

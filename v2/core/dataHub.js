@@ -4,19 +4,23 @@ import { jsonp } from './utils.js';
 import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueKey } from './naming.js';
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
 import { makeDataStatus } from './dataStatus.js';
+import { debugLog, debugWarn } from './debug.js';
 
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
 const SHEET_CACHE_VERSION = 'sheets-20260603-summer2026';
-const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260602';
+const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260714-archive1';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
+const parsedMatchesCache = new WeakMap();
+const parsedLogsCache = new WeakMap();
 
 const GAME_WIN_POINTS = 20;
 const MVP_BONUS_POINTS = { mvp1: 12, mvp2: 7, mvp3: 3 };
 const RANK_POINT_PENALTIES = { F: 0, E: -4, D: -6, C: -8, B: -10, A: -12, S: -14 };
 const MAX_SAFE_LOG_ROWS = 5000;
+const SHEET_READ_TIMEOUT_MS = 25_000;
 
 const TTL = {
   home: 60_000,
@@ -25,6 +29,7 @@ const TTL = {
   seasonDashboard: 60_000,
   gameday: 15_000,
   profile: 120_000,
+  seasonMaster: 300_000,
   sheet: 60_000,
   avatars: 120_000,
   config: 300_000
@@ -90,9 +95,12 @@ function selectPlayerRowByLeague(players = [], targetNick = '', profileLeagueCon
   if (unknownLeague.length && sameNick.length === 1) return unknownLeague[0];
   return null;
 }
-function toNumber(value, fallback = null) {
+export function toNumber(value, fallback = null) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const parsed = Number(String(value ?? '').replace(',', '.').trim());
+  if (value === null || value === undefined) return fallback;
+  const normalized = String(value).replace(',', '.').trim();
+  if (!normalized) return fallback;
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 function parseNickList(raw = '') {
@@ -138,7 +146,7 @@ function pickFirst(...values) {
   return null;
 }
 
-function normalizeSeasonPlayerRow(row = {}) {
+export function normalizeSeasonPlayerRow(row = {}) {
   const source = (row && typeof row === 'object') ? row : {};
   const normalizedMap = Object.entries(source).reduce((acc, [key, value]) => {
     acc[normalizeHeader(key)] = value;
@@ -155,12 +163,16 @@ function normalizeSeasonPlayerRow(row = {}) {
   const mvp2 = toNumber(pickFirst(getField('mvp2'), source.mvp2, source.MVP2), null);
   const mvp3 = toNumber(pickFirst(getField('mvp3'), source.mvp3, source.MVP3), null);
   const mvpTotal = toNumber(pickFirst(getField('mvp_total', 'mvp'), source.mvp_total, source.MVP_total, source.MVP, source.mvp), null);
+  const hasMvpBreakdown = [mvp1, mvp2, mvp3].some(Number.isFinite);
   const ratingEndValue = toNumber(pickFirst(getField('rating_end', 'rating', 'points'), source.rating_end, source.Rating_end, source.rating, source.Rating, source.points, source.Points), null);
-  const rawPlace = toNumber(pickFirst(getField('place', 'place_final', 'final_place'), source.place, source.Place, source.finalPlace), null);
   const rawRank = pickFirst(getField('rank_final', 'rank', 'rank_letter'), source.rank_final, source.Rank_final, source.rankLetter, source.rank, source.Rank);
   const rankValue = rawRank && typeof rawRank === 'object'
     ? pickFirst(rawRank.label, rawRank.rank, rawRank.value)
     : rawRank;
+  const explicitPlace = toNumber(pickFirst(getField('place', 'place_final', 'final_place'), source.place, source.Place, source.finalPlace), null);
+  // Legacy season masters store the final position as a number in Rank_final.
+  const legacyRankPlace = toNumber(rankValue, null);
+  const rawPlace = Number.isFinite(explicitPlace) ? explicitPlace : legacyRankPlace;
   const rankFinal = parseRankLetter(rankValue) || (Number.isFinite(ratingEndValue) ? rankFromPoints(ratingEndValue) : null);
 
   return {
@@ -175,7 +187,11 @@ function normalizeSeasonPlayerRow(row = {}) {
     mvp1,
     mvp2,
     mvp3,
-    mvp_total: Number.isFinite(mvpTotal) ? mvpTotal : [mvp1, mvp2, mvp3].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0),
+    mvp_total: Number.isFinite(mvpTotal)
+      ? mvpTotal
+      : (hasMvpBreakdown
+        ? [mvp1, mvp2, mvp3].reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0)
+        : null),
     rounds: toNumber(pickFirst(getField('rounds'), source.rounds, source.Rounds), null),
     rating_start: toNumber(pickFirst(getField('rating_start'), source.rating_start, source.Rating_start), null),
     rating_end: ratingEndValue,
@@ -436,14 +452,8 @@ function normalizeSeasonMasterPayload(payload, seasonId = '') {
   };
 }
 
-function normalizeStaticSeasonMaster(staticData = {}, seasonId = '') {
+export function normalizeStaticSeasonMaster(staticData = {}, seasonId = '') {
   if (!staticData || typeof staticData !== 'object') return null;
-  if (staticData.sections && typeof staticData.sections === 'object') {
-    return normalizeSeasonMasterPayload({
-      seasonId: staticData.seasonId || seasonId,
-      sections: staticData.sections
-    }, seasonId);
-  }
 
   const league_summary = [];
   const awards = [];
@@ -479,18 +489,29 @@ function normalizeStaticSeasonMaster(staticData = {}, seasonId = '') {
     });
   });
 
+  const sourceSections = staticData.sections && typeof staticData.sections === 'object'
+    ? staticData.sections
+    : {};
+  const sourceSummary = Array.isArray(sourceSections.league_summary)
+    ? sourceSections.league_summary
+    : Object.values(sourceSections.league_summary || {});
+  const sourceAwards = Array.isArray(sourceSections.awards)
+    ? sourceSections.awards
+    : Object.values(sourceSections.awards || {}).flatMap((rows) => Array.isArray(rows) ? rows : []);
+  const sourcePlayers = Array.isArray(sourceSections.players) ? sourceSections.players : [];
+
   return normalizeSeasonMasterPayload({
     seasonId: staticData.seasonId || seasonId,
     sections: {
-      season_meta: staticData.sections?.season_meta || {
+      season_meta: sourceSections.season_meta || {
         season: staticData.seasonId || seasonId,
         title: staticData.seasonTitle || seasonId,
         ...(staticData.period || {})
       },
-      league_summary,
-      awards,
-      series_summary: [],
-      players
+      league_summary: [...league_summary, ...sourceSummary],
+      awards: [...awards, ...sourceAwards],
+      series_summary: Array.isArray(sourceSections.series_summary) ? sourceSections.series_summary : [],
+      players: [...players, ...sourcePlayers]
     }
   }, seasonId);
 }
@@ -535,9 +556,13 @@ function readCacheEntry(key, ttlMs) {
   return { value: hit.value, ts: hit.ts };
 }
 function readStorageCache(key, ttlMs) {
-  if ((!key.startsWith('sheet:') && !key.startsWith('home:')) || typeof window === 'undefined') return null;
+  const isSeasonMaster = key.startsWith('season-master:');
+  const isDerivedSession = isSeasonMaster
+    || key.startsWith('league-live-current:')
+    || key.startsWith('gameday-full:');
+  if ((!key.startsWith('sheet:') && !key.startsWith('home:') && !isDerivedSession) || typeof window === 'undefined') return null;
   const storageKey = `${STORAGE_PREFIX}${key}`;
-  const sources = [window.sessionStorage, window.localStorage];
+  const sources = isDerivedSession ? [window.sessionStorage] : [window.sessionStorage, window.localStorage];
   for (const storage of sources) {
     try {
       const raw = storage.getItem(storageKey);
@@ -556,17 +581,34 @@ function readStorageCache(key, ttlMs) {
 }
 
 function writeStorageCache(key, value) {
-  if ((!key.startsWith('sheet:') && !key.startsWith('home:')) || typeof window === 'undefined') return;
+  const isSeasonMaster = key.startsWith('season-master:');
+  const isDerivedSession = isSeasonMaster
+    || key.startsWith('league-live-current:')
+    || key.startsWith('gameday-full:');
+  if ((!key.startsWith('sheet:') && !key.startsWith('home:') && !isDerivedSession) || typeof window === 'undefined') return;
   const payload = JSON.stringify({ ts: Date.now(), data: value });
   const storageKey = `${STORAGE_PREFIX}${key}`;
   try { window.sessionStorage.setItem(storageKey, payload); } catch {}
-  try { window.localStorage.setItem(storageKey, payload); } catch {}
+  if (!isDerivedSession) {
+    try { window.localStorage.setItem(storageKey, payload); } catch {}
+  }
 }
 
 function writeCache(key, value) {
   cache.set(key, { ts: Date.now(), value });
   writeStorageCache(key, value);
   return value;
+}
+
+async function withInFlight(key, loader) {
+  if (inFlight.has(key)) return inFlight.get(key);
+  const promise = Promise.resolve().then(loader);
+  inFlight.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    if (inFlight.get(key) === promise) inFlight.delete(key);
+  }
 }
 
 async function gasPost(payload = {}, timeoutMs = 12_000) {
@@ -610,16 +652,16 @@ async function gasGetJsonp(params = {}, timeoutMs = 12_000) {
   const action = String(params?.action || '').trim();
   if (!action) throw new Error('GAS action is required');
   const requestParams = { ...params, action };
-  console.debug('[dataHub] GAS JSONP request', { gasUrl, action, params: requestParams });
+  debugLog('[dataHub] GAS JSONP request', { gasUrl, action, params: requestParams });
 
   try {
     const raw = await jsonp(gasUrl, requestParams, timeoutMs);
     const response = normalizeGasPayload(raw);
-    console.debug('[dataHub] GAS JSONP response', { action, status: response?.status, message: response?.message });
+    debugLog('[dataHub] GAS JSONP response', { action, status: response?.status, message: response?.message });
     return response;
   } catch (error) {
     if (String(error?.message || '').includes('JSONP timeout')) {
-      console.debug('[dataHub] GAS JSONP timeout', { action, gasUrl, params: requestParams, error: String(error?.message || error) });
+      debugLog('[dataHub] GAS JSONP timeout', { action, gasUrl, params: requestParams, error: String(error?.message || error) });
       throw new Error('GAS недоступний / timeout');
     }
     throw error;
@@ -766,34 +808,43 @@ async function gasCall(action, params = {}, timeoutMs = 12_000, ttlMs = TTL.shee
   try { return await promise; } finally { inFlight.delete(key); }
 }
 
-async function tryReadSheetVariant(sheetName, options = {}) {
+function resolveSheetReadLimits(sheetName, options = {}) {
   const canonical = normalizeHeader(sheetName).replace(/\s+/g, '');
   const range = SHEET_RANGES[canonical] || SHEET_RANGES[normalizeHeader(sheetName)] || '';
   const requestedLimitRows = Number(options.limitRows);
   const isArchiveSheet = ['archive', 'архів'].includes(normalizeHeader(sheetName));
-  const safeLimitRows = isArchiveSheet
+  const outputLimitRows = isArchiveSheet
     ? Math.min(ARCHIVE_LIMIT_ROWS, Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? requestedLimitRows : ARCHIVE_LIMIT_ROWS)
-    : requestedLimitRows;
+    : null;
+  const rangeMatch = String(range).match(/:([A-Z]+)(\d+)$/i);
+  const rangeLimitRows = rangeMatch ? Number(rangeMatch[2]) : undefined;
+  // An explicit page limit must not be inflated by the legacy range ceiling.
+  // Inflating small live reads to 10k rows made cold GAS requests exceed JSONP timeout.
+  const requestedEffectiveLimitRows = Number.isFinite(requestedLimitRows) && requestedLimitRows > 0
+    ? requestedLimitRows
+    : (Number.isFinite(rangeLimitRows) && rangeLimitRows > 0 ? rangeLimitRows : 0);
+  const effectiveLimitRows = canonical === 'logs'
+    ? Math.min(requestedEffectiveLimitRows || MAX_SAFE_LOG_ROWS, MAX_SAFE_LOG_ROWS)
+    : requestedEffectiveLimitRows;
+  return { canonical, range, effectiveLimitRows, outputLimitRows, requestedLimitRows };
+}
+
+async function tryReadSheetVariant(sheetName, options = {}) {
+  const { range, effectiveLimitRows, outputLimitRows } = resolveSheetReadLimits(sheetName, options);
   let payload = null;
   try {
     if (range) {
-      const rangeMatch = String(range).match(/:([A-Z]+)(\d+)$/i);
-      const rangeLimitRows = rangeMatch ? Number(rangeMatch[2]) : undefined;
-      const requestedEffectiveLimitRows = Math.max(
-        Number.isFinite(rangeLimitRows) && rangeLimitRows > 0 ? rangeLimitRows : 0,
-        Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? requestedLimitRows : 0
+      payload = await gasGetJsonp(
+        { action: 'getSheetRaw', sheet: sheetName, limitRows: effectiveLimitRows || undefined },
+        SHEET_READ_TIMEOUT_MS
       );
-      const effectiveLimitRows = canonical === 'logs'
-        ? Math.min(requestedEffectiveLimitRows || MAX_SAFE_LOG_ROWS, MAX_SAFE_LOG_ROWS)
-        : requestedEffectiveLimitRows;
-      payload = await gasGetJsonp({ action: 'getSheetRaw', sheet: sheetName, limitRows: effectiveLimitRows || undefined });
     } else {
       payload = await readSheetAll(sheetName);
     }
 
-    if (isArchiveSheet && Number.isFinite(safeLimitRows) && safeLimitRows > 0 && payload && typeof payload === 'object') {
-      if (Array.isArray(payload.values)) payload.values = payload.values.slice(0, safeLimitRows + 1);
-      if (Array.isArray(payload.rows)) payload.rows = payload.rows.slice(0, safeLimitRows);
+    if (Number.isFinite(outputLimitRows) && outputLimitRows > 0 && payload && typeof payload === 'object') {
+      if (Array.isArray(payload.values)) payload.values = payload.values.slice(0, outputLimitRows + 1);
+      if (Array.isArray(payload.rows)) payload.rows = payload.rows.slice(0, outputLimitRows);
     }
 
     if (normalizeHeader(payload?.status) === 'err') {
@@ -802,7 +853,7 @@ async function tryReadSheetVariant(sheetName, options = {}) {
 
     return normalizeGetSheetRawResponse(payload, sheetName);
   } catch (error) {
-    console.debug('[dataHub] readSheet error', {
+    debugLog('[dataHub] readSheet error', {
       sheetName,
       status: payload?.status,
       keys: payload ? Object.keys(payload) : [],
@@ -819,11 +870,13 @@ async function readSheet(sheetName, options = {}) {
   const normalized = normalizeHeader(sheetName).replace(/\s+/g, '');
   const aliases = SHEET_ALIASES[normalized] || SHEET_ALIASES[normalizeHeader(sheetName)] || [];
   const variants = [sheetName, ...aliases].slice(0, 3);
-  const requestedLimitRows = Number(options.limitRows);
-  const requestedLimitCols = Number(options.limitCols);
+  const { range, effectiveLimitRows, outputLimitRows, requestedLimitRows } = resolveSheetReadLimits(sheetName, options);
+  const cacheLimitRows = range
+    ? effectiveLimitRows
+    : (Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? requestedLimitRows : 0);
   const optionKey = [
-    Number.isFinite(requestedLimitRows) && requestedLimitRows > 0 ? `r${requestedLimitRows}` : 'r0',
-    Number.isFinite(requestedLimitCols) && requestedLimitCols > 0 ? `c${requestedLimitCols}` : 'c0'
+    `r${cacheLimitRows || 0}`,
+    `o${outputLimitRows || 0}`
   ].join(':');
   const key = `sheet:${SHEET_CACHE_VERSION}:${variants.join('|')}:${optionKey}`;
   const cached = readCache(key, TTL.sheet) || readStorageCache(key, 10 * 60_000);
@@ -866,7 +919,7 @@ async function loadOptional(sourceLabel, loader, fallbackValue) {
     const value = await loader();
     return value ?? fallbackValue;
   } catch (error) {
-    console.warn(`[dataHub] optional source failed: ${sourceLabel}`, String(error?.message || error));
+    debugWarn(`[dataHub] optional source failed: ${sourceLabel}`, String(error?.message || error));
     return fallbackValue;
   }
 }
@@ -876,7 +929,7 @@ async function loadSoftCritical(sourceLabel, loader, fallbackValue) {
     const value = await loader();
     return value ?? fallbackValue;
   } catch (error) {
-    console.warn(`[dataHub] soft-critical source failed: ${sourceLabel}`, String(error?.message || error));
+    debugWarn(`[dataHub] soft-critical source failed: ${sourceLabel}`, String(error?.message || error));
     return fallbackValue;
   }
 }
@@ -1081,6 +1134,15 @@ function parseMatches(sheet) {
       rounds: roundsCount
     };
   }).filter((m) => m.team1.length || m.team2.length || m.team3.length || m.team4.length);
+}
+
+function parseMatchesCached(sheet = {}) {
+  if (!sheet || typeof sheet !== 'object') return parseMatches(sheet);
+  const cached = parsedMatchesCache.get(sheet);
+  if (cached) return cached;
+  const parsed = parseMatches(sheet);
+  parsedMatchesCache.set(sheet, parsed);
+  return parsed;
 }
 
 function normalizeWinnerToken(value = '') {
@@ -1301,6 +1363,15 @@ function parseLogs(sheet) {
     const tsMs = Date.parse(timestamp);
     return { timestamp, tsMs: Number.isFinite(tsMs) ? tsMs : null, date, league, nick, delta, newPoints };
   }).filter((entry) => entry.nick && (entry.delta !== null || entry.newPoints !== null));
+}
+
+function parseLogsCached(sheet = {}) {
+  if (!sheet || typeof sheet !== 'object') return parseLogs(sheet);
+  const cached = parsedLogsCache.get(sheet);
+  if (cached) return cached;
+  const parsed = parseLogs(sheet);
+  parsedLogsCache.set(sheet, parsed);
+  return parsed;
 }
 
 function deriveLogDeltas(entries = []) {
@@ -1588,7 +1659,14 @@ function buildAwards(players = [], recentGames = [], progress = {}) {
 export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
   const league = normalizeLeague(leagueId) || 'kids';
   const cacheKey = `league-live-current:${league}`;
-  const cachedEntry = readCacheEntry(cacheKey, TTL.leagueSnapshot);
+  let cachedEntry = readCacheEntry(cacheKey, TTL.leagueSnapshot);
+  if (!cachedEntry) {
+    const stored = readStorageCache(cacheKey, TTL.leagueSnapshot);
+    if (stored) {
+      cache.set(cacheKey, { ts: Date.now(), value: stored });
+      cachedEntry = readCacheEntry(cacheKey, TTL.leagueSnapshot);
+    }
+  }
   if (cachedEntry?.value) {
     const cachedUpdatedAt = cachedEntry.value?.dataStatus?.updatedAt || new Date(cachedEntry.ts).toISOString();
     return {
@@ -1602,9 +1680,9 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     };
   }
 
-  const season = await fetchCritical('current-season', () => getCurrentSeason());
-  const leagueSheet = await fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 4000, limitCols: 40 }));
-  const [gamesSheet, logsSheet, avatarsMap] = await Promise.all([
+  const [season, leagueSheet, gamesSheet, logsSheet, avatarsMap] = await Promise.all([
+    fetchCritical('current-season', () => getCurrentSeason()),
+    fetchCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 4000, limitCols: 40 })),
     fetchOptional('games-sheet', () => readSheet('games', { limitRows: 8000, limitCols: 40 }), { header: [], rows: [] }),
     fetchOptional('logs-sheet', () => readSheet('logs', { limitRows: MAX_SAFE_LOG_ROWS, limitCols: 30 }), { header: [], rows: [] }),
     fetchOptional('avatars-map', () => getAvatarsMap(), new Map())
@@ -1630,11 +1708,13 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     delta: 0
   }]));
 
-  const liveGames = parseMatches(gamesSheet || { header: [], rows: [] })
+  const parsedGames = parseMatchesCached(gamesSheet || { header: [], rows: [] });
+  const parsedLogs = parseLogsCached(logsSheet || { header: [], rows: [] });
+  const liveGames = parsedGames
     .filter((match) => match.league === league && inDateRange(match.date, seasonStart, seasonEnd));
-  const liveLogs = deriveLogDeltas(parseLogs(logsSheet || { header: [], rows: [] }))
+  const liveLogs = deriveLogDeltas(parsedLogs)
     .filter((entry) => entry.league === league && inDateRange(entry.date, seasonStart, seasonEnd));
-  const seasonBaselineByNick = buildSeasonBaselineByNick(parseLogs(logsSheet || { header: [], rows: [] }), league, seasonStart, seasonEnd);
+  const seasonBaselineByNick = buildSeasonBaselineByNick(parsedLogs, league, seasonStart, seasonEnd);
 
   liveGames.forEach((game) => {
     const teams = { team1: game.team1 || [], team2: game.team2 || [], team3: game.team3 || [], team4: game.team4 || [] };
@@ -1762,7 +1842,7 @@ export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
     })
   };
 
-  console.debug('[dataHub] dataStatus', {
+  debugLog('[dataHub] dataStatus', {
     source: result.dataStatus.source,
     ok: result.dataStatus.ok,
     updatedAt: result.dataStatus.updatedAt
@@ -1875,7 +1955,7 @@ export async function getLeagueLiveData(leagueId = 'kids') {
       updatedAt: new Date().toISOString()
     })
   };
-  console.debug('[dataHub] dataStatus', {
+  debugLog('[dataHub] dataStatus', {
     source: result.dataStatus.source,
     ok: result.dataStatus.ok,
     updatedAt: result.dataStatus.updatedAt
@@ -1963,6 +2043,10 @@ async function getSeasonBundle(season) {
   const cached = readCache(key, TTL.ratings);
   if (cached) return cached;
 
+  return withInFlight(`load:${key}`, async () => {
+    const refreshed = readCache(key, TTL.ratings);
+    if (refreshed) return refreshed;
+
   const emptySheet = { header: [], rows: [] };
 
   const [seasonSheet, kidsSheet, sundaySheet, gamesSheet, logsSheet] = await Promise.all([
@@ -1998,7 +2082,8 @@ async function getSeasonBundle(season) {
     logEntries: parseLogs(logsSheet || emptySheet) || []
   };
 
-  return writeCache(key, normalizedBundle);
+    return writeCache(key, normalizedBundle);
+  });
 }
 
 export async function getAvatarsMap() {
@@ -2105,7 +2190,7 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
     const normalizedSnapshot = normalizeLeagueSnapshotResponse(snapshotPayload, season, selectedLeague);
     if (normalizedSnapshot) return writeCache(cacheKey, normalizedSnapshot);
   } catch (error) {
-    console.debug('[dataHub] getSnapshot league fallback', { seasonId: season.id, league: selectedLeague, error: String(error?.message || error) });
+    debugLog('[dataHub] getSnapshot league fallback', { seasonId: season.id, league: selectedLeague, error: String(error?.message || error) });
   }
 
   const [bundle, avatars] = await Promise.all([
@@ -2132,7 +2217,7 @@ export async function getLeagueSnapshot(leagueOrOptions = 'kids', seasonIdArg) {
   }
 
   if (!rows.length && !bundleGames.length) {
-    console.warn('[snapshot] no data, returning empty');
+    debugWarn('[snapshot] no data, returning empty');
     return {
       players: [],
       matches: [],
@@ -2176,7 +2261,7 @@ export async function getLiveLeagueSnapshot(league = 'kids') {
   const payload = await gasCall('getSnapshot', { scope: 'league', league: selectedLeague }, 12_000, TTL.leagueSnapshot);
   const normalized = normalizeLeagueSnapshotResponse(payload, currentSeason, selectedLeague);
   if (!normalized) {
-    console.warn('[snapshot] normalized missing');
+    debugWarn('[snapshot] normalized missing');
     return {
       players: [],
       matches: [],
@@ -2316,29 +2401,16 @@ export async function getGameDayView({ dateYMD, league } = {}) {
   return writeCache(key, view);
 }
 
-export async function listSeasonMasters() {
-  const key = 'season-masters:list';
+export async function listSeasonMasters(options = {}) {
+  const includeCurrent = options?.includeCurrent === true;
+  const key = `season-masters:list:${includeCurrent ? 'all' : 'archive'}`;
   const cached = readCache(key, TTL.seasonDashboard);
   if (cached) return cached;
   const cfg = await loadSeasonsConfig();
-  const configured = cfg.seasons.filter((s) => s.enabled !== false).map((s) => s.id);
-  const staticIds = cfg.seasons.filter((s) => s.enabled !== false && s.isStatic).map((s) => s.id);
-
-  try {
-    const payload = await fetchSeasonMasterApi({ action: 'listSeasonMasters' });
-    const raw = payload?.seasons || payload?.items || payload?.list || payload?.data || payload?.result || [];
-    const list = Array.isArray(raw)
-      ? raw
-        .map((item) => {
-          if (typeof item === 'string') return item.trim();
-          return String(item?.id || item?.season || item?.seasonId || '').trim();
-        })
-        .filter(Boolean)
-      : [];
-    if (list.length) return writeCache(key, [...new Set([...staticIds, ...list])]);
-  } catch (error) {
-    console.debug('[dataHub] listSeasonMasters fallback', String(error?.message || error));
-  }
+  const configured = cfg.seasons
+    .filter((season) => season.enabled !== false)
+    .filter((season) => includeCurrent || season.id !== cfg.currentSeasonId)
+    .map((season) => season.id);
   return writeCache(key, configured);
 }
 
@@ -2346,40 +2418,43 @@ export async function getSeasonMaster(seasonId) {
   const season = String(seasonId || '').trim();
   if (!season) throw new Error('seasonId is required');
   if (seasonCache[season]) return seasonCache[season];
-  if (season === 'spring_2026') {
-    const staticData = await readStaticSeason(season);
-    const staticMaster = normalizeStaticSeasonMaster(staticData, season);
-    if (staticMaster) {
-      seasonCache[season] = staticMaster;
-      return staticMaster;
-    }
-  }
-  const cfg = await loadSeasonsConfig();
-  const configuredSeason = cfg.seasons.find((item) => item.id === season);
 
-  if (configuredSeason?.isStatic) {
-    const staticData = await readStaticSeason(season);
-    const staticMaster = normalizeStaticSeasonMaster(staticData, season);
-    if (staticMaster) {
-      seasonCache[season] = staticMaster;
-      return staticMaster;
-    }
+  const storageKey = `season-master:${season}`;
+  const stored = readStorageCache(storageKey, TTL.seasonMaster);
+  if (stored) {
+    seasonCache[season] = stored;
+    return stored;
   }
 
-  try {
-    const payload = await fetchSeasonMasterApi({ action: 'getSeasonMaster', season });
-    const normalized = normalizeSeasonMasterPayload(payload, season);
-    seasonCache[season] = normalized;
-    return normalized;
-  } catch (error) {
-    const staticData = await readStaticSeason(season);
-    const staticMaster = normalizeStaticSeasonMaster(staticData, season);
-    if (staticMaster) {
-      seasonCache[season] = staticMaster;
-      return staticMaster;
+  return withInFlight(`load:${storageKey}`, async () => {
+    if (seasonCache[season]) return seasonCache[season];
+    const refreshed = readStorageCache(storageKey, TTL.seasonMaster);
+    if (refreshed) {
+      seasonCache[season] = refreshed;
+      return refreshed;
     }
-    throw error;
-  }
+
+    const store = (value) => {
+      seasonCache[season] = value;
+      writeStorageCache(storageKey, value);
+      return value;
+    };
+
+    if (season === 'spring_2026') {
+      const staticData = await readStaticSeason(season);
+      const staticMaster = normalizeStaticSeasonMaster(staticData, season);
+      if (staticMaster) return store(staticMaster);
+    }
+    try {
+      const payload = await fetchSeasonMasterApi({ action: 'getSeasonMaster', season });
+      return store(normalizeSeasonMasterPayload(payload, season));
+    } catch (error) {
+      const staticData = await readStaticSeason(season);
+      const staticMaster = normalizeStaticSeasonMaster(staticData, season);
+      if (staticMaster) return store(staticMaster);
+      throw error;
+    }
+  });
 }
 
 export async function getSeasonSection(seasonId, sectionName) {
@@ -2481,8 +2556,13 @@ export async function buildPlayerCareer(nick, options = {}) {
   const cached = readCache(key, TTL.profile);
   if (cached) return cached;
 
-  const avatars = await getAvatarsMap();
-  const seasonIds = await listSeasonMasters();
+  const [avatars, seasonIds, config] = await Promise.all([
+    getAvatarsMap(),
+    listSeasonMasters({ includeCurrent: true }),
+    loadSeasonsConfig()
+  ]);
+  const seasonMetaById = new Map((config?.seasons || []).map((season) => [season.id, season]));
+  const seasonMasterResults = await Promise.allSettled(seasonIds.map((seasonId) => getSeasonMaster(seasonId)));
 
   const total = {
     games: 0,
@@ -2506,14 +2586,14 @@ export async function buildPlayerCareer(nick, options = {}) {
   const leagueGames = { kids: 0, sundaygames: 0 };
   const addWins = { kids: 0, sundaygames: 0 };
 
-  for (const seasonId of seasonIds) {
-    let seasonMaster;
-    try {
-      seasonMaster = await getSeasonMaster(seasonId);
-    } catch (error) {
-      console.debug('[dataHub] buildPlayerCareer skip season (master unavailable)', seasonId, String(error?.message || error));
+  for (let index = 0; index < seasonIds.length; index += 1) {
+    const seasonId = seasonIds[index];
+    const seasonResult = seasonMasterResults[index];
+    if (seasonResult.status !== 'fulfilled') {
+      debugLog('[dataHub] buildPlayerCareer skip season (master unavailable)', seasonId, String(seasonResult.reason?.message || seasonResult.reason));
       continue;
     }
+    const seasonMaster = seasonResult.value;
 
     const players = Array.isArray(seasonMaster?.sections?.players) ? seasonMaster.sections.players : [];
     if (!players.length) continue;
@@ -2523,13 +2603,13 @@ export async function buildPlayerCareer(nick, options = {}) {
 
     const seasonEntry = buildSeasonEntry(playerRow, {
       seasonId,
-      seasonTitle: resolveSeasonTitle(seasonMaster, seasonId),
+      seasonTitle: seasonMetaById.get(seasonId)?.uiLabel || resolveSeasonTitle(seasonMaster, seasonId),
       nickname: nick,
       profileLeagueContext
     });
 
     if (!isValidSeasonEntry(seasonEntry, { targetNick: nick, profileLeagueContext })) {
-      console.debug('[dataHub] buildPlayerCareer skip invalid season entry', seasonId, { nick, league: profileLeagueContext });
+      debugLog('[dataHub] buildPlayerCareer skip invalid season entry', seasonId, { nick, league: profileLeagueContext });
       continue;
     }
 
@@ -2558,7 +2638,12 @@ export async function buildPlayerCareer(nick, options = {}) {
 
   if (!playedSeasons.length) return null;
 
-  playedSeasons.sort((a, b) => String(b.seasonId).localeCompare(String(a.seasonId)));
+  playedSeasons.sort((a, b) => {
+    const aDate = Date.parse(seasonMetaById.get(a.seasonId)?.dateStart || '');
+    const bDate = Date.parse(seasonMetaById.get(b.seasonId)?.dateStart || '');
+    if (Number.isFinite(aDate) && Number.isFinite(bDate) && aDate !== bDate) return bDate - aDate;
+    return String(b.seasonId).localeCompare(String(a.seasonId));
+  });
   total.seasonsPlayed = seasonSet.size;
   total.winrate = total.matches ? Number(((total.wins / total.matches) * 100).toFixed(1)) : null;
   total.totalMatches = total.matches;
@@ -2727,9 +2812,16 @@ export async function getPlayerProfile(nickOrOptions = {}, leagueArg = 'kids') {
 export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const dateYMD = typeof dateOrOptions === 'object' ? (dateOrOptions.date || dateOrOptions.dateYMD) : dateOrOptions;
   const league = normalizeLeague(typeof dateOrOptions === 'object' ? (dateOrOptions.league || dateOrOptions.leagueId) : leagueArg) || 'kids';
-  const games = await loadCritical('games', () => readSheet('games', { limitRows: 8000, limitCols: 40 }));
-  const [leagueSheet, logs, avatars] = await Promise.all([
-    loadSoftCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 3000, limitCols: 40 }), null),
+  const cacheKey = `gameday-full:${dateYMD || 'latest'}:${league}`;
+  const cached = readCache(cacheKey, TTL.gameday) || readStorageCache(cacheKey, TTL.gameday);
+  if (cached) return cached;
+
+  return withInFlight(`load:${cacheKey}`, async () => {
+    const refreshed = readCache(cacheKey, TTL.gameday) || readStorageCache(cacheKey, TTL.gameday);
+    if (refreshed) return refreshed;
+  const [games, leagueSheet, logs, avatars] = await Promise.all([
+    loadCritical('games', () => readSheet('games', { limitRows: 8000, limitCols: 40 })),
+    loadSoftCritical(`${league}-sheet`, () => readSheet(league, { limitRows: 4000, limitCols: 40 }), null),
     loadOptional('logs', () => readSheet('logs', { limitRows: MAX_SAFE_LOG_ROWS, limitCols: 30 }), { header: [], rows: [] }),
     loadOptional('avatars', () => getAvatarsMap(), new Map())
   ]);
@@ -2737,18 +2829,18 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
   const logsSheet = logs || { header: [], rows: [] };
   const avatarsMap = avatars || new Map();
 
-  const allLeagueMatches = parseMatches(gamesSheet || { header: [], rows: [] })
+  const allLeagueMatches = parseMatchesCached(gamesSheet)
     .filter((m) => m.league === league)
     .sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
   const availableDates = [...new Set(allLeagueMatches.map((m) => m.date).filter(Boolean))].sort().reverse();
   const selectedDate = (dateYMD && availableDates.includes(dateYMD)) ? dateYMD : (availableDates[0] || '');
-  const allLogs = deriveLogDeltas(parseLogs(logsSheet || { header: [], rows: [] }));
+  const allLogs = deriveLogDeltas(parseLogsCached(logsSheet));
   const dayMatches = allLeagueMatches.filter((m) => m.date === selectedDate);
   const dayLogs = allLogs.filter((entry) => entry.league === league && entry.date === selectedDate);
 
   const leagueSheetMissing = !Array.isArray(leagueSheet?.rows) || !leagueSheet.rows.length;
   if (leagueSheetMissing) {
-    console.warn(`[dataHub] gameday soft fallback: ${league}-sheet unavailable, rendering from games/logs only`);
+    debugWarn(`[dataHub] gameday soft fallback: ${league}-sheet unavailable, rendering from games/logs only`);
   }
   const tableNow = parseScoreboardRows(leagueSheet || { header: [], rows: [] }, league);
   const nowByNick = new Map(tableNow.map((row) => [normalizeHeader(row.nick), row]));
@@ -2937,7 +3029,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     .filter((p) => p.matches > 0)
     .sort((a, b) => ((b.wins / b.matches) - (a.wins / a.matches)) || b.matches - a.matches)[0] || null;
 
-  return {
+  return writeCache(cacheKey, {
     date: selectedDate,
     league,
     availableDates,
@@ -2956,7 +3048,8 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       mvpDay: daySummary?.mvp ? { nick: daySummary.mvp, score: daySummary.mvpScore } : null,
       bestWinRate: winrateLeader ? { nick: winrateLeader.nick, winRate: Math.round((winrateLeader.wins / winrateLeader.matches) * 100), matches: winrateLeader.matches } : null
     }
-  };
+  });
+  });
 }
 
 export async function getSeasons() { return loadSeasonsConfig(); }

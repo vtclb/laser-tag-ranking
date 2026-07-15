@@ -1,7 +1,18 @@
+function storageDebugEnabled() {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem('v2Debug') === '1';
+  } catch {
+    return false;
+  }
+}
+
+const locationSearch = typeof window !== 'undefined' ? window.location?.search || '' : '';
+const locationHash = typeof window !== 'undefined' ? window.location?.hash || '' : '';
+
 export const DEBUG =
-  new URLSearchParams(window.location.search).has('debug') ||
-  window.location.hash.includes('debug=1') ||
-  localStorage.getItem('v2Debug') === '1';
+  new URLSearchParams(locationSearch).has('debug') ||
+  locationHash.includes('debug=1') ||
+  storageDebugEnabled();
 
 export function debugLog(...args) {
   if (DEBUG) console.debug(...args);

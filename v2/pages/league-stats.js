@@ -1,8 +1,9 @@
-﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js';
+﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js?v=20260715-perf2';
 import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
 import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
+import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
 const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 const FALLBACK_AVATAR = './assets/default-avatar.svg';
@@ -112,6 +113,34 @@ function tableRowMarkup(player, league) {
   </tr>`;
 }
 
+function formatUpdatedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('uk-UA', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function renderSeasonNotice(root, league, data) {
+  if (!root) return;
+  const matchesCount = Number(data?.summary?.matchesCount || 0);
+  if (matchesCount > 0) {
+    root.hidden = true;
+    root.innerHTML = '';
+    return;
+  }
+
+  const isKids = league === 'kids';
+  root.hidden = false;
+  root.innerHTML = `<strong>Сезон ще не стартував</strong>
+    <span>${isKids ? 'Поки показуємо стартовий рейтинг дитячої ліги.' : 'Поки показуємо стартові рейтинги гравців.'}</span>`;
+}
+
 function statCard({ label, value, level = 'secondary', icon = '', divider = false, progress = null }) {
   const progressMarkup = progress
     ? `<div class="winrate-bar" aria-hidden="true"><div class="winrate-fill" style="width:${esc(progress.width)}"></div></div>`
@@ -163,6 +192,100 @@ function seasonStatCard({ label, value, meta = '', width = '0%' }) {
     <div class="kpi-meta">${esc(meta)}</div>
     <div class="winrate-bar" aria-hidden="true"><div class="winrate-fill" style="width:${esc(width)}"></div></div>
   </article>`;
+}
+
+function renderLeagueAnalytics(players = [], league = 'kids') {
+  const ranking = [...(Array.isArray(players) ? players : [])]
+    .filter((player) => isSeasonActive(player))
+    .sort((a, b) => (Number(b.points) || 0) - (Number(a.points) || 0));
+
+  if (!ranking.length) {
+    return '<p class="league-pulse__empty">Аналітика з’явиться після перших ігор сезону.</p>';
+  }
+
+  const leader = ranking[0];
+  const runnerUp = ranking[1] || null;
+  const leaderPoints = Number(leader.points) || 0;
+  const runnerUpPoints = Number(runnerUp?.points) || 0;
+  const gap = runnerUp ? Math.max(0, leaderPoints - runnerUpPoints) : null;
+  const runnerWidth = leaderPoints > 0 ? clampPercent((runnerUpPoints / leaderPoints) * 100) : '0%';
+  const contenders = ranking.filter((player) => leaderPoints - (Number(player.points) || 0) <= 100).length;
+  const maxMatches = Math.max(...ranking.map((player) => Number(player.matches) || 0), 0);
+  const qualification = Math.max(3, Math.min(8, Math.ceil(maxMatches * 0.25)));
+  const qualified = ranking.filter((player) => Number(player.matches || 0) >= qualification);
+  const stabilityPool = qualified.length ? qualified : ranking;
+  const stablePlayer = [...stabilityPool]
+    .sort((a, b) => (Number(b.winRate) || 0) - (Number(a.winRate) || 0)
+      || (Number(b.matches) || 0) - (Number(a.matches) || 0))[0] || null;
+  const impactPlayer = [...stabilityPool]
+    .sort((a, b) => {
+      const aRate = Number(a.mvpTotal || 0) / Math.max(Number(a.matches || 0), 1);
+      const bRate = Number(b.mvpTotal || 0) / Math.max(Number(b.matches || 0), 1);
+      return bRate - aRate || (Number(b.mvpTotal) || 0) - (Number(a.mvpTotal) || 0);
+    })[0] || null;
+  const impactRate = impactPlayer
+    ? (Number(impactPlayer.mvpTotal || 0) / Math.max(Number(impactPlayer.matches || 0), 1)).toFixed(2)
+    : '0.00';
+  const topFive = ranking.slice(0, 5);
+  const topFiveSpread = topFive.length > 1
+    ? Math.max(0, (Number(topFive[0].points) || 0) - (Number(topFive.at(-1).points) || 0))
+    : 0;
+  const raceNote = !runnerUp
+    ? 'Перший суперник з’явиться після оновлення рейтингу.'
+    : gap <= 25
+      ? `Лідера й друге місце розділяє лише ${gap} очок.`
+      : gap <= 100
+        ? `Гонка відкрита: відрив від другого місця — ${gap} очок.`
+        : `Лідер має запас ${gap} очок над другим місцем.`;
+
+  const playerLink = (player, className) => player
+    ? `<a class="${className}" href="${playerProfileHash(league, player.nickname)}">${esc(player.nickname)}</a>`
+    : `<span class="${className}">—</span>`;
+
+  return `<div class="league-pulse__layout">
+    <article class="league-race">
+      <div class="league-race__head">
+        <span>Боротьба за перше місце</span>
+        <strong>${gap === null ? '—' : `${gap} очок`}</strong>
+      </div>
+      <div class="league-race__competitors">
+        <div class="league-race__player league-race__player--leader">
+          <span class="league-race__place">#1</span>
+          <span class="league-race__identity">${playerLink(leader, 'league-race__name')}<small>${leaderPoints} очок</small></span>
+          <span class="league-race__track" aria-hidden="true"><span style="width:100%"></span></span>
+        </div>
+        <div class="league-race__player">
+          <span class="league-race__place">#2</span>
+          <span class="league-race__identity">${playerLink(runnerUp, 'league-race__name')}<small>${runnerUp ? `${runnerUpPoints} очок` : 'Немає даних'}</small></span>
+          <span class="league-race__track" aria-hidden="true"><span style="width:${esc(runnerWidth)}"></span></span>
+        </div>
+      </div>
+      <p class="league-race__note">${esc(raceNote)}</p>
+    </article>
+
+    <div class="league-signals">
+      <article class="league-signal league-signal--race">
+        <span class="league-signal__label">Претенденти</span>
+        <strong>${contenders}</strong>
+        <p>гравців у межах 100 очок від лідера</p>
+      </article>
+      <article class="league-signal league-signal--stable">
+        <span class="league-signal__label">Стабільність</span>
+        <strong>${stablePlayer ? winRateText(stablePlayer.winRate) : '—'}</strong>
+        <p>${stablePlayer ? `${esc(stablePlayer.nickname)} · від ${qualification} ігор` : 'Ще немає вибірки'}</p>
+      </article>
+      <article class="league-signal league-signal--impact">
+        <span class="league-signal__label">MVP-ефективність</span>
+        <strong>${impactPlayer ? impactRate : '—'}</strong>
+        <p>${impactPlayer ? `${esc(impactPlayer.nickname)} · MVP за гру` : 'Ще немає вибірки'}</p>
+      </article>
+      <article class="league-signal league-signal--density">
+        <span class="league-signal__label">Щільність топ-5</span>
+        <strong>${topFive.length > 1 ? topFiveSpread : '—'}</strong>
+        <p>${topFive.length > 1 ? 'очок між першим і п’ятим місцем' : 'Потрібно більше гравців'}</p>
+      </article>
+    </div>
+  </div>`;
 }
 
 function rankDistributionBlock(distribution = {}, activePlayersCount = 0) {
@@ -226,9 +349,11 @@ function getSmallestPositiveGrowth(players = []) {
 function renderHero(root, league, data) {
   const dataStatus = makeDataStatus(data?.dataStatus);
   const statusTone = resolveDataStatusTone(dataStatus);
+  const updatedAt = formatUpdatedAt(dataStatus.updatedAt);
   root.innerHTML = `<div class="league-hero__eyebrow">\u0416\u0438\u0432\u0438\u0439 \u0441\u0435\u0437\u043e\u043d</div>
   <h1 class="px-card__title league-section-title">${esc(leagueLabelUA(league))}</h1>
   <p class="px-card__text league-season-title">\u041f\u043e\u0442\u043e\u0447\u043d\u0438\u0439 \u0441\u0435\u0437\u043e\u043d: <strong>${esc(data.seasonLabel)}</strong></p>
+  ${updatedAt ? `<p class="league-hero__updated">Оновлено ${esc(updatedAt)}</p>` : ''}
   <p class="data-status-line ${statusTone.className}">${esc(statusTone.label)}</p>`;
 }
 
@@ -262,7 +387,7 @@ function renderGameDaySection(lastGameDay, league) {
   </section>`;
 }
 
-function renderInfographic(root, data, remainingGameDays, league) {
+function renderInfographic(root, ranksRoot, gameDayRoot, data, remainingGameDays, league) {
   const activePlayers = Array.isArray(data.activePlayers) ? [...data.activePlayers] : [];
   const playersCount = Number(data.summary.activePlayersCount || activePlayers.length || 0);
   const matchesCount = Number(data.summary.matchesCount || 0);
@@ -281,12 +406,8 @@ function renderInfographic(root, data, remainingGameDays, league) {
   const mostActive = matchLeaders[0] || null;
   const secondMostActive = matchLeaders[1] || null;
   const activityLead = mostActive && secondMostActive ? Math.max(0, Number(mostActive.matches || 0) - Number(secondMostActive.matches || 0)) : null;
-  const bestWinrateTop10 = [...leaderBoardByPoints]
-    .slice(0, 10)
-    .filter((player) => Number(player.matches || 0) > 0)
-    .sort((a, b) => (Number(b.winRate) || 0) - (Number(a.winRate) || 0))[0] || null;
-  const bestWinrateTop10Value = bestWinrateTop10 ? `${Number(bestWinrateTop10.winRate || 0).toFixed(1)}%` : '—';
-  const bestWinrateTop10Width = bestWinrateTop10 ? `${Math.max(0, Math.min(100, Number(bestWinrateTop10.winRate || 0))).toFixed(1)}%` : '0%';
+  const totalMvp = Number(data.summary.totalMvp || 0);
+  const mvpPerMatch = matchesCount ? (totalMvp / matchesCount).toFixed(1) : '0.0';
   const averageDeltaPerMatchValue = matchesCount
     ? (activePlayers.reduce((sum, player) => sum + (Number(player.delta) || 0), 0) / matchesCount)
     : null;
@@ -346,18 +467,19 @@ function renderInfographic(root, data, remainingGameDays, league) {
     <h3 class="league-subtitle">Зріз сезону</h3>
     <div class="league-kpi-grid league-kpi-grid--secondary">
     ${seasonStatCard({ label: 'Середній рейтинг ліги', value: avgRating, meta: `Сумарно ${totalLeaguePoints} pts зараз`, width: clampPercent(avgRating / 14) })}
-    ${seasonStatCard({ label: 'Кращий WR у топ-10', value: bestWinrateTop10Value, meta: bestWinrateTop10 ? `${bestWinrateTop10.nickname} · ${bestWinrateTop10.matches || 0} ігор` : 'Топ-10 ще формується', width: bestWinrateTop10Width })}
+    ${seasonStatCard({ label: 'MVP у сезоні', value: totalMvp, meta: `${mvpPerMatch} нагороди на гру`, width: clampPercent((totalMvp / Math.max(matchesCount * 3, 1)) * 100) })}
     </div>
     <div class="league-kpi-grid league-kpi-grid--tertiary">
     ${seasonStatCard({ label: 'Ігри / середні бої', value: `${matchesCount} / ${battlesPerMatch}`, meta: `${playersCount} активних гравців`, width: clampPercent(matchesCount * 3) })}
     ${seasonStatCard({ label: 'Середній приріст за гру', value: averageDeltaPerMatch, meta: leader ? `Лідер ліги зараз у ранзі ${topRank}` : 'Дані ще збираються', width: averageDeltaPerMatchWidth })}
     </div>
-  </section>
-  <section class="league-dashboard-group league-dashboard-group--ranks">
+  </section>`;
+
+  if (ranksRoot) ranksRoot.innerHTML = `<section class="league-dashboard-group league-dashboard-group--ranks">
     <h3 class="league-subtitle">Розподіл за рангами</h3>
     <div class="league-rank-list">${rankDistributionBlock(data.summary.rankDistribution || {}, playersCount)}</div>
-  </section>
-  ${renderGameDaySection(data.lastGameDay, league)}`;
+  </section>`;
+  if (gameDayRoot) gameDayRoot.innerHTML = renderGameDaySection(data.lastGameDay, league);
 }
 
 function resolveLeague(params = {}) {
@@ -373,6 +495,10 @@ function renderLoading(root, league) {
   const searchInput = root.querySelector('#leagueSearchInput');
   const sortHeaders = root.querySelectorAll('.league-sort-header[data-sort]');
   const infographic = root.querySelector('#leagueInfographic');
+  const analytics = root.querySelector('#leagueAnalytics');
+  const seasonNotice = root.querySelector('#leagueSeasonNotice');
+  const ranksSection = root.querySelector('#leagueRanksSection');
+  const gameDaySection = root.querySelector('#leagueGameDaySection');
 
   if (hero) {
     hero.classList.remove('league-loading-block');
@@ -380,7 +506,14 @@ function renderLoading(root, league) {
     <p class="px-card__text league-season-title">\u0416\u0438\u0432\u0456 \u0434\u0430\u043d\u0456: <strong>\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f\u2026</strong></p>
     <p class="data-status-line data-status-line--warning">Оновлюємо live-дані…</p>`;
   }
-  if (tableTitle) tableTitle.textContent = '\u0422\u041e\u041f-10 \u0433\u0440\u0430\u0432\u0446\u0456\u0432';
+  if (tableTitle) tableTitle.textContent = 'Повна таблиця';
+  if (seasonNotice) {
+    seasonNotice.hidden = true;
+    seasonNotice.innerHTML = '';
+  }
+  if (analytics) {
+    analytics.innerHTML = '<div class="league-pulse__loading" aria-hidden="true"><span></span><span></span><span></span></div>';
+  }
   if (searchInput) {
     searchInput.value = '';
     searchInput.disabled = true;
@@ -413,6 +546,8 @@ function renderLoading(root, league) {
     expandBtn.textContent = '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f\u2026';
   }
   if (infographic) infographic.innerHTML = '';
+  if (ranksSection) ranksSection.innerHTML = '';
+  if (gameDaySection) gameDaySection.innerHTML = '';
 }
 
 function sortPlayers(players, sortBy, direction = 'desc') {
@@ -460,7 +595,7 @@ function ensureMvpSortHeaders(tableHead) {
 }
 
 export async function initLeagueStatsPage(params = {}) {
-  const root = document.getElementById('view');
+  const root = document.getElementById('leaguePage') || document.getElementById('view');
   if (!root) return;
   await initPage(root, params);
 }
@@ -472,28 +607,38 @@ export async function initPage(root, params = {}) {
     await safeInitLeagueStatsPage(root, params);
   } catch (err) {
     console.error('[league-stats] fatal crash:', err);
-    root.innerHTML = `
-      <div style="padding:20px;color:#fff">
-        ❌ Помилка завантаження сторінки
-      </div>
-    `;
+    if (DEBUG && typeof window !== 'undefined') {
+      window.__leagueStatsDebugError = {
+        message: String(err?.message || err),
+        stack: String(err?.stack || '')
+      };
+    }
+    renderPageError(root, {
+      eyebrow: leagueLabelUA(resolveLeague(params)),
+      title: 'Статистика не завантажилась',
+      message: 'Не вдалося отримати актуальні дані ліги.',
+      onRetry: () => initPage(root, params)
+    });
   }
 }
 
 async function safeInitLeagueStatsPage(root, params = {}) {
   const league = resolveLeague(params);
+  root.dataset.league = league;
   renderLoading(root, league);
-  const data = await getCurrentLeagueLiveStats(league);
+  const [data, currentSeason] = await Promise.all([
+    getCurrentLeagueLiveStats(league),
+    getCurrentSeason().catch((error) => {
+      debugWarn('[league-stats] optional season context unavailable', error);
+      return null;
+    })
+  ]);
   debugLog('[league-stats] data loaded', data);
   if (!data) {
     debugWarn('[league-stats] no data, rendering empty state');
     root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u043b\u0456\u0433\u0438</h1><p class="px-card__text">\u041d\u0435\u043c\u0430\u0454 \u0434\u0430\u043d\u0438\u0445 \u0434\u043b\u044f \u0432\u0456\u0434\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u043d\u044f.</p></section>`;
     return;
   }
-  const currentSeason = await getCurrentSeason().catch((error) => {
-    debugWarn('[league-stats] optional season context unavailable', error);
-    return null;
-  });
   const remainingGameDays = calculateRemainingGameDays(data, currentSeason);
   const safeData = {
     ...data,
@@ -509,13 +654,32 @@ async function safeInitLeagueStatsPage(root, params = {}) {
   const tableTitle = root.querySelector('#leagueTableTitle');
   const expandBtn = root.querySelector('#leagueExpandBtn');
   const infographic = root.querySelector('#leagueInfographic');
+  const analytics = root.querySelector('#leagueAnalytics');
   const searchInput = root.querySelector('#leagueSearchInput');
+  const seasonNotice = root.querySelector('#leagueSeasonNotice');
+  const ranksSection = root.querySelector('#leagueRanksSection');
+  const gameDaySection = root.querySelector('#leagueGameDaySection');
   const tableHead = root.querySelector('.league-ranking-table__head');
   ensureMvpSortHeaders(tableHead);
   const sortHeaders = root.querySelectorAll('.league-sort-header[data-sort]');
 
-  if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !searchInput || !sortHeaders.length) {
-    debugWarn('[league-stats] template nodes missing, rendering empty state');
+  if (!hero || !rankingTable || !tableTitle || !expandBtn || !infographic || !analytics || !searchInput
+    || !seasonNotice
+    || !ranksSection || !gameDaySection || !sortHeaders.length) {
+    const missingNodes = [
+      ['hero', hero],
+      ['rankingTable', rankingTable],
+      ['tableTitle', tableTitle],
+      ['expandBtn', expandBtn],
+      ['infographic', infographic],
+      ['analytics', analytics],
+      ['searchInput', searchInput],
+      ['seasonNotice', seasonNotice],
+      ['ranksSection', ranksSection],
+      ['gameDaySection', gameDaySection],
+      ['sortHeaders', sortHeaders.length]
+    ].filter(([, value]) => !value).map(([name]) => name);
+    debugWarn(`[league-stats] template nodes missing: ${missingNodes.join(', ')}`);
     root.innerHTML = `<section class="px-card league-hero"><h1 class="px-card__title league-section-title">\u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043a\u0430 \u043b\u0456\u0433\u0438</h1><p class="px-card__text">\u041d\u0435\u043c\u0430\u0454 \u0434\u0430\u043d\u0438\u0445 \u0434\u043b\u044f \u0432\u0456\u0434\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u043d\u044f.</p></section>`;
     return;
   }
@@ -527,14 +691,14 @@ async function safeInitLeagueStatsPage(root, params = {}) {
     sortDirection: 'desc'
   };
   const playersBase = [...(safeData.players || [])].filter((player) => isSeasonActive(player) || Number(player.points || 0) > 0);
-
   const renderTables = () => {
     const filtered = filterPlayers(playersBase, state.searchTerm);
     const sorted = sortPlayers(filtered, state.sortBy, state.sortDirection);
-    const visible = state.isFullOpen ? sorted : sorted.slice(0, 10);
+    const visible = state.isFullOpen || state.searchTerm ? sorted : sorted.slice(0, 10);
     rankingTable.innerHTML = visible.map((player) => tableRowMarkup(player, league)).join('')
       || '<tr><td class="league-ranking-table__empty" colspan="10">Немає активних гравців за вибраним пошуком.</td></tr>';
-    tableTitle.textContent = state.isFullOpen ? 'Усі гравці ліги' : 'ТОП-10 гравців';
+    tableTitle.textContent = 'Повна таблиця';
+    expandBtn.hidden = playersBase.length <= 10 || Boolean(state.searchTerm);
   };
 
   const setSortButtonState = () => {
@@ -566,7 +730,9 @@ async function safeInitLeagueStatsPage(root, params = {}) {
 
   renderHero(hero, league, safeData);
   hero.insertAdjacentHTML('afterend', renderDataQualityPanel(safeData.dataQuality));
-  renderInfographic(infographic, safeData, remainingGameDays, league);
+  renderSeasonNotice(seasonNotice, league, safeData);
+  renderInfographic(infographic, ranksSection, gameDaySection, safeData, remainingGameDays, league);
+  analytics.innerHTML = renderLeagueAnalytics(safeData.activePlayers, league);
   searchInput.disabled = false;
   searchInput.placeholder = '\u041d\u0456\u043a\u043d\u0435\u0439\u043c \u0433\u0440\u0430\u0432\u0446\u044f';
   expandBtn.disabled = false;

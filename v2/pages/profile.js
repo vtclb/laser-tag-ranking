@@ -5,10 +5,11 @@ import {
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js';
+} from '../core/dataHub.js?v=20260715-perf2';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
+import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
 const placeholder = './assets/default-avatar.svg';
 
@@ -29,6 +30,7 @@ function val(v, fallback = '—') {
 }
 
 function num(v) {
+  if (isMissing(v)) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -42,6 +44,17 @@ function signed(v) {
   const n = num(v);
   if (n === null) return '—';
   return `${n > 0 ? '+' : ''}${n}`;
+}
+
+function pointsWord(value) {
+  const n = Math.abs(Math.trunc(Number(value)));
+  if (!Number.isFinite(n)) return 'очок';
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return 'очок';
+  const last = n % 10;
+  if (last === 1) return 'очко';
+  if (last >= 2 && last <= 4) return 'очки';
+  return 'очок';
 }
 
 function winnerText(winner = '') {
@@ -71,7 +84,48 @@ function resolveParams(params = {}) {
 }
 
 function renderSkeleton(root) {
-  root.innerHTML = '<section class="profile-page"><div class="profile-shell"><section class="profile-section profile-loading-shell"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Завантаження профілю…</p><div class="profile-loading-bar" aria-hidden="true"></div></section></div></section>';
+  root.innerHTML = `<section class="profile-page"><div class="profile-shell">
+    <section class="profile-section profile-loading-shell" role="status" aria-live="polite">
+      <div class="profile-loading-arena" aria-hidden="true">
+        <span class="profile-loading-arena__scan"></span>
+        <span class="profile-loading-arena__target"></span>
+        <span class="profile-loading-arena__blip"></span>
+      </div>
+      <p class="profile-loading-shell__eyebrow">Профіль гравця</p>
+      <h1 class="profile-loading-shell__title">Збираємо бойову історію</h1>
+      <p class="profile-muted">Синхронізуємо сезони, ранги та MVP.</p>
+      <div class="profile-loading-stages" aria-hidden="true"><span>Сезони</span><span>Рейтинг</span><span>Досягнення</span></div>
+    </section>
+  </div></section>`;
+}
+
+function renderLiveProfilePreview(root, {
+  profileLeagueContext,
+  livePlayer,
+  currentSeason,
+  displayNick,
+  currentRank
+}) {
+  const topSeason = buildCurrentSeasonRow(livePlayer, currentSeason, profileLeagueContext) || {};
+  const profilePoints = livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points;
+
+  root.innerHTML = `
+    <section class="profile-page profile-page--progressive" aria-busy="true">
+      <div class="profile-shell">
+        ${renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNick, currentRank, topSeason })}
+        ${renderRankProgress({ progress: getRankProgress(profilePoints), currentRank })}
+        ${renderCompactStats({ livePlayer, topSeason })}
+        ${renderPerformanceSnapshot({ livePlayer, topSeason })}
+        <section class="profile-section profile-career-loading" role="status" aria-live="polite">
+          <div>
+            <p class="profile-career-loading__eyebrow">Історія гравця</p>
+            <h2 class="profile-section__title">Завантажуємо сезони</h2>
+            <p class="profile-muted">Поточні результати вже доступні. Додаємо архів і досягнення.</p>
+          </div>
+          <div class="profile-career-loading__signal" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        </section>
+      </div>
+    </section>`;
 }
 
 function rankClass(rank = 'F') {
@@ -198,7 +252,7 @@ function renderRankProgress({ progress, currentRank }) {
     </div>
     <div class="profile-rank-progress-card__route"><strong>${esc(val(shownCurrentRank))} → ${esc(val(progress.nextRank))}</strong><span>${safePercent.toFixed(0)}%</span></div>
     <div class="profile-rank-progress-card__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(safePercent)}"><span style="width:${safePercent.toFixed(1)}%"></span></div>
-    <p class="profile-note">Ще ${esc(val(progress.remain))} очок до рангу ${esc(val(progress.nextRank))}.</p>
+    <p class="profile-note">Ще ${esc(val(progress.remain))} ${pointsWord(progress.remain)} до рангу ${esc(val(progress.nextRank))}.</p>
   </div>`;
 }
 
@@ -493,7 +547,7 @@ function renderPerformanceSnapshot({ livePlayer, topSeason }) {
   });
 
   return `<section class="profile-section profile-performance">
-    <h2 class="profile-section__title">Performance Snapshot</h2>
+    <h2 class="profile-section__title">Форма гравця</h2>
     <div class="profile-performance-grid">
       <article class="profile-performance-card">
         <span>Форма</span>
@@ -531,7 +585,7 @@ function renderPlayerAnalysis({ livePlayer, topSeason }) {
     games
   });
   const analysisText = insights.impactLevel === 'high'
-    ? 'Гравець тримає сильний темп сезону: помітний MVP-impact, хороший приріст і стабільна присутність у грі.'
+    ? 'Гравець тримає сильний темп сезону: помітний вплив у MVP, хороший приріст і стабільна присутність у грі.'
     : 'Гравець має базу для росту: варто тримати ритм і збільшувати вплив у ключових матчах.';
   const strengths = insights.strengths.length ? insights.strengths : ['Підтримує стабільну базу для росту'];
   const growth = insights.growth.length ? insights.growth : ['Підтримувати поточний темп гри'];
@@ -553,6 +607,229 @@ function renderPlayerAnalysis({ livePlayer, topSeason }) {
   </section>`;
 }
 
+function seasonChronologyKey(season = {}) {
+  const source = `${season.seasonId || ''} ${season.seasonTitle || ''}`.toLowerCase();
+  const yearMatch = source.match(/20\d{2}/);
+  const year = yearMatch ? Number(yearMatch[0]) : 9999;
+  let order = 9;
+  if (source.includes('spring') || source.includes('весна')) order = 1;
+  else if (source.includes('summer') || source.includes('літо')) order = 2;
+  else if (source.includes('autumn') || source.includes('fall') || source.includes('осінь')) order = 3;
+  else if (source.includes('winter') || source.includes('зима')) order = 4;
+  return (year * 10) + order;
+}
+
+function renderCareerMetricChart(rows = [], metric = 'points') {
+  const configs = {
+    points: { key: 'points', label: 'Рейтинг', suffix: ' очок', invert: false },
+    place: { key: 'place', label: 'Місце', suffix: ' місце', invert: true },
+    delta: { key: 'delta', label: 'Приріст', suffix: ' рейтингу', invert: false }
+  };
+  const config = configs[metric] || configs.points;
+  const chartRows = rows.filter((row) => Number.isFinite(row[config.key]) && (!config.invert || row[config.key] > 0));
+  if (!chartRows.length) return '<p class="profile-career-empty">Для цього показника ще немає даних.</p>';
+
+  const values = chartRows.map((row) => row[config.key]);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const width = 320;
+  const height = 104;
+  const padX = 18;
+  const padTop = 14;
+  const padBottom = 22;
+  const usableHeight = height - padTop - padBottom;
+  const points = chartRows.map((row, index) => {
+    const value = row[config.key];
+    const x = chartRows.length === 1
+      ? width / 2
+      : padX + (index * ((width - (padX * 2)) / (chartRows.length - 1)));
+    const ratio = maxValue === minValue
+      ? .5
+      : (config.invert ? (value - minValue) : (maxValue - value)) / (maxValue - minValue);
+    const y = padTop + (ratio * usableHeight);
+    return { ...row, value, x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) };
+  });
+  const polyline = points.map((point) => `${point.x},${point.y}`).join(' ');
+  const areaPath = `M ${points[0].x} ${height - padBottom} L ${polyline.replaceAll(',', ' ')} L ${points[points.length - 1].x} ${height - padBottom} Z`;
+  const gradientId = `profileCareerArea-${config.key}`;
+
+  return `<svg class="profile-career-chart profile-career-chart--${config.key}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${esc(config.label)} за сезонами">
+    <defs>
+      <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#72ff9a" stop-opacity=".28"></stop>
+        <stop offset="1" stop-color="#55d8ff" stop-opacity=".02"></stop>
+      </linearGradient>
+    </defs>
+    <path class="profile-career-chart__area" style="fill:url(#${gradientId})" d="${areaPath}"></path>
+    ${points.length > 1 ? `<polyline class="profile-career-chart__line" points="${polyline}"></polyline>` : ''}
+    ${points.map((point) => `<g class="profile-career-chart__point ${point.current ? 'is-current' : ''}">
+      <circle cx="${point.x}" cy="${point.y}" r="${point.current ? 4.4 : 3.4}"><title>${esc(point.label)}: ${esc(String(point.value))}${esc(config.suffix)}</title></circle>
+      <text x="${point.x}" y="${height - 6}" text-anchor="middle">${esc(String(point.label).replace(/\s*20\d{2}(?:[–-]20\d{2})?/, ''))}</text>
+    </g>`).join('')}
+  </svg>`;
+}
+
+function careerMetricInsight(rows = [], metric = 'points') {
+  const available = rows.filter((row) => Number.isFinite(row[metric]) && (metric !== 'place' || row.place > 0));
+  if (!available.length) return 'Для цього показника ще немає даних.';
+  if (metric === 'place') {
+    const best = [...available].sort((a, b) => a.place - b.place)[0];
+    return `Найкращий фініш: ${best.label}, #${best.place}.`;
+  }
+  if (metric === 'delta') {
+    const best = [...available].sort((a, b) => b.delta - a.delta)[0];
+    return `Найсильніший ривок: ${best.label}, ${signed(best.delta)} рейтингу.`;
+  }
+  const best = [...available].sort((a, b) => b.points - a.points)[0];
+  return `Піковий рейтинг: ${best.label}, ${best.points} очок.`;
+}
+
+function bindCareerMetricSwitch(root) {
+  const section = root?.querySelector('.profile-career-dynamics');
+  const chartHost = section?.querySelector('[data-career-chart]');
+  const insight = section?.querySelector('[data-career-insight]');
+  const buttons = section?.querySelectorAll('[data-career-metric]');
+  if (!section || !chartHost || !insight || !buttons?.length) return;
+
+  const rows = [...section.querySelectorAll('.profile-career-season')].map((item) => ({
+    label: item.dataset.careerLabel || '',
+    points: num(item.dataset.careerPoints),
+    place: num(item.dataset.careerPlace),
+    delta: num(item.dataset.careerDelta),
+    current: item.classList.contains('is-current')
+  }));
+
+  buttons.forEach((button) => button.addEventListener('click', () => {
+    const metric = button.dataset.careerMetric || 'points';
+    buttons.forEach((item) => {
+      const active = item === button;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    chartHost.innerHTML = renderCareerMetricChart(rows, metric);
+    insight.textContent = careerMetricInsight(rows, metric);
+  }));
+}
+
+function renderCareerDynamics({ seasons = [], allTime = {}, currentSeasonId = '' } = {}) {
+  const rows = (Array.isArray(seasons) ? seasons : [])
+    .map((season) => ({
+      id: String(season.seasonId || ''),
+      label: formatSeasonTitleUA(season.seasonTitle || season.seasonId),
+      points: num(season.ratingEnd ?? season.points),
+      delta: num(season.delta ?? season.ratingDelta),
+      matches: num(season.matches ?? season.games),
+      winRate: num(season.winRate ?? season.winrate),
+      mvp: num(season.mvpTotal),
+      place: num(season.place ?? season.finalPlace),
+      rank: String(season.rank || '').trim().toUpperCase(),
+      order: seasonChronologyKey(season),
+      current: Boolean(currentSeasonId && season.seasonId === currentSeasonId)
+    }))
+    .filter((row) => [row.points, row.delta, row.matches, row.winRate, row.mvp, row.place].some((value) => value !== null))
+    .sort((a, b) => a.order - b.order);
+
+  if (!rows.length) return '';
+
+  const chartRows = rows.filter((row) => row.points !== null);
+  const chartValues = chartRows.map((row) => row.points);
+  const minValue = chartValues.length ? Math.min(...chartValues) : 0;
+  const maxValue = chartValues.length ? Math.max(...chartValues) : 0;
+  const chartWidth = 320;
+  const chartHeight = 104;
+  const padX = 18;
+  const padTop = 14;
+  const padBottom = 22;
+  const usableHeight = chartHeight - padTop - padBottom;
+  const chartPoints = chartRows.map((row, index) => {
+    const x = chartRows.length === 1
+      ? chartWidth / 2
+      : padX + (index * ((chartWidth - (padX * 2)) / (chartRows.length - 1)));
+    const y = maxValue === minValue
+      ? padTop + (usableHeight / 2)
+      : padTop + (((maxValue - row.points) / (maxValue - minValue)) * usableHeight);
+    return { ...row, x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) };
+  });
+  const polyline = chartPoints.map((point) => `${point.x},${point.y}`).join(' ');
+  const areaPath = chartPoints.length
+    ? `M ${chartPoints[0].x} ${chartHeight - padBottom} L ${polyline.replaceAll(',', ' ')} L ${chartPoints[chartPoints.length - 1].x} ${chartHeight - padBottom} Z`
+    : '';
+  const totalMatches = num(allTime.totalMatches ?? allTime.matches ?? allTime.games)
+    ?? rows.reduce((sum, row) => sum + (row.matches ?? 0), 0);
+  const cumulativeDelta = num(allTime.cumulativeDelta)
+    ?? rows.reduce((sum, row) => sum + (row.delta ?? 0), 0);
+  const bestPlace = rows.reduce((best, row) => {
+    if (row.place === null || row.place <= 0) return best;
+    return best === null || row.place < best ? row.place : best;
+  }, null);
+  const insight = careerMetricInsight(rows, 'points');
+
+  const chartMarkup = chartPoints.length
+    ? `<svg class="profile-career-chart" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="none" role="img" aria-label="Фінішний рейтинг за сезонами">
+        <defs>
+          <linearGradient id="profileCareerArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#72ff9a" stop-opacity=".28"></stop>
+            <stop offset="1" stop-color="#55d8ff" stop-opacity=".02"></stop>
+          </linearGradient>
+        </defs>
+        <path class="profile-career-chart__area" d="${areaPath}"></path>
+        ${chartPoints.length > 1 ? `<polyline class="profile-career-chart__line" points="${polyline}"></polyline>` : ''}
+        ${chartPoints.map((point) => `<g class="profile-career-chart__point ${point.current ? 'is-current' : ''}">
+          <circle cx="${point.x}" cy="${point.y}" r="${point.current ? 4.4 : 3.4}"><title>${esc(point.label)}: ${point.points} очок</title></circle>
+          <text x="${point.x}" y="${chartHeight - 6}" text-anchor="middle">${esc(String(point.label).replace(/\s*20\d{2}(?:[–-]20\d{2})?/, ''))}</text>
+        </g>`).join('')}
+      </svg>`
+    : '<p class="profile-career-empty">Фінішний рейтинг з’явиться після завершення сезону.</p>';
+
+  return `<section class="profile-section profile-career-dynamics">
+    <div class="profile-career-dynamics__head">
+      <div>
+        <h2 class="profile-section__title">Динаміка кар’єри</h2>
+        <p>Фінішний рейтинг і результат кожного сезону</p>
+      </div>
+      <strong class="${deltaTone(cumulativeDelta)}">${esc(signed(cumulativeDelta))}</strong>
+    </div>
+
+    <div class="profile-career-overview" aria-label="Підсумок кар’єри">
+      <span><b>${rows.length}</b><small>сезонів</small></span>
+      <span><b>${esc(String(totalMatches))}</b><small>ігор</small></span>
+      <span><b>${bestPlace === null ? '—' : `#${bestPlace}`}</b><small>краще місце</small></span>
+      <span><b>${esc(signed(cumulativeDelta))}</b><small>рух рейтингу</small></span>
+    </div>
+
+    <div class="profile-career-metric-switch" role="group" aria-label="Показник графіка">
+      <button type="button" class="is-active" data-career-metric="points" aria-pressed="true">Рейтинг</button>
+      <button type="button" data-career-metric="place" aria-pressed="false">Місце</button>
+      <button type="button" data-career-metric="delta" aria-pressed="false">Приріст</button>
+    </div>
+
+    <div class="profile-career-visual">
+      <div data-career-chart>${chartMarkup}</div>
+      <p class="profile-career-insight" data-career-insight>${esc(insight)}</p>
+    </div>
+
+    <div class="profile-career-timeline" aria-label="Результати за сезонами">
+      ${rows.map((row, index) => `<article class="profile-career-season ${row.current ? 'is-current' : ''}" data-career-label="${esc(row.label)}" data-career-points="${row.points ?? ''}" data-career-place="${row.place ?? ''}" data-career-delta="${row.delta ?? ''}">
+        <div class="profile-career-season__identity">
+          <span>${String(index + 1).padStart(2, '0')}</span>
+          <div><strong>${esc(row.label)}</strong>${row.current ? '<small>поточний сезон</small>' : ''}</div>
+        </div>
+        <div class="profile-career-season__result">
+          <strong>${row.points === null ? '—' : esc(String(row.points))}</strong><small>очок</small>
+        </div>
+        <div class="profile-career-season__meta">
+          <span class="${deltaTone(row.delta)}">${esc(signed(row.delta))} Δ</span>
+          <span>${row.place === null ? 'місце —' : `#${row.place} місце`}</span>
+          <span>${row.winRate === null ? 'WR —' : `${row.winRate.toFixed(1)}% WR`}</span>
+          <span>${row.matches === null ? 'ігри —' : `${row.matches} ігор`}</span>
+          <span>${row.mvp === null ? 'MVP —' : `${row.mvp} MVP`}</span>
+          ${row.rank ? `<b class="profile-career-rank ${rankClass(row.rank)}">${esc(row.rank)}</b>` : ''}
+        </div>
+      </article>`).join('')}
+    </div>
+  </section>`;
+}
+
 function renderSeasonTabs(container, tabs, selectedId) {
   const tabsMarkup = tabs.map((tab) => `
     <button
@@ -563,10 +840,7 @@ function renderSeasonTabs(container, tabs, selectedId) {
       aria-selected="${tab.id === selectedId ? 'true' : 'false'}"
     >
       <span class="profile-season-tab__title">${esc(tab.label)}</span>
-      <span class="profile-season-tab__details">
-        ${num(tab.place) !== null ? `<em class="profile-season-tab__place">#${esc(tab.place)} місце</em>` : ''}
-        ${tab.current ? '<em class="profile-season-tab__meta">поточний</em>' : ''}
-      </span>
+      ${tab.current ? '<em class="profile-season-tab__meta">поточний</em>' : ''}
     </button>
   `).join('');
 
@@ -585,13 +859,12 @@ function renderSeasonSummary(season, allTime) {
   const seasonDelta = season.delta ?? season.ratingDelta;
   const start = season.ratingStart;
   const finish = season.ratingEnd ?? season.points;
-  const place = season.place ?? season.finalPlace;
   const trendWidth = Math.min(100, Math.max(8, num(seasonDelta) === null ? 8 : Math.abs(Number(seasonDelta)) / 2));
 
   return `
       <section class="profile-season-panel">
         <h3>${esc(formatSeasonTitleUA(season.seasonTitle ?? season.id))}</h3>
-        <p class="profile-muted">${esc(leagueLabelUA(season.league ?? 'kids'))}${num(place) !== null ? ` · #${esc(place)} місце в сезоні` : ''}</p>
+        <p class="profile-muted">${esc(leagueLabelUA(season.league ?? 'kids'))}</p>
 
         <div class="profile-season-grid">
           ${metricMini({ label: 'Старт', value: start })}
@@ -601,7 +874,7 @@ function renderSeasonSummary(season, allTime) {
           ${metricMini({ label: 'Ігри', value: season.matches ?? season.games })}
           ${metricMini({ label: 'MVP', value: season.mvpTotal })}
           ${metricMini({ label: 'Ранг', value: season.rank, tone: 'is-accent' })}
-          ${metricMini({ label: 'Місце', value: num(place) !== null ? `#${place}` : '—' })}
+          ${metricMini({ label: 'Місце', value: num(season.place ?? season.finalPlace) !== null ? `#${season.place ?? season.finalPlace}` : '—' })}
         </div>
 
         <div class="profile-season-grid profile-season-grid--compact">
@@ -626,7 +899,7 @@ function renderSeasonSummary(season, allTime) {
 
 function renderLogs(logData) {
   if (!logData?.groups?.length) {
-    return '<section class="profile-logs"><h3>Логи сезону</h3><p>Для цього сезону поки немає записів.</p></section>';
+    return '';
   }
 
   return `<details class="profile-logs">
@@ -656,14 +929,93 @@ function renderLogs(logData) {
 
 function sortTabsByChronology(tabs = []) {
   return [...tabs].sort((a, b) => {
-    const aOrder = seasonOrderKey(a.label);
-    const bOrder = seasonOrderKey(b.label);
-    if (aOrder !== bOrder) return aOrder - bOrder;
-
-    const aTime = Number.isFinite(Date.parse(a.dateFrom || '')) ? Date.parse(a.dateFrom) : 0;
-    const bTime = Number.isFinite(Date.parse(b.dateFrom || '')) ? Date.parse(b.dateFrom) : 0;
-    return aTime - bTime;
+    const aParsed = Date.parse(a.dateFrom || '');
+    const bParsed = Date.parse(b.dateFrom || '');
+    const hasADate = Number.isFinite(aParsed);
+    const hasBDate = Number.isFinite(bParsed);
+    if (hasADate && hasBDate && aParsed !== bParsed) return aParsed - bParsed;
+    if (hasADate !== hasBDate) return hasADate ? -1 : 1;
+    return seasonOrderKey(a.label) - seasonOrderKey(b.label);
   });
+}
+
+function buildCurrentSeasonRow(livePlayer, currentSeason, league) {
+  if (!livePlayer || !currentSeason?.id) return null;
+  const matches = num(livePlayer.matches) ?? 0;
+  const battles = num(livePlayer.battles) ?? 0;
+  if (matches <= 0 && battles <= 0 && livePlayer.isSeasonActive !== true) return null;
+
+  const ratingEnd = num(livePlayer.points);
+  const delta = num(livePlayer.delta);
+  const mvp1 = num(livePlayer.mvp1) ?? 0;
+  const mvp2 = num(livePlayer.mvp2) ?? 0;
+  const mvp3 = num(livePlayer.mvp3) ?? 0;
+
+  return {
+    seasonId: currentSeason.id,
+    seasonTitle: currentSeason.uiLabel || currentSeason.label || currentSeason.id,
+    league,
+    leagueLabel: leagueLabelUA(league),
+    ratingStart: ratingEnd !== null && delta !== null ? ratingEnd - delta : null,
+    ratingEnd,
+    points: ratingEnd,
+    delta,
+    ratingDelta: delta,
+    matches,
+    games: matches,
+    wins: num(livePlayer.wins) ?? 0,
+    losses: num(livePlayer.losses) ?? 0,
+    draws: num(livePlayer.draws) ?? 0,
+    winRate: num(livePlayer.winRate),
+    winrate: num(livePlayer.winRate),
+    mvp1,
+    mvp2,
+    mvp3,
+    top1: mvp1,
+    top2: mvp2,
+    top3: mvp3,
+    mvpTotal: num(livePlayer.mvpTotal) ?? (mvp1 + mvp2 + mvp3),
+    rank: livePlayer.rankLetter || null,
+    place: num(livePlayer.place),
+    finalPlace: num(livePlayer.place),
+    rounds: battles
+  };
+}
+
+function addCurrentSeasonToAllTime(allTime = {}, currentSeasonRow = null, alreadyIncluded = false) {
+  if (!currentSeasonRow || alreadyIncluded) return allTime || {};
+  const base = allTime || {};
+  const matches = (num(base.totalMatches ?? base.matches ?? base.games) ?? 0) + (num(currentSeasonRow.matches) ?? 0);
+  const wins = (num(base.totalWins ?? base.wins) ?? 0) + (num(currentSeasonRow.wins) ?? 0);
+  const losses = (num(base.totalLosses ?? base.losses) ?? 0) + (num(currentSeasonRow.losses) ?? 0);
+  const draws = (num(base.totalDraws ?? base.draws) ?? 0) + (num(currentSeasonRow.draws) ?? 0);
+  const top1 = (num(base.top1) ?? 0) + (num(currentSeasonRow.mvp1) ?? 0);
+  const top2 = (num(base.top2) ?? 0) + (num(currentSeasonRow.mvp2) ?? 0);
+  const top3 = (num(base.top3) ?? 0) + (num(currentSeasonRow.mvp3) ?? 0);
+  const mvpTotal = top1 + top2 + top3;
+  const winrate = matches > 0 ? Number(((wins / matches) * 100).toFixed(1)) : null;
+
+  return {
+    ...base,
+    games: matches,
+    matches,
+    totalMatches: matches,
+    wins,
+    totalWins: wins,
+    losses,
+    totalLosses: losses,
+    draws,
+    totalDraws: draws,
+    top1,
+    top2,
+    top3,
+    mvpTotal,
+    totalMvp: mvpTotal,
+    winrate,
+    careerWR: winrate,
+    cumulativeDelta: (num(base.cumulativeDelta) ?? 0) + (num(currentSeasonRow.delta) ?? 0),
+    seasonsPlayed: (num(base.seasonsPlayed) ?? 0) + 1
+  };
 }
 
 export async function initProfilePage(params = {}) {
@@ -679,15 +1031,41 @@ export async function initProfilePage(params = {}) {
   renderSkeleton(root);
 
   try {
-    const [profile, liveStats, currentSeason, seasonOptions] = await Promise.all([
-      buildPlayerCareer(nick, { profileLeagueContext: routeLeagueContext }),
-      getCurrentLeagueLiveStats(league),
-      getCurrentSeason(),
-      getSeasonsList()
+    const profilePromise = buildPlayerCareer(nick, { profileLeagueContext: routeLeagueContext });
+    const liveStatsPromise = getCurrentLeagueLiveStats(league);
+    const currentSeasonPromise = getCurrentSeason();
+    const seasonOptionsPromise = getSeasonsList();
+    const [liveStatsResult, currentSeasonResult] = await Promise.allSettled([
+      liveStatsPromise,
+      currentSeasonPromise
     ]);
-
+    const liveStats = liveStatsResult.status === 'fulfilled' ? liveStatsResult.value : null;
+    const currentSeason = currentSeasonResult.status === 'fulfilled' ? currentSeasonResult.value : null;
     const normalizedNick = normalizePlayerKey(nick);
     const livePlayer = (liveStats?.players || []).find((player) => normalizePlayerKey(player.nickname) === normalizedNick) || null;
+
+    if (livePlayer) {
+      const previewLeagueContext = normalizeLeague(
+        routeLeagueContext
+        || livePlayer.league
+        || league
+      ) || 'kids';
+      const previewRank = String(livePlayer.rankLetter || 'F').toUpperCase();
+      renderLiveProfilePreview(root, {
+        profileLeagueContext: previewLeagueContext,
+        livePlayer,
+        currentSeason,
+        displayNick: livePlayer.nickname || nick,
+        currentRank: previewRank
+      });
+    }
+
+    const [profileResult, seasonOptionsResult] = await Promise.allSettled([
+      profilePromise,
+      seasonOptionsPromise
+    ]);
+    const profile = profileResult.status === 'fulfilled' ? profileResult.value : null;
+    const seasonOptions = seasonOptionsResult.status === 'fulfilled' ? seasonOptionsResult.value : [];
 
     if (!profile && !livePlayer) {
       root.innerHTML = `<section class="profile-page"><div class="profile-shell"><section class="profile-section"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">Гравця не знайдено.</p><div class="profile-actions"><a class="btn btn--secondary" href="${buildHash('league-stats', { league })}">Назад до ліги</a></div></section></div></section>`;
@@ -703,7 +1081,13 @@ export async function initProfilePage(params = {}) {
     ) || 'kids';
 
     const displayNick = livePlayer?.nickname || profile?.nick || nick;
-    const seasonRows = profile?.seasons || [];
+    const archivedSeasonRows = profile?.seasons || [];
+    const currentSeasonRow = buildCurrentSeasonRow(livePlayer, currentSeason, profileLeagueContext);
+    const currentSeasonAlreadyArchived = archivedSeasonRows.some((row) => row.seasonId === currentSeasonRow?.seasonId);
+    const seasonRows = currentSeasonRow
+      ? [currentSeasonRow, ...archivedSeasonRows.filter((row) => row.seasonId !== currentSeasonRow.seasonId)]
+      : archivedSeasonRows;
+    const allTimeStats = addCurrentSeasonToAllTime(profile?.allTime || {}, currentSeasonRow, currentSeasonAlreadyArchived);
     const seasonRowsById = new Map(seasonRows.map((row) => [row.seasonId, row]));
     const topSeason = seasonRows[0] || {};
     const currentRank = String(livePlayer?.rankLetter || topSeason?.rank || profile?.allTime?.bestRank || 'F').toUpperCase();
@@ -716,6 +1100,7 @@ export async function initProfilePage(params = {}) {
         ${renderHero({ profileLeagueContext, livePlayer: livePlayer || {}, currentSeason, displayNick, currentRank, topSeason })}
         ${renderRankProgress({ progress: rankProgress, currentRank })}
         ${renderCompactStats({ livePlayer: livePlayer || {}, topSeason })}
+        ${renderCareerDynamics({ seasons: seasonRows, allTime: allTimeStats, currentSeasonId: currentSeason?.id })}
         ${renderPerformanceSnapshot({ livePlayer: livePlayer || {}, topSeason })}
         ${renderPlayerAnalysis({ livePlayer: livePlayer || {}, topSeason })}
         ${renderCareerHighlights(profile?.highlights || {})}
@@ -741,6 +1126,7 @@ export async function initProfilePage(params = {}) {
     const logsEl = root.querySelector('#seasonLogsHost');
     const copyLinkBtn = root.querySelector('#profileCopyLinkBtn');
     const shareStatus = root.querySelector('#profileShareStatus');
+    bindCareerMetricSwitch(root);
 
     copyLinkBtn?.addEventListener('click', async () => {
       const shareUrl = window.location.href;
@@ -760,8 +1146,7 @@ export async function initProfilePage(params = {}) {
           id: season.seasonId,
           label: formatSeasonTitleUA(meta?.title || season.seasonTitle || season.seasonId),
           current: season.seasonId === currentSeason?.id,
-          dateFrom: meta?.dateFrom,
-          place: season.place ?? season.finalPlace
+          dateFrom: meta?.dateFrom
         };
       })
       .filter((tab) => !isMissing(tab.id));
@@ -774,10 +1159,12 @@ export async function initProfilePage(params = {}) {
         : fallbackSeasonId
     };
 
+    let renderToken = 0;
     const renderState = async () => {
+      const token = ++renderToken;
       renderSeasonTabs(seasonTabsEl, tabs, state.seasonId);
       const selectedSeason = seasonRowsById.get(state.seasonId);
-      summaryEl.innerHTML = renderSeasonSummary(selectedSeason, profile?.allTime || {});
+      summaryEl.innerHTML = renderSeasonSummary(selectedSeason, allTimeStats);
 
       if (!state.seasonId) {
         logsEl.innerHTML = '<section class="profile-logs"><h3>Логи сезону</h3><p>Немає доступних сезонів для цього гравця.</p></section>';
@@ -785,8 +1172,14 @@ export async function initProfilePage(params = {}) {
       }
 
       logsEl.innerHTML = '<p class="profile-muted">Завантаження логів сезону…</p>';
-      const logData = await getPlayerSeasonLogs({ nick: displayNick, seasonId: state.seasonId });
-      logsEl.innerHTML = renderLogs(logData);
+      try {
+        const logData = await getPlayerSeasonLogs({ nick: displayNick, seasonId: state.seasonId });
+        if (token === renderToken) logsEl.innerHTML = renderLogs(logData);
+      } catch (error) {
+        if (token === renderToken) {
+          logsEl.innerHTML = `<p class="profile-muted">${esc(safeErrorMessage(error, 'Логи сезону тимчасово недоступні'))}</p>`;
+        }
+      }
     };
 
     seasonTabsEl.addEventListener('click', (event) => {
@@ -796,8 +1189,15 @@ export async function initProfilePage(params = {}) {
       renderState();
     });
 
-    await renderState();
+    renderState();
   } catch (error) {
-    root.innerHTML = `<section class="profile-page"><div class="profile-shell"><section class="profile-section"><h1 class="profile-section__title">Профіль гравця</h1><p class="profile-muted">${esc(safeErrorMessage(error, 'Дані тимчасово недоступні'))}</p></section></div></section>`;
+    renderPageError(root, {
+      eyebrow: 'Профіль гравця',
+      title: nick,
+      message: safeErrorMessage(error, 'Дані гравця тимчасово недоступні.'),
+      backHref: buildHash('league-stats', { league }),
+      backLabel: 'До ліги',
+      onRetry: () => initProfilePage(params)
+    });
   }
 }

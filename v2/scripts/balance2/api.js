@@ -4,8 +4,18 @@ import { debugLog } from '../../core/debug.js';
 
 const PROXY_ORIGIN = 'https://laser-proxy.vartaclub.workers.dev';
 const TOURNAMENT_PROXY_JSON_ENDPOINT = `${PROXY_ORIGIN}/json`;
-const TOURNAMENT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzIEh2-gluSxvtUqCDmpGodhFntF-t59Q9OSBEjTxqdfURS3MlYwm6vcZ-1s4XPd0kHQ/exec';
-const SCHOOL_EVENTS_STORAGE_KEY = 'balance2_school_events';
+
+function createRequestId(action = 'write') {
+  const randomId = globalThis.crypto?.randomUUID?.()
+    || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  return `${String(action || 'write').replace(/[^a-z0-9_-]/gi, '').slice(0, 32)}-${randomId}`;
+}
+
+function withWriteRequestMeta(payload, action) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  if (!source.requestId) source.requestId = createRequestId(action);
+  return { ...source, requestId: source.requestId };
+}
 
 function toFormUrlEncoded(obj = {}) {
   return Object.entries(obj).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`).join('&');
@@ -105,10 +115,12 @@ export async function loadPlayersForSource(sourceMode, { force = false, timeoutM
 }
 
 export async function saveMatch(payload, timeoutMs = 20000) {
-  const body = toFormUrlEncoded({ ...payload, league: normalizeLeague(payload.league) });
+  const writePayload = withWriteRequestMeta(payload, 'saveRegularGame');
+  const body = toFormUrlEncoded({ ...writePayload, league: normalizeLeague(writePayload.league) });
   try {
     const res = await fetchWithTimeout(PROXY_ORIGIN, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
       body,
     }, timeoutMs);
@@ -128,11 +140,12 @@ function normalizeTournamentResponse(action, res, data) {
 
 async function postTournament(payload, timeoutMs = 20000) {
   const action = String(payload?.action || 'unknown');
-  debugLog(`[balance2:tournament] request ${action} payload`, payload);
+  debugLog(`[balance2:tournament] request ${action}`);
 
   try {
     const proxyRes = await fetchWithTimeout(TOURNAMENT_PROXY_JSON_ENDPOINT, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json;charset=UTF-8' },
       body: JSON.stringify(payload || {}),
     }, timeoutMs);
@@ -143,88 +156,81 @@ async function postTournament(payload, timeoutMs = 20000) {
       throw new Error('Некоректна JSON-відповідь від proxy');
     }
     const normalized = normalizeTournamentResponse(action, proxyRes, proxyData);
-    debugLog(`[balance2:tournament] response ${action} result`, normalized);
+    debugLog(`[balance2:tournament] response ${action}`, {
+      ok: normalized.ok,
+      status: String(proxyData?.status || ''),
+      httpStatus: proxyRes.status,
+    });
     return normalized;
   } catch (proxyError) {
-    debugLog('[balance2:tournament] proxy failed, trying direct GAS', proxyError);
-  }
-
-  try {
-    const res = await fetchWithTimeout(TOURNAMENT_GAS_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload || {}),
-    }, timeoutMs);
-    let data = null;
-    try {
-      data = await res.json();
-    } catch {
-      const invalid = { ok: false, data: null, message: 'Некоректна JSON-відповідь від GAS' };
-      debugLog(`[balance2:tournament] response ${action} result`, invalid);
-      return invalid;
-    }
-    const normalized = normalizeTournamentResponse(action, res, data);
-    debugLog(`[balance2:tournament] response ${action} result`, normalized);
-    return normalized;
-  } catch (e) {
     const networkError = {
       ok: false,
       data: null,
-      message: e?.name === 'AbortError' ? 'Timeout запиту до GAS' : (e?.message || 'Fetch failed'),
+      message: proxyError?.name === 'AbortError'
+        ? 'Timeout запиту до захищеного proxy'
+        : (proxyError?.message || 'Захищений proxy недоступний'),
     };
-    debugLog(`[balance2:tournament] response ${action} result`, networkError);
+    debugLog(`[balance2:tournament] request ${action} failed`, {
+      name: proxyError?.name || 'Error',
+      message: networkError.message,
+    });
     return networkError;
   }
 }
 
 export function createTournament(payload = {}) {
+  const writePayload = withWriteRequestMeta(payload, 'createTournament');
   return postTournament({
     action: 'createTournament',
     mode: 'tournament',
-    name: payload.name || '',
-    league: normalizeLeague(payload.league),
-    dateStart: payload.dateStart || '',
-    dateEnd: payload.dateEnd || '',
-    status: payload.status || 'ACTIVE',
-    notes: payload.notes || '',
+    requestId: writePayload.requestId,
+    name: writePayload.name || '',
+    league: normalizeLeague(writePayload.league),
+    dateStart: writePayload.dateStart || '',
+    dateEnd: writePayload.dateEnd || '',
+    status: writePayload.status || 'ACTIVE',
+    notes: writePayload.notes || '',
   });
 }
 
 export function saveTournamentTeams(payload = {}) {
+  const writePayload = withWriteRequestMeta(payload, 'saveTeams');
   return postTournament({
     action: 'saveTeams',
     mode: 'tournament',
-    tournamentId: payload.tournamentId || '',
-    teams: Array.isArray(payload.teams) ? payload.teams : [],
+    requestId: writePayload.requestId,
+    tournamentId: writePayload.tournamentId || '',
+    teams: Array.isArray(writePayload.teams) ? writePayload.teams : [],
   });
 }
 
 export function createTournamentGames(payload = {}) {
+  const writePayload = withWriteRequestMeta(payload, 'createGames');
   return postTournament({
     action: 'createGames',
     mode: 'tournament',
-    tournamentId: payload.tournamentId || '',
-    games: Array.isArray(payload.games) ? payload.games : [],
+    requestId: writePayload.requestId,
+    tournamentId: writePayload.tournamentId || '',
+    games: Array.isArray(writePayload.games) ? writePayload.games : [],
   });
 }
 
 export function saveTournamentGame(payload = {}) {
+  const writePayload = withWriteRequestMeta(payload, 'saveGame');
   const body = {
     action: 'saveGame',
     mode: 'tournament',
-    tournamentId: payload.tournamentId || '',
-    gameId: payload.gameId || '',
-    gameMode: payload.gameMode || 'DM',
-    teamAId: payload.teamAId || '',
-    teamBId: payload.teamBId || '',
-    result: payload.result || '',
-    scoreA: payload.scoreA ?? '',
-    scoreB: payload.scoreB ?? '',
-    series: payload.series || '',
-    mvp1: payload.mvp1 || '',
-    mvp2: payload.mvp2 || '',
-    mvp3: payload.mvp3 || '',
-    notes: payload.notes || '',
+    requestId: writePayload.requestId,
+    tournamentId: writePayload.tournamentId || '',
+    gameId: writePayload.gameId || '',
+    gameMode: writePayload.gameMode || 'DM',
+    teamAId: writePayload.teamAId || '',
+    teamBId: writePayload.teamBId || '',
+    result: writePayload.result || '',
+    mvp1: writePayload.mvp1 || '',
+    mvp2: writePayload.mvp2 || '',
+    mvp3: writePayload.mvp3 || '',
+    notes: writePayload.notes || '',
   };
   if (body.mode !== 'tournament') {
     throw new Error('Invalid tournament save mode');
@@ -247,28 +253,4 @@ export function listTournaments({ league, status } = {}) {
     league: league ? normalizeLeague(league) : '',
     status: status || '',
   });
-}
-
-function readSchoolEventsLocal() {
-  try { return JSON.parse(localStorage.getItem(SCHOOL_EVENTS_STORAGE_KEY) || '[]'); } catch { return []; }
-}
-function writeSchoolEventsLocal(events = []) { localStorage.setItem(SCHOOL_EVENTS_STORAGE_KEY, JSON.stringify(events)); }
-
-export async function saveSchoolEvent(payload = {}) {
-  const server = await postTournament({ action: 'saveSchoolEvent', mode: 'school', eventMode: 'school', format: 'school_groups_final', payload });
-  if (server.ok) return server;
-  const events = readSchoolEventsLocal();
-  const filtered = events.filter((item) => item.eventId !== payload.eventId);
-  const next = { ...payload, eventMode: 'school', affectsPlayerRating: false, updatedAt: new Date().toISOString() };
-  writeSchoolEventsLocal([next, ...filtered]);
-  return { ok: false, fallback: true, message: 'Серверне збереження school event недоступне, але локальна копія збережена. Експортуйте JSON як резервну копію.', data: next };
-}
-
-export async function loadSchoolEvents() {
-  return { ok: true, data: readSchoolEventsLocal() };
-}
-
-export async function loadSchoolEvent(eventId) {
-  const item = readSchoolEventsLocal().find((event) => event.eventId === eventId) || null;
-  return { ok: !!item, data: item, message: item ? '' : 'Подію не знайдено' };
 }

@@ -1,7 +1,7 @@
-import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260715-perf2';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { leagueLabelUA } from '../core/naming.js';
-import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate } from './tournaments.js';
+import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate, statusLabel } from './tournaments.js';
 import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
@@ -84,7 +84,7 @@ function currentRankingCard(players = [], league = '') {
   }).join('');
 
   if (!rows) {
-    return '<p class="px-card__text">Немає активних гравців</p>';
+    return '<p class="px-card__text home-ranking__empty">Немає активних гравців</p>';
   }
 
   return `<ol class="home-ranking">${rows}</ol>`;
@@ -137,14 +137,20 @@ function renderLeadersNow(adultLeader, kidsLeader) {
   const leaders = [
     { leader: adultLeader, league: 'sundaygames', leagueLabel: 'Доросла ліга' },
     { leader: kidsLeader, league: 'kids', leagueLabel: 'Дитяча ліга' }
-  ];
+  ].filter((item) => item.leader);
+
+  const cards = leaders.length
+    ? leaders.map((item) => renderLeadersNowCard({
+      ...item,
+      variant: item.league === 'sundaygames' ? 'primary' : 'secondary'
+    })).join('')
+    : '<p class="px-card__text">Дані ліг ще накопичуються</p>';
 
   return `
     <section class="home-leaders-v3">
       <div class="home-leaders-v3__title">Лідери сезону</div>
       <div class="home-leaders-v3__grid">
-        ${renderLeadersNowCard({ ...leaders[0], variant: 'primary' })}
-        ${renderLeadersNowCard({ ...leaders[1], variant: 'secondary' })}
+        ${cards}
       </div>
     </section>
   `;
@@ -296,8 +302,7 @@ function renderLeagueSection({ league, players }) {
 
 function formatHomeTournamentMeta(item = {}) {
   const format = escapeHtml(getTournamentFormatLabel(item) || 'Турнір');
-  const rawStatus = String(item?.status || '').trim();
-  const status = escapeHtml(rawStatus ? rawStatus : 'Планується');
+  const status = escapeHtml(statusLabel(item?.displayStatus || item?.status));
   const date = escapeHtml(formatTournamentDate(item?.dateStart));
   return `${format} · ${status} · ${date}`;
 }
@@ -305,6 +310,7 @@ function formatHomeTournamentMeta(item = {}) {
 function renderHomeTournamentsCard(items = [], status = 'empty') {
   const hasItems = Array.isArray(items) && items.length > 0;
   const visibleItems = hasItems ? items.slice(0, 2) : [];
+  const hasActiveItems = visibleItems.some((item) => String(item?.displayStatus || item?.status || '').toLowerCase().includes('active'));
   const list = visibleItems.map((item) => (
     `<a class="home-tournaments-teaser__row" href="${item?.tournamentId ? `#tournaments?selected=${encodeURIComponent(item.tournamentId)}` : '#tournaments'}">
       <div class="home-tournaments-teaser__left">
@@ -324,7 +330,7 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
     <div class="home-tournaments-teaser__header">
       <div class="home-tournaments-teaser__titleBlock">
         <p class="home-tournaments-teaser__kicker">ТУРНІРНИЙ РЕЖИМ</p>
-        <h2>Активні турніри</h2>
+        <h2>${hasActiveItems ? 'Активні турніри' : 'Останні турніри'}</h2>
       </div>
     </div>
     <div class="home-tournaments-teaser__content">
@@ -495,6 +501,8 @@ function setHomeLoadingLifecycle(root) {
     contentRoot.classList.remove('home-content--hidden');
     loadingRoot.classList.add('is-complete');
     loadingRoot.setAttribute('aria-busy', 'false');
+    loadingRoot.setAttribute('aria-hidden', 'true');
+    loadingRoot.hidden = true;
     window.setTimeout(() => loadingRoot.remove(), 260);
   };
 
@@ -526,7 +534,7 @@ async function safeInitHomePage(root) {
   root.classList.add('home-v2');
   root.innerHTML = `${renderHomeLoadingSkeleton()}
     <div class="home-content" id="homeContent">
-      <section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Весняний сезон 2026 року</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
+      <section class="hero home-hero"><span class="hero__kicker">ВАРТА КЛУБ</span><h1 class="hero__title">ЛАЗЕРТАГ РЕЙТИНГ</h1><p class="home-current-season">Поточний сезон</p><p class="px-card__text" id="stateBox" aria-live="polite" hidden></p></section>
       <section class="section" id="homeDataStatusMount"></section>
       <section class="section" id="leadersNowMount"></section>
       <section class="section" id="leagueSections"></section>
@@ -539,6 +547,7 @@ async function safeInitHomePage(root) {
 
   const lifecycle = setHomeLoadingLifecycle(root);
   const stateBox = document.getElementById('stateBox');
+  const currentSeasonLabel = root.querySelector('.home-current-season');
   const leadersNowMount = document.getElementById('leadersNowMount');
   const homeDataStatusMount = document.getElementById('homeDataStatusMount');
   const homeSeasonPulseMount = document.getElementById('homeSeasonPulseMount');
@@ -570,6 +579,8 @@ async function safeInitHomePage(root) {
 
     const adultsLive = adultResult.status === 'fulfilled' ? adultResult.value : null;
     const kidsLive = kidsResult.status === 'fulfilled' ? kidsResult.value : null;
+    const seasonLabel = adultsLive?.seasonLabel || kidsLive?.seasonLabel;
+    if (currentSeasonLabel && seasonLabel) currentSeasonLabel.textContent = seasonLabel;
 
     if (adultResult.status === 'rejected') {
       debugWarn('[home] adult failed', adultResult.reason);

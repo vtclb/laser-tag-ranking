@@ -1,7 +1,8 @@
-import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js';
+import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js?v=20260715-perf2';
 import { debugWarn } from '../core/debug.js';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 import { rankFromPoints } from '../core/rankRules.js';
+import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
 const LEAGUES = ['sundaygames', 'kids'];
 const NO_DATA = 'Немає даних';
@@ -24,7 +25,7 @@ function num(value, fallback = 0) {
 }
 
 function signed(value) {
-  const n = Number(value);
+  const n = realNumber(value);
   if (!Number.isFinite(n)) return '—';
   return `${n > 0 ? '+' : ''}${n}`;
 }
@@ -34,7 +35,8 @@ function titleFromId(id = '') {
     summer_2025: 'Літо 2025',
     autumn_2025: 'Осінь 2025',
     winter_2025_2026: 'Зима 2025–2026',
-    spring_2026: 'Весна 2026'
+    spring_2026: 'Весна 2026',
+    summer_2026: 'Літо 2026'
   };
   return known[id] || String(id || 'Сезон').replaceAll('_', ' ');
 }
@@ -50,14 +52,15 @@ function seasonTone(seasonId = '') {
 
 function seasonStartKey([seasonId, master]) {
   const meta = master?.sections?.season_meta || {};
-  const raw = meta.dateStart || meta.date_start || meta.Date_start || meta.start || '';
+  const raw = meta.dateStart || meta.date_start || meta.Date_start || meta.Season_start || meta.start || '';
   const parsed = Date.parse(raw);
   if (Number.isFinite(parsed)) return parsed;
   const fallbackOrder = {
     summer_2025: 1,
     autumn_2025: 2,
     winter_2025_2026: 3,
-    spring_2026: 4
+    spring_2026: 4,
+    summer_2026: 5
   };
   return fallbackOrder[seasonId] || 9999;
 }
@@ -70,11 +73,18 @@ function seasonNumber(index = 0) {
   return `S${String(index + 1).padStart(2, '0')}`;
 }
 
-function periodText(meta = {}) {
-  const start = meta.dateStart || meta.date_start || meta.Date_start || meta.start || '';
-  const end = meta.dateEnd || meta.date_end || meta.Date_end || meta.end || '';
-  if (start && end) return `${start} — ${end}`;
-  return meta.period || meta.date_range || meta.dateRange || 'Архівний сезон';
+function periodText(meta = {}, seasonId = '') {
+  const start = meta.dateStart || meta.date_start || meta.Date_start || meta.Season_start || meta.start || '';
+  const end = meta.dateEnd || meta.date_end || meta.Date_end || meta.Season_end || meta.end || '';
+  if (start && end) return `${String(start).slice(0, 10)} — ${String(end).slice(0, 10)}`;
+  const knownPeriods = {
+    summer_2025: '2025-06-01 — 2025-08-31',
+    autumn_2025: '2025-09-01 — 2025-11-30',
+    winter_2025_2026: '2025-12-01 — 2026-02-28',
+    spring_2026: '2026-03-01 — 2026-05-31',
+    summer_2026: '2026-06-01 — 2026-08-31'
+  };
+  return meta.period || meta.date_range || meta.dateRange || knownPeriods[seasonId] || 'Архівний сезон';
 }
 
 function allPlayers(master = {}) {
@@ -113,6 +123,10 @@ function ratingDelta(player = {}) {
   return num(player.rating_delta ?? player.ratingDelta ?? player.delta ?? player.Rating_delta, 0);
 }
 
+function knownRatingDelta(player = {}) {
+  return realNumber(player?.rating_delta ?? player?.ratingDelta ?? player?.delta ?? player?.Rating_delta);
+}
+
 function mvpTotal(player = {}) {
   player = player || {};
   return num(player.mvp_total ?? player.mvpTotal ?? player.mvp ?? player.MVP_total, 0);
@@ -135,8 +149,9 @@ function playerVolume(players = []) {
   return players.reduce((sum, player) => sum + playerGames(player), 0);
 }
 
-function realNumber(value) {
-  const n = Number(value);
+export function realNumber(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  const n = Number(String(value).replace(',', '.'));
   return Number.isFinite(n) ? n : null;
 }
 
@@ -155,6 +170,12 @@ function activePlayers(players = []) {
   return players.filter((player) => playerGames(player) > 0);
 }
 
+function activePlayerKeys(players = []) {
+  return [...new Set(activePlayers(players)
+    .map((player) => String(playerName(player)).trim().toLowerCase())
+    .filter((key) => key && key !== NO_DATA.toLowerCase()))];
+}
+
 function uniqueCount(players = []) {
   const names = new Set();
   players.forEach((player) => {
@@ -168,7 +189,7 @@ function topBy(players = [], getter = ratingEnd) {
   return [...players].sort((a, b) => getter(b) - getter(a) || ratingEnd(b) - ratingEnd(a))[0] || null;
 }
 
-function normalizeLeagueStats(master = {}, league = 'sundaygames') {
+export function normalizeLeagueStats(master = {}, league = 'sundaygames') {
   const players = leaguePlayers(master, league);
   const active = activePlayers(players);
   const summary = leagueSummary(master, league);
@@ -179,11 +200,34 @@ function normalizeLeagueStats(master = {}, league = 'sundaygames') {
   const matches = Number.isFinite(matchesOverride)
     ? { value: matchesOverride, source: 'archive_match_override', trusted: true }
     : confirmedLeagueMatches(summary);
+  const summaryActive = realNumber(
+    summary.Unique_players_in_matches ?? summary.uniquePlayersInMatches ?? summary.unique_players_in_matches
+      ?? summary.players ?? summary.Players
+  );
+  const summaryRecords = realNumber(
+    summary.Roster_players ?? summary.rosterPlayers ?? summary.roster_players ?? summary.records
+  );
+  const summaryDelta = realNumber(
+    summary.pointsDelta ?? summary.points_delta ?? summary.ratingDelta ?? summary.rating_delta ?? summary.delta
+  );
+  // Older archive summaries used `players` for roster size. Prefer rows that
+  // have an explicit game count so inactive roster entries do not look active.
+  const hasDetailedActivity = players.some((player) => (
+    realNumber(player?.matches ?? player?.games ?? player?.Games) !== null
+  ));
+  const activeCount = hasDetailedActivity
+    ? active.length
+    : (Number.isFinite(summaryActive) ? summaryActive : active.length);
+  const recordCount = Math.max(players.length, summaryRecords ?? 0, summaryActive ?? 0, activeCount);
+  const playerDeltaValues = active.map(knownRatingDelta).filter(Number.isFinite);
+  const deltaKnown = Number.isFinite(summaryDelta) || playerDeltaValues.length > 0;
 
   return {
     label: leagueLabelUA(league),
-    active: active.length,
-    records: players.length,
+    active: activeCount,
+    activePlayerKeys: activePlayerKeys(players),
+    records: recordCount,
+    detailedRecords: players.length,
     playerVolume: playerVolume(active),
     matches: matches.value,
     matchesTrusted: matches.trusted,
@@ -191,11 +235,17 @@ function normalizeLeagueStats(master = {}, league = 'sundaygames') {
     leaderRank: rankOf(leader),
     mvpName: playerName(mvp),
     mvpRank: rankOf(mvp),
-    delta: active.reduce((sum, player) => sum + ratingDelta(player), 0)
+    delta: Number.isFinite(summaryDelta)
+      ? summaryDelta
+      : (deltaKnown ? playerDeltaValues.reduce((sum, value) => sum + value, 0) : null),
+    deltaKnown,
+    completeness: players.length === 0 && recordCount > 0
+      ? 'summary'
+      : (recordCount > players.length ? 'partial' : 'full')
   };
 }
 
-function normalizeSeasonStats([seasonId, master], index = 0) {
+export function normalizeSeasonStats([seasonId, master], index = 0) {
   const sections = master?.sections || {};
   const meta = sections.season_meta || {};
   const adult = normalizeLeagueStats(master, 'sundaygames');
@@ -207,21 +257,29 @@ function normalizeSeasonStats([seasonId, master], index = 0) {
     : confirmedMatches.length > 0
     ? confirmedMatches.reduce((sum, value) => sum + value, 0)
     : null;
-  const active = activePlayers(allPlayers(master));
+  const totalActive = adult.active + kids.active;
 
   return {
     id: seasonId,
     number: seasonNumber(index),
-    title: meta.title || meta.seasonTitle || titleFromId(seasonId),
-    period: periodText(meta),
+    title: titleFromId(seasonId),
+    period: periodText(meta, seasonId),
     theme: seasonTone(seasonId),
     totalMatches,
     totalMatchesTrusted: Number.isFinite(totalMatches),
-    totalActive: active.length,
-    totalPlayers: uniqueCount(active),
-    totalRecords: allPlayers(master).length,
-    totalPlayerVolume: playerVolume(active),
-    totalRatingDelta: active.reduce((sum, player) => sum + ratingDelta(player), 0),
+    totalActive,
+    totalPlayers: totalActive || uniqueCount(activePlayers(allPlayers(master))),
+    totalRecords: adult.records + kids.records,
+    totalDetailedRecords: allPlayers(master).length,
+    totalPlayerVolume: adult.playerVolume + kids.playerVolume,
+    totalRatingDelta: [adult, kids]
+      .filter((league) => league.deltaKnown)
+      .reduce((sum, league) => sum + league.delta, 0),
+    totalRatingDeltaKnown: adult.deltaKnown || kids.deltaKnown,
+    activePlayerKeys: [...new Set([...adult.activePlayerKeys, ...kids.activePlayerKeys])],
+    completeness: adult.completeness === 'full' && kids.completeness === 'full'
+      ? 'full'
+      : (adult.completeness === 'summary' && kids.completeness === 'summary' ? 'summary' : 'partial'),
     leagues: { adult, kids }
   };
 }
@@ -248,18 +306,39 @@ function validateSeasonStats(stats) {
   });
 }
 
-function buildArchiveTotals(statsList = []) {
-  return statsList.reduce((acc, stats) => {
+export function buildArchiveTotals(statsList = []) {
+  const totals = statsList.reduce((acc, stats) => {
     if (!stats) return acc;
     acc.seasons += 1;
     if (stats.totalMatchesTrusted) {
       acc.matches += stats.totalMatches;
       acc.confirmedMatchSeasons += 1;
     }
-    acc.active += stats.totalActive;
-    acc.delta += stats.totalRatingDelta;
+    (stats.activePlayerKeys || []).forEach((key) => acc.activePlayerKeys.add(key));
+    if (stats.totalRatingDeltaKnown) {
+      acc.delta += stats.totalRatingDelta;
+      acc.deltaSeasons += 1;
+    }
     return acc;
-  }, { seasons: 0, matches: 0, confirmedMatchSeasons: 0, active: 0, delta: 0 });
+  }, {
+    seasons: 0,
+    matches: 0,
+    confirmedMatchSeasons: 0,
+    activePlayerKeys: new Set(),
+    delta: 0,
+    deltaSeasons: 0
+  });
+  return { ...totals, uniqueActive: totals.activePlayerKeys.size };
+}
+
+export function seasonCountLabel(count = 0) {
+  const value = Math.max(0, Math.trunc(num(count, 0)));
+  const mod10 = value % 10;
+  const mod100 = value % 100;
+  const word = mod10 === 1 && mod100 !== 11
+    ? 'сезон'
+    : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'сезони' : 'сезонів');
+  return `${value} ${word}`;
 }
 
 function leagueShare(stats = {}, field = 'active') {
@@ -312,12 +391,12 @@ function renderArchiveSummary(statsList = []) {
   const gamesTotal = statsList.reduce((sum, stats) => sum + (stats.totalMatchesTrusted ? stats.totalMatches : 0), 0);
 
   return `<section class="sx-archive-summary">
-    <strong>${totals.seasons} сезони</strong>
+    <strong>${seasonCountLabel(totals.seasons)}</strong>
     <span>${esc(period)}</span>
     <p class="sx-archive-numbers">
       <span><b>${gamesTotal}</b> ігор</span>
-      <span><b>${totals.active}</b> активні</span>
-      <span><b>${signed(totals.delta)}</b> рейтинг</span>
+      <span><b>${totals.uniqueActive || '—'}</b> гравців</span>
+      <span><b>${totals.deltaSeasons ? signed(totals.delta) : '—'}</b> зміна рейтингу</span>
     </p>
   </section>`;
 }
@@ -390,7 +469,7 @@ function renderSeasonPreviewItem(stats = {}) {
           <span class="sx-season-icon">${seasonSymbol(stats.theme)}</span>
           <h2 class="sx-season-title">${esc(stats.title)}</h2>
         </div>
-        <strong class="sx-season-delta">${signed(stats.totalRatingDelta)}</strong>
+        <strong class="sx-season-delta">${stats.totalRatingDeltaKnown ? signed(stats.totalRatingDelta) : '—'}</strong>
       </header>
       <p class="sx-season-meta">${esc(stats.period)} · Архів</p>
       <div class="sx-season-metrics">
@@ -411,6 +490,9 @@ function renderSeasonPreviewItem(stats = {}) {
           <span class="sx-split-kids" style="width:${split.kidsPct}%"></span>
         </div>
       </div>
+      ${stats.completeness === 'partial'
+        ? `<p class="sx-season-coverage">Доступно профілів: ${stats.totalDetailedRecords} із ${stats.totalRecords}</p>`
+        : ''}
       <a class="sx-season-open" href="${href}">Відкрити</a>
     </div>
   </article>`;
@@ -432,7 +514,12 @@ export async function initSeasonsPage() {
       <h1>Сезони</h1>
       <p class="sx-hero-subtitle">Архів клубного рейтингу.</p>
     </header>
-    <section class="sx-loading">Завантаження архівів...</section>
+    <section class="sx-loading sx-loading--arena" role="status" aria-live="polite">
+      <span class="sx-loading__scanner" aria-hidden="true"><i></i></span>
+      <strong>Збираємо архів сезонів</strong>
+      <span>Порівнюємо рейтинги, місця та досягнення.</span>
+      <span class="sx-loading__timeline" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    </section>
   </section>`;
 
   try {
@@ -466,12 +553,11 @@ export async function initSeasonsPage() {
       ${renderYearTop(buildYearTop(visibleMasters))}
     </section>`;
   } catch (error) {
-    root.innerHTML = `<section id="seasons" class="sx-page sx-page--catalog">
-      <header class="sx-hero">
-        <p class="sx-eyebrow">Архів рейтингу</p>
-        <h1>Сезони</h1>
-        <p class="sx-hero-subtitle">${esc(safeErrorMessage(error, 'Не вдалося завантажити архіви сезонів'))}</p>
-      </header>
-    </section>`;
+    renderPageError(root, {
+      eyebrow: 'Архів рейтингу',
+      title: 'Сезони не завантажились',
+      message: safeErrorMessage(error, 'Не вдалося завантажити архіви сезонів.'),
+      onRetry: () => initSeasonsPage()
+    });
   }
 }

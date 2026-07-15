@@ -1,6 +1,8 @@
 import { normalizeLeague } from '../core/naming.js';
+import { debugWarn } from '../core/debug.js';
 
 const V2_BASE_URL = new URL('../', import.meta.url);
+const V2_ASSET_VERSION = '20260715-clean5';
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
   let link = document.getElementById(id);
@@ -22,8 +24,12 @@ function ensureStyleOrder() {
   ensureLink({ id: 'v2-tokens', href: new URL('styles/tokens.css', V2_BASE_URL).href });
   ensureLink({ id: 'v2-pixel-layer', href: new URL('styles/pixel-layer.css', V2_BASE_URL).href });
   ensureLink({ id: 'v2-icons', href: new URL('styles/icons.css', V2_BASE_URL).href });
-  ensureLink({ id: 'v2-loading-cubes', href: new URL('styles/loading-cubes.css', V2_BASE_URL).href });
-  ensureLink({ id: 'v2-assets-main', href: new URL('assets/css/main.css', V2_BASE_URL).href });
+  const loadingCssUrl = new URL('styles/loading-cubes.css', V2_BASE_URL);
+  loadingCssUrl.searchParams.set('v', V2_ASSET_VERSION);
+  ensureLink({ id: 'v2-loading-cubes', href: loadingCssUrl.href });
+  const mainCssUrl = new URL('assets/css/main.css', V2_BASE_URL);
+  mainCssUrl.searchParams.set('v', V2_ASSET_VERSION);
+  ensureLink({ id: 'v2-assets-main', href: mainCssUrl.href });
 }
 
 function ensureBottomNav() {
@@ -35,9 +41,9 @@ function ensureBottomNav() {
   }
   if (document.querySelector('.v2-bottom-nav')) return;
 
-  const nav = document.createElement('div');
+  const nav = document.createElement('nav');
   nav.className = 'v2-bottom-nav';
-  nav.setAttribute('aria-label', 'Нижня навігація');
+  nav.setAttribute('aria-label', 'Основна навігація');
   const iconAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
   const NAV_ICONS = {
     main: `<svg ${iconAttrs}><path d="M3.5 10.8 12 4l8.5 6.8V20H3.5z"/><path d="M9.2 20v-5.6h5.6V20"/><path d="M7.8 10.8h8.4"/></svg>`,
@@ -56,9 +62,19 @@ function ensureBottomNav() {
     <a class="v2-nav-btn nav-item" data-route="#rules" href="#rules"><span class="v2-nav-btn__icon">${NAV_ICONS.rules}</span><small class="v2-nav-btn__label">ПРАВИЛА</small></a>
   `;
 
+  const navLabels = {
+    '#main': 'Головна',
+    '#league-stats?league=sundaygames': 'Доросла ліга',
+    '#league-stats?league=kids': 'Дитяча ліга',
+    '#gameday?league=sundaygames': 'Ігровий день',
+    '#seasons': 'Архів сезонів',
+    '#rules': 'Правила'
+  };
   nav.querySelectorAll('.v2-nav-btn').forEach((el) => {
+    const route = el.getAttribute('data-route') || el.getAttribute('href');
+    const label = navLabels[route] || el.querySelector('.v2-nav-btn__label')?.textContent?.trim();
+    if (label) el.setAttribute('aria-label', label);
     el.addEventListener('click', (event) => {
-      const route = el.getAttribute('data-route') || el.getAttribute('href');
       if (!route) return;
       event.preventDefault();
       location.hash = route;
@@ -69,28 +85,68 @@ function ensureBottomNav() {
   document.querySelector('.page')?.classList.add('page-root');
 }
 
+function ensureSkipLink() {
+  const skipLink = document.querySelector('.skip-link');
+  if (!(skipLink instanceof HTMLAnchorElement) || skipLink.dataset.v2Bound === '1') return;
+  skipLink.dataset.v2Bound = '1';
+  skipLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    const view = document.getElementById('view');
+    if (!view) return;
+    view.focus({ preventScroll: true });
+    view.scrollIntoView({ block: 'start' });
+  });
+}
+
 async function ensureNavSheet() {
   if (document.getElementById('v2-navsheet')) return;
 
   const sheet = document.createElement('aside');
   sheet.id = 'v2-navsheet';
   sheet.className = 'navsheet';
-  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" aria-label="Закрити меню"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація"><section class="navsheet__section"><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#gameday?league=sundaygames" data-nav-link="1">Ігровий день</a><a class="btn" href="#seasons" data-nav-link="1">Архів сезонів</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></section></div>`;
+  sheet.hidden = true;
+  sheet.inert = true;
+  sheet.setAttribute('aria-hidden', 'true');
+  sheet.innerHTML = `<button type="button" class="navsheet__backdrop" data-nav-close="1" tabindex="-1" aria-hidden="true"></button><div class="navsheet__panel" role="dialog" aria-modal="true" aria-label="Навігація" tabindex="-1"><nav class="navsheet__section" aria-label="Меню сторінок"><div class="navsheet__grid"><a class="btn" href="#main" data-nav-link="1">Головна</a><a class="btn" href="#league-stats?league=sundaygames" data-nav-link="1">Доросла ліга</a><a class="btn" href="#league-stats?league=kids" data-nav-link="1">Дитяча ліга</a><a class="btn" href="#gameday?league=sundaygames" data-nav-link="1">Ігровий день</a><a class="btn" href="#seasons" data-nav-link="1">Архів сезонів</a><a class="btn" href="#rules" data-nav-link="1">Правила</a></div></nav></div>`;
 
   let scrollY = 0;
   let touchStartY = 0;
-  const close = (afterClose) => {
+  let lastFocusedElement = null;
+  const getTriggers = () => document.querySelectorAll('#globalMenuBtn, [data-open-global-menu="1"]');
+  const syncTriggers = (expanded) => {
+    getTriggers().forEach((trigger) => {
+      trigger.setAttribute('aria-controls', sheet.id);
+      trigger.setAttribute('aria-expanded', String(expanded));
+    });
+  };
+  const close = ({ restoreFocus = true } = {}) => {
+    if (!sheet.classList.contains('is-open')) return;
     sheet.classList.remove('is-open');
+    sheet.inert = true;
+    sheet.setAttribute('aria-hidden', 'true');
+    sheet.hidden = true;
     document.body.classList.remove('navsheet-open');
     document.body.style.top = '';
     window.scrollTo(0, scrollY);
-    if (typeof afterClose === 'function') afterClose();
+    syncTriggers(false);
+    if (restoreFocus && lastFocusedElement instanceof HTMLElement && lastFocusedElement.isConnected) {
+      lastFocusedElement.focus({ preventScroll: true });
+    }
+    lastFocusedElement = null;
   };
   const open = () => {
+    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     scrollY = window.scrollY;
+    sheet.hidden = false;
+    sheet.inert = false;
+    sheet.setAttribute('aria-hidden', 'false');
     sheet.classList.add('is-open');
     document.body.classList.add('navsheet-open');
     document.body.style.top = `-${scrollY}px`;
+    syncTriggers(true);
+    requestAnimationFrame(() => {
+      sheet.querySelector('[data-nav-link="1"]')?.focus({ preventScroll: true });
+    });
   };
 
   sheet.addEventListener('click', (event) => {
@@ -102,7 +158,7 @@ async function ensureNavSheet() {
       event.preventDefault();
       const href = el.getAttribute('href') || '#main';
       location.hash = href;
-      close();
+      close({ restoreFocus: false });
     });
   });
   const panel = sheet.querySelector('.navsheet__panel');
@@ -112,17 +168,44 @@ async function ensureNavSheet() {
     if (endY - touchStartY > 60) close();
   }, { passive: true });
 
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
-  window.addEventListener('hashchange', () => close());
-  window.addEventListener('v2:route-rendered', () => close());
+  document.addEventListener('keydown', (event) => {
+    if (!sheet.classList.contains('is-open')) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...sheet.querySelectorAll('.navsheet__panel a[href], .navsheet__panel button:not([disabled]), .navsheet__panel [tabindex]:not([tabindex="-1"])')]
+      .filter((element) => element instanceof HTMLElement && !element.hidden);
+    if (!focusable.length) {
+      event.preventDefault();
+      panel?.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+  window.addEventListener('hashchange', () => close({ restoreFocus: false }));
+  window.addEventListener('v2:route-rendered', () => close({ restoreFocus: false }));
   document.body.addEventListener('click', (event) => {
-    const trigger = event.target.closest('#globalMenuBtn, [data-open-global-menu="1"]');
+    const trigger = event.target instanceof Element
+      ? event.target.closest('#globalMenuBtn, [data-open-global-menu="1"]')
+      : null;
     if (!trigger) return;
     event.preventDefault();
     if (sheet.classList.contains('is-open')) close(); else open();
   });
 
   document.body.appendChild(sheet);
+  syncTriggers(false);
 }
 
 function ensureFonts() {
@@ -148,8 +231,9 @@ function updateTopNavActiveState() {
         (route === 'main' && linkRoute === 'main')
         || (route === 'rules' && linkRoute === 'rules')
         || ((route === 'seasons' || route === 'season') && linkRoute === 'seasons')
+        || (route === 'player' && linkRoute === 'league-stats' && (!linkLeague || linkLeague === league))
         || (route === 'league-stats' && linkRoute === 'league-stats' && (!linkLeague || linkLeague === league))
-        || (route === 'gameday' && linkRoute === 'gameday' && (!linkLeague || linkLeague === league))
+        || (route === 'gameday' && linkRoute === 'gameday')
       );
 
       if (isCurrent) {
@@ -161,7 +245,7 @@ function updateTopNavActiveState() {
       }
     });
   } catch (error) {
-    console.error('[global-styles] updateTopNavActiveState failed', error);
+    debugWarn('[global-styles] updateTopNavActiveState failed', error);
   }
 }
 
@@ -170,7 +254,9 @@ function ensureLoadingScript() {
   const script = document.createElement('script');
   script.type = 'module';
   script.id = 'v2-loading-cubes-script';
-  script.src = new URL('scripts/loading-cubes.js', V2_BASE_URL).href;
+  const loadingScriptUrl = new URL('scripts/loading-cubes.js', V2_BASE_URL);
+  loadingScriptUrl.searchParams.set('v', V2_ASSET_VERSION);
+  script.src = loadingScriptUrl.href;
   document.head.appendChild(script);
 }
 
@@ -195,11 +281,12 @@ export function ensureGlobalStyles() {
   ensureStyleOrder();
   ensureFonts();
   ensureBottomNav();
+  ensureSkipLink();
   ensureNavSheet();
   try {
     updateTopNavActiveState();
   } catch (error) {
-    console.error('[global-styles] topnav active-state bootstrap failed', error);
+    debugWarn('[global-styles] topnav active-state bootstrap failed', error);
   }
   if (!window.__v2TopNavActiveBound) {
     window.__v2TopNavActiveBound = true;
@@ -207,14 +294,14 @@ export function ensureGlobalStyles() {
       try {
         updateTopNavActiveState();
       } catch (error) {
-        console.error('[global-styles] hashchange topnav active-state failed', error);
+        debugWarn('[global-styles] hashchange topnav active-state failed', error);
       }
     });
     window.addEventListener('v2:route-rendered', () => {
       try {
         updateTopNavActiveState();
       } catch (error) {
-        console.error('[global-styles] route-rendered topnav active-state failed', error);
+        debugWarn('[global-styles] route-rendered topnav active-state failed', error);
       }
     });
   }

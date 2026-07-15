@@ -1,7 +1,8 @@
-﻿import { getGameDay } from '../core/dataHub.js';
-import { DEBUG, debugLog } from '../core/debug.js';
+﻿import { getGameDay } from '../core/dataHub.js?v=20260715-perf2';
+import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
+import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
 const DEFAULT_AVATAR_URL = './assets/default-avatar.svg';
 
@@ -33,19 +34,6 @@ function renderDataQualityPanel(dataQuality) {
 function fmtDelta(v) {
   const n = Number(v) || 0;
   return `${n > 0 ? '+' : ''}${n}`;
-}
-
-function fmtOptionalDelta(v) {
-  if (v === null || v === undefined || v === '') return '—';
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '—';
-  return fmtDelta(n);
-}
-
-function deltaTone(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return 'neu';
-  return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neu';
 }
 
 function fmtRank(value = '') {
@@ -83,98 +71,18 @@ function buildHash(route, params = {}) {
   return `#${route}${qs ? `?${qs}` : ''}`;
 }
 
-function canonicalNick(value = '') {
-  return String(value || '').trim().toLowerCase();
-}
-
-function toSafeCount(value) {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
-}
-
-function readPlayerMvpCount(player = {}) {
-  const directFields = [player?.mvpCount, player?.mvpTotal, player?.mvp, player?.mvp1, player?.mvp2, player?.mvp3];
-  for (const value of directFields) {
-    if (value === undefined || value === null || value === '') continue;
-    const count = toSafeCount(value);
-    if (count > 0 || Number(value) === 0) return count;
-  }
-  return null;
-}
-
-function countPlayerMvpFromMatches(player = {}, matches = []) {
-  const nickKey = canonicalNick(player?.nick);
-  if (!nickKey) return 0;
-  let count = 0;
-  (Array.isArray(matches) ? matches : []).forEach((match) => {
-    ['mvp1', 'mvp2', 'mvp3'].forEach((key) => {
-      if (canonicalNick(match?.[key]) === nickKey) count += 1;
-    });
-  });
-  return count;
-}
-
-function getPlayerMvpCount(player = {}, matches = []) {
-  const directCount = readPlayerMvpCount(player);
-  return directCount !== null ? directCount : countPlayerMvpFromMatches(player, matches);
-}
-
-function firstFiniteNumber(...values) {
-  for (const value of values) {
-    if (value === undefined || value === null || value === '') continue;
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
-}
-
-function getPlayerDayDelta(player = {}) {
-  return firstFiniteNumber(
-    player?.delta,
-    player?.ratingDelta,
-    player?.pointsDelta,
-    player?.dayDelta,
-    player?.scoreDelta,
-    player?.change,
-    player?.gain,
-    player?.dayPoints
-  ) ?? 0;
-}
-
-function getPlayerTotalPoints(player = {}) {
-  return firstFiniteNumber(
-    player?.pointsAfter,
-    player?.totalPoints,
-    player?.currentPoints,
-    player?.points,
-    player?.rating,
-    player?.score
-  );
-}
-
-function summarizeMvpPlaces(matches = [], summary = {}) {
-  const places = [
-    { key: 'mvp1', label: '1' },
-    { key: 'mvp2', label: '2' },
-    { key: 'mvp3', label: '3' }
-  ];
-  const resolved = places.map((place) => {
-    const counts = new Map();
-    (Array.isArray(matches) ? matches : []).forEach((match) => {
-      const nick = String(match?.[place.key] || '').trim();
-      if (!nick) return;
-      const key = canonicalNick(nick);
-      const item = counts.get(key) || { nick, count: 0 };
-      item.count += 1;
-      counts.set(key, item);
-    });
-    const leader = [...counts.values()].sort((a, b) => b.count - a.count || a.nick.localeCompare(b.nick, 'uk'))[0];
-    return { ...place, nick: leader?.nick || '', count: leader?.count || 0 };
-  });
-  if (resolved.some((item) => item.nick)) return resolved;
-
-  const fallback = (typeof summary.mvpDay === 'string' ? summary.mvpDay : summary.mvpDay?.nick) || '';
-  return fallback ? [{ key: 'mvp1', label: '1', nick: fallback, count: 1 }] : [];
+function renderGameDayLoading() {
+  return `<section class="px-card gameday-loading-shell" role="status" aria-live="polite">
+    <div class="gameday-loading-arena" aria-hidden="true">
+      <span class="gameday-loading-arena__beam"></span>
+      <span class="gameday-loading-arena__team gameday-loading-arena__team--one"></span>
+      <span class="gameday-loading-arena__team gameday-loading-arena__team--two"></span>
+    </div>
+    <p class="gameday-loading-shell__eyebrow">Ігровий день</p>
+    <h1 class="gameday-loading-shell__title">Зводимо результати арени</h1>
+    <p class="gameday-loading-shell__text">Готуємо команди, очки та MVP.</p>
+    <div class="gameday-loading-stages" aria-hidden="true"><span>Матчі</span><span>Гравці</span><span>MVP</span></div>
+  </section>`;
 }
 
 function teamLabel(teamKey = 'team1') {
@@ -234,38 +142,31 @@ function parseSeries(series = '') {
 }
 
 function computeTeamStats(team = [], pointsChanges = [], roster = new Map()) {
-  const keys = new Set(team.map((nick) => canonicalNick(nick)));
+  const keys = new Set(team.map((nick) => String(nick || '').trim().toLowerCase()));
   let totalRating = 0;
   let totalDelta = 0;
-  let hasDelta = false;
 
   team.forEach((nick) => {
-    const p = roster.get(canonicalNick(nick));
+    const p = roster.get(String(nick || '').trim().toLowerCase());
     totalRating += Number(p?.pointsAfter) || 0;
   });
 
   pointsChanges.forEach((item) => {
-    if (!keys.has(canonicalNick(item.nick))) return;
-    const delta = Number(item.delta);
-    if (!Number.isFinite(delta)) return;
-    totalDelta += delta;
-    hasDelta = true;
+    if (keys.has(String(item.nick || '').trim().toLowerCase())) totalDelta += Number(item.delta) || 0;
   });
 
-  return { totalRating, totalDelta: hasDelta ? totalDelta : null, hasDelta };
+  return { totalRating, totalDelta };
 }
 
 function getPlayerGameDelta(nick = '', pointsChanges = []) {
-  const key = canonicalNick(nick);
-  if (!key) return null;
+  const key = String(nick || '').trim().toLowerCase();
+  if (!key) return 0;
   const item = (Array.isArray(pointsChanges) ? pointsChanges : [])
-    .find((change) => canonicalNick(change?.nick) === key);
-  if (!item) return null;
-  const delta = Number(item.delta);
-  return Number.isFinite(delta) ? delta : null;
+    .find((change) => String(change?.nick || '').trim().toLowerCase() === key);
+  return Number(item?.delta) || 0;
 }
 
-function buildPlayersTable(players = [], league = 'sundaygames', matches = []) {
+function buildPlayersTable(players = [], league = 'sundaygames') {
   if (!players.length) {
     return '<p class="px-card__text">Для цього дня гравців ще немає.</p>';
   }
@@ -273,18 +174,15 @@ function buildPlayersTable(players = [], league = 'sundaygames', matches = []) {
   return `
     <div class="gameday-player-list">
       ${players.map((p, idx) => {
-        const delta = getPlayerDayDelta(p);
+        const delta = Number(p.delta || 0);
         const tone = delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'neu';
-        const mvpCount = getPlayerMvpCount(p, matches);
-        const mvpTone = mvpCount > 0 ? 'is-accent' : 'is-muted';
-        const totalPoints = getPlayerTotalPoints(p);
         return `
           <a class="gameday-player-row" href="#player?league=${encodeURIComponent(league)}&nick=${encodeURIComponent(p.nick || '')}">
             <span class="gameday-player-row__place">#${idx + 1}</span>
             <img class="gameday-player-row__avatar" src="${esc(avatarUrl(p))}" alt="${esc(p.nick || 'Аватар гравця')}" loading="lazy" ${avatarFallbackAttr()}>
             <span class="gameday-player-row__main">
               <strong>${esc(p.nick || 'Гравець')}</strong>
-              <span><b class="gameday-rank-letter ${rankClass(p.rankAfter || p.rankLetter)}">${esc(fmtRank(p.rankAfter || p.rankLetter))}</b> · ${esc(totalPoints === null ? '—' : String(totalPoints))} очок · ${esc(`${p.matches ?? 0} іг / ${p.wins ?? 0} пер`)} · <b class="gameday-player-row__mvp ${mvpTone}">MVP ${esc(String(mvpCount))}</b></span>
+              <span><b class="gameday-rank-letter ${rankClass(p.rankAfter || p.rankLetter)}">${esc(fmtRank(p.rankAfter || p.rankLetter))}</b> · ${esc(String(p.pointsAfter ?? 0))} очок · ${esc(`${p.matches ?? 0} іг / ${p.wins ?? 0} пер`)}</span>
             </span>
             <span class="gameday-player-row__delta ${tone}">${esc(fmtDelta(delta))}</span>
           </a>`;
@@ -322,12 +220,11 @@ function buildMatchCard(match = {}, roster = new Map()) {
     { label: 'MVP 3', nick: match.mvp3, tone: 'bronze' }
   ].filter((item) => item.nick);
   const mvpLabel = mvpRows.length
-    ? mvpRows.map((row, index) => `${index + 1}. ${row.nick}`).filter(Boolean).join(' · ')
+    ? mvpRows.map((row) => row.nick).filter(Boolean).join(' · ')
     : 'MVP ще не визначено';
-  const hasPointChanges = Array.isArray(match.pointsChanges) && match.pointsChanges.length > 0;
   const teamTotals = teams.map(([key, members]) => {
     const stats = computeTeamStats(members, match.pointsChanges || [], roster);
-    return `${teamLabel(key)}: ${fmtOptionalDelta(stats.totalDelta)}`;
+    return `${teamLabel(key)}: ${fmtDelta(stats.totalDelta)}`;
   }).join(' · ');
 
   return `
@@ -367,20 +264,19 @@ function buildMatchCard(match = {}, roster = new Map()) {
                     <h3>${teamLabel(key)}</h3>
                     ${isWinner ? '<span class="gameday-team-box__winner-badge">переможець</span>' : isDraw ? '<span class="gameday-team-box__winner-badge">нічия</span>' : winnerKey ? '<span class="gameday-team-box__winner-badge">поразка</span>' : ''}
                   </div>
-                  <span class="gameday-team-box__delta ${deltaTone(stats.totalDelta)}">${esc(fmtOptionalDelta(stats.totalDelta))}</span>
+                  <span class="gameday-team-box__delta ${stats.totalDelta > 0 ? 'pos' : stats.totalDelta < 0 ? 'neg' : 'neu'}">${esc(fmtDelta(stats.totalDelta))}</span>
                 </div>
                 <ul class="gameday-team-player-list">
                   ${members.map((nick) => {
                     const delta = getPlayerGameDelta(nick, match.pointsChanges || []);
-                    return `<li><span>${esc(nick)}</span><b class="${deltaTone(delta)}">${esc(fmtOptionalDelta(delta))}</b></li>`;
+                    const tone = delta > 0 ? 'pos' : delta < 0 ? 'neg' : 'neu';
+                    return `<li><span>${esc(nick)}</span><b class="${tone}">${esc(fmtDelta(delta))}</b></li>`;
                   }).join('')}
                 </ul>
                 <div class="gameday-team-box__foot">${stats.totalRating || 0} pts сумарно</div>
               </section>`;
           }).join('')}
         </div>
-
-        ${hasPointChanges ? '' : '<p class="gameday-match-details__note">Бали цього матчу тимчасово недоступні.</p>'}
 
         <section class="gameday-match-summary">
           <div><span>Підсумок</span><strong>${esc(prettyWinner(match.winner))}</strong></div>
@@ -403,16 +299,13 @@ function render(root, payload, filters) {
   const matches = Array.isArray(payload.matches) ? payload.matches : [];
   const dates = Array.isArray(payload.availableDates) ? payload.availableDates : [];
   const summary = payload.summary || {};
-  const rosterMap = new Map(players.map((p) => [canonicalNick(p.nick), p]));
+  const rosterMap = new Map(players.map((p) => [String(p.nick || '').trim().toLowerCase(), p]));
   const partialNote = payload.hasLeagueSnapshot
     ? ''
     : '<p class="px-card__text">Таблиця ліги зараз недоступна, тому показуємо лише базовий лог ігрового дня.</p>';
   const gamesCount = Number(summary.matches ?? payload.gamesCount ?? matches.length ?? 0);
   const playersCount = Number(summary.participants ?? players.length ?? 0);
-  const mvpPlaces = summarizeMvpPlaces(matches, summary);
-  const mvpDayMarkup = mvpPlaces.length
-    ? `<span class="gameday-summary-mvp-list">${mvpPlaces.map((item) => `<span><em>${esc(item.label)}</em>${esc(item.nick)}${item.count > 1 ? ` <small>x${esc(String(item.count))}</small>` : ''}</span>`).join('')}</span>`
-    : '<b>MVP ще не визначено</b>';
+  const mvpDay = (typeof summary.mvpDay === 'string' ? summary.mvpDay : summary.mvpDay?.nick) || 'MVP ще не визначено';
   const bestGrowthNick = summary.bestDelta?.nick || summary.bestGain?.nick || '';
   const bestGrowthDelta = summary.bestDelta?.delta ?? summary.bestGain?.delta;
   const bestGrowth = bestGrowthNick ? `${bestGrowthNick} ${fmtDelta(bestGrowthDelta)}` : 'Приріст ще не розраховано';
@@ -429,7 +322,7 @@ function render(root, payload, filters) {
       <div class="gameday-summary-grid">
         <div class="gameday-summary-card"><span>Ігор</span><b>${esc(String(gamesCount))}</b></div>
         <div class="gameday-summary-card"><span>Гравців</span><b>${esc(String(playersCount))}</b></div>
-        <div class="gameday-summary-card gameday-summary-card--mvp"><span>MVP дня</span>${mvpDayMarkup}</div>
+        <div class="gameday-summary-card gameday-summary-card--mvp"><span>MVP дня</span><b>${esc(mvpDay)}</b></div>
         <div class="gameday-summary-card gameday-summary-card--growth"><span>Найбільший приріст</span><b>${esc(bestGrowth)}</b></div>
       </div>
       ${partialNote}
@@ -458,7 +351,7 @@ function render(root, payload, filters) {
         <h2 class="px-card__title">Таблиця гравців дня</h2>
         <p class="px-card__text">Хто як зіграв: очки, приріст і результат за день.</p>
       </div>
-      ${buildPlayersTable(players, payload.league, matches)}
+      ${buildPlayersTable(players, payload.league)}
     </section>
 
     <section class="px-card gameday-matches-block">
@@ -500,14 +393,13 @@ function render(root, payload, filters) {
     trigger?.setAttribute('aria-expanded', 'true');
   };
 
-  matchCards.forEach((card, index) => {
+  matchCards.forEach((card) => {
     const trigger = card.querySelector('.gameday-match-head');
     trigger?.addEventListener('click', () => {
       const isOpen = card.classList.contains('is-open');
       matchCards.forEach((item) => closeCard(item));
       if (!isOpen) openCard(card);
     });
-    if (index === 0) openCard(card);
   });
 }
 
@@ -524,25 +416,22 @@ export async function initPage(root, params = {}) {
     await safeInitGameDayPage(root, params);
   } catch (err) {
     console.error('[gameday] fatal crash:', err);
-    root.innerHTML = `
-      <div style="padding:20px;color:#fff">
-        ❌ Помилка завантаження сторінки
-      </div>
-    `;
+    renderPageError(root, {
+      eyebrow: 'Ігровий день',
+      title: 'Результати не завантажились',
+      message: 'Не вдалося отримати матчі та статистику дня.',
+      onRetry: () => initPage(root, params)
+    });
   }
 }
 
 async function safeInitGameDayPage(root, params = {}) {
-  root.innerHTML = `
-    <section class="px-card gameday-loading-shell">
-      <h1 class="gameday-loading-shell__title">Ігровий день</h1>
-      <p class="gameday-loading-shell__text">Завантаження...</p>
-    </section>`;
+  root.innerHTML = renderGameDayLoading();
   const filters = resolveParams(params);
   const payload = await getGameDay({ league: filters.league, date: filters.date });
   debugLog('[gameday] data loaded', payload);
   if (!payload) {
-    console.warn('[gameday] no data, rendering empty state');
+    debugWarn('[gameday] no data, rendering empty state');
     root.innerHTML = `
       <section class="px-card gameday-loading-shell">
         <h1 class="gameday-loading-shell__title">Ігровий день</h1>
@@ -558,7 +447,7 @@ async function safeInitGameDayPage(root, params = {}) {
     summary: payload?.summary || {}
   };
   if (!safePayload?.hasLeagueSnapshot) {
-    console.warn('[gameday] rendered in partial mode without league snapshot sheet');
+    debugWarn('[gameday] rendered in partial mode without league snapshot sheet');
   }
   render(root, safePayload, filters);
 }

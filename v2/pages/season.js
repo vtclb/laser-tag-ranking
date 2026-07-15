@@ -1,5 +1,6 @@
-import { listSeasonMasters, getSeasonMaster, rankFromPoints, safeErrorMessage } from '../core/dataHub.js';
+import { listSeasonMasters, getSeasonMaster, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260715-perf2';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
+import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
 const RANK_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -29,7 +30,8 @@ function titleFromId(id = '') {
     spring_2026: 'Весна 2026',
     winter_2025_2026: 'Зима 2025-2026',
     autumn_2025: 'Осінь 2025',
-    summer_2025: 'Літо 2025'
+    summer_2025: 'Літо 2025',
+    summer_2026: 'Літо 2026'
   };
   return known[id] || String(id || 'Сезон').replaceAll('_', ' ');
 }
@@ -48,7 +50,8 @@ function seasonStartKey(seasonId = '') {
     summer_2025: 1,
     autumn_2025: 2,
     winter_2025_2026: 3,
-    spring_2026: 4
+    spring_2026: 4,
+    summer_2026: 5
   };
   return fallbackOrder[seasonId] || 9999;
 }
@@ -488,12 +491,13 @@ export async function initSeasonPage(params = {}) {
       seasons: seasons.length ? seasons : [selectedSeason]
     });
   } catch (error) {
-    root.innerHTML = `<section class="sd-page">
-      <div class="sd-loading">
-        <strong>Архів недоступний</strong>
-        <span>${esc(safeErrorMessage(error, 'Не вдалося завантажити сезон'))}</span>
-        <a href="#seasons">Повернутися до сезонів</a>
-      </div>
-    </section>`;
+    renderPageError(root, {
+      eyebrow: 'Архів сезону',
+      title: 'Сезон не завантажився',
+      message: safeErrorMessage(error, 'Не вдалося завантажити сезон.'),
+      backHref: '#seasons',
+      backLabel: 'До архіву',
+      onRetry: () => initSeasonPage(params)
+    });
   }
 }

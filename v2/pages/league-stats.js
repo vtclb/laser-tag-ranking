@@ -93,10 +93,6 @@ function tableRowMarkup(player, league) {
   const deltaClass = deltaValue >= 0 ? 'is-positive' : 'is-negative';
   const isInactive = !isSeasonActive(player);
   const deltaText = isInactive ? '—' : fmtSigned(deltaValue);
-  const matchesText = seasonStatValue(player, 'matches');
-  const mobileWinRate = isInactive ? '—' : winRateText(player.winRate);
-  const mvpTotal = ['mvp1', 'mvp2', 'mvp3']
-    .reduce((total, key) => total + (Number(player?.[key]) || 0), 0);
   return `<tr class="league-ranking-table__row league-ranking-table__row--rank-${rankKey}${isInactive ? ' league-ranking-table__row--inactive' : ''}" data-href="${href}" tabindex="0" role="link" aria-label="Профіль ${esc(player.nickname)}">
     <td class="league-ranking-table__cell league-ranking-table__cell--place">${player.place ? `#${player.place}` : '—'}</td>
     <td class="league-ranking-table__cell league-ranking-table__cell--player">
@@ -104,7 +100,6 @@ function tableRowMarkup(player, league) {
         <span class="league-rank-badge ${rankClass(rank)}">${esc(rank)}</span>
         <span class="league-avatar-wrap league-rank-frame ${rankClass(rank)}"><img class="league-avatar" src="${esc(player.avatarUrl || FALLBACK_AVATAR)}" alt="${esc(player.nickname || 'Аватар гравця')}" loading="lazy" ${avatarFallbackAttr()}></span>
         <span class="league-player-cell__name">${esc(player.nickname)}</span>
-        <span class="league-player-cell__mobile-meta">${matchesText} іг · ${esc(mobileWinRate)} WR · MVP ${esc(mvpTotal)} <span class="league-player-cell__mobile-delta ${deltaClass}">${esc(deltaText)}</span></span>
       </span>
     </td>
     <td class="league-ranking-table__cell league-ranking-table__cell--points">${esc(player.points ?? 0)}</td>

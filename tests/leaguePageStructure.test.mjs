@@ -45,11 +45,12 @@ test('league page explains a season with no games without hiding starting rating
   assert.match(script, /стартовий рейтинг/);
 });
 
-test('league mobile controls keep touch targets and ranking rows self-contained', () => {
+test('league mobile controls keep touch targets and avoid an oversized player column', () => {
   assert.match(css, /league-search-input[\s\S]*min-height: 44px/);
-  assert.match(css, /league-full-ranking \.league-table-shell[\s\S]*overflow-x: hidden !important/);
-  assert.match(css, /league-ranking-table[\s\S]*min-width: 0 !important/);
-  assert.match(script, /league-player-cell__mobile-meta/);
-  assert.doesNotMatch(template, /Таблицю можна прокручувати вбік/);
+  assert.match(css, /league-full-ranking \.league-table-shell[\s\S]*overflow-x: auto/);
+  assert.match(css, /league-ranking-table[\s\S]*min-width: 580px !important/);
+  assert.match(css, /league-ranking-table__cell--player[\s\S]*width: 170px !important/);
+  assert.doesNotMatch(script, /league-player-cell__mobile-meta/);
+  assert.match(template, /Таблицю можна прокручувати вбік/);
   assert.match(css, /league-pulse__layout[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
 });

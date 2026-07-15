@@ -2,7 +2,7 @@ import { normalizeLeague } from '../core/naming.js';
 import { debugWarn } from '../core/debug.js';
 
 const V2_BASE_URL = new URL('../', import.meta.url);
-const V2_ASSET_VERSION = '20260715-clean5';
+const V2_ASSET_VERSION = '20260715-table1';
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
   let link = document.getElementById(id);

@@ -1,4 +1,4 @@
-import { ensureGlobalStyles } from '../pages/global-styles.js?v=20260715-clean5';
+import { ensureGlobalStyles } from '../pages/global-styles.js?v=20260715-table1';
 import { debugInfo, debugLog } from './debug.js';
 import { normalizeLeague } from './naming.js';
 
@@ -288,8 +288,8 @@ async function renderRoute() {
     }
 
     if (route === 'league-stats') {
-      if (!await mountTemplate('./pages/league.html?v=20260715-clean5', renderId)) return;
-      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260715-clean5');
+      if (!await mountTemplate('./pages/league.html?v=20260715-table1', renderId)) return;
+      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260715-table1');
       await runPageInit(route, initLeagueStatsPage, { league: queryParams.league }, renderId);
       return;
     }

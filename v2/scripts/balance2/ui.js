@@ -603,9 +603,12 @@ export function renderTeams() {
       const matchSide = key === activeTeams[0] ? 'A' : (key === activeTeams[1] ? 'B' : '');
       const details = document.createElement('details');
       const summary = document.createElement('summary');
+      const summaryText = document.createElement('span');
       details.className = card.className;
       details.dataset.teamId = key;
-      summary.textContent = `${getTeamLabel(key)}${matchSide ? ` - ${matchSide}` : ''} - ${sumByNicks(state.teamsState.teams[key] || [])} pts`;
+      summaryText.className = 'team-card-summary-text';
+      summaryText.textContent = `${getTeamLabel(key)}${matchSide ? ` - ${matchSide}` : ''} - ${sumByNicks(state.teamsState.teams[key] || [])} pts`;
+      summary.append(summaryText);
       details.append(summary, ...card.childNodes);
       details.open = activeTeamSet.has(key)
         || expandedMobileTeams.has(key)

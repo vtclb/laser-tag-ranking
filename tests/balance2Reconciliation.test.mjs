@@ -86,12 +86,16 @@ test('series state supports the full ten rounds', () => {
 test('admin UI exposes ten rounds and keeps school mode hidden', () => {
   const html = readFileSync(new URL('../v2/balance2.html', import.meta.url), 'utf8');
   const ui = readFileSync(new URL('../v2/scripts/balance2/ui.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../v2/styles/balance2.css', import.meta.url), 'utf8');
 
   assert.match(html, /data-series-count="10"/);
   assert.doesNotMatch(ui, /data-event-mode="school"/);
   assert.match(html, /class="mobile-workspace-nav"/);
   assert.match(html, /href="#playersCard"/);
   assert.match(html, /href="#matchCard"/);
+  assert.match(html, /href="\.\/index\.html#main"/);
+  assert.match(css, /\.v2-bottom-nav \{ display: none !important; \}/);
+  assert.match(ui, /team-card-summary-text/);
   assert.match(ui, /useMobileAccordion/);
   assert.match(ui, /data-event-mode="regular"/);
   assert.match(ui, /round !== null && Number\(round\) === option\.val/);

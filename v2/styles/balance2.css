@@ -856,7 +856,7 @@ body.theme-game .balance2-root .lobby-panel { border-left: 1px solid #29323c !im
     top: 0;
     z-index: 50;
     display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: 44px repeat(4, minmax(0, 1fr));
     gap: 2px;
     margin: 0 -16px;
     padding: 7px 10px;
@@ -919,7 +919,7 @@ body.theme-game .balance2-root .lobby-panel { border-left: 1px solid #29323c !im
   .round-btn { min-width: 0; min-height: 48px; padding: 6px 3px; white-space: normal; }
 
   .save-sticky {
-    bottom: calc(62px + env(safe-area-inset-bottom));
+    bottom: env(safe-area-inset-bottom);
     z-index: 45;
     margin: 0 -8px;
     padding: 8px;
@@ -960,4 +960,65 @@ body.theme-game .balance2-root .lobby-panel { border-left: 1px solid #29323c !im
   }
   #teamsGrid details.team-card[open] > summary::after { content: "\2212"; }
   #teamsGrid details.team-card[open] > summary { margin-bottom: 10px; border-bottom: 1px solid #29323c; }
+}
+
+/* Balance2 owns its navigation; the global six-item bar is intentionally hidden. */
+body.theme-game:has(.balance2-root) .v2-bottom-nav { display: none !important; }
+
+.mobile-workspace-nav__home {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0 !important;
+  color: #59d6c7 !important;
+}
+.mobile-workspace-nav__home svg {
+  width: 22px;
+  height: 22px;
+}
+
+@media (min-width: 761px) {
+  body.theme-game .balance2-root .mobile-workspace-nav {
+    display: flex !important;
+    justify-content: flex-end;
+    padding: 8px 0;
+  }
+  .mobile-workspace-nav > a:not(.mobile-workspace-nav__home) {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  body.theme-game .balance2-root { padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+  .mobile-workspace-nav a {
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  .team-card-summary-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .team-name-wrap,
+  .team-score-tags,
+  .player-meta { min-width: 0; }
+  .balance2-root button {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 340px) {
+  .balance2-root { padding-right: 12px; padding-left: 12px; }
+  body.theme-game .balance2-root .mobile-workspace-nav { margin-right: -12px; margin-left: -12px; padding-right: 6px; padding-left: 6px; }
+  .mobile-workspace-nav a { padding-right: 1px; padding-left: 1px; font-size: 10px; }
+}
+
+body.theme-game .balance2-root .player-row > .tag {
+  flex: 0 0 max-content !important;
+  width: max-content !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  overflow: visible !important;
 }

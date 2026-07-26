@@ -120,7 +120,7 @@ export async function saveMatch(payload, timeoutMs = 20000) {
   try {
     const res = await fetchWithTimeout(PROXY_ORIGIN, {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
       body,
     }, timeoutMs);
@@ -145,7 +145,7 @@ async function postTournament(payload, timeoutMs = 20000) {
   try {
     const proxyRes = await fetchWithTimeout(TOURNAMENT_PROXY_JSON_ENDPOINT, {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'omit',
       headers: { 'Content-Type': 'application/json;charset=UTF-8' },
       body: JSON.stringify(payload || {}),
     }, timeoutMs);

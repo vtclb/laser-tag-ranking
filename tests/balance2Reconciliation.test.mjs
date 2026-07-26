@@ -87,6 +87,7 @@ test('admin UI exposes ten rounds and keeps school mode hidden', () => {
   const html = readFileSync(new URL('../v2/balance2.html', import.meta.url), 'utf8');
   const ui = readFileSync(new URL('../v2/scripts/balance2/ui.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../v2/styles/balance2.css', import.meta.url), 'utf8');
+  const api = readFileSync(new URL('../v2/scripts/balance2/api.js', import.meta.url), 'utf8');
 
   assert.match(html, /data-series-count="10"/);
   assert.doesNotMatch(ui, /data-event-mode="school"/);
@@ -108,4 +109,6 @@ test('admin UI exposes ten rounds and keeps school mode hidden', () => {
   assert.match(css, /\.round-btn\.outcome-draw/);
   assert.match(css, /\.round-card\[data-result="2"\]/);
   assert.match(css, /\.rating-sync-panel--confirmed/);
+  assert.doesNotMatch(api, /credentials:\s*['"]include['"]/);
+  assert.equal((api.match(/credentials:\s*['"]omit['"]/g) || []).length, 2);
 });

@@ -606,7 +606,7 @@ export function renderTeams() {
       const summaryText = document.createElement('span');
       details.className = card.className;
       details.dataset.teamId = key;
-      summaryText.className = 'team-card-summary-text';
+      summaryText.className = 'team-summary-text';
       summaryText.textContent = `${getTeamLabel(key)}${matchSide ? ` - ${matchSide}` : ''} - ${sumByNicks(state.teamsState.teams[key] || [])} pts`;
       summary.append(summaryText);
       details.append(summary, ...card.childNodes);
@@ -711,6 +711,7 @@ export function renderMatchTeams() {
   }
 
   const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  const summary = computeSeriesSummary();
   root.innerHTML = [teamA, teamB].map((key, idx) => {
     const items = state.teamsState.teams[key].map((playerKey) => {
       const player = map.get(playerKey);
@@ -718,7 +719,11 @@ export function renderMatchTeams() {
       return `<li>${escapeHtml(player?.nick || playerKey)}${leagueLabel}</li>`;
     }).join('');
     const label = idx === 0 ? 'A' : 'B';
-    return `<div class="team-card"><h4>${label} · ${escapeHtml(getTeamLabel(key))}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
+    const side = idx === 0 ? 'team1' : 'team2';
+    const outcomeClass = summary.played < 1
+      ? ''
+      : (summary.winner === 'tie' ? 'match-team--draw' : (summary.winner === side ? 'match-team--winner' : 'match-team--loser'));
+    return `<div class="team-card match-team ${outcomeClass}"><h4>${label} · ${escapeHtml(getTeamLabel(key))}</h4><ul class="match-team-preview">${items || '<li>порожньо</li>'}</ul></div>`;
   }).join('');
 }
 
@@ -746,7 +751,17 @@ export function renderSeriesEditor() {
     ];
     return `<div class="round-card ${round !== null ? 'selected' : ''}" data-result="${round === null ? 'none' : round}"><div class="series-row"><strong>Бій ${idx + 1}</strong><small class="round-chip">${chip}</small><div class="round-row">${options.map((option) => {
       const selected = round !== null && Number(round) === option.val;
-      return `<button class="chip round-btn ${option.className} ${selected ? 'active' : ''}" type="button" aria-pressed="${selected}" data-round="${idx}" data-value="${option.val}">${selected ? '✓ ' : ''}${option.label}</button>`;
+      const outcomeClass = round === null
+        ? ''
+        : (round === 0 && option.val === 0
+          ? 'outcome-draw'
+          : (round !== 0 && option.val === round
+            ? 'outcome-winner'
+            : (round !== 0 && option.val !== 0 ? 'outcome-loser' : '')));
+      const outcomeLabel = outcomeClass === 'outcome-winner'
+        ? `✓ ${option.label}`
+        : (outcomeClass === 'outcome-loser' ? `Поразка ${option.val === 1 ? 'A' : 'B'}` : option.label);
+      return `<button class="chip round-btn ${option.className} ${selected ? 'active' : ''} ${outcomeClass}" type="button" aria-pressed="${selected}" data-round="${idx}" data-value="${option.val}">${outcomeLabel}</button>`;
     }).join('')}</div></div></div>`;
   }).join('');
 }
@@ -757,8 +772,10 @@ export function renderMatchSummary() {
   const summary = computeSeriesSummary();
   const winnerLabel = summary.played < 1 ? 'не визначено' : (summary.winner === 'tie' ? 'Нічия' : (summary.winner === 'team1' ? 'A' : 'B'));
   const totalRounds = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(state.matchState.seriesCount) || 3));
+  const teamAOutcome = summary.played < 1 ? '' : (summary.winner === 'tie' ? 'summary-outcome-draw' : (summary.winner === 'team1' ? 'summary-outcome-winner' : 'summary-outcome-loser'));
+  const teamBOutcome = summary.played < 1 ? '' : (summary.winner === 'tie' ? 'summary-outcome-draw' : (summary.winner === 'team2' ? 'summary-outcome-winner' : 'summary-outcome-loser'));
 
-  root.innerHTML = `<div class="summary-pill summary-progress">Відмічено: <strong>${summary.played} / ${totalRounds}</strong></div><div class="summary-pill summary-a">A: <strong>${summary.wins.team1}</strong></div><div class="summary-pill summary-draw">Нічиї: <strong>${summary.draws}</strong></div><div class="summary-pill summary-b">B: <strong>${summary.wins.team2}</strong></div><div class="summary-pill summary-winner">Поточний результат: <strong>${winnerLabel}</strong></div>`;
+  root.innerHTML = `<div class="summary-pill summary-progress">Відмічено: <strong>${summary.played} / ${totalRounds}</strong></div><div class="summary-pill summary-a ${teamAOutcome}">A: <strong>${summary.wins.team1}</strong></div><div class="summary-pill summary-draw">Нічиї: <strong>${summary.draws}</strong></div><div class="summary-pill summary-b ${teamBOutcome}">B: <strong>${summary.wins.team2}</strong></div><div class="summary-pill summary-winner">Поточний результат: <strong>${winnerLabel}</strong></div>`;
 }
 
 export function renderPenalties() {

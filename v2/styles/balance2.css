@@ -271,9 +271,9 @@
   background: rgba(255, 255, 255, .02);
 }
 .round-card.selected { border-width: 2px; }
-.round-card[data-result="1"] { border-color: rgba(124, 255, 114, .78); background: rgba(124, 255, 114, .07); }
-.round-card[data-result="0"] { border-color: rgba(255, 204, 92, .78); background: rgba(255, 204, 92, .07); }
-.round-card[data-result="2"] { border-color: rgba(255, 112, 122, .8); background: rgba(255, 112, 122, .07); }
+.round-card[data-result="1"],
+.round-card[data-result="2"] { border-color: rgba(101, 214, 138, .72); background: rgba(101, 214, 138, .05); }
+.round-card[data-result="0"] { border-color: rgba(231, 237, 243, .72); background: rgba(231, 237, 243, .05); }
 .series-row {
   display: grid;
   grid-template-columns: 64px 70px minmax(0, 1fr);
@@ -295,9 +295,6 @@
 }
 .round-btn { min-height: 40px; width: 100%; }
 .round-btn.active { color: #081018; font-weight: 800; border-width: 2px; }
-.round-btn.result-a.active { border-color: #7cff72; background: #7cff72; }
-.round-btn.result-draw.active { border-color: #ffcc5c; background: #ffcc5c; }
-.round-btn.result-b.active { border-color: #ff707a; background: #ff707a; }
 .round-btn[aria-pressed="false"] { opacity: .72; }
 .round-btn[aria-pressed="false"]:hover { opacity: 1; }
 
@@ -320,9 +317,9 @@
   padding: .42rem .55rem;
 }
 .summary-progress { border-color: rgba(49, 208, 255, .55); }
-.summary-a { border-color: rgba(124, 255, 114, .45); }
-.summary-draw { border-color: rgba(255, 204, 92, .45); }
-.summary-b { border-color: rgba(255, 112, 122, .5); }
+.summary-a,
+.summary-b { border-color: rgba(255, 255, 255, .14); }
+.summary-draw { border-color: rgba(231, 237, 243, .34); }
 .summary-winner { grid-column: span 2; }
 
 .last-game-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
@@ -996,7 +993,7 @@ body.theme-game:has(.balance2-root) .v2-bottom-nav { display: none !important; }
     overflow-wrap: anywhere;
     hyphens: auto;
   }
-  .team-card-summary-text {
+  .team-summary-text {
     min-width: 0;
     overflow-wrap: anywhere;
   }
@@ -1021,4 +1018,103 @@ body.theme-game .balance2-root .player-row > .tag {
   min-width: max-content !important;
   max-width: none !important;
   overflow: visible !important;
+}
+
+/* Final isolation from pixel-layer's broad [class*="card/panel"] legacy rules. */
+body.theme-game .balance2-root .round-card {
+  border: 1px solid #313c47 !important;
+  border-radius: 4px !important;
+  background: #10161c !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+}
+body.theme-game .balance2-root .round-card.selected { border-width: 1px !important; }
+body.theme-game .balance2-root .round-card[data-result="1"],
+body.theme-game .balance2-root .round-card[data-result="2"] {
+  border-color: rgba(101, 214, 138, .72) !important;
+  background: rgba(101, 214, 138, .05) !important;
+}
+body.theme-game .balance2-root .round-card[data-result="0"] {
+  border-color: rgba(231, 237, 243, .72) !important;
+  background: rgba(231, 237, 243, .05) !important;
+}
+body.theme-game .balance2-root .tournament-panel {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+body.theme-game .balance2-root .rating-sync-panel {
+  border: 1px solid rgba(255, 204, 92, .55) !important;
+  border-radius: 6px !important;
+  background: rgba(255, 204, 92, .06) !important;
+  box-shadow: none !important;
+}
+body.theme-game .balance2-root .rating-sync-panel--confirmed {
+  border-color: rgba(101, 214, 138, .62) !important;
+  background: rgba(101, 214, 138, .07) !important;
+}
+body.theme-game .balance2-root .rating-sync-panel--error {
+  border-color: rgba(240, 107, 114, .68) !important;
+  background: rgba(240, 107, 114, .07) !important;
+}
+
+/* Result colors describe the outcome, never a permanently assigned A/B color. */
+body.theme-game .balance2-root .round-btn.outcome-winner {
+  border-color: #65d68a !important;
+  background: #65d68a !important;
+  color: #092016 !important;
+  opacity: 1;
+}
+body.theme-game .balance2-root .round-btn.outcome-loser {
+  border-color: #f06b72 !important;
+  background: #f06b72 !important;
+  color: #26080b !important;
+  font-weight: 750;
+  opacity: 1;
+}
+body.theme-game .balance2-root .round-btn.outcome-draw {
+  border-color: #f2f5f7 !important;
+  background: #f2f5f7 !important;
+  color: #11171d !important;
+  opacity: 1;
+}
+.balance2-root .round-card[data-result="1"] .round-chip,
+.balance2-root .round-card[data-result="2"] .round-chip {
+  border-color: rgba(101, 214, 138, .7);
+  background: rgba(101, 214, 138, .16);
+  color: #9ce9b5;
+}
+.balance2-root .round-card[data-result="0"] .round-chip {
+  border-color: rgba(242, 245, 247, .7);
+  background: rgba(242, 245, 247, .12);
+  color: #f2f5f7;
+}
+.balance2-root .summary-outcome-winner {
+  border-color: rgba(101, 214, 138, .72);
+  background: rgba(101, 214, 138, .1);
+  color: #a9edbf;
+}
+.balance2-root .summary-outcome-loser {
+  border-color: rgba(240, 107, 114, .72);
+  background: rgba(240, 107, 114, .1);
+  color: #ffb1b5;
+}
+.balance2-root .summary-outcome-draw {
+  border-color: rgba(242, 245, 247, .62);
+  background: rgba(242, 245, 247, .08);
+  color: #f2f5f7;
+}
+body.theme-game .balance2-root .match-team--winner {
+  border-color: #65d68a !important;
+  box-shadow: inset 3px 0 #65d68a !important;
+}
+body.theme-game .balance2-root .match-team--loser {
+  border-color: #f06b72 !important;
+  box-shadow: inset 3px 0 #f06b72 !important;
+}
+body.theme-game .balance2-root .match-team--draw {
+  border-color: #dfe7ee !important;
+  box-shadow: inset 3px 0 #dfe7ee !important;
 }

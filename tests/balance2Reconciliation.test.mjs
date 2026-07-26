@@ -95,8 +95,17 @@ test('admin UI exposes ten rounds and keeps school mode hidden', () => {
   assert.match(html, /href="#matchCard"/);
   assert.match(html, /href="\.\/index\.html#main"/);
   assert.match(css, /\.v2-bottom-nav \{ display: none !important; \}/);
-  assert.match(ui, /team-card-summary-text/);
+  assert.match(ui, /team-summary-text/);
+  assert.doesNotMatch(ui, /team-card-summary-text/);
   assert.match(ui, /useMobileAccordion/);
   assert.match(ui, /data-event-mode="regular"/);
   assert.match(ui, /round !== null && Number\(round\) === option\.val/);
+  assert.match(ui, /outcome-winner/);
+  assert.match(ui, /outcome-loser/);
+  assert.match(ui, /outcome-draw/);
+  assert.match(css, /\.round-btn\.outcome-winner/);
+  assert.match(css, /\.round-btn\.outcome-loser/);
+  assert.match(css, /\.round-btn\.outcome-draw/);
+  assert.match(css, /\.round-card\[data-result="2"\]/);
+  assert.match(css, /\.rating-sync-panel--confirmed/);
 });

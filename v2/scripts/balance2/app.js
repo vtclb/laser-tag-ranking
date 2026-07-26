@@ -23,7 +23,7 @@ import {
 import { autoBalance2, balanceIntoNTeams } from './balance.js';
 import { syncSelectedFromTeamsAndBench } from './manual.js';
 import { render, bindUiEvents, setTournamentStatus, clearTournamentStatus } from './ui.js';
-import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js';
+import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams, saveTournamentGame } from './api.js?v=20260726-save-cors-hotfix';
 import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 import { debugLog } from '../../core/debug.js';

@@ -111,4 +111,6 @@ test('admin UI exposes ten rounds and keeps school mode hidden', () => {
   assert.match(css, /\.rating-sync-panel--confirmed/);
   assert.doesNotMatch(api, /credentials:\s*['"]include['"]/);
   assert.equal((api.match(/credentials:\s*['"]omit['"]/g) || []).length, 2);
+  assert.match(html, /app\.js\?v=20260726-save-cors-hotfix2/);
+  assert.match(readFileSync(new URL('../v2/scripts/balance2/app.js', import.meta.url), 'utf8'), /api\.js\?v=20260726-save-cors-hotfix/);
 });

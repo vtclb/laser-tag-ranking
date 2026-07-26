@@ -12,6 +12,7 @@ import {
   getActiveMatchTeams,
   getTeamLabel,
   MAX_LOBBY_PLAYERS,
+  MAX_SERIES_ROUNDS,
   TEAM_KEYS,
   ensureTeamsForManualAssignment,
   assignPlayerToTeam,
@@ -26,6 +27,7 @@ import { loadPlayersForSource, saveMatch, createTournament, saveTournamentTeams,
 import { saveLobby, restoreLobby, peekLobbyRestore, clearPlayersCache, saveLastSavedGame, readLastSavedGame } from './storage.js';
 import { setStatus, lockSaveButton } from './status.js';
 import { debugLog } from '../../core/debug.js';
+import { buildRatingReconciliation, snapshotPlayerPoints, snapshotTeamTotals } from './reconciliation.js';
 
 const $ = (id) => document.getElementById(id);
 const LEAGUE_KEY = 'balance2:league';
@@ -34,6 +36,9 @@ const MIXED_MVP_DUPLICATE_WARNING = 'Уточни MVP: є кілька грав�
 const MIXED_MVP_SAVE_BLOCK = 'Уточни MVP: вибери гравця зі списку';
 let saveLocked = false;
 let saveStatusResetTimer = 0;
+let retryAction = 'save';
+let ratingRefreshInProgress = false;
+const RATING_REFRESH_DELAYS = [0, 1200, 2500];
 
 function escapeAttr(value = '') {
   return String(value ?? '')
@@ -364,8 +369,10 @@ function ensureActiveMatchState() {
 }
 
 function syncSeriesMirror() {
-  const rounds = Array.isArray(state.matchState.seriesRounds) ? state.matchState.seriesRounds.slice(0, 7) : Array(7).fill(null);
-  while (rounds.length < 7) rounds.push(null);
+  const rounds = Array.isArray(state.matchState.seriesRounds)
+    ? state.matchState.seriesRounds.slice(0, MAX_SERIES_ROUNDS)
+    : Array(MAX_SERIES_ROUNDS).fill(null);
+  while (rounds.length < MAX_SERIES_ROUNDS) rounds.push(null);
   state.matchState.seriesRounds = rounds;
   state.matchState.series = rounds.map((value) => (value === null ? '-' : String(value)));
 }
@@ -425,6 +432,11 @@ function runBalance() {
   }
   refreshGroupSchedule({ force: true });
   saveLobby();
+  setStatus({
+    state: 'success',
+    text: `\u041a\u043e\u043c\u0430\u043d\u0434\u0438 \u0441\u0444\u043e\u0440\u043c\u043e\u0432\u0430\u043d\u043e: ${selected.length} \u0433\u0440\u0430\u0432\u0446\u0456\u0432 \u0443 ${state.teamsState.teamCount} \u043a\u043e\u043c\u0430\u043d\u0434\u0430\u0445`,
+    retryVisible: false,
+  });
 }
 
 function toPenaltiesString() {
@@ -533,8 +545,8 @@ function mapTournamentResult() {
 }
 
 function resetMatchOnlyState() {
-  state.matchState.seriesRounds = Array(7).fill(null);
-  state.matchState.series = ['-', '-', '-', '-', '-', '-', '-'];
+  state.matchState.seriesRounds = Array(MAX_SERIES_ROUNDS).fill(null);
+  state.matchState.series = Array(MAX_SERIES_ROUNDS).fill('-');
   state.matchState.match.winner = '';
   state.matchState.match.series = '';
   MVP_IDS.forEach((id) => {
@@ -589,16 +601,127 @@ function validateSave() {
 
 function createLastSavedSnapshot() {
   const summary = computeSeriesSummary();
-  const [teamA, teamB] = getActiveMatchTeams();
+  const [teamA, teamB] = state.app.eventMode === 'tournament'
+    ? [state.activeTeamAId, state.activeTeamBId]
+    : getActiveMatchTeams();
+  const teamIds = [teamA, teamB];
+  const teams = Object.fromEntries(teamIds.map((teamId) => [teamId, [...(state.teamsState.teams[teamId] || [])]]));
+  const beforePoints = snapshotPlayerPoints(state.playersState.players, getPlayerKey);
+  const beforeTeamTotals = snapshotTeamTotals(teams, beforePoints);
   return {
     savedAt: new Date().toISOString(),
     league: state.app.league,
+    playerSourceMode: state.app.playerSourceMode,
     teamA: getTeamLabel(teamA),
     teamB: getTeamLabel(teamB),
     summary: `${summary.wins.team1}-${summary.wins.team2}`,
     mvp: resolveMvpNick('mvp1') || resolveMvpNick('mvp2') || resolveMvpNick('mvp3') || '—',
     penalties: Object.values(state.matchState.match.penalties || {}).reduce((acc, value) => acc + (Number(value) || 0), 0),
+    ratingSync: state.app.eventMode === 'regular' ? {
+      status: 'pending',
+      message: 'Оновлюємо рейтинги гравців...',
+      refreshedAt: '',
+      changes: [],
+      teamChanges: [],
+      beforeSpread: 0,
+      afterSpread: 0,
+    } : null,
+    ratingContext: state.app.eventMode === 'regular' ? {
+      participantKeys: [...new Set(Object.values(teams).flat())],
+      teams,
+      beforePoints,
+      beforeTeamTotals,
+    } : null,
   };
+}
+
+function setRetryAction(action = 'save') {
+  retryAction = action === 'ratings' ? 'ratings' : 'save';
+  const button = $('retrySaveBtn');
+  if (button) button.textContent = retryAction === 'ratings' ? 'Оновити рейтинги' : 'Повторити збереження';
+}
+
+function persistLastSavedSnapshot(snapshot) {
+  state.lastSavedGame = snapshot;
+  saveLastSavedGame(snapshot);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function refreshRatingsAfterSavedGame({ singleAttempt = false } = {}) {
+  if (ratingRefreshInProgress) return;
+  const snapshot = state.lastSavedGame;
+  const context = snapshot?.ratingContext;
+  if (!snapshot || !context || !Array.isArray(context.participantKeys)) {
+    setStatus({ state: 'saved', text: 'Гру збережено, але немає даних для перевірки рейтингів.', retryVisible: false });
+    return;
+  }
+
+  ratingRefreshInProgress = true;
+  setRetryAction('ratings');
+  setSaveFeedback('saving', 'Гру збережено. Оновлюємо рейтинги...', { renderNow: false });
+  setStatus({ state: 'saving', text: 'Гру збережено. Перевіряємо нові бали гравців...', retryVisible: false });
+  renderAndSync();
+
+  let reconciliation = null;
+  let refreshError = null;
+  const delays = singleAttempt ? [0] : RATING_REFRESH_DELAYS;
+  for (const delay of delays) {
+    if (delay) await wait(delay);
+    try {
+      const sourceMode = snapshot.playerSourceMode || snapshot.league || 'sundaygames';
+      clearPlayersCache(normalizeLeague(sourceMode));
+      const freshPlayers = await loadPlayersForSource(sourceMode, { force: true, timeoutMs: 15000 });
+      const refreshedPlayers = normalizeLoadedPlayers(freshPlayers.players || []);
+      if (state.app.playerSourceMode === sourceMode) state.playersState.players = refreshedPlayers;
+      reconciliation = buildRatingReconciliation({
+        ...context,
+        afterPlayers: refreshedPlayers,
+        getKey: getPlayerKey,
+      });
+      refreshError = null;
+      if (reconciliation.confirmed) break;
+    } catch (error) {
+      refreshError = error;
+    }
+  }
+
+  if (reconciliation) {
+    snapshot.ratingSync = {
+      status: reconciliation.confirmed ? 'confirmed' : 'pending',
+      message: reconciliation.confirmed
+        ? 'Рейтинги та суми команд оновлено.'
+        : 'Гру збережено, але зміни балів ще не підтверджені сервером.',
+      refreshedAt: new Date().toISOString(),
+      changes: reconciliation.changes,
+      teamChanges: reconciliation.teamChanges,
+      beforeSpread: reconciliation.beforeSpread,
+      afterSpread: reconciliation.afterSpread,
+    };
+  } else {
+    snapshot.ratingSync = {
+      ...(snapshot.ratingSync || {}),
+      status: 'error',
+      message: `Гру збережено, але рейтинги не завантажились: ${refreshError?.message || 'невідома помилка'}`,
+      refreshedAt: new Date().toISOString(),
+    };
+  }
+
+  persistLastSavedSnapshot(snapshot);
+  saveLobby();
+  ratingRefreshInProgress = false;
+  const confirmed = snapshot.ratingSync.status === 'confirmed';
+  if (confirmed) {
+    setRetryAction('save');
+    setSaveFeedback('success', 'Гру збережено. Рейтинги оновлено.', { renderNow: false });
+    setStatus({ state: 'saved', text: 'Рейтинговий матч збережено. Нові бали та суми команд підтверджено.', retryVisible: false });
+  } else {
+    setSaveFeedback('success', 'Гру збережено. Рейтинги очікують оновлення.', { renderNow: false });
+    setStatus({ state: 'saved', text: snapshot.ratingSync.message, retryVisible: true });
+  }
+  renderAndSync();
 }
 
 function summarizeWritePayload(payload, eventMode) {
@@ -742,6 +865,7 @@ async function handleSaveRegularGame(retry = false) {
     res = await saveMatch(payload, 20000);
   } catch (saveError) {
     const message = saveError?.message || 'Не вдалося зберегти гру';
+    setRetryAction('save');
     setSaveFeedback('error', message, { renderNow: false });
     setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: true });
     saveLocked = false;
@@ -752,29 +876,19 @@ async function handleSaveRegularGame(retry = false) {
   }
 
   if (res.ok) {
-    try {
-      clearPlayersCache(normalizeLeague(state.app.league));
-      const freshPlayers = await loadPlayersForSource(state.app.playerSourceMode, { force: true, timeoutMs: 15000 });
-      state.playersState.players = normalizeLoadedPlayers(freshPlayers.players || []);
-
-      const snapshot = createLastSavedSnapshot();
-      state.lastSavedGame = snapshot;
-      saveLastSavedGame(snapshot);
-      markScheduledMatchPlayed(snapshot.summary);
-
-      resetMatchOnlyState();
-      syncSeriesMirror();
-      saveLobby();
-      setSaveFeedback('success', 'Гру збережено', { renderNow: false });
-      setStatus({ state: 'saved', text: 'Рейтинговий матч збережено. Рейтинг оновлено.', retryVisible: false });
-      renderAndSync();
-    } catch (loadError) {
-      const message = loadError?.message || 'Не вдалося зберегти гру';
-      setSaveFeedback('error', message, { renderNow: false });
-      setStatus({ state: 'error', text: `❌ Не вдалося отримати відповідь від сервера: ${message}`, retryVisible: true });
-    }
+    const snapshot = createLastSavedSnapshot();
+    persistLastSavedSnapshot(snapshot);
+    markScheduledMatchPlayed(snapshot.summary);
+    resetMatchOnlyState();
+    syncSeriesMirror();
+    saveLobby();
+    setSaveFeedback('success', 'Гру збережено', { renderNow: false });
+    setStatus({ state: 'saved', text: 'Рейтинговий матч збережено. Оновлюємо бали гравців...', retryVisible: false });
+    renderAndSync();
+    await refreshRatingsAfterSavedGame();
   } else {
     const message = res.message || 'Не вдалося зберегти гру';
+    setRetryAction('save');
     setSaveFeedback('error', message, { renderNow: false });
     setStatus({ state: 'error', text: `❌ ${message}`, retryVisible: true });
   }
@@ -918,8 +1032,6 @@ async function init() {
     renderAndSync();
   });
 
-  $('balanceBtn')?.addEventListener('click', () => { runBalance(); renderAndSync(); });
-  $('manualBtn')?.addEventListener('click', () => { state.app.mode = 'manual'; ensureTeamsForManualAssignment(); syncSelectedFromTeamsAndBench(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
   $('clearLobbyBtn')?.addEventListener('click', () => { state.playersState.selected = []; syncSelectedMap(); clearAllTeams(); ensureActiveMatchState(); setTournamentDirty(); saveLobby(); renderAndSync(); });
 
   const debouncedSearch = (() => {
@@ -966,7 +1078,10 @@ async function init() {
   });
 
   $('saveBtn')?.addEventListener('click', () => doSave(false));
-  $('retrySaveBtn')?.addEventListener('click', () => doSave(true));
+  $('retrySaveBtn')?.addEventListener('click', () => {
+    if (retryAction === 'ratings') refreshRatingsAfterSavedGame({ singleAttempt: true });
+    else doSave(true);
+  });
 
   bindUiEvents({
     onTogglePlayer(nick) {
@@ -1015,6 +1130,25 @@ async function init() {
       runBalance();
       renderAndSync();
     },
+    onRebalanceAfterSave() {
+      const selected = state.playersState.selected.length;
+      const teamCount = state.teamsState.teamCount;
+      if (selected < teamCount) {
+        setStatus({ state: 'error', text: `Недостатньо гравців для ${teamCount} команд.`, retryVisible: false });
+        renderAndSync();
+        return;
+      }
+      runBalance();
+      if (state.lastSavedGame?.ratingSync) {
+        state.lastSavedGame.ratingSync.rebalancedAt = new Date().toISOString();
+        persistLastSavedSnapshot(state.lastSavedGame);
+      }
+      setStatus({ state: 'saved', text: 'Команди перебалансовано за актуальними балами для наступної гри.', retryVisible: false });
+      renderAndSync();
+    },
+    onRefreshRatingsAfterSave() {
+      refreshRatingsAfterSavedGame({ singleAttempt: true });
+    },
     onManualBalance() {
       state.app.mode = 'manual';
       ensureTeamsForManualAssignment();
@@ -1037,8 +1171,8 @@ async function init() {
       renderAndSync();
     },
     onSeriesCount(count) {
-      state.matchState.seriesCount = Math.min(7, Math.max(3, Number(count) || 3));
-      for (let i = state.matchState.seriesCount; i < 7; i += 1) state.matchState.seriesRounds[i] = null;
+      state.matchState.seriesCount = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(count) || 3));
+      for (let i = state.matchState.seriesCount; i < MAX_SERIES_ROUNDS; i += 1) state.matchState.seriesRounds[i] = null;
       syncSeriesMirror();
       saveLobby();
       renderAndSync();

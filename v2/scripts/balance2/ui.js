@@ -95,28 +95,6 @@ function sanitizeTeamCount(value) {
   return normalizeTeamCount(value);
 }
 
-function sumPoints(team) {
-  return team.reduce((acc, player) => acc + (Number(player.points ?? player.pts) || 0), 0);
-}
-
-function balanceIntoNTeamsLocal(players, rawTeamCount) {
-  const teamCount = sanitizeTeamCount(rawTeamCount);
-  const teams = Object.fromEntries(TEAM_KEYS.map((key) => [key, []]));
-  const sorted = [...players].sort((a, b) => ((Number(b.points ?? b.pts) || 0) - (Number(a.points ?? a.pts) || 0)));
-  const targets = Array.from(
-    { length: teamCount },
-    (_, i) => Math.floor(sorted.length / teamCount) + (i < sorted.length % teamCount ? 1 : 0),
-  );
-
-  sorted.forEach((player) => {
-    const idx = Array.from({ length: teamCount }, (_, i) => i)
-      .filter((i) => teams[`team${i + 1}`].length < targets[i])
-      .sort((a, b) => sumPoints(teams[`team${a + 1}`]) - sumPoints(teams[`team${b + 1}`]))[0] ?? 0;
-    teams[`team${idx + 1}`].push(player);
-  });
-  return teams;
-}
-
 export function render() {
   renderStepFlow();
   renderLeagueControls();
@@ -352,7 +330,6 @@ export function renderLeagueControls() {
         <div class="event-mode-switch">
           <button type="button" class="chip event-mode-button ${state.app.eventMode === 'regular' ? 'active' : ''}" data-event-mode="regular">Рейтингові ігри</button>
           <button type="button" class="chip event-mode-button ${state.app.eventMode === 'tournament' ? 'active' : ''}" data-event-mode="tournament">Турнір</button>
-          <button type="button" class="chip event-mode-button ${state.app.eventMode === 'school' ? 'active' : ''}" data-event-mode="school">Школа</button>
         </div>
       </section>
       <section class="balance-step balance-step--source">
@@ -394,7 +371,7 @@ export function renderTeamSettings() {
     settings = document.createElement('section');
     settings.id = 'teamSettingsCard';
     settings.className = 'card team-settings-card';
-    lobbySection.parentNode.insertBefore(settings, lobbySection);
+    lobbySection.parentNode.insertBefore(settings, lobbySection.nextSibling);
   }
 
   let modeControl = document.getElementById('balanceModeControl');
@@ -414,7 +391,7 @@ export function renderTeamSettings() {
   const isSchool = state.app.eventMode === 'school';
   settings.innerHTML = `
     <h3>3. Налаштування команд</h3>
-    <p class="section-hint">Обери кількість команд і режим балансу до формування lobby.</p>
+    <p class="section-hint">Обери кількість команд і спосіб формування. Лобі при зміні не очищається.</p>
     <div class="team-settings-grid">
       <div class="team-settings-group" data-team-count-slot>
         <label class="team-count-select-label">Кількість команд
@@ -454,7 +431,7 @@ export function renderPlayers() {
   list.innerHTML = players.map((player) => {
     const key = getPlayerKey(player);
     const selected = isSelected(key);
-    return `<div class="player-row ${selected ? 'selected' : ''}" data-toggle="${escapeAttr(key)}">${playerMetaHtml(player)}<span class="tag">${selected ? '✅ у лобі' : 'Додати'}</span></div>`;
+    return `<div class="player-row ${selected ? 'selected' : ''}" data-toggle="${escapeAttr(key)}">${playerMetaHtml(player)}<span class="tag">${selected ? 'У лобі' : 'Додати'}</span></div>`;
   }).join('');
 }
 
@@ -479,6 +456,16 @@ function sumByNicks(playerKeys) {
   const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
   return playerKeys.reduce((acc, playerKey) => acc + (Number(map.get(playerKey)?.points ?? map.get(playerKey)?.pts) || 0), 0);
 }
+function formatSigned(value) {
+  const numeric = Number(value) || 0;
+  return `${numeric > 0 ? '+' : ''}${numeric}`;
+}
+
+function latestTeamRatingChange(teamId) {
+  const changes = state.lastSavedGame?.ratingSync?.teamChanges;
+  return Array.isArray(changes) ? changes.find((change) => change.teamId === teamId) : null;
+}
+
 
 function scheduleStatusLabel(status) {
   if (status === 'done') return 'Зіграно';
@@ -579,11 +566,23 @@ export function renderTeams() {
   const grid = document.getElementById('teamsGrid');
   if (!grid) return;
 
+  const useMobileAccordion = globalThis.matchMedia?.('(max-width: 760px)').matches === true;
+  const expandedMobileTeams = new Set([...grid.querySelectorAll('details.team-card[open][data-team-id]')]
+    .map((card) => card.dataset.teamId));
+
   const keys = state.app.eventMode === 'school' ? TEAM_KEYS.slice(0, 10) : TEAM_KEYS.slice(0, state.teamsState.teamCount);
   const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
+  const activeTeams = state.app.eventMode === 'tournament'
+    ? [state.activeTeamAId, state.activeTeamBId]
+    : getActiveMatchTeams();
+  const activeTeamSet = new Set(activeTeams);
   const cards = keys.map((key) => {
     const playerKeys = state.teamsState.teams[key] || [];
     const total = sumByNicks(playerKeys);
+    const ratingChange = latestTeamRatingChange(key);
+    const ratingDelta = ratingChange ? `<span class="tag team-rating-delta ${ratingChange.delta > 0 ? 'positive' : (ratingChange.delta < 0 ? 'negative' : '')}">Δ ${formatSigned(ratingChange.delta)}</span>` : '';
+    const activeSide = key === activeTeams[0] ? 'A' : (key === activeTeams[1] ? 'B' : '');
+    const activeBadge = activeSide ? `<span class="tag active-team-badge">Матч ${activeSide}</span>` : '';
     const members = playerKeys.map((playerKey) => {
       const player = map.get(playerKey) || { nick: playerKey, points: 0, rank: '—' };
       return `<div class="team-player">${playerMetaHtml(player)}<button class="team-player-remove" type="button" data-role="remove-player-from-team" data-player-key="${escapeAttr(playerKey)}" data-team-id="${escapeAttr(key)}">Прибрати</button></div>`;
@@ -594,10 +593,27 @@ export function renderTeams() {
       <input class="search-input" data-school-meta="${escapeAttr(key)}" data-school-meta-field="schoolNumber" placeholder="Номер школи" value="${escapeAttr(teamMeta.schoolNumber || '')}">
       <input class="search-input" data-school-meta="${escapeAttr(key)}" data-school-meta-field="teamName" placeholder="Назва команди" value="${escapeAttr(teamMeta.teamName || `Команда ${key.replace('team', '')}`)}">
     </div>` : '';
-    return `<div class="team-card"><h4>${teamNameControl(key)} <span class="tag">Σ ${total}</span></h4>${schoolFields}${members}</div>`;
+    return `<div class="team-card ${activeTeamSet.has(key) ? 'active-match-team' : ''}"><h4>${teamNameControl(key)} <span class="team-score-tags">${activeBadge}<span class="tag">Σ ${total}</span>${ratingDelta}</span></h4>${schoolFields}${members}</div>`;
   });
 
   grid.innerHTML = cards.join('');
+  if (useMobileAccordion) {
+    [...grid.children].forEach((card, index) => {
+      const key = keys[index];
+      const matchSide = key === activeTeams[0] ? 'A' : (key === activeTeams[1] ? 'B' : '');
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      details.className = card.className;
+      details.dataset.teamId = key;
+      summary.textContent = `${getTeamLabel(key)}${matchSide ? ` - ${matchSide}` : ''} - ${sumByNicks(state.teamsState.teams[key] || [])} pts`;
+      details.append(summary, ...card.childNodes);
+      details.open = activeTeamSet.has(key)
+        || expandedMobileTeams.has(key)
+        || (expandedMobileTeams.size === 0 && index < 2);
+      card.replaceWith(details);
+    });
+  }
+
   const preview = document.getElementById('schoolGroupsPreview');
   if (preview && state.app.eventMode === 'school') {
     const groupA = state.schoolState?.groups?.A?.teamIds || [];
@@ -720,7 +736,15 @@ export function renderSeriesEditor() {
 
   root.innerHTML = rounds.slice(0, count).map((round, idx) => {
     const chip = round === null ? '—' : (round === 0 ? 'Нічия' : (round === 1 ? 'A' : 'B'));
-    return `<div class="round-card"><div class="series-row"><span>Бій ${idx + 1}<small class="round-chip">${chip}</small></span><div class="round-row">${[{ val: 1, label: 'Перемога A' }, { val: 0, label: 'Нічия' }, { val: 2, label: 'Перемога B' }].map((option) => `<button class="chip round-btn ${Number(round) === option.val ? 'active' : ''}" type="button" data-round="${idx}" data-value="${option.val}">${option.label}</button>`).join('')}</div></div></div>`;
+    const options = [
+      { val: 1, label: 'Перемога A', className: 'result-a' },
+      { val: 0, label: 'Нічия', className: 'result-draw' },
+      { val: 2, label: 'Перемога B', className: 'result-b' },
+    ];
+    return `<div class="round-card ${round !== null ? 'selected' : ''}" data-result="${round === null ? 'none' : round}"><div class="series-row"><strong>Бій ${idx + 1}</strong><small class="round-chip">${chip}</small><div class="round-row">${options.map((option) => {
+      const selected = round !== null && Number(round) === option.val;
+      return `<button class="chip round-btn ${option.className} ${selected ? 'active' : ''}" type="button" aria-pressed="${selected}" data-round="${idx}" data-value="${option.val}">${selected ? '✓ ' : ''}${option.label}</button>`;
+    }).join('')}</div></div></div>`;
   }).join('');
 }
 
@@ -728,9 +752,10 @@ export function renderMatchSummary() {
   const root = document.getElementById('matchSummary');
   if (!root) return;
   const summary = computeSeriesSummary();
-  const winnerLabel = summary.winner === 'tie' ? 'Нічия' : (summary.winner === 'team1' ? 'A' : 'B');
+  const winnerLabel = summary.played < 1 ? 'не визначено' : (summary.winner === 'tie' ? 'Нічия' : (summary.winner === 'team1' ? 'A' : 'B'));
+  const totalRounds = Math.min(MAX_SERIES_ROUNDS, Math.max(3, Number(state.matchState.seriesCount) || 3));
 
-  root.innerHTML = `<div class="summary-pill">A: <strong>${summary.wins.team1}</strong></div><div class="summary-pill">B: <strong>${summary.wins.team2}</strong></div><div class="summary-pill">Нічиї: <strong>${summary.draws}</strong></div><div class="summary-pill">Поточний переможець: <strong>${winnerLabel}</strong></div>`;
+  root.innerHTML = `<div class="summary-pill summary-progress">Відмічено: <strong>${summary.played} / ${totalRounds}</strong></div><div class="summary-pill summary-a">A: <strong>${summary.wins.team1}</strong></div><div class="summary-pill summary-draw">Нічиї: <strong>${summary.draws}</strong></div><div class="summary-pill summary-b">B: <strong>${summary.wins.team2}</strong></div><div class="summary-pill summary-winner">Поточний результат: <strong>${winnerLabel}</strong></div>`;
 }
 
 export function renderPenalties() {
@@ -823,7 +848,31 @@ export function renderLastSavedGame() {
     return;
   }
   const g = state.lastSavedGame;
-  root.innerHTML = `<div class="summary-pill">${escapeHtml(formatSavedTime(g.savedAt))} — ${escapeHtml(g.teamA)} vs ${escapeHtml(g.teamB)}</div><div class="summary-pill">Серія: <strong>${escapeHtml(g.summary)}</strong></div><div class="summary-pill">MVP: <strong>${escapeHtml(g.mvp)}</strong></div><div class="summary-pill">Штрафи: <strong>${escapeHtml(g.penalties)}</strong></div>`;
+  const sync = g.ratingSync;
+  const changedPlayers = Array.isArray(sync?.changes) ? sync.changes.filter((change) => Number(change.delta) !== 0) : [];
+  const teamChanges = Array.isArray(sync?.teamChanges) ? sync.teamChanges : [];
+  const playerRows = changedPlayers.map((change) => `<li><strong>${escapeHtml(change.nick)}</strong><span>${escapeHtml(change.before)} → ${escapeHtml(change.after)} <b>${escapeHtml(formatSigned(change.delta))}</b></span></li>`).join('');
+  const teamRows = teamChanges.map((change) => `<div class="rating-team-change"><span>${escapeHtml(getTeamLabel(change.teamId))}</span><strong>Σ ${escapeHtml(change.before)} → ${escapeHtml(change.after)} (${escapeHtml(formatSigned(change.delta))})</strong></div>`).join('');
+  const canRebalance = sync?.status === 'confirmed' && !sync?.rebalancedAt;
+  const canRefreshRatings = ['pending', 'error'].includes(sync?.status);
+  const syncHtml = sync ? `
+    <div class="rating-sync-panel rating-sync-panel--${escapeAttr(sync.status || 'pending')}">
+      <strong>${escapeHtml(sync.message || 'Перевіряємо рейтинги...')}</strong>
+      ${teamRows ? `<div class="rating-team-changes">${teamRows}</div>` : ''}
+      ${sync.status === 'confirmed' ? `<div class="rating-spread">Різниця між командами: <strong>${escapeHtml(sync.beforeSpread)} → ${escapeHtml(sync.afterSpread)}</strong></div>` : ''}
+      ${playerRows ? `<details><summary>Зміни балів гравців (${changedPlayers.length})</summary><ul class="rating-player-changes">${playerRows}</ul></details>` : ''}
+      ${canRebalance ? '<button class="chip rebalance-after-save" type="button" data-rebalance-after-save="1">Перебалансувати для наступної гри</button>' : ''}
+      ${canRefreshRatings ? '<button class="chip" type="button" data-refresh-ratings-after-save="1">Оновити рейтинги</button>' : ''}
+      ${sync?.rebalancedAt ? '<div class="tag">Команди вже перебалансовано за новими балами.</div>' : ''}
+    </div>` : '';
+  root.innerHTML = `
+    <div class="last-game-summary">
+      <div class="summary-pill">${escapeHtml(formatSavedTime(g.savedAt))} — ${escapeHtml(g.teamA)} vs ${escapeHtml(g.teamB)}</div>
+      <div class="summary-pill">Серія: <strong>${escapeHtml(g.summary)}</strong></div>
+      <div class="summary-pill">MVP: <strong>${escapeHtml(g.mvp)}</strong></div>
+      <div class="summary-pill">Штрафи: <strong>${escapeHtml(g.penalties)}</strong></div>
+    </div>
+    ${syncHtml}`;
 }
 
 export function bindUiEvents(handlers) {
@@ -834,30 +883,6 @@ export function bindUiEvents(handlers) {
       if (!btn || !roundsContainer.contains(btn)) return;
       handlers.onSeriesResult(Number(btn.dataset.round), Number(btn.dataset.value));
     });
-  }
-
-  const balanceBtn = document.getElementById('balanceBtn');
-  if (balanceBtn) {
-    balanceBtn.addEventListener('click', (e) => {
-      const selected = state.playersState.selected.length;
-      const teamCount = sanitizeTeamCount(state.teamsState.teamCount);
-      if (selected < teamCount) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        window.alert(`Недостатньо гравців для ${teamCount} команд. Мінімум: ${teamCount}.`);
-        return;
-      }
-      const map = new Map(state.playersState.players.map((p) => [getPlayerKey(p), p]));
-      const picked = state.playersState.selected.map((playerKey) => map.get(playerKey)).filter(Boolean);
-      const teams = balanceIntoNTeamsLocal(picked, teamCount);
-      TEAM_KEYS.forEach((key) => {
-        state.teamsState.teams[key] = (teams[key] || []).map((p) => getPlayerKey(p));
-      });
-      state.teamsState.teamCount = teamCount;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      handlers.onChanged();
-    }, true);
   }
 
   document.addEventListener('change', (e) => {
@@ -905,6 +930,8 @@ export function bindUiEvents(handlers) {
     const nextTournamentMatch = e.target.closest('[data-tournament-next-match]');
     const loadPlayers = e.target.closest('[data-load-players]') || e.target.closest('#loadPlayersBtn');
     const removeFromTeam = e.target.closest('[data-role="remove-player-from-team"]');
+    const rebalanceAfterSave = e.target.closest('[data-rebalance-after-save]');
+    const refreshRatingsAfterSave = e.target.closest('[data-refresh-ratings-after-save]');
     const schoolBuildTeams = e.target.closest('[data-school-build-teams]');
     const schoolBuildGroups = e.target.closest('[data-school-build-groups]');
     const schoolGenerateGroupMatches = e.target.closest('[data-school-generate-group-matches]');
@@ -984,6 +1011,8 @@ export function bindUiEvents(handlers) {
     if (createTournament) handlers.onCreateTournament();
     if (saveTeams) handlers.onSaveTournamentTeams();
     if (removeFromTeam) handlers.onRemovePlayerFromTeam(removeFromTeam.dataset.playerKey, removeFromTeam.dataset.teamId);
+    if (rebalanceAfterSave) handlers.onRebalanceAfterSave();
+    if (refreshRatingsAfterSave) handlers.onRefreshRatingsAfterSave();
     if (schoolBuildTeams) handlers.onSchoolBuildTeams();
     if (schoolBuildGroups) handlers.onSchoolBuildGroups();
     if (schoolGenerateGroupMatches) handlers.onSchoolGenerateGroupMatches();

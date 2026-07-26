@@ -110,7 +110,7 @@ export function restoreLobby() {
     ? (data?.app?.sortMode || data?.sortMode)
     : 'points_desc';
   const restoredEventMode = data?.app?.eventMode || data?.eventMode;
-  state.app.eventMode = ['regular', 'tournament', 'school'].includes(restoredEventMode)
+  state.app.eventMode = ['regular', 'tournament'].includes(restoredEventMode)
     ? restoredEventMode
     : (isPlainObject(data?.tournamentState) && (data.tournamentState.tournamentId || data.tournamentState.teamsSaved) ? 'tournament' : 'regular');
   state.app.playerSourceMode = normalizePlayerSourceMode(data?.app?.playerSourceMode || data?.playerSourceMode || state.app.playerSourceMode, state.app.eventMode);

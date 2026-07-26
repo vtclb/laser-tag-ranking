@@ -11,9 +11,9 @@
 <body>
   <main class="balance2-root" aria-labelledby="balance2Title">
     <header class="balance2-hero">
-      <p class="balance2-hero__eyebrow">LaserTag Arena</p>
+      <p class="balance2-hero__eyebrow">Панель адміністратора</p>
       <h1 id="balance2Title">Балансер команд</h1>
-      <p>Збери лобі, сформуй команди та збережи результат матчу.</p>
+      <p>Гравці, команди й результат матчу в одному робочому просторі.</p>
     </header>
 
     <section class="card status-card" id="statusBox" data-state="idle" role="status" aria-live="polite" aria-atomic="true">
@@ -22,15 +22,22 @@
       <button id="retrySaveBtn" class="chip hidden" type="button">Повторити</button>
     </section>
 
+    <nav class="mobile-workspace-nav" aria-label="Mobile workspace navigation">
+      <a href="#playersCard">&#1043;&#1088;&#1072;&#1074;&#1094;&#1110;</a>
+      <a href="#lobbyCard">&#1051;&#1086;&#1073;&#1110;</a>
+      <a href="#teamsCard">&#1050;&#1086;&#1084;&#1072;&#1085;&#1076;&#1080;</a>
+      <a href="#matchCard">&#1056;&#1077;&#1079;&#1091;&#1083;&#1100;&#1090;&#1072;&#1090;</a>
+    </nav>
+
     <section class="card hidden" id="restoreCard">
       <h2>Відновлення</h2>
       <p class="section-hint">Знайдено збережений стан лобі.</p>
       <button id="restoreBtn" class="chip" type="button">Відновити лобі</button>
     </section>
 
-    <section class="card">
-      <h2>Ліга</h2>
-      <p class="section-hint">Оберіть лігу і завантажте актуальний список гравців.</p>
+    <section class="card setup-panel">
+      <h2>Початок гри</h2>
+      <p class="section-hint">Обери формат і завантаж актуальний склад ліги.</p>
       <div class="league-controls">
         <label class="league-label" for="leagueSelect">Ліга</label>
         <select id="leagueSelect" class="chip">
@@ -41,9 +48,9 @@
       </div>
     </section>
 
-    <section class="card">
-      <h2>Гравці</h2>
-      <p class="section-hint">Пошук лише по ніку. Відсортуй і додай у лобі.</p>
+    <section class="card workspace-panel players-panel" id="playersCard">
+      <h2>Доступні гравці</h2>
+      <p class="section-hint">Натисни на гравця, щоб додати або прибрати його.</p>
       <div class="search-row">
         <input id="searchInput" class="search-input" type="search" placeholder="Пошук по ніку..." aria-label="Пошук гравця за ніком">
           <select id="sortMode" class="chip" aria-label="Сортування списку гравців">
@@ -55,41 +62,44 @@
       </div>
       <div class="counts-row">
         <div id="playersCount" class="tag">Гравців: 0</div>
-        <div id="selectedCount" class="tag">Обрано: 0 / 15</div>
+        <div id="selectedCount" class="tag">Обрано: 0 / 50</div>
       </div>
       <div id="playerList" class="player-list"></div>
     </section>
 
-    <section class="card">
+    <section class="card workspace-panel lobby-panel" id="lobbyCard">
       <div class="section-head">
-        <h2>Лобі</h2>
+        <h2>Лобі гри</h2>
         <button id="clearLobbyBtn" class="chip" type="button">Очистити</button>
       </div>
-      <p class="section-hint">До 15 гравців для балансування та матчу.</p>
+      <p class="section-hint">Перевір склад перед формуванням команд.</p>
       <div id="lobbyList" class="lobby-list"></div>
     </section>
 
-    <section class="card" id="teamsCard">
+    <section class="card teams-panel" id="teamsCard">
       <h2>Команди</h2>
-      <p class="section-hint">Команди з’являться після дії в блоці “Налаштування команд”.</p>
+      <p class="section-hint">Суми балів і поточний склад видно без переходів між екранами.</p>
       <div id="teamsGrid" class="teams-grid"></div>
     </section>
 
-    <section class="card" id="matchCard">
-      <h2>Матч</h2>
-      <p class="section-hint">Відміть серію, MVP і штрафи, потім збережи.</p>
+    <section class="card match-panel" id="matchCard">
+      <h2>Результат матчу</h2>
+      <p class="section-hint">Відміть бої, обери MVP та перевір підсумок перед збереженням.</p>
       <div id="activeMatchConfig" class="match-config"></div>
       <h3 id="activeMatchLabel">Команда 1 vs Команда 2</h3>
       <div id="matchTeamsPreview" class="teams-grid"></div>
 
       <div class="series-count" id="seriesCountOptions">
-        <span>К-сть боїв:</span>
+        <strong>Кількість боїв</strong>
         <div class="series-count-choices">
           <button class="chip" type="button" data-series-count="3">3</button>
           <button class="chip" type="button" data-series-count="4">4</button>
           <button class="chip" type="button" data-series-count="5">5</button>
           <button class="chip" type="button" data-series-count="6">6</button>
           <button class="chip" type="button" data-series-count="7">7</button>
+          <button class="chip" type="button" data-series-count="8">8</button>
+          <button class="chip" type="button" data-series-count="9">9</button>
+          <button class="chip" type="button" data-series-count="10">10</button>
           <button class="chip" type="button" data-series-reset="1">Очистити</button>
         </div>
       </div>
@@ -110,7 +120,7 @@
       </div>
 
       <div>
-        <h3>Остання збережена гра</h3>
+        <h3>Після збереження</h3>
         <div id="lastSavedGame" class="match-summary"></div>
       </div>
 
@@ -118,6 +128,6 @@
     </section>
   </main>
 
-  <script type="module" src="./scripts/balance2/app.js?v=20260713-ux2"></script>
+  <script type="module" src="./scripts/balance2/app.js?v=20260726-admin-hotfix"></script>
 </body>
 </html>

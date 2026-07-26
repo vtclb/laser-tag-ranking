@@ -232,3 +232,17 @@ test('restoreLobby ignores corrupted tournamentState safely', () => {
   assert.deepEqual(state.tournamentState.tournamentSchedule, []);
   assert.deepEqual(state.tournamentState.status, { message: '', type: 'idle' });
 });
+
+test('restoreLobby falls back from hidden school mode without crashing', () => {
+  resetBalanceState();
+  writeLobbySnapshot({
+    app: { eventMode: 'school', playerSourceMode: 'kids' },
+    playersState: { selected: ['p1'] },
+    schoolState: { title: 'Legacy school draft' },
+  });
+
+  assert.equal(restoreLobby(), true);
+  assert.equal(state.app.eventMode, 'regular');
+  assert.equal(state.app.playerSourceMode, 'kids');
+  assert.deepEqual(state.playersState.selected, ['p1']);
+});

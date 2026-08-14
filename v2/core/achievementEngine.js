@@ -1,11 +1,13 @@
-const TIER_SCORE = {
-  bronze: 10,
-  silver: 25,
-  gold: 50,
-  elite: 100
-};
+const TIER_LEVELS = [
+  { key: 'bronze', label: 'Бронза', score: 10 },
+  { key: 'silver', label: 'Срібло', score: 20 },
+  { key: 'gold', label: 'Золото', score: 35 },
+  { key: 'platinum', label: 'Платина', score: 55 },
+  { key: 'diamond', label: 'Діамант', score: 80 },
+  { key: 'legendary', label: 'Легенда', score: 120 }
+];
 
-const TIER_ORDER = { elite: 4, gold: 3, silver: 2, bronze: 1 };
+const TIER_ORDER = Object.fromEntries(TIER_LEVELS.map((tier, index) => [tier.key, index + 1]));
 const RANK_ORDER = { F: 0, E: 1, D: 2, C: 3, B: 4, A: 5, S: 6 };
 
 function number(value, fallback = 0) {
@@ -19,6 +21,10 @@ function firstNumber(source = {}, keys = [], fallback = 0) {
     if (Number.isFinite(value)) return value;
   }
   return fallback;
+}
+
+function clamp(value) {
+  return Math.max(0, Math.min(1, number(value)));
 }
 
 function countLabel(value, forms) {
@@ -36,14 +42,22 @@ function countLabel(value, forms) {
   return `${count} ${form}`;
 }
 
-function normalizeStats(allTime = {}, seasons = []) {
+function seasonPlace(season = {}) {
+  return firstNumber(season, ['place', 'finalPlace'], Number.POSITIVE_INFINITY);
+}
+
+function seasonDelta(season = {}) {
+  return firstNumber(season, ['delta', 'ratingDelta'], Number.NEGATIVE_INFINITY);
+}
+
+function normalizeStats(allTime = {}, seasons = [], context = {}) {
   const safeSeasons = Array.isArray(seasons) ? seasons.filter((season) => season && typeof season === 'object') : [];
-  const games = firstNumber(allTime, ['games', 'matches', 'totalMatches']);
-  const recordedWins = firstNumber(allTime, ['wins', 'totalWins']);
-  const mvp1 = firstNumber(allTime, ['top1', 'mvp1']);
-  const mvp2 = firstNumber(allTime, ['top2', 'mvp2']);
-  const mvp3 = firstNumber(allTime, ['top3', 'mvp3']);
-  const mvpTotal = firstNumber(allTime, ['mvpTotal', 'totalMvp'], mvp1 + mvp2 + mvp3);
+  const games = Math.max(0, firstNumber(allTime, ['games', 'matches', 'totalMatches']));
+  const recordedWins = Math.max(0, firstNumber(allTime, ['wins', 'totalWins']));
+  const mvp1 = Math.max(0, firstNumber(allTime, ['top1', 'mvp1']));
+  const mvp2 = Math.max(0, firstNumber(allTime, ['top2', 'mvp2']));
+  const mvp3 = Math.max(0, firstNumber(allTime, ['top3', 'mvp3']));
+  const mvpTotal = Math.max(0, firstNumber(allTime, ['mvpTotal', 'totalMvp'], mvp1 + mvp2 + mvp3));
   const seasonOutcomes = safeSeasons.reduce((acc, season) => {
     const seasonGames = firstNumber(season, ['games', 'matches']);
     const seasonWins = firstNumber(season, ['wins']);
@@ -58,215 +72,279 @@ function normalizeStats(allTime = {}, seasons = []) {
   const winRate = seasonOutcomes.games > 0
     ? seasonOutcomes.weightedRate / seasonOutcomes.games
     : firstNumber(allTime, ['winrate', 'winRate', 'careerWR'], games ? (wins / games) * 100 : 0);
-  const bestRank = String(allTime.bestRank || allTime.highestRank || 'F').trim().toUpperCase();
+  const longestStreakRaw = Number(context.longestStreak ?? allTime.longestStreak);
 
   return {
-    games: Math.max(0, games),
-    wins: Math.max(0, wins),
-    mvp1: Math.max(0, mvp1),
-    mvp2: Math.max(0, mvp2),
-    mvp3: Math.max(0, mvp3),
-    mvpTotal: Math.max(0, mvpTotal),
+    games,
+    wins,
+    mvp1,
+    mvp2,
+    mvp3,
+    mvpTotal,
     winRate: Math.max(0, winRate),
-    bestRank,
-    seasons: safeSeasons
+    seasonsPlayed: Math.max(firstNumber(allTime, ['seasonsPlayed']), safeSeasons.length),
+    podiums: safeSeasons.filter((season) => seasonPlace(season) <= 3).length,
+    titles: safeSeasons.filter((season) => seasonPlace(season) === 1).length,
+    bestDelta: Math.max(0, ...safeSeasons.map(seasonDelta).filter(Number.isFinite)),
+    bestRank: String(allTime.bestRank || allTime.highestRank || 'F').trim().toUpperCase(),
+    longestStreak: Number.isFinite(longestStreakRaw) ? Math.max(0, longestStreakRaw) : null
   };
 }
 
-function milestone({ id, title, mark, tier, metric, target, forms }) {
+function cumulativeScore(levelIndex) {
+  return TIER_LEVELS.slice(0, levelIndex + 1).reduce((sum, tier) => sum + tier.score, 0);
+}
+
+function currentLevelIndex(value, thresholds) {
+  let found = -1;
+  thresholds.forEach((threshold, index) => {
+    if (value >= threshold) found = index;
+  });
+  return found;
+}
+
+function numericFamily({ id, title, prefix, metric, thresholds, forms }) {
   return {
     id,
     title,
-    mark,
-    tier,
-    score: TIER_SCORE[tier],
     evaluate(stats) {
-      const current = number(stats[metric]);
-      const remaining = Math.max(0, target - current);
-      return {
-        unlocked: current >= target,
+      const current = stats[metric];
+      if (!Number.isFinite(current)) return { available: false };
+      const levelIndex = currentLevelIndex(current, thresholds);
+      const tier = levelIndex >= 0 ? TIER_LEVELS[levelIndex] : null;
+      const achievedThreshold = levelIndex >= 0 ? thresholds[levelIndex] : 0;
+      const nextIndex = levelIndex + 1;
+      const nextTier = TIER_LEVELS[nextIndex] || null;
+      const nextTarget = thresholds[nextIndex];
+      const unlocked = levelIndex >= 0 ? {
+        id,
+        familyId: id,
+        title,
+        mark: `${prefix}${achievedThreshold}`,
+        tier: tier.key,
+        tierLabel: tier.label,
+        level: levelIndex + 1,
+        maxLevel: thresholds.length,
+        score: cumulativeScore(levelIndex),
+        detail: countLabel(current, forms)
+      } : null;
+      const next = nextTier && Number.isFinite(nextTarget) ? {
+        id: `${id}-level-${nextIndex + 1}`,
+        familyId: id,
+        title,
+        mark: `${prefix}${nextTarget}`,
+        tier: nextTier.key,
+        tierLabel: nextTier.label,
+        level: nextIndex + 1,
+        maxLevel: thresholds.length,
+        score: nextTier.score,
         current,
-        target,
-        progress: Math.min(1, current / target),
-        detail: `${Math.min(current, target)} / ${target} ${forms[2]}`,
-        remainingLabel: remaining > 0 ? `Ще ${countLabel(remaining, forms)}` : 'Відкрито'
+        target: nextTarget,
+        progress: clamp((current - achievedThreshold) / Math.max(1, nextTarget - achievedThreshold)),
+        detail: `${Math.floor(current)} / ${nextTarget}`,
+        remainingLabel: `Ще ${countLabel(nextTarget - current, forms)}`
+      } : null;
+      return { available: true, unlocked, next };
+    }
+  };
+}
+
+function stabilityFamily() {
+  const requirements = [
+    { games: 50, winRate: 50 },
+    { games: 100, winRate: 52.5 },
+    { games: 200, winRate: 55 },
+    { games: 300, winRate: 57.5 },
+    { games: 500, winRate: 60 },
+    { games: 700, winRate: 65 }
+  ];
+  return {
+    id: 'stability',
+    title: 'Стабільний результат',
+    evaluate(stats) {
+      let levelIndex = -1;
+      requirements.forEach((requirement, index) => {
+        if (stats.games >= requirement.games && stats.winRate >= requirement.winRate) levelIndex = index;
+      });
+      const tier = levelIndex >= 0 ? TIER_LEVELS[levelIndex] : null;
+      const currentRequirement = levelIndex >= 0 ? requirements[levelIndex] : { games: 0, winRate: 0 };
+      const nextIndex = levelIndex + 1;
+      const nextTier = TIER_LEVELS[nextIndex] || null;
+      const nextRequirement = requirements[nextIndex];
+      const unlocked = tier ? {
+        id: 'stability',
+        familyId: 'stability',
+        title: 'Стабільний результат',
+        mark: `${Math.round(currentRequirement.winRate)}%`,
+        tier: tier.key,
+        tierLabel: tier.label,
+        level: levelIndex + 1,
+        maxLevel: requirements.length,
+        score: cumulativeScore(levelIndex),
+        detail: `${stats.winRate.toFixed(1)}% WR · ${stats.games} ігор`
+      } : null;
+      let next = null;
+      if (nextTier && nextRequirement) {
+        const gamesProgress = (stats.games - currentRequirement.games) / Math.max(1, nextRequirement.games - currentRequirement.games);
+        const rateProgress = (stats.winRate - currentRequirement.winRate) / Math.max(.1, nextRequirement.winRate - currentRequirement.winRate);
+        const missingGames = Math.max(0, nextRequirement.games - stats.games);
+        const missingRate = Math.max(0, nextRequirement.winRate - stats.winRate);
+        const missing = [
+          missingGames > 0 ? countLabel(missingGames, ['гра', 'гри', 'ігор']) : '',
+          missingRate > 0 ? `${missingRate.toFixed(1)} п.п. WR` : ''
+        ].filter(Boolean).join(' і ');
+        next = {
+          id: `stability-level-${nextIndex + 1}`,
+          familyId: 'stability',
+          title: 'Стабільний результат',
+          mark: `${nextRequirement.winRate}%`,
+          tier: nextTier.key,
+          tierLabel: nextTier.label,
+          level: nextIndex + 1,
+          maxLevel: requirements.length,
+          score: nextTier.score,
+          current: stats.winRate,
+          target: nextRequirement.winRate,
+          progress: clamp(Math.min(gamesProgress, rateProgress)),
+          detail: `${stats.winRate.toFixed(1)}% WR · ${stats.games}/${nextRequirement.games} ігор`,
+          remainingLabel: missing ? `Ще ${missing}` : 'Умови виконано'
+        };
+      }
+      return { available: true, unlocked, next };
+    }
+  };
+}
+
+function rankFamily() {
+  const levels = [
+    { rank: 'C', tier: TIER_LEVELS[0] },
+    { rank: 'B', tier: TIER_LEVELS[1] },
+    { rank: 'A', tier: TIER_LEVELS[2] },
+    { rank: 'S', tier: TIER_LEVELS[5] }
+  ];
+  return {
+    id: 'career-rank',
+    title: 'Карʼєрний ранг',
+    evaluate(stats) {
+      const rankValue = RANK_ORDER[stats.bestRank] ?? 0;
+      let levelIndex = -1;
+      levels.forEach((level, index) => {
+        if (rankValue >= RANK_ORDER[level.rank]) levelIndex = index;
+      });
+      const currentLevel = levelIndex >= 0 ? levels[levelIndex] : null;
+      const nextLevel = levels[levelIndex + 1] || null;
+      return {
+        available: true,
+        unlocked: currentLevel ? {
+          id: 'career-rank',
+          familyId: 'career-rank',
+          title: 'Карʼєрний ранг',
+          mark: currentLevel.rank,
+          tier: currentLevel.tier.key,
+          tierLabel: currentLevel.tier.label,
+          level: levelIndex + 1,
+          maxLevel: levels.length,
+          score: levels.slice(0, levelIndex + 1).reduce((sum, level) => sum + level.tier.score, 0),
+          detail: `Найвищий ранг: ${stats.bestRank}`
+        } : null,
+        next: nextLevel ? {
+          id: `career-rank-${nextLevel.rank}`,
+          familyId: 'career-rank',
+          title: 'Карʼєрний ранг',
+          mark: nextLevel.rank,
+          tier: nextLevel.tier.key,
+          tierLabel: nextLevel.tier.label,
+          level: levelIndex + 2,
+          maxLevel: levels.length,
+          score: nextLevel.tier.score,
+          current: rankValue,
+          target: RANK_ORDER[nextLevel.rank],
+          progress: clamp(rankValue / RANK_ORDER[nextLevel.rank]),
+          detail: `Поточний максимум: ${stats.bestRank}`,
+          remainingLabel: `До рангу ${nextLevel.rank}`
+        } : null
       };
     }
   };
 }
 
-function seasonPlace(season = {}) {
-  return firstNumber(season, ['place', 'finalPlace'], Number.POSITIVE_INFINITY);
-}
-
-function seasonDelta(season = {}) {
-  return firstNumber(season, ['delta', 'ratingDelta'], Number.NEGATIVE_INFINITY);
-}
-
-function seasonLabel(season = {}) {
-  return String(season.seasonTitle || season.seasonId || '').trim();
+function allRounderFamily() {
+  return {
+    id: 'all-rounder',
+    title: 'Універсал MVP',
+    evaluate(stats) {
+      const current = [stats.mvp1, stats.mvp2, stats.mvp3].filter((value) => value > 0).length;
+      const unlocked = current === 3;
+      return {
+        available: true,
+        unlocked: unlocked ? {
+          id: 'all-rounder',
+          familyId: 'all-rounder',
+          title: 'Універсал MVP',
+          mark: 'III',
+          tier: 'gold',
+          tierLabel: 'Особлива',
+          level: 1,
+          maxLevel: 1,
+          score: 35,
+          detail: 'Усі три позиції MVP'
+        } : null,
+        next: !unlocked ? {
+          id: 'all-rounder-special',
+          familyId: 'all-rounder',
+          title: 'Універсал MVP',
+          mark: 'III',
+          tier: 'gold',
+          tierLabel: 'Особлива',
+          level: 1,
+          maxLevel: 1,
+          score: 35,
+          current,
+          target: 3,
+          progress: current / 3,
+          detail: `${current} / 3 позиції MVP`,
+          remainingLabel: `Ще ${3 - current} ${3 - current === 1 ? 'позиція' : 'позиції'} MVP`
+        } : null
+      };
+    }
+  };
 }
 
 export const ACHIEVEMENT_DEFINITIONS = [
-  milestone({ id: 'debut', title: 'Перший вихід', mark: '01', tier: 'bronze', metric: 'games', target: 1, forms: ['гра', 'гри', 'ігор'] }),
-  milestone({ id: 'regular-25', title: 'Постійний гравець', mark: '25', tier: 'silver', metric: 'games', target: 25, forms: ['гра', 'гри', 'ігор'] }),
-  milestone({ id: 'veteran-100', title: 'Ветеран арени', mark: '100', tier: 'gold', metric: 'games', target: 100, forms: ['гра', 'гри', 'ігор'] }),
-  milestone({ id: 'iron-200', title: 'Залізна витримка', mark: '200', tier: 'elite', metric: 'games', target: 200, forms: ['гра', 'гри', 'ігор'] }),
-  milestone({ id: 'first-win', title: 'Перша перемога', mark: 'W', tier: 'bronze', metric: 'wins', target: 1, forms: ['перемога', 'перемоги', 'перемог'] }),
-  milestone({ id: 'winner-25', title: 'Переможний темп', mark: 'W25', tier: 'silver', metric: 'wins', target: 25, forms: ['перемога', 'перемоги', 'перемог'] }),
-  milestone({ id: 'winner-100', title: 'Сотня перемог', mark: 'W100', tier: 'elite', metric: 'wins', target: 100, forms: ['перемога', 'перемоги', 'перемог'] }),
-  milestone({ id: 'first-mvp', title: 'Помітний внесок', mark: 'M', tier: 'bronze', metric: 'mvpTotal', target: 1, forms: ['MVP', 'MVP', 'MVP'] }),
-  milestone({ id: 'mvp-10', title: 'Гравець моменту', mark: 'M10', tier: 'silver', metric: 'mvpTotal', target: 10, forms: ['MVP', 'MVP', 'MVP'] }),
-  milestone({ id: 'mvp-50', title: 'Майстер впливу', mark: 'M50', tier: 'elite', metric: 'mvpTotal', target: 50, forms: ['MVP', 'MVP', 'MVP'] }),
-  {
-    id: 'all-rounder',
-    title: 'Універсал',
-    mark: 'III',
-    tier: 'gold',
-    score: TIER_SCORE.gold,
-    evaluate(stats) {
-      const current = [stats.mvp1, stats.mvp2, stats.mvp3].filter((value) => value > 0).length;
-      const remaining = 3 - current;
-      return { unlocked: current === 3, current, target: 3, progress: current / 3, detail: `${current} / 3 позиції MVP`, remainingLabel: remaining > 0 ? `Ще ${remaining} позиції MVP` : 'Відкрито' };
-    }
-  },
-  {
-    id: 'stable-55',
-    title: 'Стабільний результат',
-    mark: '55%',
-    tier: 'gold',
-    score: TIER_SCORE.gold,
-    evaluate(stats) {
-      const gamesProgress = Math.min(1, stats.games / 50);
-      const rateProgress = Math.min(1, stats.winRate / 55);
-      const unlocked = stats.games >= 50 && stats.winRate >= 55;
-      return {
-        unlocked,
-        current: stats.winRate,
-        target: 55,
-        progress: Math.min(gamesProgress, rateProgress),
-        detail: `${stats.winRate.toFixed(1)}% WR · ${stats.games} ігор`,
-        remainingLabel: unlocked ? 'Відкрито' : stats.games < 50 ? `Ще ${countLabel(50 - stats.games, ['гра', 'гри', 'ігор'])}` : `Ще ${(55 - stats.winRate).toFixed(1)} п.п. WR`
-      };
-    }
-  },
-  {
-    id: 'elite-60',
-    title: 'Елітна стабільність',
-    mark: '60%',
-    tier: 'elite',
-    score: TIER_SCORE.elite,
-    evaluate(stats) {
-      const gamesProgress = Math.min(1, stats.games / 100);
-      const rateProgress = Math.min(1, stats.winRate / 60);
-      const unlocked = stats.games >= 100 && stats.winRate >= 60;
-      return {
-        unlocked,
-        current: stats.winRate,
-        target: 60,
-        progress: Math.min(gamesProgress, rateProgress),
-        detail: `${stats.winRate.toFixed(1)}% WR · ${stats.games} ігор`,
-        remainingLabel: unlocked ? 'Відкрито' : stats.games < 100 ? `Ще ${countLabel(100 - stats.games, ['гра', 'гри', 'ігор'])}` : `Ще ${(60 - stats.winRate).toFixed(1)} п.п. WR`
-      };
-    }
-  },
-  {
-    id: 'podium',
-    title: 'На пʼєдесталі',
-    mark: 'TOP3',
-    tier: 'gold',
-    score: TIER_SCORE.gold,
-    evaluate(stats) {
-      const season = [...stats.seasons].sort((a, b) => seasonPlace(a) - seasonPlace(b))[0];
-      const place = seasonPlace(season);
-      return {
-        unlocked: place <= 3,
-        current: Number.isFinite(place) ? place : 0,
-        target: 3,
-        progress: place <= 3 ? 1 : 0,
-        detail: place <= 3 ? `${place} місце · ${seasonLabel(season)}` : 'Фінішувати у топ-3',
-        remainingLabel: place <= 3 ? 'Відкрито' : 'До топ-3 сезону'
-      };
-    }
-  },
-  {
-    id: 'champion',
-    title: 'Чемпіон сезону',
-    mark: '#1',
-    tier: 'elite',
-    score: TIER_SCORE.elite,
-    evaluate(stats) {
-      const season = stats.seasons.find((entry) => seasonPlace(entry) === 1);
-      return {
-        unlocked: Boolean(season),
-        current: season ? 1 : 0,
-        target: 1,
-        progress: season ? 1 : 0,
-        detail: season ? seasonLabel(season) : 'Посісти 1 місце в сезоні',
-        remainingLabel: season ? 'Відкрито' : 'До 1 місця сезону'
-      };
-    }
-  },
-  {
-    id: 'climber-100',
-    title: 'Ривок сезону',
-    mark: '+100',
-    tier: 'gold',
-    score: TIER_SCORE.gold,
-    evaluate(stats) {
-      const season = [...stats.seasons].sort((a, b) => seasonDelta(b) - seasonDelta(a))[0];
-      const delta = Math.max(0, seasonDelta(season));
-      return {
-        unlocked: delta >= 100,
-        current: delta,
-        target: 100,
-        progress: Math.min(1, delta / 100),
-        detail: delta > 0 ? `+${delta} · ${seasonLabel(season)}` : 'Набрати +100 за сезон',
-        remainingLabel: delta >= 100 ? 'Відкрито' : `Ще +${Math.ceil(100 - delta)} за сезон`
-      };
-    }
-  },
-  {
-    id: 'rank-s',
-    title: 'S-ранг',
-    mark: 'S',
-    tier: 'elite',
-    score: TIER_SCORE.elite,
-    evaluate(stats) {
-      const current = RANK_ORDER[stats.bestRank] ?? 0;
-      const remaining = Math.max(0, RANK_ORDER.S - current);
-      return { unlocked: current >= RANK_ORDER.S, current, target: RANK_ORDER.S, progress: current / RANK_ORDER.S, detail: `Найвищий ранг: ${stats.bestRank}`, remainingLabel: remaining > 0 ? `Ще ${remaining} ${remaining === 1 ? 'ранг' : 'ранги'}` : 'Відкрито' };
-    }
-  }
+  numericFamily({ id: 'games', title: 'Ветеран арени', prefix: 'G', metric: 'games', thresholds: [100, 200, 300, 500, 700, 1000], forms: ['гра', 'гри', 'ігор'] }),
+  numericFamily({ id: 'wins', title: 'Шлях переможця', prefix: 'W', metric: 'wins', thresholds: [25, 50, 100, 150, 200, 300], forms: ['перемога', 'перемоги', 'перемог'] }),
+  numericFamily({ id: 'mvp', title: 'Майстер впливу', prefix: 'M', metric: 'mvpTotal', thresholds: [10, 25, 50, 100, 150, 250], forms: ['MVP', 'MVP', 'MVP'] }),
+  numericFamily({ id: 'win-streak', title: 'Переможна серія', prefix: 'S', metric: 'longestStreak', thresholds: [3, 5, 7, 10, 15, 20], forms: ['перемога поспіль', 'перемоги поспіль', 'перемог поспіль'] }),
+  numericFamily({ id: 'seasons', title: 'Досвід сезонів', prefix: 'Y', metric: 'seasonsPlayed', thresholds: [1, 2, 3, 5, 7, 10], forms: ['сезон', 'сезони', 'сезонів'] }),
+  numericFamily({ id: 'podiums', title: 'На пʼєдесталі', prefix: 'P', metric: 'podiums', thresholds: [1, 2, 3, 5, 7, 10], forms: ['пʼєдестал', 'пʼєдестали', 'пʼєдесталів'] }),
+  numericFamily({ id: 'titles', title: 'Чемпіон сезонів', prefix: 'C', metric: 'titles', thresholds: [1, 2, 3, 5, 7, 10], forms: ['чемпіонство', 'чемпіонства', 'чемпіонств'] }),
+  numericFamily({ id: 'growth', title: 'Ривок сезону', prefix: '+', metric: 'bestDelta', thresholds: [100, 200, 300, 500, 700, 1000], forms: ['очко приросту', 'очки приросту', 'очок приросту'] }),
+  stabilityFamily(),
+  rankFamily(),
+  allRounderFamily()
 ];
 
-export function buildAchievementProfile({ allTime = {}, seasons = [] } = {}) {
-  const stats = normalizeStats(allTime, seasons);
-  const evaluated = ACHIEVEMENT_DEFINITIONS.map((definition) => ({
-    id: definition.id,
-    title: definition.title,
-    mark: definition.mark,
-    tier: definition.tier,
-    score: definition.score,
-    ...definition.evaluate(stats)
-  })).map((achievement) => ({
-    ...achievement,
-    progress: Math.max(0, Math.min(1, number(achievement.progress)))
-  }));
-
+export function buildAchievementProfile({ allTime = {}, seasons = [], longestStreak } = {}) {
+  const stats = normalizeStats(allTime, seasons, { longestStreak });
+  const evaluated = ACHIEVEMENT_DEFINITIONS.map((definition) => definition.evaluate(stats)).filter((result) => result.available !== false);
   const unlocked = evaluated
-    .filter((achievement) => achievement.unlocked)
-    .sort((a, b) => TIER_ORDER[b.tier] - TIER_ORDER[a.tier] || b.score - a.score || a.title.localeCompare(b.title, 'uk'));
+    .map((result) => result.unlocked)
+    .filter(Boolean)
+    .sort((a, b) => (TIER_ORDER[b.tier] || 0) - (TIER_ORDER[a.tier] || 0) || b.level - a.level || a.title.localeCompare(b.title, 'uk'));
   const inProgress = evaluated
-    .filter((achievement) => !achievement.unlocked && achievement.progress > 0)
-    .sort((a, b) => b.progress - a.progress || b.score - a.score)
-    .slice(0, 3);
+    .map((result) => result.next)
+    .filter(Boolean)
+    .sort((a, b) => b.progress - a.progress || (TIER_ORDER[b.tier] || 0) - (TIER_ORDER[a.tier] || 0))
+    .slice(0, 4);
 
   return {
     unlocked,
     inProgress,
     score: unlocked.reduce((sum, achievement) => sum + achievement.score, 0),
     unlockedCount: unlocked.length,
-    totalCount: evaluated.length
+    totalCount: evaluated.length,
+    classCount: TIER_LEVELS.length
   };
 }
+
+export { TIER_LEVELS };

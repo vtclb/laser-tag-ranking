@@ -1,4 +1,4 @@
-import { ensureGlobalStyles } from '../pages/global-styles.js?v=20260814-achievements2';
+import { ensureGlobalStyles } from '../pages/global-styles.js?v=20260814-achievements3';
 import { debugInfo, debugLog } from './debug.js';
 import { normalizeLeague } from './naming.js';
 
@@ -303,7 +303,7 @@ async function renderRoute() {
 
     if (route === 'player') {
       if (!await mountTemplate('./pages/profile.html', renderId)) return;
-      const { initProfilePage } = await import('../pages/profile.js?v=20260814-achievements2');
+      const { initProfilePage } = await import('../pages/profile.js?v=20260814-achievements3');
       await runPageInit(route, initProfilePage, { league: queryParams.league, nick: queryParams.nick }, renderId);
       return;
     }

@@ -13174,9 +13174,12 @@ body.theme-game .profile-page img[class*="avatar"] {
   font: 700 .7rem/1 var(--font-mono);
 }
 
+.profile-award--bronze .profile-award__mark { border-color: #b78b68; color: #d9b08c; }
 .profile-award--silver .profile-award__mark { border-color: #c5d3dc; color: #edf6fb; }
 .profile-award--gold .profile-award__mark { border-color: #ffd84a; color: #ffd84a; }
-.profile-award--elite .profile-award__mark { border-color: #7df1ff; color: #7df1ff; }
+.profile-award--platinum .profile-award__mark { border-color: #7df1ff; color: #7df1ff; }
+.profile-award--diamond .profile-award__mark { border-color: #7aa7ff; color: #9cbcff; }
+.profile-award--legendary .profile-award__mark { border-color: #ff6b8a; color: #ff8aa3; }
 
 .profile-award__body {
   display: grid;
@@ -13189,6 +13192,27 @@ body.theme-game .profile-page img[class*="avatar"] {
   color: #eef8ff;
   font-size: .82rem;
 }
+
+.profile-award__tier,
+.profile-award-progress__tier {
+  color: #9fb4c2;
+  font: 700 .58rem/1 var(--font-mono);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.profile-award--bronze .profile-award__tier,
+.profile-award--bronze .profile-award-progress__tier { color: #d9b08c; }
+.profile-award--silver .profile-award__tier,
+.profile-award--silver .profile-award-progress__tier { color: #d5e1e8; }
+.profile-award--gold .profile-award__tier,
+.profile-award--gold .profile-award-progress__tier { color: #ffd84a; }
+.profile-award--platinum .profile-award__tier,
+.profile-award--platinum .profile-award-progress__tier { color: #7df1ff; }
+.profile-award--diamond .profile-award__tier,
+.profile-award--diamond .profile-award-progress__tier { color: #9cbcff; }
+.profile-award--legendary .profile-award__tier,
+.profile-award--legendary .profile-award-progress__tier { color: #ff8aa3; }
 
 .profile-award__score {
   margin-left: auto;

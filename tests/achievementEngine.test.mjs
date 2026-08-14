@@ -1,64 +1,109 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ACHIEVEMENT_DEFINITIONS, buildAchievementProfile } from '../v2/core/achievementEngine.js';
+import { ACHIEVEMENT_DEFINITIONS, TIER_LEVELS, buildAchievementProfile } from '../v2/core/achievementEngine.js';
+
+function byFamily(items, familyId) {
+  return items.find((item) => item.familyId === familyId);
+}
 
 test('empty and corrupted career data stays safe', () => {
   const result = buildAchievementProfile({ allTime: { games: 'bad', wins: null }, seasons: 'bad' });
   assert.equal(result.unlockedCount, 0);
   assert.equal(result.score, 0);
-  assert.equal(result.totalCount, ACHIEVEMENT_DEFINITIONS.length);
+  assert.equal(result.totalCount, ACHIEVEMENT_DEFINITIONS.length - 1);
+  assert.equal(result.classCount, 6);
 });
 
-test('career milestones unlock at their exact thresholds', () => {
-  const result = buildAchievementProfile({
-    allTime: { games: 100, wins: 25, top1: 8, top2: 1, top3: 1, mvpTotal: 10, winrate: 55, bestRank: 'A' }
+test('game activity is one award that upgrades through six classes', () => {
+  const bronze = buildAchievementProfile({ allTime: { games: 100 } });
+  assert.deepEqual(byFamily(bronze.unlocked, 'games'), {
+    id: 'games',
+    familyId: 'games',
+    title: 'Ветеран арени',
+    mark: 'G100',
+    tier: 'bronze',
+    tierLabel: 'Бронза',
+    level: 1,
+    maxLevel: 6,
+    score: 10,
+    detail: '100 ігор'
   });
-  const ids = new Set(result.unlocked.map((item) => item.id));
-  ['debut', 'regular-25', 'veteran-100', 'first-win', 'winner-25', 'first-mvp', 'mvp-10', 'all-rounder', 'stable-55'].forEach((id) => assert.equal(ids.has(id), true, id));
-  assert.equal(ids.has('elite-60'), false);
-  assert.equal(ids.has('rank-s'), false);
+
+  const platinum = buildAchievementProfile({ allTime: { games: 585 } });
+  const award = byFamily(platinum.unlocked, 'games');
+  const next = byFamily(platinum.inProgress, 'games');
+  assert.equal(award.tier, 'platinum');
+  assert.equal(award.mark, 'G500');
+  assert.equal(next.tier, 'diamond');
+  assert.equal(next.remainingLabel, 'Ще 115 ігор');
+  assert.equal(platinum.unlocked.filter((item) => item.familyId === 'games').length, 1);
+
+  const legendary = buildAchievementProfile({ allTime: { games: 1000 } });
+  assert.equal(byFamily(legendary.unlocked, 'games').tier, 'legendary');
+  assert.equal(byFamily(legendary.inProgress, 'games'), undefined);
 });
 
-test('season achievements use place and delta without requiring every season field', () => {
+test('wins and MVP use archive-calibrated class thresholds', () => {
   const result = buildAchievementProfile({
-    allTime: { games: 12, wins: 7 },
-    seasons: [
-      { seasonTitle: 'Осінь 2025', finalPlace: 1 },
-      { seasonTitle: 'Весна 2026', ratingDelta: 135 }
-    ]
+    allTime: { games: 300, wins: 150, top1: 80, top2: 15, top3: 5, mvpTotal: 100 }
   });
-  const byId = new Map(result.unlocked.map((item) => [item.id, item]));
-  assert.equal(byId.get('podium')?.detail, '1 місце · Осінь 2025');
-  assert.equal(byId.get('champion')?.detail, 'Осінь 2025');
-  assert.equal(byId.get('climber-100')?.detail, '+135 · Весна 2026');
+  assert.equal(byFamily(result.unlocked, 'wins').tier, 'platinum');
+  assert.equal(byFamily(result.unlocked, 'mvp').tier, 'platinum');
+  assert.equal(byFamily(result.inProgress, 'wins').remainingLabel, 'Ще 50 перемог');
+  assert.equal(byFamily(result.inProgress, 'mvp').remainingLabel, 'Ще 50 MVP');
 });
 
-test('legacy seasons can recover wins from games and win rate', () => {
+test('legacy seasons recover wins and create season, podium, title and growth classes', () => {
   const result = buildAchievementProfile({
     allTime: { games: 200, wins: 0, winrate: 0 },
     seasons: [
-      { games: 100, wins: 0, winRate: 60 },
-      { games: 100, wins: 0, winRate: 50 }
+      { games: 100, wins: 0, winRate: 60, place: 1, delta: 220 },
+      { games: 100, wins: 0, winRate: 50, place: 2, delta: 80 }
     ]
   });
-  const ids = new Set(result.unlocked.map((item) => item.id));
-  assert.equal(ids.has('winner-100'), true);
-  assert.equal(ids.has('stable-55'), true);
-  assert.equal(ids.has('elite-60'), false);
+  assert.equal(byFamily(result.unlocked, 'wins').tier, 'gold');
+  assert.equal(byFamily(result.unlocked, 'seasons').tier, 'silver');
+  assert.equal(byFamily(result.unlocked, 'podiums').tier, 'silver');
+  assert.equal(byFamily(result.unlocked, 'titles').tier, 'bronze');
+  assert.equal(byFamily(result.unlocked, 'growth').tier, 'silver');
 });
 
-test('achievement points are separate fixed rewards for unlocked badges', () => {
-  const result = buildAchievementProfile({ allTime: { games: 1, wins: 1, mvpTotal: 1 } });
-  assert.deepEqual(result.unlocked.map((item) => item.id).sort(), ['debut', 'first-mvp', 'first-win']);
-  assert.equal(result.score, 30);
+test('win streak family appears only when detailed match history is available', () => {
+  const unavailable = buildAchievementProfile({ allTime: { games: 100 } });
+  assert.equal(byFamily(unavailable.unlocked, 'win-streak'), undefined);
+  assert.equal(byFamily(unavailable.inProgress, 'win-streak'), undefined);
+
+  const streak = buildAchievementProfile({ allTime: { games: 100 }, longestStreak: 11 });
+  assert.equal(byFamily(streak.unlocked, 'win-streak').tier, 'platinum');
+  assert.equal(byFamily(streak.inProgress, 'win-streak').remainingLabel, 'Ще 4 перемоги поспіль');
 });
 
-test('progress exposes only the nearest three locked achievements', () => {
-  const result = buildAchievementProfile({ allTime: { games: 24, wins: 24, mvpTotal: 9, bestRank: 'B' } });
-  assert.equal(result.inProgress.length, 3);
-  assert.equal(result.inProgress.every((item) => item.progress > 0 && item.progress < 1), true);
-  const regular = result.inProgress.find((item) => item.id === 'regular-25');
-  assert.equal(regular?.remainingLabel, 'Ще 1 гра');
-  assert.equal(result.inProgress.every((item) => typeof item.remainingLabel === 'string' && item.remainingLabel.length > 0), true);
+test('stability requires both volume and win rate for each class', () => {
+  const result = buildAchievementProfile({
+    allTime: { games: 320, wins: 180, winrate: 56.25 },
+    seasons: [{ games: 320, wins: 180, winRate: 56.25 }]
+  });
+  assert.equal(byFamily(result.unlocked, 'stability').tier, 'gold');
+  const next = byFamily(result.inProgress, 'stability');
+  assert.equal(next.tier, 'platinum');
+  assert.match(next.remainingLabel, /1\.3 п\.п\. WR/);
+});
+
+test('rank and all-rounder remain compact special class awards', () => {
+  const result = buildAchievementProfile({
+    allTime: { games: 20, bestRank: 'S', top1: 1, top2: 1, top3: 1, mvpTotal: 3 }
+  });
+  assert.equal(byFamily(result.unlocked, 'career-rank').tier, 'legendary');
+  assert.equal(byFamily(result.unlocked, 'all-rounder').tierLabel, 'Особлива');
+});
+
+test('AP is cumulative across completed levels but only one card is shown per family', () => {
+  const result = buildAchievementProfile({ allTime: { games: 300, wins: 50, mvpTotal: 0 } });
+  const games = byFamily(result.unlocked, 'games');
+  const wins = byFamily(result.unlocked, 'wins');
+  assert.equal(games.score, TIER_LEVELS[0].score + TIER_LEVELS[1].score + TIER_LEVELS[2].score);
+  assert.equal(wins.score, TIER_LEVELS[0].score + TIER_LEVELS[1].score);
+  assert.equal(result.score, games.score + wins.score);
+  assert.equal(new Set(result.unlocked.map((item) => item.familyId)).size, result.unlocked.length);
 });

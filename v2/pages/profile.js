@@ -6,8 +6,8 @@ import {
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js?v=20260814-achievements2';
-import { buildAchievementProfile } from '../core/achievementEngine.js';
+} from '../core/dataHub.js?v=20260814-achievements3';
+import { buildAchievementProfile } from '../core/achievementEngine.js?v=20260814-classes1';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
@@ -319,7 +319,7 @@ function renderCareerHighlights(highlights = {}) {
   return `<section class="profile-section profile-achievements"><h2 class="profile-section__title">Рекорди карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement"><div class="profile-achievement__icon">${item.icon}</div><div class="profile-achievement__value">${esc(item.value)}</div><div class="profile-achievement__label">${esc(item.label)}</div><div class="profile-achievement__season">${esc(item.season)}</div></article>`).join('')}</div></section>`;
 }
 
-function renderAchievementSystem(achievements = {}) {
+function renderAchievementSystem(achievements = {}, streak) {
   const unlocked = Array.isArray(achievements.unlocked) ? achievements.unlocked : [];
   const inProgress = Array.isArray(achievements.inProgress) ? achievements.inProgress : [];
   const unlockedCount = num(achievements.unlockedCount) ?? unlocked.length;
@@ -328,8 +328,8 @@ function renderAchievementSystem(achievements = {}) {
 
   const renderAwards = (items) => `<div class="profile-award-list">${items.map((item) => `<article class="profile-award profile-award--${esc(item.tier || 'bronze')}">
         <span class="profile-award__mark" aria-hidden="true">${esc(item.mark || 'A')}</span>
-        <span class="profile-award__body"><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span>
-        <span class="profile-award__score">+${esc(item.score)} AP</span>
+        <span class="profile-award__body"><span class="profile-award__tier">${esc(item.tierLabel || '')} · ${esc(item.level)} / ${esc(item.maxLevel)}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span>
+        <span class="profile-award__score">${esc(item.score)} AP</span>
       </article>`).join('')}</div>`;
   const featured = unlocked.slice(0, 6);
   const remaining = unlocked.slice(6);
@@ -338,18 +338,18 @@ function renderAchievementSystem(achievements = {}) {
     : '<p class="profile-muted">Перша нагорода відкриється після зіграної гри.</p>';
 
   const progressMarkup = inProgress.length
-    ? `<div class="profile-award-progress"><h3>Найближчі цілі</h3>${inProgress.map((item) => `<div class="profile-award-progress__item">
-        <div><span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span><span class="profile-award-progress__target"><b>${esc(item.remainingLabel || '')}</b><em>+${esc(item.score)} AP</em></span></div>
+    ? `<div class="profile-award-progress"><h3>Наступні класи</h3>${inProgress.map((item) => `<div class="profile-award-progress__item profile-award--${esc(item.tier || 'bronze')}">
+        <div><span><span class="profile-award-progress__tier">${esc(item.tierLabel || '')} · ${esc(item.level)} / ${esc(item.maxLevel)}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span><span class="profile-award-progress__target"><b>${esc(item.remainingLabel || '')}</b><em>+${esc(item.score)} AP</em></span></div>
         <div class="profile-award-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round((item.progress || 0) * 100)}"><span style="width:${Math.round((item.progress || 0) * 100)}%"></span></div>
       </div>`).join('')}</div>`
     : '';
 
-  return `<section class="profile-section profile-awards">
+  return `<section class="profile-section profile-awards" id="profileAwardsHost">
     <div class="profile-awards__head">
       <h2 class="profile-section__title">Нагороди та досягнення</h2>
-      <div class="profile-awards__summary"><strong>${esc(score)} AP</strong><span>${esc(unlockedCount)} / ${esc(totalCount)} відкрито</span></div>
+      <div class="profile-awards__summary"><strong>${esc(score)} AP</strong><span>${esc(unlockedCount)} / ${esc(totalCount)} категорій</span></div>
     </div>
-    <div id="profileWinStreakHost">${renderWinStreak()}</div>
+    ${renderWinStreak(streak)}
     ${unlockedMarkup}
     ${progressMarkup}
   </section>`;
@@ -1193,11 +1193,13 @@ export async function initProfilePage(params = {}) {
     const logsEl = root.querySelector('#seasonLogsHost');
     const copyLinkBtn = root.querySelector('#profileCopyLinkBtn');
     const shareStatus = root.querySelector('#profileShareStatus');
-    const winStreakHost = root.querySelector('#profileWinStreakHost');
+    const profileAwardsHost = root.querySelector('#profileAwardsHost');
     bindCareerMetricSwitch(root);
 
     winStreakPromise.then((streak) => {
-      if (winStreakHost?.isConnected) winStreakHost.innerHTML = renderWinStreak(streak);
+      if (!profileAwardsHost?.isConnected) return;
+      const updatedAchievements = buildAchievementProfile({ allTime: allTimeStats, seasons: seasonRows, longestStreak: streak?.longest });
+      profileAwardsHost.outerHTML = renderAchievementSystem(updatedAchievements, streak);
     });
 
     copyLinkBtn?.addEventListener('click', async () => {

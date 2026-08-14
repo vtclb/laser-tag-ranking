@@ -66,6 +66,20 @@ test('profile shows asynchronous career win streak and explicit reward remainder
   assert.match(css, /profile-award-progress__target/);
 });
 
+test('achievement cards open an accessible mobile detail sheet with levels and owners', () => {
+  assert.match(profile, /data-achievement-family/);
+  assert.match(profile, /aria-haspopup="dialog"/);
+  assert.match(profile, /function openAchievementDialog/);
+  assert.match(profile, /getAchievementLeaderboard/);
+  assert.match(profile, /Усі рівні/);
+  assert.match(profile, /Власники нагороди/);
+  assert.match(profile, /Однакові результати ділять місце/);
+  assert.match(profile, /role="table"/);
+  assert.match(css, /\.achievement-dialog/);
+  assert.match(css, /max-height: 90dvh/);
+  assert.match(css, /\.achievement-leaderboard__row\.is-current/);
+});
+
 test('gameday keeps exact deltas and all three MVP positions visible', () => {
   assert.match(gameday, /match\.pointsChanges \|\| \[\]/);
   assert.match(gameday, /getPlayerGameDelta\(nick, match\.pointsChanges \|\| \[\]\)/);

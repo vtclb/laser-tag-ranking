@@ -103,10 +103,17 @@ function currentLevelIndex(value, thresholds) {
   return found;
 }
 
-function numericFamily({ id, title, prefix, metric, thresholds, forms }) {
+function numericFamily({ id, title, description, prefix, metric, thresholds, forms }) {
   return {
     id,
     title,
+    description,
+    levels: thresholds.map((target, index) => ({
+      ...TIER_LEVELS[index],
+      level: index + 1,
+      target,
+      requirementLabel: countLabel(target, forms)
+    })),
     evaluate(stats) {
       const current = stats[metric];
       if (!Number.isFinite(current)) return { available: false };
@@ -126,7 +133,8 @@ function numericFamily({ id, title, prefix, metric, thresholds, forms }) {
         level: levelIndex + 1,
         maxLevel: thresholds.length,
         score: cumulativeScore(levelIndex),
-        detail: countLabel(current, forms)
+        detail: countLabel(current, forms),
+        metricValue: current
       } : null;
       const next = nextTier && Number.isFinite(nextTarget) ? {
         id: `${id}-level-${nextIndex + 1}`,
@@ -142,7 +150,7 @@ function numericFamily({ id, title, prefix, metric, thresholds, forms }) {
         target: nextTarget,
         progress: clamp((current - achievedThreshold) / Math.max(1, nextTarget - achievedThreshold)),
         detail: `${Math.floor(current)} / ${nextTarget}`,
-        remainingLabel: `Ще ${countLabel(nextTarget - current, forms)}`
+          remainingLabel: `Ще ${countLabel(nextTarget - current, forms)}`
       } : null;
       return { available: true, unlocked, next };
     }
@@ -161,6 +169,13 @@ function stabilityFamily() {
   return {
     id: 'stability',
     title: 'Стабільний результат',
+    description: 'Нагорода за поєднання великої кількості ігор і стабільно високого відсотка перемог.',
+    levels: requirements.map((requirement, index) => ({
+      ...TIER_LEVELS[index],
+      level: index + 1,
+      target: requirement.winRate,
+      requirementLabel: `${requirement.games} ігор · ${requirement.winRate}% WR`
+    })),
     evaluate(stats) {
       let levelIndex = -1;
       requirements.forEach((requirement, index) => {
@@ -181,7 +196,9 @@ function stabilityFamily() {
         level: levelIndex + 1,
         maxLevel: requirements.length,
         score: cumulativeScore(levelIndex),
-        detail: `${stats.winRate.toFixed(1)}% WR · ${stats.games} ігор`
+        detail: `${stats.winRate.toFixed(1)}% WR · ${stats.games} ігор`,
+        metricValue: stats.winRate,
+        secondaryMetricValue: stats.games
       } : null;
       let next = null;
       if (nextTier && nextRequirement) {
@@ -225,6 +242,13 @@ function rankFamily() {
   return {
     id: 'career-rank',
     title: 'Карʼєрний ранг',
+    description: 'Нагорода за найвищий ранг, якого гравець досяг хоча б в одному сезоні.',
+    levels: levels.map((level, index) => ({
+      ...level.tier,
+      level: index + 1,
+      target: RANK_ORDER[level.rank],
+      requirementLabel: `Досягнути рангу ${level.rank}`
+    })),
     evaluate(stats) {
       const rankValue = RANK_ORDER[stats.bestRank] ?? 0;
       let levelIndex = -1;
@@ -245,7 +269,8 @@ function rankFamily() {
           level: levelIndex + 1,
           maxLevel: levels.length,
           score: levels.slice(0, levelIndex + 1).reduce((sum, level) => sum + level.tier.score, 0),
-          detail: `Найвищий ранг: ${stats.bestRank}`
+          detail: `Найвищий ранг: ${stats.bestRank}`,
+          metricValue: rankValue
         } : null,
         next: nextLevel ? {
           id: `career-rank-${nextLevel.rank}`,
@@ -272,6 +297,14 @@ function allRounderFamily() {
   return {
     id: 'all-rounder',
     title: 'Універсал MVP',
+    description: 'Особлива нагорода за здобуття кожної з трьох позицій MVP: MVP 1, MVP 2 та MVP 3.',
+    levels: [{
+      ...TIER_LEVELS[2],
+      label: 'Особлива',
+      level: 1,
+      target: 3,
+      requirementLabel: 'Отримати MVP 1, MVP 2 і MVP 3'
+    }],
     evaluate(stats) {
       const current = [stats.mvp1, stats.mvp2, stats.mvp3].filter((value) => value > 0).length;
       const unlocked = current === 3;
@@ -287,7 +320,8 @@ function allRounderFamily() {
           level: 1,
           maxLevel: 1,
           score: 35,
-          detail: 'Усі три позиції MVP'
+          detail: 'Усі три позиції MVP',
+          metricValue: current
         } : null,
         next: !unlocked ? {
           id: 'all-rounder-special',
@@ -311,14 +345,14 @@ function allRounderFamily() {
 }
 
 export const ACHIEVEMENT_DEFINITIONS = [
-  numericFamily({ id: 'games', title: 'Ветеран арени', prefix: 'G', metric: 'games', thresholds: [100, 200, 300, 500, 700, 1000], forms: ['гра', 'гри', 'ігор'] }),
-  numericFamily({ id: 'wins', title: 'Шлях переможця', prefix: 'W', metric: 'wins', thresholds: [25, 50, 100, 150, 200, 300], forms: ['перемога', 'перемоги', 'перемог'] }),
-  numericFamily({ id: 'mvp', title: 'Майстер впливу', prefix: 'M', metric: 'mvpTotal', thresholds: [10, 25, 50, 100, 150, 250], forms: ['MVP', 'MVP', 'MVP'] }),
-  numericFamily({ id: 'win-streak', title: 'Переможна серія', prefix: 'S', metric: 'longestStreak', thresholds: [3, 5, 7, 10, 15, 20], forms: ['перемога поспіль', 'перемоги поспіль', 'перемог поспіль'] }),
-  numericFamily({ id: 'seasons', title: 'Досвід сезонів', prefix: 'Y', metric: 'seasonsPlayed', thresholds: [1, 2, 3, 5, 7, 10], forms: ['сезон', 'сезони', 'сезонів'] }),
-  numericFamily({ id: 'podiums', title: 'На пʼєдесталі', prefix: 'P', metric: 'podiums', thresholds: [1, 2, 3, 5, 7, 10], forms: ['пʼєдестал', 'пʼєдестали', 'пʼєдесталів'] }),
-  numericFamily({ id: 'titles', title: 'Чемпіон сезонів', prefix: 'C', metric: 'titles', thresholds: [1, 2, 3, 5, 7, 10], forms: ['чемпіонство', 'чемпіонства', 'чемпіонств'] }),
-  numericFamily({ id: 'growth', title: 'Ривок сезону', prefix: '+', metric: 'bestDelta', thresholds: [100, 200, 300, 500, 700, 1000], forms: ['очко приросту', 'очки приросту', 'очок приросту'] }),
+  numericFamily({ id: 'games', title: 'Ветеран арени', description: 'Нагорода за загальну кількість рейтингових ігор у всіх сезонах.', prefix: 'G', metric: 'games', thresholds: [100, 200, 300, 500, 700, 1000], forms: ['гра', 'гри', 'ігор'] }),
+  numericFamily({ id: 'wins', title: 'Шлях переможця', description: 'Нагорода за загальну кількість перемог у рейтингових іграх.', prefix: 'W', metric: 'wins', thresholds: [25, 50, 100, 150, 200, 300], forms: ['перемога', 'перемоги', 'перемог'] }),
+  numericFamily({ id: 'mvp', title: 'Майстер впливу', description: 'Нагорода за сумарну кількість потраплянь на перше, друге або третє місце MVP.', prefix: 'M', metric: 'mvpTotal', thresholds: [10, 25, 50, 100, 150, 250], forms: ['MVP', 'MVP', 'MVP'] }),
+  numericFamily({ id: 'win-streak', title: 'Переможна серія', description: 'Нагорода за найдовшу безперервну серію перемог. Серія може продовжуватися між різними ігровими днями.', prefix: 'S', metric: 'longestStreak', thresholds: [3, 5, 7, 10, 15, 20], forms: ['перемога поспіль', 'перемоги поспіль', 'перемог поспіль'] }),
+  numericFamily({ id: 'seasons', title: 'Досвід сезонів', description: 'Нагорода за кількість сезонів, у яких гравець має зафіксований результат.', prefix: 'Y', metric: 'seasonsPlayed', thresholds: [1, 2, 3, 5, 7, 10], forms: ['сезон', 'сезони', 'сезонів'] }),
+  numericFamily({ id: 'podiums', title: 'На пʼєдесталі', description: 'Нагорода за завершення сезону на першому, другому або третьому місці.', prefix: 'P', metric: 'podiums', thresholds: [1, 2, 3, 5, 7, 10], forms: ['пʼєдестал', 'пʼєдестали', 'пʼєдесталів'] }),
+  numericFamily({ id: 'titles', title: 'Чемпіон сезонів', description: 'Нагорода за сезони, завершені на першому місці рейтингу.', prefix: 'C', metric: 'titles', thresholds: [1, 2, 3, 5, 7, 10], forms: ['чемпіонство', 'чемпіонства', 'чемпіонств'] }),
+  numericFamily({ id: 'growth', title: 'Ривок сезону', description: 'Нагорода за найбільший приріст рейтингу, показаний в одному сезоні.', prefix: '+', metric: 'bestDelta', thresholds: [100, 200, 300, 500, 700, 1000], forms: ['очко приросту', 'очки приросту', 'очок приросту'] }),
   stabilityFamily(),
   rankFamily(),
   allRounderFamily()
@@ -345,6 +379,55 @@ export function buildAchievementProfile({ allTime = {}, seasons = [], longestStr
     totalCount: evaluated.length,
     classCount: TIER_LEVELS.length
   };
+}
+
+export function getAchievementFamily(familyId = '') {
+  const definition = ACHIEVEMENT_DEFINITIONS.find((item) => item.id === String(familyId));
+  if (!definition) return null;
+  return {
+    id: definition.id,
+    title: definition.title,
+    description: definition.description || '',
+    levels: (definition.levels || []).map((level) => ({ ...level }))
+  };
+}
+
+export function buildAchievementStandings(profiles = [], familyId = '') {
+  const definition = ACHIEVEMENT_DEFINITIONS.find((item) => item.id === String(familyId));
+  if (!definition || !Array.isArray(profiles)) return [];
+
+  const rows = profiles.map((profile) => {
+    const stats = normalizeStats(profile?.allTime, profile?.seasons, { longestStreak: profile?.longestStreak });
+    const unlocked = definition.evaluate(stats)?.unlocked;
+    if (!unlocked) return null;
+    return {
+      nick: String(profile?.nick || '').trim(),
+      league: String(profile?.league || '').trim(),
+      avatar: String(profile?.avatar || '').trim(),
+      tier: unlocked.tier,
+      tierLabel: unlocked.tierLabel,
+      level: unlocked.level,
+      maxLevel: unlocked.maxLevel,
+      detail: unlocked.detail,
+      score: unlocked.score,
+      metricValue: number(unlocked.metricValue),
+      secondaryMetricValue: number(unlocked.secondaryMetricValue)
+    };
+  }).filter((row) => row?.nick);
+
+  rows.sort((a, b) => b.level - a.level
+    || b.metricValue - a.metricValue
+    || b.secondaryMetricValue - a.secondaryMetricValue
+    || a.nick.localeCompare(b.nick, 'uk'));
+
+  let previousKey = '';
+  let position = 0;
+  return rows.map((row, index) => {
+    const tieKey = `${row.level}:${row.metricValue}:${row.secondaryMetricValue}`;
+    if (tieKey !== previousKey) position = index + 1;
+    previousKey = tieKey;
+    return { ...row, position };
+  });
 }
 
 export { TIER_LEVELS };

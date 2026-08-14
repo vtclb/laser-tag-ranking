@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ACHIEVEMENT_DEFINITIONS, TIER_LEVELS, buildAchievementProfile } from '../v2/core/achievementEngine.js';
+import {
+  ACHIEVEMENT_DEFINITIONS,
+  TIER_LEVELS,
+  buildAchievementProfile,
+  buildAchievementStandings,
+  getAchievementFamily
+} from '../v2/core/achievementEngine.js';
 
 function byFamily(items, familyId) {
   return items.find((item) => item.familyId === familyId);
@@ -27,7 +33,8 @@ test('game activity is one award that upgrades through six classes', () => {
     level: 1,
     maxLevel: 6,
     score: 10,
-    detail: '100 ігор'
+    detail: '100 ігор',
+    metricValue: 100
   });
 
   const platinum = buildAchievementProfile({ allTime: { games: 585 } });
@@ -106,4 +113,28 @@ test('AP is cumulative across completed levels but only one card is shown per fa
   assert.equal(wins.score, TIER_LEVELS[0].score + TIER_LEVELS[1].score);
   assert.equal(result.score, games.score + wins.score);
   assert.equal(new Set(result.unlocked.map((item) => item.familyId)).size, result.unlocked.length);
+});
+
+test('achievement family exposes explanation and every level requirement', () => {
+  const family = getAchievementFamily('games');
+  assert.equal(family.title, 'Ветеран арени');
+  assert.match(family.description, /кількість рейтингових ігор/);
+  assert.deepEqual(family.levels.map((level) => level.target), [100, 200, 300, 500, 700, 1000]);
+  assert.deepEqual(family.levels.map((level) => level.label), TIER_LEVELS.map((tier) => tier.label));
+  assert.equal(getAchievementFamily('unknown'), null);
+});
+
+test('achievement standings sort by class and metric while equal results share a place', () => {
+  const rows = buildAchievementStandings([
+    { nick: 'Gold', allTime: { games: 320 } },
+    { nick: 'Silver B', allTime: { games: 220 } },
+    { nick: 'No award', allTime: { games: 99 } },
+    { nick: 'Silver A', allTime: { games: 220 } },
+    { nick: 'Silver C', allTime: { games: 205 } }
+  ], 'games');
+
+  assert.deepEqual(rows.map((row) => row.nick), ['Gold', 'Silver A', 'Silver B', 'Silver C']);
+  assert.deepEqual(rows.map((row) => row.position), [1, 2, 2, 4]);
+  assert.deepEqual(rows.map((row) => row.tier), ['gold', 'silver', 'silver', 'silver']);
+  assert.deepEqual(buildAchievementStandings([], 'unknown'), []);
 });

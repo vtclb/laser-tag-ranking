@@ -1,19 +1,23 @@
 import {
   buildPlayerCareer,
+  getAchievementLeaderboard,
   getCurrentLeagueLiveStats,
   getCurrentSeason,
   getPlayerCareerWinStreak,
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js?v=20260814-achievements3';
-import { buildAchievementProfile } from '../core/achievementEngine.js?v=20260814-classes1';
+} from '../core/dataHub.js?v=20260814-achievements4';
+import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260814-classes2';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
 import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
 const placeholder = './assets/default-avatar.svg';
+const achievementDialogContexts = new WeakMap();
+const achievementDialogRoots = new WeakSet();
+const achievementDialogRequests = new WeakMap();
 
 function esc(v) {
   return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -326,11 +330,11 @@ function renderAchievementSystem(achievements = {}, streak) {
   const totalCount = num(achievements.totalCount) ?? unlocked.length;
   const score = num(achievements.score) ?? 0;
 
-  const renderAwards = (items) => `<div class="profile-award-list">${items.map((item) => `<article class="profile-award profile-award--${esc(item.tier || 'bronze')}">
+  const renderAwards = (items) => `<div class="profile-award-list">${items.map((item) => `<button type="button" class="profile-award profile-award--${esc(item.tier || 'bronze')}" data-achievement-family="${esc(item.familyId)}" aria-haspopup="dialog">
         <span class="profile-award__mark" aria-hidden="true">${esc(item.mark || 'A')}</span>
         <span class="profile-award__body"><span class="profile-award__tier">${esc(item.tierLabel || '')} · ${esc(item.level)} / ${esc(item.maxLevel)}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span>
         <span class="profile-award__score">${esc(item.score)} AP</span>
-      </article>`).join('')}</div>`;
+      </button>`).join('')}</div>`;
   const featured = unlocked.slice(0, 6);
   const remaining = unlocked.slice(6);
   const unlockedMarkup = unlocked.length
@@ -338,10 +342,10 @@ function renderAchievementSystem(achievements = {}, streak) {
     : '<p class="profile-muted">Перша нагорода відкриється після зіграної гри.</p>';
 
   const progressMarkup = inProgress.length
-    ? `<div class="profile-award-progress"><h3>Наступні класи</h3>${inProgress.map((item) => `<div class="profile-award-progress__item profile-award--${esc(item.tier || 'bronze')}">
+    ? `<div class="profile-award-progress"><h3>Наступні класи</h3>${inProgress.map((item) => `<button type="button" class="profile-award-progress__item profile-award--${esc(item.tier || 'bronze')}" data-achievement-family="${esc(item.familyId)}" aria-haspopup="dialog">
         <div><span><span class="profile-award-progress__tier">${esc(item.tierLabel || '')} · ${esc(item.level)} / ${esc(item.maxLevel)}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span><span class="profile-award-progress__target"><b>${esc(item.remainingLabel || '')}</b><em>+${esc(item.score)} AP</em></span></div>
         <div class="profile-award-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round((item.progress || 0) * 100)}"><span style="width:${Math.round((item.progress || 0) * 100)}%"></span></div>
-      </div>`).join('')}</div>`
+      </button>`).join('')}</div>`
     : '';
 
   return `<section class="profile-section profile-awards" id="profileAwardsHost">
@@ -352,7 +356,108 @@ function renderAchievementSystem(achievements = {}, streak) {
     ${renderWinStreak(streak)}
     ${unlockedMarkup}
     ${progressMarkup}
+    <dialog class="achievement-dialog" id="achievementDialog" aria-labelledby="achievementDialogTitle"></dialog>
   </section>`;
+}
+
+function renderAchievementDialogContent({ family, achievements = {}, leaderboard, displayNick = '', league = 'kids', loading = false, error = '' } = {}) {
+  if (!family) return '';
+  const unlocked = (achievements.unlocked || []).find((item) => item.familyId === family.id);
+  const next = (achievements.inProgress || []).find((item) => item.familyId === family.id);
+  const rows = Array.isArray(leaderboard?.rows) ? leaderboard.rows : [];
+  const currentKey = normalizePlayerKey(displayNick);
+  const currentRow = rows.find((row) => normalizePlayerKey(row.nick) === currentKey);
+  const currentLevel = unlocked?.level || 0;
+  const status = unlocked
+    ? `${unlocked.tierLabel} · ${unlocked.detail}${currentRow ? ` · #${currentRow.position} у списку` : ''}`
+    : (next?.remainingLabel || 'Нагорода ще не відкрита');
+  const levels = (family.levels || []).map((level) => `<li class="achievement-dialog__level achievement-dialog__level--${esc(level.key || 'gold')} ${level.level === currentLevel ? 'is-current' : ''} ${level.level < currentLevel ? 'is-complete' : ''}">
+      <span class="achievement-dialog__tier-mark" aria-hidden="true">${esc(level.level)}</span>
+      <span><b>${esc(level.label)}</b><small>${esc(level.requirementLabel)}</small></span>
+      <em>+${esc(level.score)} AP</em>
+    </li>`).join('');
+  const leaderboardBody = loading
+    ? '<div class="achievement-dialog__loading" role="status">Збираємо результати всіх сезонів…</div>'
+    : error
+      ? `<div class="achievement-dialog__empty" role="status">${esc(error)}</div>`
+      : rows.length
+        ? `<div class="achievement-leaderboard" role="table" aria-label="Власники нагороди ${esc(family.title)}">
+            <div class="achievement-leaderboard__head" role="row"><span role="columnheader">Місце</span><span role="columnheader">Гравець</span><span role="columnheader">Рівень</span><span role="columnheader">Результат</span></div>
+            ${rows.map((row) => `<a class="achievement-leaderboard__row ${normalizePlayerKey(row.nick) === currentKey ? 'is-current' : ''}" role="row" href="${buildHash('player', { league, nick: row.nick })}">
+              <b role="cell">#${esc(row.position)}</b>
+              <span class="achievement-leaderboard__player" role="cell"><img src="${esc(row.avatar || placeholder)}" alt="" loading="lazy"><strong>${esc(row.nick)}</strong></span>
+              <span class="achievement-leaderboard__tier achievement-leaderboard__tier--${esc(row.tier)}" role="cell">${esc(row.tierLabel)}</span>
+              <span role="cell">${esc(row.detail)}</span>
+            </a>`).join('')}
+          </div>`
+        : '<div class="achievement-dialog__empty">У доступних даних ще немає власників цієї нагороди.</div>';
+
+  return `<div class="achievement-dialog__panel">
+    <header class="achievement-dialog__header">
+      <span><small>Нагорода</small><h2 id="achievementDialogTitle">${esc(family.title)}</h2></span>
+      <button type="button" class="achievement-dialog__close" data-achievement-close aria-label="Закрити">×</button>
+    </header>
+    <div class="achievement-dialog__scroll">
+      <section class="achievement-dialog__intro">
+        <p>${esc(family.description)}</p>
+        <div><small>Ваш результат</small><strong>${esc(status)}</strong></div>
+      </section>
+      <section class="achievement-dialog__levels" aria-labelledby="achievementLevelsTitle">
+        <h3 id="achievementLevelsTitle">Усі рівні</h3>
+        <ol>${levels}</ol>
+      </section>
+      <section class="achievement-dialog__ranking" aria-labelledby="achievementRankingTitle">
+        <div class="achievement-dialog__ranking-head"><span><small>${esc(leagueLabelUA(league))}</small><h3 id="achievementRankingTitle">Власники нагороди</h3></span>${!loading && !error ? `<b>${esc(rows.length)} гравців</b>` : ''}</div>
+        <p class="achievement-dialog__ranking-note">Сортування: клас нагороди, потім фактичний результат. Однакові результати ділять місце.</p>
+        ${leaderboardBody}
+      </section>
+    </div>
+  </div>`;
+}
+
+async function openAchievementDialog(root, familyId) {
+  const context = achievementDialogContexts.get(root);
+  const dialog = root.querySelector('#achievementDialog');
+  const family = getAchievementFamily(familyId);
+  if (!context || !dialog || !family) return;
+  const requestId = (achievementDialogRequests.get(root) || 0) + 1;
+  achievementDialogRequests.set(root, requestId);
+
+  dialog.innerHTML = renderAchievementDialogContent({ family, ...context, loading: true });
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+
+  try {
+    const leaderboard = await getAchievementLeaderboard({ familyId, league: context.league });
+    if (achievementDialogRequests.get(root) !== requestId || (!dialog.open && !dialog.hasAttribute('open'))) return;
+    dialog.innerHTML = renderAchievementDialogContent({ family, ...context, leaderboard });
+  } catch (error) {
+    if (achievementDialogRequests.get(root) !== requestId) return;
+    dialog.innerHTML = renderAchievementDialogContent({
+      family,
+      ...context,
+      error: safeErrorMessage(error, 'Не вдалося завантажити загальний список. Спробуйте ще раз.')
+    });
+  }
+}
+
+function bindAchievementDialog(root) {
+  if (achievementDialogRoots.has(root)) return;
+  achievementDialogRoots.add(root);
+  root.addEventListener('click', (event) => {
+    const closeButton = event.target.closest('[data-achievement-close]');
+    if (closeButton) {
+      const dialog = closeButton.closest('dialog');
+      if (typeof dialog?.close === 'function') dialog.close();
+      else dialog?.removeAttribute('open');
+      return;
+    }
+    const trigger = event.target.closest('[data-achievement-family]');
+    if (trigger) openAchievementDialog(root, trigger.dataset.achievementFamily);
+  });
+  root.addEventListener('click', (event) => {
+    if (event.target.matches?.('dialog.achievement-dialog')) event.target.close();
+  });
 }
 
 function shortDate(value = '') {
@@ -1195,11 +1300,14 @@ export async function initProfilePage(params = {}) {
     const shareStatus = root.querySelector('#profileShareStatus');
     const profileAwardsHost = root.querySelector('#profileAwardsHost');
     bindCareerMetricSwitch(root);
+    achievementDialogContexts.set(root, { achievements, displayNick, league: profileLeagueContext });
+    bindAchievementDialog(root);
 
     winStreakPromise.then((streak) => {
       if (!profileAwardsHost?.isConnected) return;
       const updatedAchievements = buildAchievementProfile({ allTime: allTimeStats, seasons: seasonRows, longestStreak: streak?.longest });
       profileAwardsHost.outerHTML = renderAchievementSystem(updatedAchievements, streak);
+      achievementDialogContexts.set(root, { achievements: updatedAchievements, displayNick, league: profileLeagueContext });
     });
 
     copyLinkBtn?.addEventListener('click', async () => {

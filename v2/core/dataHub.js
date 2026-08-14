@@ -5,7 +5,7 @@ import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueK
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
 import { makeDataStatus } from './dataStatus.js';
 import { debugLog, debugWarn } from './debug.js';
-import { buildAchievementProfile } from './achievementEngine.js?v=20260814-classes1';
+import { buildAchievementProfile, buildAchievementStandings } from './achievementEngine.js?v=20260814-classes2';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -2747,6 +2747,132 @@ export async function buildPlayerCareer(nick, options = {}) {
       averageSeasonWinrate,
       highestRank: total.bestRank
     }
+  });
+}
+
+function buildAchievementCareerAggregate({ nick = '', league = '', avatar = '', seasons = [] } = {}) {
+  const safeSeasons = Array.isArray(seasons) ? seasons.filter(Boolean) : [];
+  const total = {
+    games: 0,
+    matches: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    winrate: null,
+    top1: 0,
+    top2: 0,
+    top3: 0,
+    mvpTotal: 0,
+    bestRank: null,
+    seasonsPlayed: safeSeasons.length
+  };
+
+  safeSeasons.forEach((season) => {
+    total.games += Number(season.matches) || 0;
+    total.matches += Number(season.matches) || 0;
+    total.wins += Number(season.wins) || 0;
+    total.losses += Number(season.losses) || 0;
+    total.draws += Number(season.draws) || 0;
+    total.top1 += Number(season.mvp1) || 0;
+    total.top2 += Number(season.mvp2) || 0;
+    total.top3 += Number(season.mvp3) || 0;
+    total.mvpTotal += Number(season.mvpTotal) || 0;
+    if (isRankBetter(season.rank, total.bestRank)) total.bestRank = season.rank;
+  });
+  total.winrate = total.matches ? Number(((total.wins / total.matches) * 100).toFixed(1)) : 0;
+
+  return { nick, league, avatar, allTime: total, seasons: safeSeasons };
+}
+
+export async function getAchievementLeaderboard({ familyId = '', league = 'kids' } = {}) {
+  const selectedLeague = normalizeLeagueKey(normalizeLeague(league) || 'kids') || 'kids';
+  const selectedFamily = String(familyId || '').trim();
+  if (!selectedFamily) return { familyId: '', league: selectedLeague, rows: [] };
+  const cacheKey = `achievement-leaderboard:${selectedLeague}:${selectedFamily}`;
+  const cached = readCache(cacheKey, TTL.profile);
+  if (cached) return cached;
+
+  const [avatars, seasonIds, config, currentSeason, liveStats] = await Promise.all([
+    getAvatarsMap(),
+    listSeasonMasters({ includeCurrent: true }),
+    loadSeasonsConfig(),
+    getCurrentSeason().catch(() => null),
+    getCurrentLeagueLiveStats(selectedLeague).catch(() => null)
+  ]);
+  const seasonMetaById = new Map((config?.seasons || []).map((season) => [season.id, season]));
+  const seasonMasterResults = await Promise.allSettled(seasonIds.map((seasonId) => getSeasonMaster(seasonId)));
+  const players = new Map();
+
+  const addSeasonEntry = (entry, { replace = false } = {}) => {
+    if (!entry?.nickname || normalizeLeagueKey(entry.league) !== selectedLeague || !hasMeaningfulSeasonStats(entry)) return;
+    const playerKey = normalizePlayerKey(entry.nickname);
+    if (!playerKey) return;
+    if (!players.has(playerKey)) {
+      players.set(playerKey, {
+        nick: entry.nickname,
+        league: selectedLeague,
+        avatar: avatars.get(playerKey) || '',
+        seasons: new Map()
+      });
+    }
+    const player = players.get(playerKey);
+    if (replace || !player.seasons.has(entry.seasonId)) player.seasons.set(entry.seasonId, entry);
+  };
+
+  seasonMasterResults.forEach((result, index) => {
+    if (result.status !== 'fulfilled') return;
+    const seasonId = seasonIds[index];
+    const seasonTitle = seasonMetaById.get(seasonId)?.uiLabel || resolveSeasonTitle(result.value, seasonId);
+    const rows = Array.isArray(result.value?.sections?.players) ? result.value.sections.players : [];
+    rows.forEach((row) => addSeasonEntry(buildSeasonEntry(row, { seasonId, seasonTitle, profileLeagueContext: selectedLeague })));
+  });
+
+  const currentSeasonId = String(currentSeason?.id || liveStats?.seasonId || '').trim();
+  if (currentSeasonId) {
+    const currentSeasonTitle = currentSeason?.uiLabel || liveStats?.seasonLabel || currentSeasonId;
+    (liveStats?.players || []).forEach((player) => {
+      const liveRow = {
+        ...player,
+        Matches: player.matches,
+        Wins: player.wins,
+        Losses: player.losses,
+        Draws: player.draws,
+        MVP1: player.mvp1,
+        MVP2: player.mvp2,
+        MVP3: player.mvp3,
+        Rating_end: player.points,
+        Rating_delta: player.delta,
+        Place: player.place,
+        Rank_final: player.rankLetter,
+        league: selectedLeague
+      };
+      addSeasonEntry(buildSeasonEntry(liveRow, {
+        seasonId: currentSeasonId,
+        seasonTitle: currentSeasonTitle,
+        profileLeagueContext: selectedLeague
+      }), { replace: true });
+    });
+  }
+
+  const profiles = [...players.values()].map((player) => buildAchievementCareerAggregate({
+    ...player,
+    seasons: [...player.seasons.values()]
+  }));
+
+  if (selectedFamily === 'win-streak') {
+    const snapshots = await Promise.allSettled(seasonIds.map((seasonId) => getLeagueSnapshot(selectedLeague, seasonId)));
+    const matches = snapshots.flatMap((result) => result.status === 'fulfilled' && Array.isArray(result.value?.matches) ? result.value.matches : []);
+    profiles.forEach((profile) => {
+      profile.longestStreak = calculatePlayerWinStreak(matches, profile.nick).longest;
+    });
+  }
+
+  return writeCache(cacheKey, {
+    familyId: selectedFamily,
+    league: selectedLeague,
+    rows: buildAchievementStandings(profiles, selectedFamily),
+    playersChecked: profiles.length,
+    generatedAt: new Date().toISOString()
   });
 }
 

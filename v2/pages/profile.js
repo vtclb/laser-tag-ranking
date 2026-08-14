@@ -2,10 +2,12 @@ import {
   buildPlayerCareer,
   getCurrentLeagueLiveStats,
   getCurrentSeason,
+  getPlayerCareerWinStreak,
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js?v=20260715-perf2';
+} from '../core/dataHub.js?v=20260814-achievements2';
+import { buildAchievementProfile } from '../core/achievementEngine.js';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
@@ -314,7 +316,69 @@ function renderCareerHighlights(highlights = {}) {
   if (mvpRecord?.seasonTitle && num(mvpRecord.mvpTotal) !== null) cards.push({ icon: '⭐', label: 'Рекорд MVP', value: String(mvpRecord.mvpTotal), season: formatSeasonTitleUA(mvpRecord.seasonTitle) });
 
   if (!cards.length) return '';
-  return `<section class="profile-section profile-achievements"><h2 class="profile-section__title">Досягнення карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement"><div class="profile-achievement__icon">${item.icon}</div><div class="profile-achievement__value">${esc(item.value)}</div><div class="profile-achievement__label">${esc(item.label)}</div><div class="profile-achievement__season">${esc(item.season)}</div></article>`).join('')}</div></section>`;
+  return `<section class="profile-section profile-achievements"><h2 class="profile-section__title">Рекорди карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement"><div class="profile-achievement__icon">${item.icon}</div><div class="profile-achievement__value">${esc(item.value)}</div><div class="profile-achievement__label">${esc(item.label)}</div><div class="profile-achievement__season">${esc(item.season)}</div></article>`).join('')}</div></section>`;
+}
+
+function renderAchievementSystem(achievements = {}) {
+  const unlocked = Array.isArray(achievements.unlocked) ? achievements.unlocked : [];
+  const inProgress = Array.isArray(achievements.inProgress) ? achievements.inProgress : [];
+  const unlockedCount = num(achievements.unlockedCount) ?? unlocked.length;
+  const totalCount = num(achievements.totalCount) ?? unlocked.length;
+  const score = num(achievements.score) ?? 0;
+
+  const renderAwards = (items) => `<div class="profile-award-list">${items.map((item) => `<article class="profile-award profile-award--${esc(item.tier || 'bronze')}">
+        <span class="profile-award__mark" aria-hidden="true">${esc(item.mark || 'A')}</span>
+        <span class="profile-award__body"><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span>
+        <span class="profile-award__score">+${esc(item.score)} AP</span>
+      </article>`).join('')}</div>`;
+  const featured = unlocked.slice(0, 6);
+  const remaining = unlocked.slice(6);
+  const unlockedMarkup = unlocked.length
+    ? `${renderAwards(featured)}${remaining.length ? `<details class="profile-awards__more"><summary>Ще ${remaining.length} нагород</summary>${renderAwards(remaining)}</details>` : ''}`
+    : '<p class="profile-muted">Перша нагорода відкриється після зіграної гри.</p>';
+
+  const progressMarkup = inProgress.length
+    ? `<div class="profile-award-progress"><h3>Найближчі цілі</h3>${inProgress.map((item) => `<div class="profile-award-progress__item">
+        <div><span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span><span class="profile-award-progress__target"><b>${esc(item.remainingLabel || '')}</b><em>+${esc(item.score)} AP</em></span></div>
+        <div class="profile-award-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round((item.progress || 0) * 100)}"><span style="width:${Math.round((item.progress || 0) * 100)}%"></span></div>
+      </div>`).join('')}</div>`
+    : '';
+
+  return `<section class="profile-section profile-awards">
+    <div class="profile-awards__head">
+      <h2 class="profile-section__title">Нагороди та досягнення</h2>
+      <div class="profile-awards__summary"><strong>${esc(score)} AP</strong><span>${esc(unlockedCount)} / ${esc(totalCount)} відкрито</span></div>
+    </div>
+    <div id="profileWinStreakHost">${renderWinStreak()}</div>
+    ${unlockedMarkup}
+    ${progressMarkup}
+  </section>`;
+}
+
+function shortDate(value = '') {
+  const parsed = Date.parse(`${String(value || '').slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(parsed)) return '';
+  return new Date(parsed).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function renderWinStreak(streak) {
+  if (streak === undefined) {
+    return `<div class="profile-win-streak is-loading" role="status"><span class="profile-win-streak__mark">W×</span><span><strong>Найдовший вінстрік</strong><small>Рахуємо послідовність матчів…</small></span></div>`;
+  }
+  if (!streak || !Number.isFinite(Number(streak.gamesCount)) || Number(streak.gamesCount) === 0) {
+    return `<div class="profile-win-streak is-empty"><span class="profile-win-streak__mark">W×0</span><span><strong>Найдовший вінстрік</strong><small>У доступній історії немає детальних матчів</small></span></div>`;
+  }
+
+  const longest = Math.max(0, Number(streak.longest) || 0);
+  const current = Math.max(0, Number(streak.current) || 0);
+  const period = shortDate(streak.startDate) && shortDate(streak.endDate)
+    ? `${shortDate(streak.startDate)} — ${shortDate(streak.endDate)}`
+    : `${Number(streak.gamesCount) || 0} матчів у доступній історії`;
+  return `<div class="profile-win-streak">
+    <span class="profile-win-streak__mark">W×${esc(longest)}</span>
+    <span class="profile-win-streak__body"><strong>Найдовший вінстрік</strong><small>${esc(period)}</small></span>
+    <span class="profile-win-streak__current"><small>Поточний</small><b>${esc(current)}</b></span>
+  </div>`;
 }
 
 function resolveGameplayInsights({ wins, losses, draws, wr, mvp, delta, place, games }) {
@@ -1032,6 +1096,7 @@ export async function initProfilePage(params = {}) {
 
   try {
     const profilePromise = buildPlayerCareer(nick, { profileLeagueContext: routeLeagueContext });
+    const winStreakPromise = getPlayerCareerWinStreak({ nick, league: routeLeagueContext || league }).catch(() => null);
     const liveStatsPromise = getCurrentLeagueLiveStats(league);
     const currentSeasonPromise = getCurrentSeason();
     const seasonOptionsPromise = getSeasonsList();
@@ -1088,6 +1153,7 @@ export async function initProfilePage(params = {}) {
       ? [currentSeasonRow, ...archivedSeasonRows.filter((row) => row.seasonId !== currentSeasonRow.seasonId)]
       : archivedSeasonRows;
     const allTimeStats = addCurrentSeasonToAllTime(profile?.allTime || {}, currentSeasonRow, currentSeasonAlreadyArchived);
+    const achievements = buildAchievementProfile({ allTime: allTimeStats, seasons: seasonRows });
     const seasonRowsById = new Map(seasonRows.map((row) => [row.seasonId, row]));
     const topSeason = seasonRows[0] || {};
     const currentRank = String(livePlayer?.rankLetter || topSeason?.rank || profile?.allTime?.bestRank || 'F').toUpperCase();
@@ -1103,6 +1169,7 @@ export async function initProfilePage(params = {}) {
         ${renderCareerDynamics({ seasons: seasonRows, allTime: allTimeStats, currentSeasonId: currentSeason?.id })}
         ${renderPerformanceSnapshot({ livePlayer: livePlayer || {}, topSeason })}
         ${renderPlayerAnalysis({ livePlayer: livePlayer || {}, topSeason })}
+        ${renderAchievementSystem(achievements)}
         ${renderCareerHighlights(profile?.highlights || {})}
 
         <section class="profile-section profile-priority-history">
@@ -1126,7 +1193,12 @@ export async function initProfilePage(params = {}) {
     const logsEl = root.querySelector('#seasonLogsHost');
     const copyLinkBtn = root.querySelector('#profileCopyLinkBtn');
     const shareStatus = root.querySelector('#profileShareStatus');
+    const winStreakHost = root.querySelector('#profileWinStreakHost');
     bindCareerMetricSwitch(root);
+
+    winStreakPromise.then((streak) => {
+      if (winStreakHost?.isConnected) winStreakHost.innerHTML = renderWinStreak(streak);
+    });
 
     copyLinkBtn?.addEventListener('click', async () => {
       const shareUrl = window.location.href;

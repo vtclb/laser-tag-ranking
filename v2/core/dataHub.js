@@ -5,6 +5,7 @@ import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueK
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
 import { makeDataStatus } from './dataStatus.js';
 import { debugLog, debugWarn } from './debug.js';
+import { buildAchievementProfile } from './achievementEngine.js';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -1150,8 +1151,69 @@ function normalizeWinnerToken(value = '') {
   if (!normalized) return 'tie';
   if (['team1', '1', 'a', 'teama', 'team a', 'команда1', 'команда 1'].includes(normalized)) return 'team1';
   if (['team2', '2', 'b', 'teamb', 'team b', 'команда2', 'команда 2'].includes(normalized)) return 'team2';
+  if (['team3', '3', 'c', 'teamc', 'team c', 'команда3', 'команда 3'].includes(normalized)) return 'team3';
+  if (['team4', '4', 'd', 'teamd', 'team d', 'команда4', 'команда 4'].includes(normalized)) return 'team4';
   if (['tie', 'draw', 'нічия', 'x', '0', '-', 'none', 'нічия/тай'].includes(normalized)) return 'tie';
   return normalized;
+}
+
+function matchTeams(match = {}) {
+  const nested = match.teams || {};
+  return {
+    team1: Array.isArray(match.team1) ? match.team1 : (nested.sideA || nested.team1 || []),
+    team2: Array.isArray(match.team2) ? match.team2 : (nested.sideB || nested.team2 || []),
+    team3: Array.isArray(match.team3) ? match.team3 : (nested.sideC || nested.team3 || []),
+    team4: Array.isArray(match.team4) ? match.team4 : (nested.sideD || nested.team4 || [])
+  };
+}
+
+export function calculatePlayerWinStreak(matches = [], nick = '') {
+  const target = normalizePlayerKey(nick);
+  if (!target) return { longest: 0, current: 0, gamesCount: 0, startDate: '', endDate: '' };
+
+  const ordered = (Array.isArray(matches) ? matches : [])
+    .map((match, index) => ({
+      match: match || {},
+      index,
+      time: Date.parse(match?.timestamp || match?.date || ''),
+      explicitOrder: String(match?.streakOrder || '')
+    }))
+    .sort((a, b) => {
+      if (a.explicitOrder && b.explicitOrder && a.explicitOrder !== b.explicitOrder) return a.explicitOrder.localeCompare(b.explicitOrder);
+      if (Number.isFinite(a.time) && Number.isFinite(b.time) && a.time !== b.time) return a.time - b.time;
+      if (Number.isFinite(a.time) !== Number.isFinite(b.time)) return Number.isFinite(a.time) ? -1 : 1;
+      return a.index - b.index;
+    });
+
+  let longest = 0;
+  let current = 0;
+  let gamesCount = 0;
+  let runStart = '';
+  let bestStart = '';
+  let bestEnd = '';
+
+  ordered.forEach(({ match }) => {
+    const teams = matchTeams(match);
+    const playerTeam = Object.entries(teams).find(([, members]) => (Array.isArray(members) ? members : []).some((member) => normalizePlayerKey(member) === target))?.[0];
+    if (!playerTeam) return;
+
+    gamesCount += 1;
+    const date = parseDateOnly(match.timestamp || match.date || '');
+    if (normalizeWinnerToken(match.winner) === playerTeam) {
+      if (current === 0) runStart = date;
+      current += 1;
+      if (current > longest) {
+        longest = current;
+        bestStart = runStart;
+        bestEnd = date;
+      }
+    } else {
+      current = 0;
+      runStart = '';
+    }
+  });
+
+  return { longest, current, gamesCount, startDate: bestStart, endDate: bestEnd };
 }
 
 function parseHomeGamesRows(sheet = {}) {
@@ -2666,6 +2728,7 @@ export async function buildPlayerCareer(nick, options = {}) {
   const primaryLeague = (leagueGames.sundaygames > leagueGames.kids)
     ? 'sundaygames'
     : (leagueGames.sundaygames === leagueGames.kids && addWins.sundaygames > addWins.kids ? 'sundaygames' : 'kids');
+  const achievements = buildAchievementProfile({ allTime: total, seasons: playedSeasons });
 
   return writeCache(key, {
     nick,
@@ -2674,6 +2737,7 @@ export async function buildPlayerCareer(nick, options = {}) {
     profileLeagueContext: profileLeagueContext || primaryLeague,
     allTime: total,
     seasons: playedSeasons,
+    achievements,
     highlights: {
       bestSeasonByPoints,
       bestSeasonByDelta,
@@ -2773,6 +2837,28 @@ export async function getPlayerSeasonLogs({ nick, seasonId } = {}) {
   };
 }
 
+export async function getPlayerCareerWinStreak({ nick, league = 'kids' } = {}) {
+  if (!nick) return { longest: 0, current: 0, gamesCount: 0, startDate: '', endDate: '', seasonsWithHistory: 0, seasonsChecked: 0 };
+  const selectedLeague = normalizeLeague(league) || 'kids';
+  const seasons = (await getSeasonsList())
+    .filter((season) => season?.id)
+    .sort((a, b) => String(a.dateFrom || '').localeCompare(String(b.dateFrom || '')));
+  const results = await Promise.allSettled(seasons.map((season) => getLeagueSnapshot(selectedLeague, season.id)));
+  const matches = [];
+  let seasonsWithHistory = 0;
+
+  results.forEach((result, seasonIndex) => {
+    if (result.status !== 'fulfilled' || !Array.isArray(result.value?.matches) || !result.value.matches.length) return;
+    seasonsWithHistory += 1;
+    result.value.matches.forEach((match, matchIndex) => {
+      matches.push({ ...match, streakOrder: `${String(seasonIndex).padStart(3, '0')}:${String(matchIndex).padStart(6, '0')}` });
+    });
+  });
+
+  const streak = calculatePlayerWinStreak(matches, nick);
+  return { ...streak, seasonsWithHistory, seasonsChecked: seasons.length };
+}
+
 export async function getTopPlayers(seasonId, league = 'kids', limit = 3) { const snapshot = await getLeagueSnapshot(league, seasonId); return snapshot.table.slice(0, Math.max(1, limit)); }
 export async function getHomeSnapshot() { return getHomeOverview(); }
 export async function getSeasonOverview(seasonIdOrOptions = {}) {
@@ -2805,7 +2891,7 @@ export async function getPlayerProfile(nickOrOptions = {}, leagueArg = 'kids') {
     seasons: profile.seasons.map((s) => ({ seasonId: s.seasonId, seasonTitle: s.seasonTitle, games: s.games, wins: s.wins, losses: s.losses, draws: s.draws, mvp: s.top1, top2: s.top2, top3: s.top3, winRate: s.winrate })),
     current: current ? { rank: current.rankLetter, points: current.points, place: current.place, league } : null,
     insights: { topTeammates: [], topOpponents: [], teammateWinrate: null, versusWinrate: null },
-    badges: []
+    badges: profile.achievements?.unlocked || []
   };
 }
 

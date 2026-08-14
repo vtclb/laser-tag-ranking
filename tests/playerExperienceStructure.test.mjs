@@ -51,6 +51,21 @@ test('profile career chart switches between rating, place and growth without ext
   assert.match(css, /profile-career-metric-switch/);
 });
 
+test('profile shows asynchronous career win streak and explicit reward remainder', () => {
+  const initSource = profile.slice(profile.indexOf('export async function initProfilePage'));
+  assert.match(profile, /function renderWinStreak/);
+  assert.match(profile, /Найдовший вінстрік/);
+  assert.match(profile, /item\.remainingLabel/);
+  assert.match(profile, /\+\$\{esc\(item\.score\)\} AP/);
+  assert.match(initSource, /const winStreakPromise = getPlayerCareerWinStreak/);
+  assert.ok(
+    initSource.indexOf('root.innerHTML = `') < initSource.indexOf('winStreakPromise.then'),
+    'profile must render before the full streak history resolves'
+  );
+  assert.match(css, /profile-win-streak/);
+  assert.match(css, /profile-award-progress__target/);
+});
+
 test('gameday keeps exact deltas and all three MVP positions visible', () => {
   assert.match(gameday, /match\.pointsChanges \|\| \[\]/);
   assert.match(gameday, /getPlayerGameDelta\(nick, match\.pointsChanges \|\| \[\]\)/);

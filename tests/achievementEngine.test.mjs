@@ -17,8 +17,10 @@ test('empty and corrupted career data stays safe', () => {
   const result = buildAchievementProfile({ allTime: { games: 'bad', wins: null }, seasons: 'bad' });
   assert.equal(result.unlockedCount, 0);
   assert.equal(result.score, 0);
-  assert.equal(result.totalCount, ACHIEVEMENT_DEFINITIONS.length - 1);
+  assert.equal(result.totalCount, ACHIEVEMENT_DEFINITIONS.length);
   assert.equal(result.classCount, 6);
+  assert.equal(result.collection.length, ACHIEVEMENT_DEFINITIONS.length);
+  assert.ok(result.collection.every((item) => item.status === 'locked'));
 });
 
 test('game activity is one award that upgrades through six classes', () => {
@@ -122,6 +124,20 @@ test('achievement family exposes explanation and every level requirement', () =>
   assert.deepEqual(family.levels.map((level) => level.target), [100, 200, 300, 500, 700, 1000]);
   assert.deepEqual(family.levels.map((level) => level.label), TIER_LEVELS.map((tier) => tier.label));
   assert.equal(getAchievementFamily('unknown'), null);
+});
+
+test('collection always includes earned and unearned award categories', () => {
+  const result = buildAchievementProfile({ allTime: { games: 120, wins: 10 } });
+  const games = byFamily(result.collection, 'games');
+  const wins = byFamily(result.collection, 'wins');
+  const streak = byFamily(result.collection, 'win-streak');
+  assert.equal(games.status, 'unlocked');
+  assert.equal(games.tier, 'bronze');
+  assert.equal(wins.status, 'locked');
+  assert.equal(wins.tier, 'locked');
+  assert.match(wins.remainingLabel, /15 перемог/);
+  assert.equal(streak.status, 'locked');
+  assert.equal(streak.remainingLabel, '3 перемоги поспіль');
 });
 
 test('achievement standings sort by class and metric while equal results share a place', () => {

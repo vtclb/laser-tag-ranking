@@ -112,6 +112,7 @@ function numericFamily({ id, title, description, prefix, metric, thresholds, for
       ...TIER_LEVELS[index],
       level: index + 1,
       target,
+      mark: `${prefix}${target}`,
       requirementLabel: countLabel(target, forms)
     })),
     evaluate(stats) {
@@ -174,6 +175,7 @@ function stabilityFamily() {
       ...TIER_LEVELS[index],
       level: index + 1,
       target: requirement.winRate,
+      mark: `${Math.round(requirement.winRate)}%`,
       requirementLabel: `${requirement.games} ігор · ${requirement.winRate}% WR`
     })),
     evaluate(stats) {
@@ -247,6 +249,7 @@ function rankFamily() {
       ...level.tier,
       level: index + 1,
       target: RANK_ORDER[level.rank],
+      mark: level.rank,
       requirementLabel: `Досягнути рангу ${level.rank}`
     })),
     evaluate(stats) {
@@ -303,6 +306,7 @@ function allRounderFamily() {
       label: 'Особлива',
       level: 1,
       target: 3,
+      mark: 'III',
       requirementLabel: 'Отримати MVP 1, MVP 2 і MVP 3'
     }],
     evaluate(stats) {
@@ -360,7 +364,8 @@ export const ACHIEVEMENT_DEFINITIONS = [
 
 export function buildAchievementProfile({ allTime = {}, seasons = [], longestStreak } = {}) {
   const stats = normalizeStats(allTime, seasons, { longestStreak });
-  const evaluated = ACHIEVEMENT_DEFINITIONS.map((definition) => definition.evaluate(stats)).filter((result) => result.available !== false);
+  const familyResults = ACHIEVEMENT_DEFINITIONS.map((definition) => ({ definition, result: definition.evaluate(stats) }));
+  const evaluated = familyResults.map((item) => item.result).filter((result) => result.available !== false);
   const unlocked = evaluated
     .map((result) => result.unlocked)
     .filter(Boolean)
@@ -370,13 +375,35 @@ export function buildAchievementProfile({ allTime = {}, seasons = [], longestStr
     .filter(Boolean)
     .sort((a, b) => b.progress - a.progress || (TIER_ORDER[b.tier] || 0) - (TIER_ORDER[a.tier] || 0))
     .slice(0, 4);
+  const collection = familyResults.map(({ definition, result }) => {
+    if (result?.unlocked) return { ...result.unlocked, status: 'unlocked' };
+    const firstLevel = definition.levels?.[0] || {};
+    const next = result?.next;
+    return {
+      id: definition.id,
+      familyId: definition.id,
+      title: definition.title,
+      mark: next?.mark || firstLevel.mark || '—',
+      tier: 'locked',
+      tierLabel: 'Не отримано',
+      level: 0,
+      maxLevel: definition.levels?.length || 1,
+      score: 0,
+      nextScore: next?.score || firstLevel.score || 0,
+      detail: next?.remainingLabel || firstLevel.requirementLabel || 'Статистика ще недоступна',
+      remainingLabel: next?.remainingLabel || firstLevel.requirementLabel || 'Статистика ще недоступна',
+      progress: next?.progress || 0,
+      status: 'locked'
+    };
+  });
 
   return {
     unlocked,
     inProgress,
+    collection,
     score: unlocked.reduce((sum, achievement) => sum + achievement.score, 0),
     unlockedCount: unlocked.length,
-    totalCount: evaluated.length,
+    totalCount: ACHIEVEMENT_DEFINITIONS.length,
     classCount: TIER_LEVELS.length
   };
 }

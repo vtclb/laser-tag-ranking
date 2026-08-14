@@ -13146,6 +13146,22 @@ body.theme-game .profile-page img[class*="avatar"] {
   border-top: 1px solid rgba(255, 255, 255, .08);
 }
 
+.profile-award-collection {
+  display: grid;
+  gap: .35rem;
+}
+
+.profile-award-collection h3 {
+  margin: 0;
+  color: #dff6ff;
+  font-size: .68rem;
+  text-transform: uppercase;
+}
+
+.profile-award-collection--locked {
+  margin-top: .15rem;
+}
+
 .profile-award {
   min-width: 0;
   width: 100%;
@@ -13198,6 +13214,34 @@ body.theme-game .profile-page img[class*="avatar"] {
 .profile-award--platinum .profile-award__mark { border-color: #7df1ff; color: #7df1ff; }
 .profile-award--diamond .profile-award__mark { border-color: #7aa7ff; color: #9cbcff; }
 .profile-award--legendary .profile-award__mark { border-color: #ff6b8a; color: #ff8aa3; }
+
+.profile-award.is-locked {
+  color: #8497a4;
+  background: rgba(255, 255, 255, .012);
+}
+
+.profile-award.is-locked .profile-award__mark {
+  color: #748691;
+  border-color: #53636d;
+  background: rgba(255, 255, 255, .018);
+  filter: grayscale(1);
+}
+
+.profile-award.is-locked .profile-award__body strong {
+  color: #a4b2bb;
+}
+
+.profile-award.is-locked .profile-award__tier,
+.profile-award.is-locked .profile-award__body small,
+.profile-award.is-locked .profile-award__score {
+  color: #6f828f;
+}
+
+.profile-award.is-locked:hover,
+.profile-award.is-locked:focus-visible {
+  background: rgba(255, 255, 255, .04);
+  outline-color: rgba(181, 201, 213, .45);
+}
 
 .profile-award__body {
   display: grid;

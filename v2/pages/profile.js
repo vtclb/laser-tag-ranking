@@ -7,8 +7,8 @@ import {
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js?v=20260814-achievements4';
-import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260814-classes2';
+} from '../core/dataHub.js?v=20260814-achievements5';
+import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260814-classes3';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
@@ -325,27 +325,25 @@ function renderCareerHighlights(highlights = {}) {
 
 function renderAchievementSystem(achievements = {}, streak) {
   const unlocked = Array.isArray(achievements.unlocked) ? achievements.unlocked : [];
-  const inProgress = Array.isArray(achievements.inProgress) ? achievements.inProgress : [];
+  const collection = Array.isArray(achievements.collection) && achievements.collection.length
+    ? achievements.collection
+    : unlocked.map((item) => ({ ...item, status: 'unlocked' }));
   const unlockedCount = num(achievements.unlockedCount) ?? unlocked.length;
-  const totalCount = num(achievements.totalCount) ?? unlocked.length;
+  const totalCount = num(achievements.totalCount) ?? collection.length;
   const score = num(achievements.score) ?? 0;
 
-  const renderAwards = (items) => `<div class="profile-award-list">${items.map((item) => `<button type="button" class="profile-award profile-award--${esc(item.tier || 'bronze')}" data-achievement-family="${esc(item.familyId)}" aria-haspopup="dialog">
+  const renderAwards = (items) => `<div class="profile-award-list">${items.map((item) => `<button type="button" class="profile-award profile-award--${esc(item.tier || 'locked')} ${item.status === 'locked' ? 'is-locked' : ''}" data-achievement-family="${esc(item.familyId)}" aria-haspopup="dialog">
         <span class="profile-award__mark" aria-hidden="true">${esc(item.mark || 'A')}</span>
-        <span class="profile-award__body"><span class="profile-award__tier">${esc(item.tierLabel || '')} · ${esc(item.level)} / ${esc(item.maxLevel)}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span>
-        <span class="profile-award__score">${esc(item.score)} AP</span>
+        <span class="profile-award__body"><span class="profile-award__tier">${esc(item.tierLabel || '')}${item.status === 'unlocked' ? ` · ${esc(item.level)} / ${esc(item.maxLevel)}` : ''}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span>
+        <span class="profile-award__score">${item.status === 'locked' ? `+${esc(item.nextScore || 0)}` : esc(item.score)} AP</span>
       </button>`).join('')}</div>`;
-  const featured = unlocked.slice(0, 6);
-  const remaining = unlocked.slice(6);
-  const unlockedMarkup = unlocked.length
-    ? `${renderAwards(featured)}${remaining.length ? `<details class="profile-awards__more"><summary>Ще ${remaining.length} нагород</summary>${renderAwards(remaining)}</details>` : ''}`
+  const owned = collection.filter((item) => item.status === 'unlocked');
+  const locked = collection.filter((item) => item.status !== 'unlocked');
+  const unlockedMarkup = owned.length
+    ? `<div class="profile-award-collection"><h3>Отримані</h3>${renderAwards(owned)}</div>`
     : '<p class="profile-muted">Перша нагорода відкриється після зіграної гри.</p>';
-
-  const progressMarkup = inProgress.length
-    ? `<div class="profile-award-progress"><h3>Наступні класи</h3>${inProgress.map((item) => `<button type="button" class="profile-award-progress__item profile-award--${esc(item.tier || 'bronze')}" data-achievement-family="${esc(item.familyId)}" aria-haspopup="dialog">
-        <div><span><span class="profile-award-progress__tier">${esc(item.tierLabel || '')} · ${esc(item.level)} / ${esc(item.maxLevel)}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span><span class="profile-award-progress__target"><b>${esc(item.remainingLabel || '')}</b><em>+${esc(item.score)} AP</em></span></div>
-        <div class="profile-award-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round((item.progress || 0) * 100)}"><span style="width:${Math.round((item.progress || 0) * 100)}%"></span></div>
-      </button>`).join('')}</div>`
+  const lockedMarkup = locked.length
+    ? `<div class="profile-award-collection profile-award-collection--locked"><h3>Ще не отримані</h3>${renderAwards(locked)}</div>`
     : '';
 
   return `<section class="profile-section profile-awards" id="profileAwardsHost">
@@ -355,7 +353,7 @@ function renderAchievementSystem(achievements = {}, streak) {
     </div>
     ${renderWinStreak(streak)}
     ${unlockedMarkup}
-    ${progressMarkup}
+    ${lockedMarkup}
     <dialog class="achievement-dialog" id="achievementDialog" aria-labelledby="achievementDialogTitle"></dialog>
   </section>`;
 }
@@ -363,6 +361,7 @@ function renderAchievementSystem(achievements = {}, streak) {
 function renderAchievementDialogContent({ family, achievements = {}, leaderboard, displayNick = '', league = 'kids', loading = false, error = '' } = {}) {
   if (!family) return '';
   const unlocked = (achievements.unlocked || []).find((item) => item.familyId === family.id);
+  const collectionItem = (achievements.collection || []).find((item) => item.familyId === family.id);
   const next = (achievements.inProgress || []).find((item) => item.familyId === family.id);
   const rows = Array.isArray(leaderboard?.rows) ? leaderboard.rows : [];
   const currentKey = normalizePlayerKey(displayNick);
@@ -370,7 +369,7 @@ function renderAchievementDialogContent({ family, achievements = {}, leaderboard
   const currentLevel = unlocked?.level || 0;
   const status = unlocked
     ? `${unlocked.tierLabel} · ${unlocked.detail}${currentRow ? ` · #${currentRow.position} у списку` : ''}`
-    : (next?.remainingLabel || 'Нагорода ще не відкрита');
+    : (collectionItem?.remainingLabel || next?.remainingLabel || 'Нагорода ще не відкрита');
   const levels = (family.levels || []).map((level) => `<li class="achievement-dialog__level achievement-dialog__level--${esc(level.key || 'gold')} ${level.level === currentLevel ? 'is-current' : ''} ${level.level < currentLevel ? 'is-complete' : ''}">
       <span class="achievement-dialog__tier-mark" aria-hidden="true">${esc(level.level)}</span>
       <span><b>${esc(level.label)}</b><small>${esc(level.requirementLabel)}</small></span>

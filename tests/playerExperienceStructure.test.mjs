@@ -55,15 +55,17 @@ test('profile shows asynchronous career win streak and explicit reward remainder
   const initSource = profile.slice(profile.indexOf('export async function initProfilePage'));
   assert.match(profile, /function renderWinStreak/);
   assert.match(profile, /Найдовший вінстрік/);
-  assert.match(profile, /item\.remainingLabel/);
-  assert.match(profile, /\+\$\{esc\(item\.score\)\} AP/);
+  assert.match(profile, /collectionItem\?\.remainingLabel/);
+  assert.match(profile, /item\.nextScore/);
+  assert.match(profile, /Ще не отримані/);
+  assert.match(profile, /item\.status === 'locked'/);
   assert.match(initSource, /const winStreakPromise = getPlayerCareerWinStreak/);
   assert.ok(
     initSource.indexOf('root.innerHTML = `') < initSource.indexOf('winStreakPromise.then'),
     'profile must render before the full streak history resolves'
   );
   assert.match(css, /profile-win-streak/);
-  assert.match(css, /profile-award-progress__target/);
+  assert.match(css, /profile-award\.is-locked/);
 });
 
 test('achievement cards open an accessible mobile detail sheet with levels and owners', () => {

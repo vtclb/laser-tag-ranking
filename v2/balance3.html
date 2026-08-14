@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101418">
+  <title>Балансер 3 | Varta</title>
+  <link rel="stylesheet" href="./styles/balance3.css">
+</head>
+<body>
+  <main class="b3-shell" id="balance3App">
+    <header class="b3-header">
+      <div>
+        <p class="b3-kicker">Панель адміністратора</p>
+        <h1>Балансер 3</h1>
+      </div>
+      <a class="b3-home" href="./index.html#main">Головна</a>
+    </header>
+
+    <div class="b3-status" id="statusBox" data-tone="neutral" role="status" aria-live="polite">
+      <span id="statusText">Готово до роботи</span>
+      <button class="b3-link-button is-hidden" id="retryButton" type="button">Повторити</button>
+      <button class="b3-link-button b3-link-button--danger is-hidden" id="forceRetryButton" type="button">Надіслати повторно</button>
+      <button class="b3-link-button is-hidden" id="cancelPendingButton" type="button">Скасувати очікування</button>
+    </div>
+
+    <section class="b3-restore is-hidden" id="restoreBanner">
+      <div>
+        <strong>Знайдено незавершену сесію</strong>
+        <span id="restoreMeta"></span>
+      </div>
+      <div class="b3-inline-actions">
+        <button class="b3-button b3-button--primary" id="restoreButton" type="button">Відновити</button>
+        <button class="b3-button" id="discardDraftButton" type="button">Видалити</button>
+      </div>
+    </section>
+
+    <nav class="b3-steps" aria-label="Етапи формування гри">
+      <button type="button" data-step-target="players" aria-current="step"><span>1</span> Гравці</button>
+      <button type="button" data-step-target="teams"><span>2</span> Команди</button>
+      <button type="button" data-step-target="result"><span>3</span> Результат</button>
+    </nav>
+
+    <section class="b3-stage" data-stage="players">
+      <div class="b3-toolbar">
+        <label>
+          <span>Ліга</span>
+          <select id="leagueSelect">
+            <option value="sundaygames">Доросла</option>
+            <option value="kids">Дитяча</option>
+          </select>
+        </label>
+        <button class="b3-button b3-button--primary" id="loadPlayersButton" type="button">Завантажити гравців</button>
+      </div>
+
+      <div class="b3-section-head">
+        <div>
+          <h2>Лобі</h2>
+          <p id="selectionCount">Обрано 0 / 50</p>
+        </div>
+        <button class="b3-button b3-button--quiet" id="clearSelectionButton" type="button">Очистити</button>
+      </div>
+
+      <div class="b3-settings">
+        <h2>Налаштування команд</h2>
+        <div class="b3-settings-grid">
+          <label>
+            <span>Кількість команд</span>
+            <select id="teamCountSelect"></select>
+          </label>
+          <fieldset>
+            <legend>Режим</legend>
+            <div class="b3-segmented">
+              <label><input type="radio" name="balanceMode" value="auto" checked><span>Автобаланс</span></label>
+              <label><input type="radio" name="balanceMode" value="manual"><span>Вручну</span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Рейтинг для балансу</legend>
+            <div class="b3-segmented">
+              <label><input type="radio" name="ratingModel" value="points" checked><span>Поінти</span></label>
+              <label><input type="radio" name="ratingModel" value="skill_v2"><span>Skill V2</span></label>
+            </div>
+          </fieldset>
+        </div>
+        <p class="b3-note" id="ratingModelNote">Поінти: чинний рейтинг. Skill V2: тестова оцінка сили за результатами команд і MVP; офіційні бали не змінюються.</p>
+      </div>
+
+      <div class="b3-primary-bar">
+        <button class="b3-button b3-button--primary b3-button--wide" id="formTeamsButton" type="button">Сформувати команди</button>
+      </div>
+
+      <div class="b3-filter-row">
+        <input id="playerSearch" type="search" placeholder="Пошук гравця" autocomplete="off">
+        <select id="playerSort" aria-label="Сортування гравців">
+          <option value="rating_desc">Поінти: більше</option>
+          <option value="rating_asc">Поінти: менше</option>
+          <option value="name_asc">Ім'я: А-Я</option>
+        </select>
+      </div>
+
+      <div class="b3-player-list" id="playerList">
+        <p class="b3-empty">Завантажте склад обраної ліги.</p>
+      </div>
+
+    </section>
+
+    <section class="b3-stage is-hidden" data-stage="teams">
+      <div class="b3-section-head">
+        <div>
+          <h2>Команди</h2>
+          <p id="balanceQuality"></p>
+        </div>
+        <button class="b3-button" id="rebalanceButton" type="button">Інший варіант</button>
+      </div>
+      <div class="b3-team-grid" id="teamsGrid"></div>
+      <div class="b3-bench is-hidden" id="unassignedPanel">
+        <h3>Нерозподілені</h3>
+        <div id="unassignedList"></div>
+      </div>
+      <button class="b3-button b3-button--primary b3-button--wide" id="continueToResultButton" type="button">Перейти до результату</button>
+    </section>
+
+    <section class="b3-stage is-hidden" data-stage="result">
+      <div class="b3-section-head">
+        <div>
+          <h2>Результат гри</h2>
+          <p>Оберіть дві команди та позначте кожен бій.</p>
+        </div>
+      </div>
+
+      <div class="b3-match-selectors">
+        <label><span>Команда A</span><select id="teamASelect"></select></label>
+        <span class="b3-versus">VS</span>
+        <label><span>Команда B</span><select id="teamBSelect"></select></label>
+      </div>
+
+      <div class="b3-round-count">
+        <span>Кількість боїв</span>
+        <div class="b3-round-count__options" id="roundCountOptions"></div>
+      </div>
+      <div class="b3-rounds" id="roundsList"></div>
+      <div class="b3-match-summary" id="matchSummary"></div>
+
+      <div class="b3-mvp-grid">
+        <label><span>MVP 1</span><select id="mvp1Select"></select></label>
+        <label><span>MVP 2</span><select id="mvp2Select"></select></label>
+        <label><span>MVP 3</span><select id="mvp3Select"></select></label>
+      </div>
+
+      <div class="b3-save-bar">
+        <button class="b3-button b3-button--primary b3-button--wide" id="saveGameButton" type="button">Зберегти гру</button>
+      </div>
+      <div class="b3-last-save is-hidden" id="lastSavePanel"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./scripts/balance3/app.js"></script>
+</body>
+</html>

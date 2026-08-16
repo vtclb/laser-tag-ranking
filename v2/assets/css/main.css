@@ -13040,6 +13040,95 @@ body.theme-game .profile-page img[class*="avatar"] {
   gap: .6rem;
 }
 
+/* Achievement fire progress and earned avatar cosmetics. */
+.profile-award__fires {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 15px;
+  margin-top: 1px;
+}
+
+.profile-award-fire {
+  display: inline-block;
+  flex: 0 0 11px;
+  width: 11px;
+  height: 15px;
+  color: #536773;
+  opacity: .28;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 22c4.97 0 9-4.03 9-9 0-4-3-7-6-9 .5 4-2 6-2 6s1-5-4-8c.5 5-4 7-4 11 0 4.97 3.03 9 7 9Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 22c4.97 0 9-4.03 9-9 0-4-3-7-6-9 .5 4-2 6-2 6s1-5-4-8c.5 5-4 7-4 11 0 4.97 3.03 9 7 9Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.profile-award-fire.is-lit {
+  opacity: 1;
+}
+
+.profile-award-fire.is-current {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.profile-award-fire--bronze { color: #d9a06f; }
+.profile-award-fire--silver { color: #dbe7ee; }
+.profile-award-fire--gold { color: #ffd84a; }
+.profile-award-fire--platinum { color: #71efff; }
+.profile-award-fire--diamond { color: #8daeff; }
+.profile-award-fire--legendary { color: #ff718f; }
+
+.profile-award.is-locked .profile-award-fire {
+  color: #60717c;
+  opacity: .2;
+}
+
+.achievement-dialog__tier-mark:has(.profile-award-fire) {
+  width: 28px;
+  height: 32px;
+  border: 0;
+}
+
+.achievement-dialog__tier-mark .profile-award-fire {
+  width: 17px;
+  height: 23px;
+  flex-basis: 17px;
+}
+
+body.theme-game .profile-page .profile-avatar-frame[class*="profile-avatar-frame--award-"] {
+  --award-frame-color: #9fb4c2;
+  position: relative;
+  isolation: isolate;
+  border: 2px solid var(--award-frame-color) !important;
+  box-shadow: inset 0 0 0 2px rgba(3, 9, 17, .9), 0 0 12px color-mix(in srgb, var(--award-frame-color) 36%, transparent) !important;
+}
+
+body.theme-game .profile-page .profile-avatar-frame[class*="profile-avatar-frame--award-"]::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 3px;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--award-frame-color) 70%, white 30%);
+  border-radius: 2px;
+}
+
+body.theme-game .profile-page .profile-avatar-frame[class*="profile-avatar-frame--award-"] img {
+  position: relative;
+  z-index: 0;
+}
+
+body.theme-game .profile-page .profile-avatar-frame.profile-avatar-frame--award-bronze { --award-frame-color: #c98b5a !important; }
+body.theme-game .profile-page .profile-avatar-frame.profile-avatar-frame--award-silver { --award-frame-color: #d5e1e8 !important; }
+body.theme-game .profile-page .profile-avatar-frame.profile-avatar-frame--award-gold { --award-frame-color: #ffd84a !important; }
+body.theme-game .profile-page .profile-avatar-frame.profile-avatar-frame--award-platinum { --award-frame-color: #71efff !important; }
+body.theme-game .profile-page .profile-avatar-frame.profile-avatar-frame--award-diamond { --award-frame-color: #86a8ff !important; }
+body.theme-game .profile-page .profile-avatar-frame.profile-avatar-frame--award-legendary { --award-frame-color: #ff6688 !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-award-fire.is-current {
+    filter: none;
+  }
+}
+
 .profile-awards {
   gap: .7rem;
 }
@@ -21071,4 +21160,10 @@ body.theme-game .league-page #leagueExpandBtn.button-primary {
   body.theme-game .league-page .league-player-cell__name {
     font-size: 12px;
   }
+}
+
+/* Keep earned frames above the late profile reset rules. */
+body.theme-game .profile-page .profile-avatar-frame[class*="profile-avatar-frame--award-"] {
+  border: 2px solid var(--award-frame-color) !important;
+  box-shadow: inset 0 0 0 2px rgba(3, 9, 17, .9), 0 0 12px color-mix(in srgb, var(--award-frame-color) 36%, transparent) !important;
 }

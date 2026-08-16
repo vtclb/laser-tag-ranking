@@ -5,7 +5,7 @@ import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueK
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
 import { makeDataStatus } from './dataStatus.js';
 import { debugLog, debugWarn } from './debug.js';
-import { buildAchievementProfile, buildAchievementStandings } from './achievementEngine.js?v=20260814-classes3';
+import { buildAchievementProfile, buildAchievementStandings } from './achievementEngine.js?v=20260816-award-flames2';
 
 const cache = new Map();
 const inFlight = new Map();

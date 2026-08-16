@@ -7,8 +7,8 @@ import {
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js?v=20260814-achievements5';
-import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260814-classes3';
+} from '../core/dataHub.js?v=20260816-award-flames2';
+import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260816-award-flames2';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
@@ -323,6 +323,34 @@ function renderCareerHighlights(highlights = {}) {
   return `<section class="profile-section profile-achievements"><h2 class="profile-section__title">Рекорди карʼєри</h2><div class="profile-achievement-grid">${cards.map((item) => `<article class="profile-achievement"><div class="profile-achievement__icon">${item.icon}</div><div class="profile-achievement__value">${esc(item.value)}</div><div class="profile-achievement__label">${esc(item.label)}</div><div class="profile-achievement__season">${esc(item.season)}</div></article>`).join('')}</div></section>`;
 }
 
+const AWARD_TIER_KEYS = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'legendary'];
+
+function renderAwardFires(item = {}) {
+  const maxLevel = Math.max(1, Math.min(AWARD_TIER_KEYS.length, Math.trunc(Number(item.maxLevel)) || 1));
+  const completedLevel = item.status === 'unlocked'
+    ? Math.max(0, Math.min(maxLevel, Math.trunc(Number(item.level)) || 0))
+    : 0;
+  const fires = Array.from({ length: maxLevel }, (_, index) => {
+    const isLit = index < completedLevel;
+    const tier = AWARD_TIER_KEYS[Math.min(index, AWARD_TIER_KEYS.length - 1)];
+    return `<i class="profile-award-fire profile-award-fire--${tier} ${isLit ? 'is-lit' : ''} ${index === completedLevel - 1 ? 'is-current' : ''}" aria-hidden="true"></i>`;
+  }).join('');
+  return `<span class="profile-award__fires" role="img" aria-label="Відкрито ${completedLevel} з ${maxLevel} рівнів">${fires}</span>`;
+}
+
+function awardFrameClass(achievements = {}) {
+  const tier = achievements?.cosmetics?.equippedAvatarFrame?.tier;
+  return AWARD_TIER_KEYS.includes(tier) ? `profile-avatar-frame--award-${tier}` : '';
+}
+
+function applyAwardFrame(root, achievements = {}) {
+  const frame = root?.querySelector('.profile-avatar-frame');
+  if (!frame) return;
+  AWARD_TIER_KEYS.forEach((tier) => frame.classList.remove(`profile-avatar-frame--award-${tier}`));
+  const nextClass = awardFrameClass(achievements);
+  if (nextClass) frame.classList.add(nextClass);
+}
+
 function renderAchievementSystem(achievements = {}, streak) {
   const unlocked = Array.isArray(achievements.unlocked) ? achievements.unlocked : [];
   const collection = Array.isArray(achievements.collection) && achievements.collection.length
@@ -334,7 +362,7 @@ function renderAchievementSystem(achievements = {}, streak) {
 
   const renderAwards = (items) => `<div class="profile-award-list">${items.map((item) => `<button type="button" class="profile-award profile-award--${esc(item.tier || 'locked')} ${item.status === 'locked' ? 'is-locked' : ''}" data-achievement-family="${esc(item.familyId)}" aria-haspopup="dialog">
         <span class="profile-award__mark" aria-hidden="true">${esc(item.mark || 'A')}</span>
-        <span class="profile-award__body"><span class="profile-award__tier">${esc(item.tierLabel || '')}${item.status === 'unlocked' ? ` · ${esc(item.level)} / ${esc(item.maxLevel)}` : ''}</span><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span>
+        <span class="profile-award__body"><span class="profile-award__tier">${esc(item.tierLabel || '')}</span><strong>${esc(item.title)}</strong>${renderAwardFires(item)}<small>${esc(item.detail)}</small></span>
         <span class="profile-award__score">${item.status === 'locked' ? `+${esc(item.nextScore || 0)}` : esc(item.score)} AP</span>
       </button>`).join('')}</div>`;
   const owned = collection.filter((item) => item.status === 'unlocked');
@@ -349,7 +377,7 @@ function renderAchievementSystem(achievements = {}, streak) {
   return `<section class="profile-section profile-awards" id="profileAwardsHost">
     <div class="profile-awards__head">
       <h2 class="profile-section__title">Нагороди та досягнення</h2>
-      <div class="profile-awards__summary"><strong>${esc(score)} AP</strong><span>${esc(unlockedCount)} / ${esc(totalCount)} категорій</span></div>
+      <div class="profile-awards__summary"><strong>${esc(score)} AP</strong><span>${esc(unlockedCount)} з ${esc(totalCount)} категорій відкрито</span></div>
     </div>
     ${renderWinStreak(streak)}
     ${unlockedMarkup}
@@ -371,7 +399,7 @@ function renderAchievementDialogContent({ family, achievements = {}, leaderboard
     ? `${unlocked.tierLabel} · ${unlocked.detail}${currentRow ? ` · #${currentRow.position} у списку` : ''}`
     : (collectionItem?.remainingLabel || next?.remainingLabel || 'Нагорода ще не відкрита');
   const levels = (family.levels || []).map((level) => `<li class="achievement-dialog__level achievement-dialog__level--${esc(level.key || 'gold')} ${level.level === currentLevel ? 'is-current' : ''} ${level.level < currentLevel ? 'is-complete' : ''}">
-      <span class="achievement-dialog__tier-mark" aria-hidden="true">${esc(level.level)}</span>
+      <span class="achievement-dialog__tier-mark ${level.level <= currentLevel ? 'is-lit' : ''}" aria-hidden="true"><i class="profile-award-fire profile-award-fire--${esc(level.key || 'gold')} ${level.level <= currentLevel ? 'is-lit' : ''}"></i></span>
       <span><b>${esc(level.label)}</b><small>${esc(level.requirementLabel)}</small></span>
       <em>+${esc(level.score)} AP</em>
     </li>`).join('');
@@ -559,7 +587,7 @@ function meterLabel(level) {
   return 'Низький';
 }
 
-function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNick, currentRank, topSeason }) {
+function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNick, currentRank, topSeason, achievements }) {
   const points = livePlayer?.points ?? topSeason?.ratingEnd ?? topSeason?.points;
   const place = livePlayer?.place ?? topSeason?.place ?? topSeason?.finalPlace;
   const seasonLabel = formatSeasonTitleUA(currentSeason?.uiLabel ?? topSeason?.seasonTitle ?? 'Поточний сезон');
@@ -570,7 +598,7 @@ function renderHero({ profileLeagueContext, livePlayer, currentSeason, displayNi
     <article class="profile-section profile-hero ${rankClass(currentRank)}">
       <a class="btn btn--secondary profile-hero__back" href="${buildHash('league-stats', { league: normalizeLeagueKey(profileLeagueContext) })}">← До ліги</a>
       <div class="profile-hero__top">
-        <div class="profile-avatar-frame ${rankClass(currentRank)}">
+        <div class="profile-avatar-frame ${rankClass(currentRank)} ${awardFrameClass(achievements)}">
           <img class="avatar" src="${esc(topSeason?.avatar ?? livePlayer?.avatarUrl ?? placeholder)}" alt="${esc(displayNick || 'Аватар гравця')}" onerror="this.onerror=null;this.src='${placeholder}'">
         </div>
         <div class="profile-meta">
@@ -1267,7 +1295,7 @@ export async function initProfilePage(params = {}) {
     root.innerHTML = `
       <section class="profile-page">
         <div class="profile-shell">
-        ${renderHero({ profileLeagueContext, livePlayer: livePlayer || {}, currentSeason, displayNick, currentRank, topSeason })}
+        ${renderHero({ profileLeagueContext, livePlayer: livePlayer || {}, currentSeason, displayNick, currentRank, topSeason, achievements })}
         ${renderRankProgress({ progress: rankProgress, currentRank })}
         ${renderCompactStats({ livePlayer: livePlayer || {}, topSeason })}
         ${renderCareerDynamics({ seasons: seasonRows, allTime: allTimeStats, currentSeasonId: currentSeason?.id })}
@@ -1306,6 +1334,7 @@ export async function initProfilePage(params = {}) {
       if (!profileAwardsHost?.isConnected) return;
       const updatedAchievements = buildAchievementProfile({ allTime: allTimeStats, seasons: seasonRows, longestStreak: streak?.longest });
       profileAwardsHost.outerHTML = renderAchievementSystem(updatedAchievements, streak);
+      applyAwardFrame(root, updatedAchievements);
       achievementDialogContexts.set(root, { achievements: updatedAchievements, displayNick, league: profileLeagueContext });
     });
 

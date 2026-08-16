@@ -21,6 +21,7 @@ test('empty and corrupted career data stays safe', () => {
   assert.equal(result.classCount, 6);
   assert.equal(result.collection.length, ACHIEVEMENT_DEFINITIONS.length);
   assert.ok(result.collection.every((item) => item.status === 'locked'));
+  assert.deepEqual(result.cosmetics, { avatarFrames: [], equippedAvatarFrame: null });
 });
 
 test('game activity is one award that upgrades through six classes', () => {
@@ -115,6 +116,16 @@ test('AP is cumulative across completed levels but only one card is shown per fa
   assert.equal(wins.score, TIER_LEVELS[0].score + TIER_LEVELS[1].score);
   assert.equal(result.score, games.score + wins.score);
   assert.equal(new Set(result.unlocked.map((item) => item.familyId)).size, result.unlocked.length);
+});
+
+test('achievement classes unlock cumulative avatar frames and equip the highest one', () => {
+  const result = buildAchievementProfile({ allTime: { games: 510 } });
+  assert.deepEqual(result.cosmetics.avatarFrames.map((frame) => frame.tier), ['bronze', 'silver', 'gold', 'platinum']);
+  assert.deepEqual(result.cosmetics.equippedAvatarFrame, {
+    id: 'award-platinum',
+    tier: 'platinum',
+    label: 'Плазмове сяйво'
+  });
 });
 
 test('achievement family exposes explanation and every level requirement', () => {

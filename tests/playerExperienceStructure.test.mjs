@@ -82,6 +82,15 @@ test('achievement cards open an accessible mobile detail sheet with levels and o
   assert.match(css, /\.achievement-leaderboard__row\.is-current/);
 });
 
+test('achievement levels use accessible fire progress and earned avatar frames', () => {
+  assert.match(profile, /function renderAwardFires/);
+  assert.match(profile, /aria-label="Відкрито \$\{completedLevel\} з \$\{maxLevel\} рівнів"/);
+  assert.doesNotMatch(profile, /esc\(item\.level\)\} \/ \$\{esc\(item\.maxLevel\)/);
+  assert.match(profile, /profile-avatar-frame--award-/);
+  assert.match(css, /\.profile-award-fire/);
+  assert.match(css, /\.profile-avatar-frame--award-legendary/);
+});
+
 test('gameday keeps exact deltas and all three MVP positions visible', () => {
   assert.match(gameday, /match\.pointsChanges \|\| \[\]/);
   assert.match(gameday, /getPlayerGameDelta\(nick, match\.pointsChanges \|\| \[\]\)/);

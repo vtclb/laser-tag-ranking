@@ -9,6 +9,14 @@ const TIER_LEVELS = [
 
 const TIER_ORDER = Object.fromEntries(TIER_LEVELS.map((tier, index) => [tier.key, index + 1]));
 const RANK_ORDER = { F: 0, E: 1, D: 2, C: 3, B: 4, A: 5, S: 6 };
+const AVATAR_FRAME_NAMES = {
+  bronze: 'Бронзова іскра',
+  silver: 'Срібний жар',
+  gold: 'Золоте полумʼя',
+  platinum: 'Плазмове сяйво',
+  diamond: 'Крижаний вогонь',
+  legendary: 'Легендарна ватра'
+};
 
 function number(value, fallback = 0) {
   const parsed = Number(value);
@@ -396,6 +404,14 @@ export function buildAchievementProfile({ allTime = {}, seasons = [], longestStr
       status: 'locked'
     };
   });
+  const highestTierIndex = unlocked.reduce((highest, achievement) => (
+    Math.max(highest, (TIER_ORDER[achievement.tier] || 0) - 1)
+  ), -1);
+  const avatarFrames = TIER_LEVELS.slice(0, highestTierIndex + 1).map((tier) => ({
+    id: `award-${tier.key}`,
+    tier: tier.key,
+    label: AVATAR_FRAME_NAMES[tier.key]
+  }));
 
   return {
     unlocked,
@@ -404,7 +420,11 @@ export function buildAchievementProfile({ allTime = {}, seasons = [], longestStr
     score: unlocked.reduce((sum, achievement) => sum + achievement.score, 0),
     unlockedCount: unlocked.length,
     totalCount: ACHIEVEMENT_DEFINITIONS.length,
-    classCount: TIER_LEVELS.length
+    classCount: TIER_LEVELS.length,
+    cosmetics: {
+      avatarFrames,
+      equippedAvatarFrame: avatarFrames.at(-1) || null
+    }
   };
 }
 

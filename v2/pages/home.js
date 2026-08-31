@@ -1,8 +1,9 @@
-import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260715-perf2';
+import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260831-season-close1';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { leagueLabelUA } from '../core/naming.js';
 import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate, statusLabel } from './tournaments.js';
 import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
+import { filterPublicPlayers, isHiddenPublicNick } from '../core/playerVisibility.js?v=20260831-private-player1';
 
 const HOME_LEAGUES = ['sundaygames', 'kids'];
 const STATS_LINKS = {
@@ -43,6 +44,26 @@ function isCurrentSeasonActive(player = null) {
 
 function byPointsDesc(a = {}, b = {}) {
   return Number(b?.points || 0) - Number(a?.points || 0);
+}
+
+function publicHomeLeague(live) {
+  if (!live || typeof live !== 'object') return live;
+  const players = filterPublicPlayers(live.players);
+  const activePlayers = filterPublicPlayers(live.activePlayers);
+  const progressPool = activePlayers.length ? activePlayers : players.filter(isCurrentSeasonActive);
+  return {
+    ...live,
+    players,
+    activePlayers,
+    progress: {
+      ...(live.progress || {}),
+      mostMvp: [...progressPool].sort((a, b) => Number(b.mvpTotal || 0) - Number(a.mvpTotal || 0))[0] || null,
+      bestGrowth: [...progressPool].sort((a, b) => Number(b.delta || 0) - Number(a.delta || 0))[0] || null
+    },
+    lastGameDay: live.lastGameDay
+      ? { ...live.lastGameDay, mvp: isHiddenPublicNick(live.lastGameDay.mvp) ? null : live.lastGameDay.mvp }
+      : null
+  };
 }
 
 function rankKeyFromPlayer(player = {}) {
@@ -577,8 +598,8 @@ async function safeInitHomePage(root) {
       getCurrentLeagueLiveStats('kids')
     ]);
 
-    const adultsLive = adultResult.status === 'fulfilled' ? adultResult.value : null;
-    const kidsLive = kidsResult.status === 'fulfilled' ? kidsResult.value : null;
+    const adultsLive = publicHomeLeague(adultResult.status === 'fulfilled' ? adultResult.value : null);
+    const kidsLive = publicHomeLeague(kidsResult.status === 'fulfilled' ? kidsResult.value : null);
     const seasonLabel = adultsLive?.seasonLabel || kidsLive?.seasonLabel;
     if (currentSeasonLabel && seasonLabel) currentSeasonLabel.textContent = seasonLabel;
 

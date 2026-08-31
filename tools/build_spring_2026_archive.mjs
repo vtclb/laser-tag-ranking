@@ -3,10 +3,16 @@ import path from 'node:path';
 
 const ROOT = process.cwd();
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzIuGIL5xC2gIhHKypLzTcz6ORApWZ-Q3uOqSlEZvZ6DriCmOSC24NgjXSYmZVP_QLgeA/exec';
-const SEASON_ID = 'spring_2026';
-const SEASON_TITLE = 'Весна 2026';
-const DATE_START = '2026-03-01';
-const DATE_END = '2026-05-31';
+function readArg(name, fallback = '') {
+  const prefix = `--${name}=`;
+  const value = process.argv.find((arg) => arg.startsWith(prefix));
+  return value ? value.slice(prefix.length).trim() : fallback;
+}
+
+const SEASON_ID = readArg('season', 'spring_2026');
+const SEASON_TITLE = readArg('title', 'Весна 2026');
+const DATE_START = readArg('start', '2026-03-01');
+const DATE_END = readArg('end', '2026-05-31');
 const GAME_WIN_POINTS = 20;
 const MVP_BONUS = { mvp1: 12, mvp2: 7, mvp3: 3 };
 const RANK_PENALTIES = { F: 0, E: -4, D: -6, C: -8, B: -10, A: -12, S: -14 };
@@ -70,7 +76,7 @@ function parseWinner(value = '') {
   return '';
 }
 
-function isSpringDate(date) {
+function isSeasonDate(date) {
   return date >= DATE_START && date <= DATE_END;
 }
 
@@ -165,7 +171,7 @@ function parseGames(sheet) {
       mvp3: mvp.mvp3 || '',
       rawSeries: String(row[idx.series] || '').trim()
     };
-  }).filter((match) => match.date && isSpringDate(match.date) && ['sundaygames', 'kids'].includes(match.league));
+  }).filter((match) => match.date && isSeasonDate(match.date) && ['sundaygames', 'kids'].includes(match.league));
 }
 
 function parseLogs(sheet) {
@@ -188,7 +194,7 @@ function parseLogs(sheet) {
       delta: toNumber(row[idx.delta], NaN),
       newPoints: toNumber(row[idx.newPoints], NaN)
     };
-  }).filter((entry) => entry.date && isSpringDate(entry.date) && ['sundaygames', 'kids'].includes(entry.league) && entry.nick);
+  }).filter((entry) => entry.date && isSeasonDate(entry.date) && ['sundaygames', 'kids'].includes(entry.league) && entry.nick);
 }
 
 function touch(stats, nick, leagueId) {
@@ -336,14 +342,23 @@ function computeLeague({ leagueId, roster, games, logs }) {
       computedDelta: row.computedDelta,
       loggedDelta: row.loggedDelta
     };
-  }).sort((a, b) => b.points - a.points || b.wins - a.wins || a.nick.localeCompare(b.nick, 'uk'));
+  });
+  const activePlayers = players
+    .filter((row) => row.games > 0)
+    .sort((a, b) => b.points - a.points || b.wins - a.wins || a.nick.localeCompare(b.nick, 'uk'));
+  const inactivePlayers = players
+    .filter((row) => row.games === 0)
+    .sort((a, b) => b.points - a.points || a.nick.localeCompare(b.nick, 'uk'));
 
-  players.forEach((row, index) => {
+  activePlayers.forEach((row, index) => {
     row.place = index + 1;
     row.finalPlace = row.place;
   });
-
-  const activePlayers = players.filter((row) => row.games > 0);
+  inactivePlayers.forEach((row) => {
+    row.place = null;
+    row.finalPlace = null;
+  });
+  const rankedPlayers = [...activePlayers, ...inactivePlayers];
   const summary = {
     league: leagueId,
     players: activePlayers.length,
@@ -355,26 +370,31 @@ function computeLeague({ leagueId, roster, games, logs }) {
     draws: activePlayers.reduce((sum, p) => sum + p.draws, 0),
     pointsDelta: activePlayers.reduce((sum, p) => sum + p.ratingDelta, 0),
     rounds: leagueGames.reduce((sum, game) => sum + Math.max(1, game.rawSeries.split(/[\/:;-]/).filter(Boolean).length || 1), 0),
-    mvp: activePlayers.sort((a, b) => b.mvp - a.mvp)[0]?.nick || null
+    mvp: [...activePlayers].sort((a, b) => b.mvpTotal - a.mvpTotal || b.mvp - a.mvp)[0]?.nick || null
   };
 
-  const rankDistribution = players.reduce((acc, row) => {
+  const rankDistribution = activePlayers.reduce((acc, row) => {
     acc[row.rankLetter] = (acc[row.rankLetter] || 0) + 1;
     return acc;
   }, {});
 
+  const mvpLeader = [...activePlayers].sort((a, b) => b.mvpTotal - a.mvpTotal || b.mvp - a.mvp || b.games - a.games)[0];
+  const impactLeader = [...activePlayers].sort((a, b) => b.ratingDelta - a.ratingDelta || b.points - a.points)[0];
+  const winRateLeader = [...activePlayers]
+    .filter((row) => row.games >= 5)
+    .sort((a, b) => b.winRate - a.winRate || b.games - a.games || b.points - a.points)[0];
   const awards = [
-    { league: leagueId, award: 'leader', label: 'Лідер сезону', nick: players[0]?.nick || '', value: players[0]?.points || 0 },
-    { league: leagueId, award: 'mvp', label: 'MVP сезону', nick: [...players].sort((a, b) => b.mvp - a.mvp)[0]?.nick || '', value: [...players].sort((a, b) => b.mvp - a.mvp)[0]?.mvp || 0 },
-    { league: leagueId, award: 'impact', label: 'Найбільший приріст', nick: [...players].sort((a, b) => b.ratingDelta - a.ratingDelta)[0]?.nick || '', value: [...players].sort((a, b) => b.ratingDelta - a.ratingDelta)[0]?.ratingDelta || 0 },
-    { league: leagueId, award: 'winrate', label: 'Найкращий WR', nick: [...activePlayers].sort((a, b) => b.winRate - a.winRate)[0]?.nick || '', value: [...activePlayers].sort((a, b) => b.winRate - a.winRate)[0]?.winRate || 0 }
+    { league: leagueId, award: 'leader', label: 'Лідер сезону', nick: activePlayers[0]?.nick || '', value: activePlayers[0]?.points || 0 },
+    { league: leagueId, award: 'mvp', label: 'MVP сезону', nick: mvpLeader?.nick || '', value: mvpLeader?.mvpTotal || 0 },
+    { league: leagueId, award: 'impact', label: 'Найбільший приріст', nick: impactLeader?.nick || '', value: impactLeader?.ratingDelta || 0 },
+    { league: leagueId, award: 'winrate', label: 'Найкращий WR', nick: winRateLeader?.nick || '', value: winRateLeader?.winRate || 0 }
   ];
 
   const missingLogs = activePlayers
     .filter((row) => !row.logs)
     .map((row) => ({ nick: row.nick, computedDelta: row.computedDelta, games: row.games, wins: row.wins, losses: row.losses }));
 
-  return { table: players, summary, rankDistribution, awards, matches: leagueGames, audit: { missingLogs } };
+  return { table: rankedPlayers, summary, rankDistribution, awards, matches: leagueGames, audit: { missingLogs } };
 }
 
 function makeMasterRows(leagues) {

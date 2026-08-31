@@ -268,42 +268,42 @@ async function renderRoute() {
 
     if (route === 'main') {
       if (!await mountTemplate('./pages/index.html', renderId)) return;
-      const { initHomePage } = await import('../pages/home.js?v=20260715-clean5');
+      const { initHomePage } = await import('../pages/home.js?v=20260831-season-close2');
       await runPageInit(route, initHomePage, {}, renderId);
       return;
     }
 
     if (route === 'seasons') {
       if (!await mountTemplate('./pages/seasons.html', renderId)) return;
-      const { initSeasonsPage } = await import('../pages/seasons.js?v=20260715-clean5');
+      const { initSeasonsPage } = await import('../pages/seasons.js?v=20260831-season-close2');
       await runPageInit(route, initSeasonsPage, {}, renderId);
       return;
     }
 
     if (route === 'season') {
       if (!await mountTemplate('./pages/season.html', renderId)) return;
-      const { initSeasonPage } = await import('../pages/season.js?v=20260715-clean5');
+      const { initSeasonPage } = await import('../pages/season.js?v=20260831-season-close2');
       await runPageInit(route, initSeasonPage, { season: queryParams.season, league: queryParams.league }, renderId);
       return;
     }
 
     if (route === 'league-stats') {
-      if (!await mountTemplate('./pages/league.html?v=20260715-table2', renderId)) return;
-      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260715-table2');
+      if (!await mountTemplate('./pages/league.html?v=20260831-season-close2', renderId)) return;
+      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260831-season-close2');
       await runPageInit(route, initLeagueStatsPage, { league: queryParams.league }, renderId);
       return;
     }
 
     if (route === 'gameday') {
       if (!await mountTemplate('./pages/gameday.html', renderId)) return;
-      const { initGameDayPage } = await import('../pages/gameday.js?v=20260715-clean5');
+      const { initGameDayPage } = await import('../pages/gameday.js?v=20260831-season-close2');
       await runPageInit(route, initGameDayPage, { league: queryParams.league, date: queryParams.date }, renderId);
       return;
     }
 
     if (route === 'player') {
       if (!await mountTemplate('./pages/profile.html', renderId)) return;
-      const { initProfilePage } = await import('../pages/profile.js?v=20260816-award-flames2');
+      const { initProfilePage } = await import('../pages/profile.js?v=20260831-season-close2');
       await runPageInit(route, initProfilePage, { league: queryParams.league, nick: queryParams.nick }, renderId);
       return;
     }
@@ -317,7 +317,7 @@ async function renderRoute() {
 
     if (route === 'tournaments') {
       if (!await mountTemplate('./pages/tournaments.html', renderId)) return;
-      const { initTournamentsPage } = await import('../pages/tournaments.js?v=20260715-clean5');
+      const { initTournamentsPage } = await import('../pages/tournaments.js?v=20260831-season-close2');
       await runPageInit(route, initTournamentsPage, {
         selected: queryParams.selected || queryParams.id || ''
       }, renderId);

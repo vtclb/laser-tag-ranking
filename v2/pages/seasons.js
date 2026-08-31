@@ -1,8 +1,9 @@
-import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js?v=20260715-perf2';
+import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js?v=20260831-season-close1';
 import { debugWarn } from '../core/debug.js';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 import { rankFromPoints } from '../core/rankRules.js';
 import { renderPageError } from '../core/pageState.js?v=20260715-load1';
+import { filterPublicPlayers } from '../core/playerVisibility.js?v=20260831-private-player1';
 
 const LEAGUES = ['sundaygames', 'kids'];
 const NO_DATA = 'Немає даних';
@@ -36,7 +37,8 @@ function titleFromId(id = '') {
     autumn_2025: 'Осінь 2025',
     winter_2025_2026: 'Зима 2025–2026',
     spring_2026: 'Весна 2026',
-    summer_2026: 'Літо 2026'
+    summer_2026: 'Літо 2026',
+    autumn_2026: 'Осінь 2026'
   };
   return known[id] || String(id || 'Сезон').replaceAll('_', ' ');
 }
@@ -60,7 +62,8 @@ function seasonStartKey([seasonId, master]) {
     autumn_2025: 2,
     winter_2025_2026: 3,
     spring_2026: 4,
-    summer_2026: 5
+    summer_2026: 5,
+    autumn_2026: 6
   };
   return fallbackOrder[seasonId] || 9999;
 }
@@ -82,12 +85,17 @@ function periodText(meta = {}, seasonId = '') {
     autumn_2025: '2025-09-01 — 2025-11-30',
     winter_2025_2026: '2025-12-01 — 2026-02-28',
     spring_2026: '2026-03-01 — 2026-05-31',
-    summer_2026: '2026-06-01 — 2026-08-31'
+    summer_2026: '2026-06-01 — 2026-08-31',
+    autumn_2026: '2026-09-01 — 2026-11-30'
   };
   return meta.period || meta.date_range || meta.dateRange || knownPeriods[seasonId] || 'Архівний сезон';
 }
 
 function allPlayers(master = {}) {
+  return filterPublicPlayers(Array.isArray(master?.sections?.players) ? master.sections.players : []);
+}
+
+function rawPlayers(master = {}) {
   return Array.isArray(master?.sections?.players) ? master.sections.players : [];
 }
 
@@ -191,10 +199,13 @@ function topBy(players = [], getter = ratingEnd) {
 
 export function normalizeLeagueStats(master = {}, league = 'sundaygames') {
   const players = leaguePlayers(master, league);
+  const rawLeaguePlayers = rawPlayers(master).filter((player) => playerLeague(player) === league);
   const active = activePlayers(players);
+  const hiddenRecords = Math.max(0, rawLeaguePlayers.length - players.length);
+  const hiddenActive = Math.max(0, activePlayers(rawLeaguePlayers).length - active.length);
   const summary = leagueSummary(master, league);
-  const leader = topBy(players, ratingEnd);
-  const mvp = topBy(players, mvpTotal);
+  const leader = topBy(active, ratingEnd);
+  const mvp = topBy(active, mvpTotal);
   const seasonId = master?.seasonId || master?.season || '';
   const matchesOverride = realNumber(SEASON_MATCH_OVERRIDES[seasonId]?.[league]);
   const matches = Number.isFinite(matchesOverride)
@@ -207,6 +218,12 @@ export function normalizeLeagueStats(master = {}, league = 'sundaygames') {
   const summaryRecords = realNumber(
     summary.Roster_players ?? summary.rosterPlayers ?? summary.roster_players ?? summary.records
   );
+  const publicSummaryActive = Number.isFinite(summaryActive)
+    ? Math.max(0, summaryActive - hiddenActive)
+    : null;
+  const publicSummaryRecords = Number.isFinite(summaryRecords)
+    ? Math.max(0, summaryRecords - hiddenRecords)
+    : null;
   const summaryDelta = realNumber(
     summary.pointsDelta ?? summary.points_delta ?? summary.ratingDelta ?? summary.rating_delta ?? summary.delta
   );
@@ -217,8 +234,8 @@ export function normalizeLeagueStats(master = {}, league = 'sundaygames') {
   ));
   const activeCount = hasDetailedActivity
     ? active.length
-    : (Number.isFinite(summaryActive) ? summaryActive : active.length);
-  const recordCount = Math.max(players.length, summaryRecords ?? 0, summaryActive ?? 0, activeCount);
+    : (Number.isFinite(publicSummaryActive) ? publicSummaryActive : active.length);
+  const recordCount = Math.max(players.length, publicSummaryRecords ?? 0, publicSummaryActive ?? 0, activeCount);
   const playerDeltaValues = active.map(knownRatingDelta).filter(Number.isFinite);
   const deltaKnown = Number.isFinite(summaryDelta) || playerDeltaValues.length > 0;
 

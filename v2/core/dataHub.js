@@ -1,5 +1,5 @@
 // Changelog (Codex): safe rounds parsing, home snapshot top5/stats normalization, and battles/rounds consistency for Home/GameDay summaries.
-import seasonsConfig from './seasons.config.js';
+import seasonsConfig from './seasons.config.js?v=20260831-season-close1';
 import { jsonp } from './utils.js';
 import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueKey } from './naming.js';
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
@@ -11,7 +11,7 @@ const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
 const SHEET_CACHE_VERSION = 'sheets-20260603-summer2026';
-const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260714-archive1';
+const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260831-summer2026';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
 const parsedMatchesCache = new WeakMap();
@@ -2502,7 +2502,9 @@ export async function getSeasonMaster(seasonId) {
       return value;
     };
 
-    if (season === 'spring_2026') {
+    const config = await loadSeasonsConfig();
+    const configuredSeason = config.seasons.find((item) => item.id === season);
+    if (configuredSeason?.isStatic) {
       const staticData = await readStaticSeason(season);
       const staticMaster = normalizeStaticSeasonMaster(staticData, season);
       if (staticMaster) return store(staticMaster);

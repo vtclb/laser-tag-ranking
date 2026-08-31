@@ -1,6 +1,7 @@
-import { listSeasonMasters, getSeasonMaster, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260715-perf2';
+import { listSeasonMasters, getSeasonMaster, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260831-season-close1';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 import { renderPageError } from '../core/pageState.js?v=20260715-load1';
+import { filterPublicPlayers } from '../core/playerVisibility.js?v=20260831-private-player1';
 
 const RANK_ORDER = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 
@@ -31,7 +32,8 @@ function titleFromId(id = '') {
     winter_2025_2026: 'Зима 2025-2026',
     autumn_2025: 'Осінь 2025',
     summer_2025: 'Літо 2025',
-    summer_2026: 'Літо 2026'
+    summer_2026: 'Літо 2026',
+    autumn_2026: 'Осінь 2026'
   };
   return known[id] || String(id || 'Сезон').replaceAll('_', ' ');
 }
@@ -51,7 +53,8 @@ function seasonStartKey(seasonId = '') {
     autumn_2025: 2,
     winter_2025_2026: 3,
     spring_2026: 4,
-    summer_2026: 5
+    summer_2026: 5,
+    autumn_2026: 6
   };
   return fallbackOrder[seasonId] || 9999;
 }
@@ -362,8 +365,9 @@ function renderSeason(root, { seasonId, league, master, seasons }) {
   const selectedLeague = normalizeLeague(league) || 'sundaygames';
   const allLeaguePlayers = (Array.isArray(sections.players) ? sections.players : [])
     .filter((player) => playerLeague(player) === selectedLeague);
-  const players = sortByRating(allLeaguePlayers);
-  const activePlayers = players.filter((player) => playerGames(player) > 0);
+  const activePlayers = sortByRating(filterPublicPlayers(allLeaguePlayers).filter((player) => playerGames(player) > 0))
+    .map((player, index) => ({ ...player, place: index + 1, finalPlace: index + 1 }));
+  const players = activePlayers;
   const summary = leagueSummary(sections, selectedLeague);
   const leader = players[0] || {};
   const runnerUp = players[1] || {};
@@ -402,7 +406,7 @@ function renderSeason(root, { seasonId, league, master, seasons }) {
 
     <section class="sd-kpi-grid" aria-label="Ключові цифри сезону">
       ${kpi('матчів за сезон', totalGames, 'зіграно у лізі', '01')}
-      ${kpi('активних гравців', activePlayers.length, `${players.length} записів`, '02')}
+      ${kpi('активних гравців', activePlayers.length, `${allLeaguePlayers.length} записів`, '02')}
       ${kpi('MVP записів', totalMvp, '1/2/3 місця', '03')}
       ${kpi('лідер сезону', playerName(leader), `${ratingEnd(leader)} очок`, '04')}
     </section>

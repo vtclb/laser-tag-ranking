@@ -1,4 +1,4 @@
-import { loadSeasonsConfig } from '../core/dataHub.js?v=20260715-perf2';
+import { loadSeasonsConfig } from '../core/dataHub.js?v=20260831-season-close1';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { jsonp } from '../core/utils.js';
 

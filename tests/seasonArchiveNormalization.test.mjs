@@ -16,8 +16,8 @@ test('spring archive keeps full roster while counting only active players', asyn
   const stats = normalizeSeasonStats(['spring_2026', master], 3);
 
   assert.equal(master.sections.players.length, 201);
-  assert.equal(stats.totalDetailedRecords, 201);
-  assert.equal(stats.totalActive, 88);
+  assert.equal(stats.totalDetailedRecords, 200);
+  assert.equal(stats.totalActive, 87);
   assert.equal(stats.totalMatches, 273);
   assert.equal(stats.completeness, 'full');
 });
@@ -32,6 +32,27 @@ test('summer archive does not treat archived roster count as active count', asyn
   assert.equal(stats.totalActive, 10);
   assert.equal(stats.totalMatches, 322);
   assert.equal(stats.completeness, 'partial');
+});
+
+test('summer 2026 archive ranks only active players and preserves both leagues', async () => {
+  const source = await readArchive('summer_2026.json');
+  const master = normalizeStaticSeasonMaster(source, 'summer_2026');
+  const stats = normalizeSeasonStats(['summer_2026', master], 4);
+
+  assert.equal(master.sections.players.length, 207);
+  assert.equal(stats.totalDetailedRecords, 206);
+  assert.equal(stats.totalActive, 73);
+  assert.equal(stats.totalMatches, 285);
+  assert.equal(stats.leagues.adult.leaderName, 'Pantazi_ko');
+  assert.equal(stats.leagues.kids.leaderName, 'Баранчік');
+
+  for (const league of ['sundaygames', 'kids']) {
+    const players = source.leagues[league].table.filter((player) => player.games > 0);
+    assert.deepEqual(players.map((player) => player.place), players.map((_, index) => index + 1));
+    assert.ok(source.leagues[league].awards.every((award) => (
+      players.some((player) => player.nick === award.nick)
+    )));
+  }
 });
 
 test('legacy numeric Rank_final is preserved as the archived finishing place', () => {

@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-08-31T17:36:38.517Z",
+  "gasUrl": "https://script.google.com/macros/s/AKfycbzIuGIL5xC2gIhHKypLzTcz6ORApWZ-Q3uOqSlEZvZ6DriCmOSC24NgjXSYmZVP_QLgeA/exec",
+  "sourceRows": {
+    "games": 285,
+    "logs": 2197
+  },
+  "corrections": [
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 49,
+      "rawNick": "виделка ",
+      "nick": "виделка"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 50,
+      "rawNick": "квадробер ",
+      "nick": "квадробер"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 51,
+      "rawNick": "сємочка ",
+      "nick": "сємочка"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 65,
+      "rawNick": "Sniper ",
+      "nick": "Sniper"
+    },
+    {
+      "league": "kids",
+      "type": "trimmed_roster_nickname",
+      "row": 71,
+      "rawNick": "Variy ",
+      "nick": "Variy"
+    }
+  ],
+  "warnings": []
+}

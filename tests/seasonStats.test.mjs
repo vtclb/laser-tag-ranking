@@ -88,7 +88,8 @@ test('archive list excludes the live season but career list can include it', asy
   const archives = await listSeasonMasters();
   const allSeasons = await listSeasonMasters({ includeCurrent: true });
 
-  assert.equal(archives.includes('summer_2026'), false);
-  assert.equal(allSeasons.includes('summer_2026'), true);
-  assert.deepEqual(archives, ['spring_2026', 'winter_2025_2026', 'autumn_2025', 'summer_2025']);
+  assert.equal(archives.includes('summer_2026'), true);
+  assert.equal(archives.includes('autumn_2026'), false);
+  assert.equal(allSeasons.includes('autumn_2026'), true);
+  assert.deepEqual(archives, ['summer_2026', 'spring_2026', 'winter_2025_2026', 'autumn_2025', 'summer_2025']);
 });

@@ -7,11 +7,12 @@ import {
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js?v=20260816-award-flames2';
+} from '../core/dataHub.js?v=20260831-season-close1';
 import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260816-award-flames2';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';
+import { filterPublicPlayers } from '../core/playerVisibility.js?v=20260831-private-player1';
 import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
 const placeholder = './assets/default-avatar.svg';
@@ -391,7 +392,8 @@ function renderAchievementDialogContent({ family, achievements = {}, leaderboard
   const unlocked = (achievements.unlocked || []).find((item) => item.familyId === family.id);
   const collectionItem = (achievements.collection || []).find((item) => item.familyId === family.id);
   const next = (achievements.inProgress || []).find((item) => item.familyId === family.id);
-  const rows = Array.isArray(leaderboard?.rows) ? leaderboard.rows : [];
+  const rows = filterPublicPlayers(Array.isArray(leaderboard?.rows) ? leaderboard.rows : [])
+    .map((row, index) => ({ ...row, position: index + 1 }));
   const currentKey = normalizePlayerKey(displayNick);
   const currentRow = rows.find((row) => normalizePlayerKey(row.nick) === currentKey);
   const currentLevel = unlocked?.level || 0;

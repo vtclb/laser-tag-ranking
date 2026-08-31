@@ -1,9 +1,10 @@
-﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js?v=20260715-perf2';
+﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js?v=20260831-season-close1';
 import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
 import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
 import { renderPageError } from '../core/pageState.js?v=20260715-load1';
+import { filterPublicPlayers, findExactHiddenPlayer, isHiddenPublicNick, rerankPublicPlayers } from '../core/playerVisibility.js?v=20260831-private-player1';
 
 const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
 const FALLBACK_AVATAR = './assets/default-avatar.svg';
@@ -574,10 +575,29 @@ function sortPlayers(players, sortBy, direction = 'desc') {
   return [...sortGroup(activeRows), ...sortGroup(inactiveRows)];
 }
 
-function filterPlayers(players, searchTerm) {
+function filterPlayers(players, searchTerm, hiddenSource = []) {
   const term = String(searchTerm || '').trim().toLowerCase();
   if (!term) return [...players];
+  const hidden = findExactHiddenPlayer(hiddenSource, term);
+  if (hidden) return [{ ...hidden, place: null, finalPlace: null }];
   return players.filter((player) => String(player.nickname || '').toLowerCase().includes(term));
+}
+
+function publicRankDistribution(players = []) {
+  return players.reduce((distribution, player) => {
+    const rank = String(player?.rankLetter || 'F').toUpperCase();
+    distribution[rank] = (distribution[rank] || 0) + 1;
+    return distribution;
+  }, {});
+}
+
+function publicProgress(players = [], source = {}) {
+  const active = players.filter(isSeasonActive);
+  return {
+    ...source,
+    bestGrowth: [...active].sort((a, b) => Number(b.delta || 0) - Number(a.delta || 0))[0] || null,
+    mostMvp: [...active].sort((a, b) => Number(b.mvpTotal || 0) - Number(a.mvpTotal || 0))[0] || null
+  };
 }
 
 function ensureMvpSortHeaders(tableHead) {
@@ -640,13 +660,25 @@ async function safeInitLeagueStatsPage(root, params = {}) {
     return;
   }
   const remainingGameDays = calculateRemainingGameDays(data, currentSeason);
+  const sourcePlayers = Array.isArray(data?.players) ? data.players : [];
+  const sourceActivePlayers = Array.isArray(data?.activePlayers) ? data.activePlayers : [];
+  const publicPlayers = rerankPublicPlayers(sourcePlayers);
+  const publicActivePlayers = filterPublicPlayers(
+    sourceActivePlayers.length ? sourceActivePlayers : sourcePlayers.filter(isSeasonActive)
+  );
   const safeData = {
     ...data,
-    players: Array.isArray(data?.players) ? data.players : [],
-    activePlayers: Array.isArray(data?.activePlayers) ? data.activePlayers : [],
-    summary: data?.summary || {},
-    progress: data?.progress || {},
-    lastGameDay: data?.lastGameDay || null
+    players: publicPlayers,
+    activePlayers: publicActivePlayers,
+    summary: {
+      ...(data?.summary || {}),
+      activePlayersCount: publicActivePlayers.length,
+      rankDistribution: publicRankDistribution(publicActivePlayers)
+    },
+    progress: publicProgress(publicActivePlayers, data?.progress || {}),
+    lastGameDay: data?.lastGameDay
+      ? { ...data.lastGameDay, mvp: isHiddenPublicNick(data.lastGameDay.mvp) ? null : data.lastGameDay.mvp }
+      : null
   };
 
   const hero = root.querySelector('#leagueHero');
@@ -690,9 +722,10 @@ async function safeInitLeagueStatsPage(root, params = {}) {
     sortBy: 'default',
     sortDirection: 'desc'
   };
+  const hiddenPlayerSource = sourcePlayers.filter((player) => !filterPublicPlayers([player]).length);
   const playersBase = [...(safeData.players || [])].filter((player) => isSeasonActive(player) || Number(player.points || 0) > 0);
   const renderTables = () => {
-    const filtered = filterPlayers(playersBase, state.searchTerm);
+    const filtered = filterPlayers(playersBase, state.searchTerm, hiddenPlayerSource);
     const sorted = sortPlayers(filtered, state.sortBy, state.sortDirection);
     const visible = state.isFullOpen || state.searchTerm ? sorted : sorted.slice(0, 10);
     rankingTable.innerHTML = visible.map((player) => tableRowMarkup(player, league)).join('')

@@ -16,7 +16,9 @@ test('root domain boots the current v2 app without exposing the v2 path', () => 
 test('root and legacy v2 entry expose the branded social preview', () => {
   for (const html of [rootHtml, v2Html]) {
     assert.match(html, /property="og:title" content="Рейтингова система «Варта»"/);
-    assert.match(html, /property="og:image" content="https:\/\/lasertagif\.online\/v2\/assets\/og-varta-ranking\.png"/);
+    assert.match(html, /property="og:image" content="https:\/\/lasertagif\.online\/v2\/assets\/og-varta-ranking-v2\.png"/);
+    assert.match(html, /property="og:image:width" content="1200"/);
+    assert.match(html, /property="og:image:height" content="630"/);
     assert.match(html, /name="twitter:card" content="summary_large_image"/);
     assert.match(html, /rel="canonical" href="https:\/\/lasertagif\.online\/"/);
   }

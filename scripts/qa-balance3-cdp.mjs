@@ -109,6 +109,15 @@ if (!LIVE_READONLY) await command('Page.addScriptToEvaluateOnNewDocument', {
           return new Response([gamesCsv, ...qa.savedRows].join('\\n'), { status: 200, headers: { 'Content-Type': 'text/csv' } });
         }
         if (url.includes('laser-proxy.vartaclub.workers.dev')) {
+          const jsonPayload = String(init.headers?.['Content-Type'] || init.headers?.get?.('Content-Type') || '').includes('application/json')
+            ? JSON.parse(String(init.body || '{}'))
+            : null;
+          if (jsonPayload?.action === 'getSkillRatings') {
+            return new Response(JSON.stringify({ status: 'OK', ratings: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          }
+          if (jsonPayload?.action === 'syncSkillRatings') {
+            return new Response(JSON.stringify({ status: 'OK', updated: jsonPayload.ratings?.length || 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          }
           qa.saveCalls += 1;
           const payload = Object.fromEntries(new URLSearchParams(String(init.body || '')));
           if (qa.saveMode === 'ambiguousSaved') {

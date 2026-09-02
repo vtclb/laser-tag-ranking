@@ -22,6 +22,12 @@ test('normalizePlayer preserves an existing stable player key', () => {
   assert.equal(second.key, first.key);
 });
 
+test('normalizePlayer keeps missing shadow values missing instead of converting null to zero', () => {
+  const normalized = normalizePlayer({ nick: 'New player', skillRating: null, rawSkillRating: null });
+  assert.equal(normalized.skillRating, null);
+  assert.equal(normalized.rawSkillRating, null);
+});
+
 test('initial and restored sessions always use the hidden skill model', () => {
   assert.equal(createInitialState().ratingModel, 'skill_v2');
   const restored = sanitizeRestoredState({ ...createInitialState(), ratingModel: 'points' });

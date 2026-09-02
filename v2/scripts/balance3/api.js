@@ -1,6 +1,6 @@
 import { GAMES_CSV_URL, PROXY_ORIGIN } from './config.js';
 import { normalizeLeague, normalizePlayer } from './domain.js';
-import { calculateSkillRatings, normalizeSkillMatch } from './skillRating.js';
+import { calculateSkillRatings, normalizeSkillMatch, SKILL_RATING_VERSION } from './skillRating.js';
 import { readPlayerCache, savePlayerCache } from './storage.js';
 
 const SKILL_BASELINE_END = '2026-08-31';
@@ -80,7 +80,16 @@ export function gameDateKey(value) {
 export function buildSeasonSkillShadow(liveGames = [], baselineMatches = []) {
   const baseline = calculateSkillRatings(baselineMatches);
   const currentSeasonGames = liveGames.filter((game) => gameDateKey(game?.timestamp ?? game?.date) > SKILL_BASELINE_END);
-  return calculateSkillRatings(currentSeasonGames, { initialRatings: baseline.ratings });
+  const current = calculateSkillRatings(currentSeasonGames, { initialRatings: baseline.ratings });
+  const datedGames = currentSeasonGames.filter((game) => gameDateKey(game?.timestamp ?? game?.date));
+  return {
+    ...current,
+    registry: {
+      sourceMatches: baseline.metrics.matches + current.metrics.matches,
+      lastGameAt: datedGames.length ? String(datedGames[datedGames.length - 1].timestamp || datedGames[datedGames.length - 1].date || '') : SKILL_BASELINE_END,
+      version: SKILL_RATING_VERSION,
+    },
+  };
 }
 
 async function loadSkillBaselineMatches(league) {
@@ -96,6 +105,66 @@ async function loadSkillBaselineMatches(league) {
   return Array.isArray(matches) ? matches.map(normalizeSkillMatch) : [];
 }
 
+async function postJson(payload, timeoutMs = 15000) {
+  const response = await fetchWithTimeout(PROXY_ORIGIN, {
+    method: 'POST',
+    credentials: 'omit',
+    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+    body: JSON.stringify(payload),
+  }, timeoutMs);
+  const data = await response.json();
+  if (!response.ok || String(data?.status || '').toUpperCase() !== 'OK') {
+    throw new Error(data?.message || `Shadow registry HTTP ${response.status}`);
+  }
+  return data;
+}
+
+export async function loadSkillRegistry(league) {
+  const data = await postJson({ action: 'getSkillRatings', league: normalizeLeague(league) });
+  return Array.isArray(data.ratings) ? data.ratings : [];
+}
+
+export async function syncSkillRegistry(league, players, registry = {}) {
+  const normalizedLeague = normalizeLeague(league);
+  const ratings = (Array.isArray(players) ? players : []).map((player) => {
+    const hasHistory = player.skillRating !== null && player.skillRating !== '' && Number.isFinite(Number(player.skillRating));
+    return {
+    playerId: String(player.id || player.key || player.nick),
+    nick: player.nick,
+    league: normalizedLeague,
+    skillRating: hasHistory ? Number(player.skillRating) : 1000,
+    rawSkillRating: hasHistory ? Number(player.rawSkillRating ?? player.skillRating) : 1000,
+    skillGames: hasHistory ? Number(player.skillGames) || 0 : 0,
+    uncertainty: hasHistory ? Number(player.skillUncertainty ?? player.uncertainty) || 0 : 350,
+    provisional: hasHistory ? Boolean(player.provisional) : true,
+    sourceMatches: Number(registry.sourceMatches) || 0,
+    version: registry.version || SKILL_RATING_VERSION,
+    lastGameAt: registry.lastGameAt || '',
+    };
+  });
+  if (!ratings.length) return { status: 'OK', updated: 0 };
+  return postJson({ action: 'syncSkillRatings', league: normalizedLeague, ratings });
+}
+
+function normalizedNick(value) {
+  return String(value || '').trim().toLocaleLowerCase('uk');
+}
+
+export function mergeSkillRegistry(players = [], registryRows = []) {
+  const byId = new Map();
+  const byNick = new Map();
+  registryRows.forEach((record) => {
+    const id = String(record?.playerId || record?.id || '').trim();
+    const nick = normalizedNick(record?.nick || record?.nickname);
+    if (id) byId.set(id, record);
+    if (nick) byNick.set(nick, record);
+  });
+  return players.map((player) => normalizePlayer({
+    ...player,
+    ...(byId.get(String(player.id || '')) || byNick.get(normalizedNick(player.nick)) || {}),
+  }, player.league));
+}
+
 export function createRequestId(action = 'save') {
   const suffix = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   return `balance3-${action}-${suffix}`;
@@ -107,7 +176,10 @@ export async function loadLeaguePlayers(league, { force = false } = {}) {
     const cached = readPlayerCache(normalizedLeague);
     if (cached.length) return cached.map((player) => normalizePlayer(player, normalizedLeague)).filter(Boolean);
   }
-  const gamesPromise = loadLeagueGames(normalizedLeague).catch(() => []);
+  const gamesPromise = loadLeagueGames(normalizedLeague)
+    .then((games) => ({ ok: true, games }))
+    .catch(() => ({ ok: false, games: [] }));
+  const registryPromise = loadSkillRegistry(normalizedLeague).catch(() => []);
   const response = await fetchWithTimeout(`${PROXY_ORIGIN}/fetchLeagueCsv?league=${normalizedLeague}&cb=${Date.now()}`);
   if (!response.ok) throw new Error(`Сервер повернув HTTP ${response.status}`);
   const rows = parseCsv(await response.text());
@@ -123,16 +195,26 @@ export async function loadLeaguePlayers(league, { force = false } = {}) {
     league: normalizedLeague,
   }, normalizedLeague)).filter(Boolean);
   try {
-    const games = await gamesPromise;
+    const gamesResult = await gamesPromise;
+    const registryRows = await registryPromise;
     const baselineMatches = await loadSkillBaselineMatches(normalizedLeague).catch(() => null);
-    if (games.length || baselineMatches?.length) {
+    if (gamesResult.ok && (gamesResult.games.length || baselineMatches?.length)) {
       const shadow = baselineMatches
-        ? buildSeasonSkillShadow(games, baselineMatches)
-        : calculateSkillRatings(games);
+        ? buildSeasonSkillShadow(gamesResult.games, baselineMatches)
+        : calculateSkillRatings(gamesResult.games);
       players = players.map((player) => normalizePlayer({
         ...player,
         ...(shadow.ratings[player.nick] || {}),
       }, normalizedLeague));
+      await syncSkillRegistry(normalizedLeague, players, shadow.registry || {
+        sourceMatches: shadow.metrics.matches,
+        version: SKILL_RATING_VERSION,
+      }).catch(() => null);
+    } else if (registryRows.length) {
+      players = mergeSkillRegistry(players, registryRows);
+    } else if (baselineMatches?.length) {
+      const baseline = calculateSkillRatings(baselineMatches);
+      players = players.map((player) => normalizePlayer({ ...player, ...(baseline.ratings[player.nick] || {}) }, normalizedLeague));
     }
   } catch {
     // Shadow data is optional; official points remain a complete fallback.

@@ -34,7 +34,10 @@ export function normalizePlayer(player = {}, league = 'sundaygames') {
   if (!nick) return null;
   const normalizedLeague = normalizeLeague(player.league || player.sourceLeague || league);
   const points = Number(player.points ?? player.pts ?? player.rating) || 0;
-  const skillRatingValue = Number(player.skillRating);
+  const skillRatingSource = player.skillRating;
+  const skillRatingValue = Number(skillRatingSource);
+  const rawSkillRatingSource = player.rawSkillRating;
+  const rawSkillRatingValue = Number(rawSkillRatingSource);
   const key = createPlayerKey({ ...player, nick, league: normalizedLeague });
   return {
     key,
@@ -43,7 +46,12 @@ export function normalizePlayer(player = {}, league = 'sundaygames') {
     league: normalizedLeague,
     rating: points,
     points,
-    skillRating: Number.isFinite(skillRatingValue) ? skillRatingValue : null,
+    skillRating: skillRatingSource !== null && skillRatingSource !== '' && Number.isFinite(skillRatingValue)
+      ? skillRatingValue
+      : null,
+    rawSkillRating: rawSkillRatingSource !== null && rawSkillRatingSource !== '' && Number.isFinite(rawSkillRatingValue)
+      ? rawSkillRatingValue
+      : null,
     skillGames: Math.max(0, Number(player.skillGames) || 0),
     uncertainty: Number(player.skillUncertainty ?? player.uncertainty) || null,
     provisional: Boolean(player.provisional),

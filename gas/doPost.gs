@@ -122,6 +122,10 @@ function doPost(e) {
         // getPdfLinks: { league, date:'YYYY-MM-DD' } -> { links: {matchId:url} }
         if (action === 'getPdfLinks') return handleGetPdfLinks_(payload);
 
+        // 7) Прихований рейтинг Balance3. Не впливає на офіційні Points.
+        if (action === 'getSkillRatings') return handleGetSkillRatings_(payload);
+        if (action === 'syncSkillRatings') return handleSyncSkillRatings_(payload);
+
         // Unknown
         return JsonErr(new Error('Unknown action'));
       }
@@ -470,6 +474,117 @@ function handleRegularGame_(params) {
   });
 
   return JsonOK({status:'OK', players: updatedPlayers});
+}
+
+/* ===================== BALANCE3 SHADOW SKILL REGISTRY ===================== */
+const SKILL_RATINGS_SHEET_ = 'skill_ratings';
+const SKILL_RATINGS_HEADERS_ = [
+  'PlayerId', 'Nickname', 'League', 'SkillRating', 'RawSkillRating', 'SkillGames',
+  'Uncertainty', 'Provisional', 'SourceMatches', 'Version', 'LastGameAt', 'UpdatedAt'
+];
+
+function ensureSkillRatingsSheet_() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(SKILL_RATINGS_SHEET_);
+  if (!sheet) {
+    sheet = ss.insertSheet(SKILL_RATINGS_SHEET_);
+    sheet.getRange(1, 1, 1, SKILL_RATINGS_HEADERS_.length).setValues([SKILL_RATINGS_HEADERS_]);
+    sheet.setFrozenRows(1);
+  }
+  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), SKILL_RATINGS_HEADERS_.length)).getValues()[0];
+  SKILL_RATINGS_HEADERS_.forEach((header, index) => {
+    if (headers[index] !== header) sheet.getRange(1, index + 1).setValue(header);
+  });
+  return sheet;
+}
+
+function skillRegistryRecord_(record, fallbackLeague) {
+  const league = normalizeLeague_(record && (record.league || fallbackLeague));
+  const nick = String(record && (record.nick || record.nickname) || '').trim();
+  const playerId = String(record && (record.playerId || record.id) || nick).trim();
+  const skillRating = Math.min(1800, Math.max(400, Number(record && record.skillRating) || 1000));
+  const rawSkillRating = Math.min(1800, Math.max(400, Number(record && record.rawSkillRating) || skillRating));
+  if (!league || !nick || !playerId) return null;
+  return {
+    playerId,
+    nick,
+    league,
+    skillRating: Math.round(skillRating),
+    rawSkillRating: Math.round(rawSkillRating),
+    skillGames: Math.max(0, Math.round(Number(record.skillGames) || 0)),
+    uncertainty: Math.max(0, Math.round(Number(record.uncertainty || record.skillUncertainty) || 0)),
+    provisional: Boolean(record.provisional),
+    sourceMatches: Math.max(0, Math.round(Number(record.sourceMatches) || 0)),
+    version: String(record.version || '').trim().slice(0, 80),
+    lastGameAt: String(record.lastGameAt || '').trim().slice(0, 40)
+  };
+}
+
+function handleGetSkillRatings_(payload) {
+  const league = normalizeLeague_(payload && payload.league);
+  if (!league) throw new Error('league required');
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SKILL_RATINGS_SHEET_);
+  if (!sheet || sheet.getLastRow() < 2) return JsonOK({ status: 'OK', ratings: [] });
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, SKILL_RATINGS_HEADERS_.length).getValues();
+  const ratings = rows.filter(row => normalizeLeague_(row[2]) === league).map(row => ({
+    playerId: String(row[0] || ''),
+    nick: String(row[1] || ''),
+    league: normalizeLeague_(row[2]),
+    skillRating: Number(row[3]) || 1000,
+    rawSkillRating: Number(row[4]) || Number(row[3]) || 1000,
+    skillGames: Number(row[5]) || 0,
+    uncertainty: Number(row[6]) || 0,
+    provisional: row[7] === true || String(row[7]).toLowerCase() === 'true',
+    sourceMatches: Number(row[8]) || 0,
+    version: String(row[9] || ''),
+    lastGameAt: row[10] instanceof Date ? row[10].toISOString() : String(row[10] || ''),
+    updatedAt: row[11] instanceof Date ? row[11].toISOString() : String(row[11] || '')
+  }));
+  return JsonOK({ status: 'OK', ratings });
+}
+
+function handleSyncSkillRatings_(payload) {
+  const league = normalizeLeague_(payload && payload.league);
+  const incoming = Array.isArray(payload && payload.ratings) ? payload.ratings.slice(0, 100) : [];
+  if (!league) throw new Error('league required');
+  if (!incoming.length) return JsonOK({ status: 'OK', updated: 0 });
+
+  const records = incoming.map(record => skillRegistryRecord_(record, league)).filter(Boolean);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = ensureSkillRatingsSheet_();
+    const existingRows = sheet.getLastRow() > 1
+      ? sheet.getRange(2, 1, sheet.getLastRow() - 1, SKILL_RATINGS_HEADERS_.length).getValues()
+      : [];
+    const rowByKey = new Map();
+    existingRows.forEach((row, index) => {
+      const key = `${normalizeLeague_(row[2])}::${String(row[0] || '').trim()}`;
+      if (key !== '::') rowByKey.set(key, { row: index + 2, sourceMatches: Number(row[8]) || 0 });
+    });
+    const now = new Date();
+    let updated = 0;
+    records.forEach(record => {
+      const key = `${record.league}::${record.playerId}`;
+      const existing = rowByKey.get(key);
+      if (existing && existing.sourceMatches > record.sourceMatches) return;
+      const values = [[
+        record.playerId, record.nick, record.league, record.skillRating, record.rawSkillRating,
+        record.skillGames, record.uncertainty, record.provisional, record.sourceMatches,
+        record.version, record.lastGameAt, now
+      ]];
+      if (existing) sheet.getRange(existing.row, 1, 1, SKILL_RATINGS_HEADERS_.length).setValues(values);
+      else {
+        sheet.appendRow(values[0]);
+        rowByKey.set(key, { row: sheet.getLastRow(), sourceMatches: record.sourceMatches });
+      }
+      updated += 1;
+    });
+    return JsonOK({ status: 'OK', updated });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ===================== AVATARS (Drive + sheet 'avatars') ===================== */

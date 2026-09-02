@@ -69,3 +69,18 @@ test('invalid matches are skipped without creating partial ratings', () => {
   assert.equal(result.metrics.skipped, 2);
   assert.deepEqual(result.ratings, {});
 });
+
+test('continues a persisted season baseline without resetting games or rating', () => {
+  const result = calculateSkillRatings([
+    { team1: ['Alpha'], team2: ['Bravo'], winner: 'team1' },
+  ], {
+    initialRatings: {
+      Alpha: { rawSkillRating: 1120, skillGames: 30 },
+      Bravo: { rawSkillRating: 880, skillGames: 30 },
+    },
+  });
+  assert.equal(result.ratings.Alpha.skillGames, 31);
+  assert.equal(result.ratings.Bravo.skillGames, 31);
+  assert.ok(result.ratings.Alpha.rawSkillRating > 1120);
+  assert.ok(result.ratings.Bravo.rawSkillRating < 880);
+});

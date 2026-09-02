@@ -22,6 +22,12 @@ test('normalizePlayer preserves an existing stable player key', () => {
   assert.equal(second.key, first.key);
 });
 
+test('initial and restored sessions always use the hidden skill model', () => {
+  assert.equal(createInitialState().ratingModel, 'skill_v2');
+  const restored = sanitizeRestoredState({ ...createInitialState(), ratingModel: 'points' });
+  assert.equal(restored.ratingModel, 'skill_v2');
+});
+
 test('sanitizeRestoredState removes unknown and duplicate team assignments', () => {
   const a = player('Alpha');
   const b = player('Bravo');
@@ -88,8 +94,10 @@ test('regular payload uses active teams, stable MVP keys and battle sequence', (
     mvp3: '',
     series: '102',
     penalties: '',
-    balanceVersion: 'balance3-v1-points',
+    balanceVersion: 'balance3-skill-v2-shadow-1',
   });
+  assert.equal('skillRating' in buildRegularPayload(state, 'request-2'), false);
+  assert.equal('points' in buildRegularPayload(state, 'request-3'), false);
 });
 
 test('regular game fingerprint normalizes roster order and draw aliases', () => {

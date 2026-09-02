@@ -133,14 +133,10 @@ if (LIVE_READONLY) {
   await evaluate(`localStorage.removeItem('balance3:pending-write:v1'); localStorage.removeItem('balance3:draft:v1')`);
   await evaluate(`document.querySelector('#loadPlayersButton').click()`);
   await waitFor(`document.querySelectorAll('[data-player-key]').length > 0`, 30000);
-  await evaluate(`(() => {
-    const skill = document.querySelector('input[name="ratingModel"][value="skill_v2"]');
-    skill.checked = true;
-    skill.dispatchEvent(new Event('change', { bubbles: true }));
-  })()`);
   const liveReadOnlyCheck = await evaluate(`({
     players: document.querySelectorAll('[data-player-key]').length,
-    skillPlayers: Array.from(document.querySelectorAll('[data-player-key]')).filter((node) => node.textContent.includes('V2')).length,
+    ratingSelectorHidden: document.querySelector('input[name="ratingModel"]') === null,
+    skillValuesHidden: Array.from(document.querySelectorAll('[data-player-key]')).every((node) => !node.textContent.includes('V2')),
     status: document.querySelector('#statusText').textContent,
     overflow: document.documentElement.scrollWidth - window.innerWidth
   })`);
@@ -157,13 +153,8 @@ for (let index = 0; index < 12; index += 1) {
   await evaluate(`document.querySelector('[data-player-key][aria-pressed="false"]').click()`);
 }
 await waitFor(`document.querySelector('#selectionCount').textContent.includes('12 / 50')`);
-await evaluate(`(() => {
-  const skill = document.querySelector('input[name="ratingModel"][value="skill_v2"]');
-  skill.checked = true;
-  skill.dispatchEvent(new Event('change', { bubbles: true }));
-  document.querySelector('.b3-settings').scrollIntoView({ block: 'start' });
-})()`);
-await screenshot('settings-skill-mobile.png');
+await evaluate(`document.querySelector('.b3-settings').scrollIntoView({ block: 'start' })`);
+await screenshot('settings-hidden-rating-mobile.png');
 
 await evaluate(`(() => {
   const select = document.querySelector('#teamCountSelect');
@@ -175,11 +166,12 @@ await waitFor(`!document.querySelector('[data-stage="teams"]').classList.contain
 const twoTeamCheck = await evaluate(`({
   cards: document.querySelectorAll('.b3-team').length,
   assigned: document.querySelectorAll('.b3-team-player').length,
-  skillMode: document.querySelector('input[name="ratingModel"][value="skill_v2"]').checked,
-  skillTotals: Array.from(document.querySelectorAll('.b3-team__head strong')).every((node) => node.textContent.includes('V2')),
+  ratingSelectorHidden: document.querySelector('input[name="ratingModel"]') === null,
+  skillValuesHidden: !document.querySelector('#teamsGrid').textContent.includes('V2'),
+  officialTotalsVisible: Array.from(document.querySelectorAll('.b3-team__head strong')).every((node) => node.textContent.includes('pts')),
   overflow: document.documentElement.scrollWidth - window.innerWidth
 })`);
-if (twoTeamCheck.cards !== 2 || twoTeamCheck.assigned !== 12 || !twoTeamCheck.skillMode || !twoTeamCheck.skillTotals || twoTeamCheck.overflow > 1) throw new Error(`2-team mobile check failed: ${JSON.stringify(twoTeamCheck)}`);
+if (twoTeamCheck.cards !== 2 || twoTeamCheck.assigned !== 12 || !twoTeamCheck.ratingSelectorHidden || !twoTeamCheck.skillValuesHidden || !twoTeamCheck.officialTotalsVisible || twoTeamCheck.overflow > 1) throw new Error(`2-team mobile check failed: ${JSON.stringify(twoTeamCheck)}`);
 
 await evaluate(`document.querySelector('[data-step-target="players"]').click()`);
 await evaluate(`(() => {
@@ -359,7 +351,7 @@ console.log(JSON.stringify({
   manualCheck,
   desktopCheck,
   restoreSurvivalCheck,
-  screenshots: ['artifacts/balance3-qa/settings-skill-mobile.png', 'artifacts/balance3-qa/teams-12-mobile.png', 'artifacts/balance3-qa/result-10-mobile.png', 'artifacts/balance3-qa/teams-2-desktop.png'],
+  screenshots: ['artifacts/balance3-qa/settings-hidden-rating-mobile.png', 'artifacts/balance3-qa/teams-12-mobile.png', 'artifacts/balance3-qa/result-10-mobile.png', 'artifacts/balance3-qa/teams-2-desktop.png'],
 }, null, 2));
 
 await command('Page.close');

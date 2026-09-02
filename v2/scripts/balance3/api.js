@@ -3,6 +3,10 @@ import { normalizeLeague, normalizePlayer } from './domain.js';
 import { calculateSkillRatings, normalizeSkillMatch } from './skillRating.js';
 import { readPlayerCache, savePlayerCache } from './storage.js';
 
+const SKILL_BASELINE_END = '2026-08-31';
+const SKILL_BASELINE_URL = new URL('../../data/seasons/summer_2026.json', import.meta.url);
+let skillBaselinePromise = null;
+
 export function parseCsv(text = '') {
   const rows = [];
   let row = [];
@@ -64,6 +68,34 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
   }
 }
 
+export function gameDateKey(value) {
+  const source = String(value || '').trim();
+  const iso = source.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const local = source.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (!local) return '';
+  return `${local[3]}-${local[2].padStart(2, '0')}-${local[1].padStart(2, '0')}`;
+}
+
+export function buildSeasonSkillShadow(liveGames = [], baselineMatches = []) {
+  const baseline = calculateSkillRatings(baselineMatches);
+  const currentSeasonGames = liveGames.filter((game) => gameDateKey(game?.timestamp ?? game?.date) > SKILL_BASELINE_END);
+  return calculateSkillRatings(currentSeasonGames, { initialRatings: baseline.ratings });
+}
+
+async function loadSkillBaselineMatches(league) {
+  if (!skillBaselinePromise) {
+    skillBaselinePromise = fetchWithTimeout(SKILL_BASELINE_URL, { credentials: 'same-origin' })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Архів рейтингу повернув HTTP ${response.status}`);
+        return response.json();
+      });
+  }
+  const archive = await skillBaselinePromise;
+  const matches = archive?.leagues?.[normalizeLeague(league)]?.matches;
+  return Array.isArray(matches) ? matches.map(normalizeSkillMatch) : [];
+}
+
 export function createRequestId(action = 'save') {
   const suffix = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   return `balance3-${action}-${suffix}`;
@@ -92,8 +124,11 @@ export async function loadLeaguePlayers(league, { force = false } = {}) {
   }, normalizedLeague)).filter(Boolean);
   try {
     const games = await gamesPromise;
-    if (games.length) {
-      const shadow = calculateSkillRatings(games);
+    const baselineMatches = await loadSkillBaselineMatches(normalizedLeague).catch(() => null);
+    if (games.length || baselineMatches?.length) {
+      const shadow = baselineMatches
+        ? buildSeasonSkillShadow(games, baselineMatches)
+        : calculateSkillRatings(games);
       players = players.map((player) => normalizePlayer({
         ...player,
         ...(shadow.ratings[player.nick] || {}),

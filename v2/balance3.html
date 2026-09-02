@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101418">
   <title>Балансер 3 | Varta</title>
-  <link rel="stylesheet" href="./styles/balance3.css">
+  <link rel="stylesheet" href="./styles/balance3.css?v=20260902-shadow-rating">
 </head>
 <body>
   <main class="b3-shell" id="balance3App">
@@ -75,15 +75,8 @@
               <label><input type="radio" name="balanceMode" value="manual"><span>Вручну</span></label>
             </div>
           </fieldset>
-          <fieldset>
-            <legend>Рейтинг для балансу</legend>
-            <div class="b3-segmented">
-              <label><input type="radio" name="ratingModel" value="points" checked><span>Поінти</span></label>
-              <label><input type="radio" name="ratingModel" value="skill_v2"><span>Skill V2</span></label>
-            </div>
-          </fieldset>
         </div>
-        <p class="b3-note" id="ratingModelNote">Поінти: чинний рейтинг. Skill V2: тестова оцінка сили за результатами команд і MVP; офіційні бали не змінюються.</p>
+        <p class="b3-note" id="ratingModelNote">Автобаланс враховує внутрішню оцінку сили. Офіційні поінти нараховуються за чинною схемою.</p>
       </div>
 
       <div class="b3-primary-bar">
@@ -155,6 +148,6 @@
     </section>
   </main>
 
-  <script type="module" src="./scripts/balance3/app.js"></script>
+  <script type="module" src="./scripts/balance3/app.js?v=20260902-shadow-rating"></script>
 </body>
 </html>

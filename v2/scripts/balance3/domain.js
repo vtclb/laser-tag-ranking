@@ -67,7 +67,7 @@ export function createInitialState() {
     sort: 'rating_desc',
     teamCount: 2,
     balanceMode: 'auto',
-    ratingModel: 'points',
+    ratingModel: 'skill_v2',
     balanceSeed: 1,
     teams: createEmptyTeams(),
     teamNames: Object.fromEntries(TEAM_IDS.map((teamId, index) => [teamId, `Команда ${index + 1}`])),
@@ -109,7 +109,12 @@ export function teamRating(state, teamId) {
 }
 
 export function playerBalanceRating(player, ratingModel = 'points') {
-  if (ratingModel === 'skill_v2' && Number.isFinite(Number(player?.skillRating))) return Number(player.skillRating);
+  if (ratingModel === 'skill_v2') {
+    const shadowRating = player?.skillRating;
+    return shadowRating !== null && shadowRating !== '' && Number.isFinite(Number(shadowRating))
+      ? Number(shadowRating)
+      : 1000;
+  }
   return Number(player?.points ?? player?.rating) || 0;
 }
 
@@ -254,7 +259,7 @@ export function sanitizeRestoredState(candidate) {
     selectedKeys,
     teamCount,
     balanceMode: candidate.balanceMode === 'manual' ? 'manual' : 'auto',
-    ratingModel: candidate.ratingModel === 'skill_v2' ? 'skill_v2' : 'points',
+    ratingModel: 'skill_v2',
     teams,
     activeTeamA,
     activeTeamB,

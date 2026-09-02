@@ -70,7 +70,6 @@ async function loadPlayers({ force = false } = {}) {
   try {
     const league = getState().league;
     const players = await loadLeaguePlayers(league, { force });
-    const skillPlayers = players.filter((player) => player.skillGames > 0).length;
     updateState((state) => ({
       ...resetTeamsAndMatch(state),
       players,
@@ -78,7 +77,7 @@ async function loadPlayers({ force = false } = {}) {
       selectedKeys: state.selectedKeys.filter((key) => players.some((player) => player.key === key)),
       save: {
         status: 'success',
-        message: `Завантажено гравців: ${players.length}. Skill V2: ${skillPlayers}/${players.length}`,
+        message: `Завантажено гравців: ${players.length}. Внутрішня оцінка сили готова.`,
         requestId: '',
       },
     }));
@@ -336,23 +335,6 @@ function bindEvents() {
   $('teamCountSelect').addEventListener('change', (event) => updateState((state) => ({ ...resetTeamsAndMatch(state), teamCount: Number(event.target.value) })));
   document.querySelectorAll('input[name="balanceMode"]').forEach((input) => input.addEventListener('change', (event) => {
     if (event.target.checked) updateState((state) => ({ ...resetTeamsAndMatch(state), balanceMode: event.target.value }));
-  }));
-  document.querySelectorAll('input[name="ratingModel"]').forEach((input) => input.addEventListener('change', (event) => {
-    if (event.target.checked) updateState((state) => {
-      const ratingModel = event.target.value;
-      const skillPlayers = state.players.filter((player) => player.skillGames > 0).length;
-      return {
-        ...resetTeamsAndMatch(state),
-        ratingModel,
-        save: {
-          status: ratingModel === 'skill_v2' && !skillPlayers ? 'warning' : 'success',
-          message: ratingModel === 'skill_v2'
-            ? (skillPlayers ? `Skill V2 активний для ${skillPlayers} гравців` : 'Історія Skill V2 недоступна, використаємо поінти')
-            : 'Балансування за чинними поінтами',
-          requestId: '',
-        },
-      };
-    });
   }));
   $('formTeamsButton').addEventListener('click', () => formTeams());
   $('rebalanceButton').addEventListener('click', () => formTeams({ nextSeed: true }));

@@ -4,7 +4,6 @@ import {
   selectedPlayers,
   summarizeRounds,
   summarizeTeams,
-  playerBalanceRating,
   teamPlayers,
   unassignedPlayers,
   validateMatch,
@@ -46,7 +45,7 @@ function renderPlayers(state) {
     <button class="b3-player" type="button" data-player-key="${escapeHtml(player.key)}" aria-pressed="${selected.has(player.key)}">
       <span class="b3-player__check">${selected.has(player.key) ? '✓' : ''}</span>
       <span class="b3-player__name">${escapeHtml(player.nick)}</span>
-      <span class="b3-player__rating">${player.rating}${state.ratingModel === 'skill_v2' && player.skillRating ? ` · V2 ${player.skillRating}` : ''}</span>
+      <span class="b3-player__rating">${player.rating} pts</span>
     </button>
   `).join('') : `<p class="b3-empty">${state.playersLoaded ? 'Нічого не знайдено.' : 'Завантажте склад обраної ліги.'}</p>`;
 }
@@ -62,18 +61,17 @@ function renderTeams(state) {
   const ids = activeTeamIds(state);
   $('teamsGrid').innerHTML = ids.map((teamId) => {
     const players = teamPlayers(state, teamId);
-    const total = players.reduce((sum, player) => sum + playerBalanceRating(player, state.ratingModel), 0);
-    const ratingLabel = state.ratingModel === 'skill_v2' ? 'V2' : 'pts';
+    const total = players.reduce((sum, player) => sum + player.rating, 0);
     return `
       <article class="b3-team" data-team-id="${teamId}">
         <header class="b3-team__head">
           <h3>${escapeHtml(state.teamNames[teamId])}</h3>
-          <strong>${total} ${ratingLabel}</strong>
+          <strong>${total} pts</strong>
         </header>
         <div class="b3-team__players">
           ${players.length ? players.map((player) => `
             <div class="b3-team-player">
-              <span>${escapeHtml(player.nick)} · ${playerBalanceRating(player, state.ratingModel)}</span>
+              <span>${escapeHtml(player.nick)} · ${player.rating} pts</span>
               ${teamMoveSelect(state, player.key, teamId)}
             </div>
           `).join('') : '<p class="b3-empty" style="padding:0 11px">Команда порожня</p>'}
@@ -86,14 +84,14 @@ function renderTeams(state) {
   $('unassignedPanel').classList.toggle('is-hidden', unassigned.length === 0);
   $('unassignedList').innerHTML = unassigned.map((player) => `
     <div class="b3-team-player">
-      <span>${escapeHtml(player.nick)} · ${playerBalanceRating(player, state.ratingModel)}</span>
+      <span>${escapeHtml(player.nick)} · ${player.rating} pts</span>
       ${teamMoveSelect(state, player.key)}
     </div>
   `).join('');
 
   const metrics = summarizeTeams(state);
   const quality = metrics.relativeSpread <= 0.08 ? 'Добрий баланс' : metrics.relativeSpread <= 0.16 ? 'Прийнятний баланс' : 'Потрібна перевірка';
-  $('balanceQuality').textContent = `${quality} · розкид ${Math.round(metrics.spread)} ${state.ratingModel === 'skill_v2' ? 'V2' : 'pts'}`;
+  $('balanceQuality').textContent = `${quality} · внутрішня оцінка сили`;
   $('balanceQuality').className = metrics.relativeSpread <= 0.08 ? 'b3-quality--good' : 'b3-quality--warn';
   $('rebalanceButton').classList.toggle('is-hidden', state.balanceMode !== 'auto');
 }
@@ -159,11 +157,10 @@ export function render(state) {
   $('playerSort').value = state.sort;
   $('teamCountSelect').value = String(state.teamCount);
   document.querySelectorAll('input[name="balanceMode"]').forEach((input) => { input.checked = input.value === state.balanceMode; });
-  document.querySelectorAll('input[name="ratingModel"]').forEach((input) => { input.checked = input.value === state.ratingModel; });
   const skillPlayers = state.players.filter((player) => player.skillGames > 0).length;
-  $('ratingModelNote').textContent = state.ratingModel === 'skill_v2'
-    ? `Skill V2: ${skillPlayers}/${state.players.length} гравців з історією. Офіційні поінти без змін.`
-    : 'Поінти: чинний рейтинг. Skill V2 доступний для паралельної перевірки.';
+  $('ratingModelNote').textContent = skillPlayers || !state.playersLoaded
+    ? 'Автобаланс враховує внутрішню оцінку сили. Офіційні поінти нараховуються за чинною схемою.'
+    : 'Історія сили недоступна: нові гравці отримають нейтральну стартову оцінку. Офіційні поінти без змін.';
   renderPlayers(state);
   renderTeams(state);
   renderTeamSelectors(state);

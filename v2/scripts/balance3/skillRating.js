@@ -59,9 +59,20 @@ function awardWeights(match, participants) {
   return new Map([...weights].map(([nick, value]) => [nick, value - average]));
 }
 
-export function calculateSkillRatings(matches = []) {
+export function calculateSkillRatings(matches = [], { initialRatings = {} } = {}) {
   const players = new Map();
   const metrics = { matches: 0, decisions: 0, skipped: 0, correct: 0, brier: 0 };
+
+  Object.entries(initialRatings && typeof initialRatings === 'object' ? initialRatings : {}).forEach(([rawNick, seed]) => {
+    const nick = normalizeNick(seed?.nick || rawNick);
+    if (!nick) return;
+    const rawRating = Number(seed?.rawSkillRating ?? seed?.rating);
+    players.set(nick, {
+      nick,
+      rating: clamp(Number.isFinite(rawRating) ? rawRating : DEFAULT_RATING, MIN_RATING, MAX_RATING),
+      games: Math.max(0, Number(seed?.skillGames ?? seed?.games) || 0),
+    });
+  });
 
   for (const match of Array.isArray(matches) ? matches : []) {
     const team1 = uniqueTeam(match?.team1);

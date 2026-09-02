@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { balancePlayers } from '../v2/scripts/balance3/balance.js';
-import { normalizePlayer } from '../v2/scripts/balance3/domain.js';
+import { normalizePlayer, playerBalanceRating } from '../v2/scripts/balance3/domain.js';
 
 function players(count) {
   return Array.from({ length: count }, (_, index) => normalizePlayer({
@@ -39,7 +39,7 @@ test('deduplicates repeated player records before balancing', () => {
   assert.equal(Object.values(result.teams).flat().length, 6);
 });
 
-test('Skill V2 mode uses shadow ratings while points mode remains available', () => {
+test('hidden skill mode uses shadow ratings while the points calculation remains isolated', () => {
   const roster = [
     normalizePlayer({ nick: 'A', points: 1000, skillRating: 500 }),
     normalizePlayer({ nick: 'B', points: 900, skillRating: 600 }),
@@ -51,4 +51,17 @@ test('Skill V2 mode uses shadow ratings while points mode remains available', ()
   assert.notDeepEqual(pointsResult.teams, skillResult.teams);
   assert.equal(skillResult.metrics.ratingModel, 'skill_v2');
   assert.equal(Math.max(...skillResult.metrics.totals) - Math.min(...skillResult.metrics.totals), 0);
+});
+
+test('players without shadow history start from the neutral skill baseline', () => {
+  const roster = [
+    normalizePlayer({ nick: 'Veteran', points: 1200, skillRating: 1100 }),
+    normalizePlayer({ nick: 'New high points', points: 1500 }),
+    normalizePlayer({ nick: 'New low points', points: 50 }),
+  ];
+  const result = balancePlayers(roster, 2, 1);
+  assert.equal(playerBalanceRating(roster[1], 'skill_v2'), 1000);
+  assert.equal(playerBalanceRating(roster[2], 'skill_v2'), 1000);
+  assert.equal(result.metrics.ratingModel, 'skill_v2');
+  assert.deepEqual(result.metrics.totals.sort((a, b) => a - b), [1100, 2000]);
 });

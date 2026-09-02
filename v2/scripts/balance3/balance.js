@@ -23,7 +23,7 @@ function spread(teams, teamCount, ratingModel) {
   return Math.max(...totals) - Math.min(...totals);
 }
 
-export function balancePlayers(players = [], rawTeamCount = 2, seed = 1, { ratingModel = 'points' } = {}) {
+export function balancePlayers(players = [], rawTeamCount = 2, seed = 1, { ratingModel = 'skill_v2' } = {}) {
   const teamCount = normalizeTeamCount(rawTeamCount);
   if (!Array.isArray(players) || players.length < teamCount) {
     throw new Error('Недостатньо гравців для обраної кількості команд');

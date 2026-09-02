@@ -49,5 +49,6 @@ test('GAS exposes a separate registry without changing the regular points formul
   assert.match(source, /action === 'getSkillRatings'/);
   assert.match(source, /action === 'syncSkillRatings'/);
   assert.match(source, /SKILL_RATINGS_SHEET_ = 'skill_ratings'/);
+  assert.match(source, /ratings\.slice\(0, 250\)/);
   assert.match(source, /const delta\s+= partScore \+ winScore \+ mvpBonus \+ penScore/);
 });

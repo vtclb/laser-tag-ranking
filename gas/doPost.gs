@@ -546,7 +546,7 @@ function handleGetSkillRatings_(payload) {
 
 function handleSyncSkillRatings_(payload) {
   const league = normalizeLeague_(payload && payload.league);
-  const incoming = Array.isArray(payload && payload.ratings) ? payload.ratings.slice(0, 100) : [];
+  const incoming = Array.isArray(payload && payload.ratings) ? payload.ratings.slice(0, 250) : [];
   if (!league) throw new Error('league required');
   if (!incoming.length) return JsonOK({ status: 'OK', updated: 0 });
 

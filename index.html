@@ -1,19 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uk">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Лазертаг рейтинг | Варта</title>
-    <meta http-equiv="refresh" content="0; url=./v2/index.html">
-    <link rel="canonical" href="https://lasertagif.online/v2/index.html">
-    <script>
-      const destination = new URL("./v2/index.html", window.location.href);
-      destination.search = window.location.search;
-      destination.hash = window.location.hash;
-      window.location.replace(destination.href);
-    </script>
-  </head>
-  <body>
-    <a href="./v2/index.html">Відкрити актуальний рейтинг</a>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Рейтингова система | Варта</title>
+  <meta name="description" content="Офіційна рейтингова система клубу «Варта»: ліги, ігрові дні, профілі, нагороди та архів сезонів.">
+  <link rel="canonical" href="https://lasertagif.online/">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="uk_UA">
+  <meta property="og:site_name" content="Варта">
+  <meta property="og:title" content="Рейтингова система «Варта»">
+  <meta property="og:description" content="Рейтинги гравців, статистика матчів, нагороди та історія сезонів лазертаг-клубу «Варта».">
+  <meta property="og:url" content="https://lasertagif.online/">
+  <meta property="og:image" content="https://lasertagif.online/v2/assets/og-varta-ranking.png">
+  <meta property="og:image:secure_url" content="https://lasertagif.online/v2/assets/og-varta-ranking.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1732">
+  <meta property="og:image:height" content="909">
+  <meta property="og:image:alt" content="Рейтингова система лазертаг-клубу Варта">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Рейтингова система «Варта»">
+  <meta name="twitter:description" content="Рейтинги гравців, статистика матчів, нагороди та історія сезонів.">
+  <meta name="twitter:image" content="https://lasertagif.online/v2/assets/og-varta-ranking.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./v2/styles/tokens.css">
+  <link rel="stylesheet" href="./v2/styles/pixel-layer.css">
+  <link rel="stylesheet" href="./v2/styles/icons.css">
+  <link id="v2-loading-cubes" rel="stylesheet" href="./v2/styles/loading-cubes.css?v=20260715-clean5">
+</head>
+<body class="theme-game">
+  <a class="skip-link" href="#view">До основного вмісту</a>
+  <div id="app">
+    <header class="topbar"></header>
+    <main class="page">
+      <div class="container section" id="view" tabindex="-1"></div>
+    </main>
+    <div id="routeStatus" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  </div>
+  <script type="module" src="./v2/core/router.js?v=20260902-clean-domain"></script>
+</body>
 </html>

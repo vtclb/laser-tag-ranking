@@ -4,6 +4,7 @@ import { normalizeLeague } from './naming.js';
 
 const templateCache = new Map();
 const TEMPLATE_TIMEOUT_MS = 10_000;
+const V2_BASE_URL = new URL('../', import.meta.url);
 let routeRenderSequence = 0;
 const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments']);
 const routeTitles = {
@@ -110,7 +111,7 @@ async function fetchTemplate(path) {
   if (!templateCache.has(path)) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TEMPLATE_TIMEOUT_MS);
-    const request = fetch(path, { signal: controller.signal })
+    const request = fetch(new URL(path, V2_BASE_URL).href, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`Template load failed: ${path}`);
         return response.text();
@@ -261,7 +262,7 @@ async function renderRoute() {
   debugInfo('[router] render:start', { hash: location.hash, route, queryParams });
 
   try {
-    if (!location.hash || String(location.hash || '').replace(/^#/, '').split('?')[0].replace(/^\/+/, '').toLowerCase() !== route) {
+    if (location.hash && String(location.hash || '').replace(/^#/, '').split('?')[0].replace(/^\/+/, '').toLowerCase() !== route) {
       location.replace(buildHash(route, queryParams));
       return;
     }

@@ -1,129 +1,19 @@
 <!doctype html>
 <html lang="uk">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Молодша ліга | Лазертаг</title>
-    <link
-      rel="preconnect"
-      href="https://fonts.googleapis.com"
-    />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="styles/tokens.css" />
-    <link rel="stylesheet" href="styles/base.css" />
-    <link rel="stylesheet" href="styles/layout.css" />
-    <link rel="stylesheet" href="styles/theme-game.css" />
-    <link rel="stylesheet" href="styles/pixel-layer.css" />
-    <script type="module" src="scripts/bootstrap.js?v=1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js?v=2025-09-19-avatars-3"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Лазертаг рейтинг | Варта</title>
+    <meta http-equiv="refresh" content="0; url=./v2/index.html">
+    <link rel="canonical" href="https://lasertagif.online/v2/index.html">
+    <script>
+      const destination = new URL("./v2/index.html", window.location.href);
+      destination.search = window.location.search;
+      destination.hash = window.location.hash;
+      window.location.replace(destination.href);
+    </script>
   </head>
-  <body data-league="kids">
-    <div class="page-shell">
-      <nav class="topnav">
-        <div class="container topnav__inner">
-          <a href="index.html" class="active">Молодша Ліга</a>
-          <a href="sunday.html">Старша Ліга</a>
-          <a href="gameday.html">Ігровий день</a>
-          <a href="rules.html">Правила</a>
-          <a href="about.html">Про клуб</a>
-        </div>
-      </nav>
-
-      <section class="section hero section--manifest">
-        <div class="container">
-          <div class="grid grid--12">
-            <div class="hero__copy stack">
-              <span class="kicker px-badge">Молодша Ліга</span>
-              <h1>Laser Tag Ranking</h1>
-              <div id="season-info" class="season-info"></div>
-              <div class="summary" id="summary"></div>
-              <div class="hero__actions">
-                <a class="btn btn--primary" href="gameday.html">Ігровий день</a>
-                <a class="btn btn--secondary" href="rules.html">Правила</a>
-                <a class="btn btn--secondary" href="about.html">Про клуб</a>
-              </div>
-              <div class="status-bar">
-                <span class="px-badge">kids</span>
-                <hr class="px-divider" style="flex: 1" />
-                <span class="status-bar__text">rating / rules / gameday</span>
-              </div>
-            </div>
-            <div class="hero__panel">
-              <aside class="system-panel stack">
-                <h2>Поточний розподіл рангів</h2>
-                <p>Структура сезонного рейтингу по класах S-F.</p>
-                <div id="rank-chart" class="rank-chart"></div>
-              </aside>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="section section--manifest">
-        <div class="container stack">
-          <h2 class="section-title">Пошук і MVP</h2>
-          <div class="grid grid--12">
-            <div class="menu-card" style="grid-column: span 5">
-              <div class="search-box">
-                <label class="px-badge" for="search">Пошук нікнейму</label>
-                <input type="text" id="search" placeholder="Пошук нікнейму…" />
-              </div>
-            </div>
-            <div class="menu-card" style="grid-column: span 7">
-              <div class="top-mvp" id="top-mvp"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="section section--manifest">
-        <div class="container stack">
-          <h2 class="section-title">Таблиця рейтингу</h2>
-          <div class="table-container">
-            <table id="ranking">
-              <thead>
-                <tr>
-                  <th data-key="place">Місце <span class="sort-arrow"></span></th>
-                  <th>Аватар</th>
-                  <th data-key="nickname">Нікнейм <span class="sort-arrow"></span></th>
-                  <th data-key="rank">Ранг <span class="sort-arrow"></span></th>
-                  <th data-key="points">Бали <span class="sort-arrow"></span></th>
-                  <th data-key="games">Ігор <span class="sort-arrow"></span></th>
-                  <th data-key="winRate">%Win <span class="sort-arrow"></span></th>
-                  <th data-key="mvp">MVP <span class="sort-arrow"></span></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <button id="prev-page">Назад</button>
-            <span id="page-info" class="page-info"></span>
-            <button id="next-page">Вперед</button>
-            <button id="show-all">Показати всі</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="section section--manifest">
-        <div class="container stack">
-          <h2 class="section-title">Статистика гравця</h2>
-          <div id="stats-modal" class="hidden">
-            <div class="modal-content">
-              <button id="stats-close">✕</button>
-              <div id="stats-body"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+  <body>
+    <a href="./v2/index.html">Відкрити актуальний рейтинг</a>
   </body>
 </html>

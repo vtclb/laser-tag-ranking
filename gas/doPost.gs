@@ -69,6 +69,10 @@ function doGet(e) {
       return respond_({ status: 'OK', pong: true, ts: new Date().toISOString() }, cb);
     }
 
+    if (action === 'getSheetRaw') {
+      return respond_(handleGetSheetRaw_(p), cb);
+    }
+
     return respond_({ status: 'ERR', message: 'Unknown GET action' }, cb);
   } catch (err) {
     return respond_({ status: 'ERR', message: err && err.message ? err.message : String(err) }, e && e.parameter ? e.parameter.callback : '');
@@ -364,6 +368,52 @@ function handleRegularGame_(params) {
   } finally {
     lock.releaseLock();
   }
+}
+
+const PUBLIC_SHEET_READ_LIMIT_ = 10000;
+const PUBLIC_READABLE_SHEETS_ = new Set([
+  'kids',
+  'sundaygames',
+  'games',
+  'logs',
+  'avatars',
+  'tournaments',
+  'tournament_teams',
+  'tournament_games',
+  'tournament_players',
+  'tournament_config',
+  'season_autumn_2025_master',
+  'season_summer_2025_master',
+  'season_winter_2025_2026_master',
+  'Архів',
+  'ocinb2025'
+]);
+
+function handleGetSheetRaw_(params) {
+  const requestedName = String(params && params.sheet || '').trim();
+  if (!PUBLIC_READABLE_SHEETS_.has(requestedName)) throw new Error('Sheet is not available');
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(requestedName);
+  if (!sheet) throw new Error('Sheet not found');
+
+  const requestedLimit = Number(params && params.limitRows);
+  const limitRows = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? Math.min(Math.floor(requestedLimit), PUBLIC_SHEET_READ_LIMIT_)
+    : PUBLIC_SHEET_READ_LIMIT_;
+  const rowCount = Math.min(sheet.getLastRow(), limitRows);
+  const columnCount = sheet.getLastColumn();
+  if (rowCount < 1 || columnCount < 1) {
+    return { status: 'OK', sheet: requestedName, header: [], rows: [] };
+  }
+
+  const values = sheet.getRange(1, 1, rowCount, columnCount).getValues();
+  return {
+    status: 'OK',
+    sheet: requestedName,
+    header: values[0].map(value => String(value || '')),
+    rows: values.slice(1)
+  };
 }
 
 function handleRegularGameLocked_(params) {
@@ -687,25 +737,19 @@ function handleEditRegularGame_(payload) {
     if (original.revision !== expectedRevision) throw new Error('Цю гру вже редагували. Оновіть список.');
     if (original.series === series && original.winner === winner) return JsonOK({status:'OK', unchanged:true, game:original});
 
-    const allRows = gamesSheet.getRange(rowNumber, 1, gamesSheet.getLastRow() - rowNumber + 1, gamesSheet.getLastColumn()).getValues();
-    const futureGames = allRows.map((values, index) => regularGameFromRow_(headers, values, rowNumber + index))
-      .filter(game => game.league === original.league);
-    const baselines = regularLogBaselines_(ss, futureGames);
+    const baselines = regularLogBaselines_(ss, [original]);
     const originalPoints = {};
     const correctedPoints = {};
-    futureGames.forEach((game, index) => {
-      const players = Array.from(new Set(splitRegularTeam_(game.team1).concat(splitRegularTeam_(game.team2))));
-      players.forEach(nick => {
-        if (Number.isFinite(originalPoints[nick])) return;
-        const millis = game.timestamp instanceof Date ? game.timestamp.getTime() : NaN;
-        const baseline = baselines.get(`${millis}::${game.league}::${nick}`);
-        if (!Number.isFinite(baseline)) throw new Error(`Не вдалося відновити поінти до гри для ${nick}`);
-        originalPoints[nick] = baseline;
-        correctedPoints[nick] = baseline;
-      });
-      scoreRegularGame_(game, originalPoints);
-      scoreRegularGame_(index === 0 ? {...game, series, winner} : game, correctedPoints);
+    const players = Array.from(new Set(splitRegularTeam_(original.team1).concat(splitRegularTeam_(original.team2))));
+    players.forEach(nick => {
+      const millis = original.timestamp instanceof Date ? original.timestamp.getTime() : NaN;
+      const baseline = baselines.get(`${millis}::${original.league}::${nick}`);
+      if (!Number.isFinite(baseline)) throw new Error(`Не вдалося відновити поінти до гри для ${nick}`);
+      originalPoints[nick] = baseline;
+      correctedPoints[nick] = baseline;
     });
+    scoreRegularGame_(original, originalPoints);
+    scoreRegularGame_({...original, series, winner}, correctedPoints);
 
     const pointDeltas = {};
     Object.keys(correctedPoints).forEach(nick => {

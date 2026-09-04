@@ -10,7 +10,7 @@ import { buildAchievementProfile, buildAchievementStandings } from './achievemen
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260603-summer2026';
+const SHEET_CACHE_VERSION = 'sheets-20260905-live-results1';
 const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260831-summer2026';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };

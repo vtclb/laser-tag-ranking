@@ -1,4 +1,4 @@
-import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260831-season-close1';
+import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260905-live-results1';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { leagueLabelUA } from '../core/naming.js';
 import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate, statusLabel } from './tournaments.js';

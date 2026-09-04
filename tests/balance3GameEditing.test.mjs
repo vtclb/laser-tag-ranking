@@ -15,27 +15,32 @@ test('regular game correction derives winner from every saved battle', () => {
   assert.throws(() => gasHelpers.regularWinnerFromSeries_('---'), /Серія/);
 });
 
-test('winner correction propagates rank threshold effects through later games', () => {
-  const games = [
-    ['Sem,Pantazi_ko,wiedii,SixSeven', 'Justy,Morti,Wolfie,Оксанка', 'team2', ['Morti','Оксанка','Wolfie']],
-    ['Pantazi_ko,wiedii,SixSeven,Morti', 'Justy,Оксанка,Wolfie,Sem', 'team1', ['Morti','Justy','wiedii']],
-    ['Pantazi_ko,Morti,wiedii,SixSeven', 'Sem,Justy,Оксанка,Wolfie', 'team1', ['Pantazi_ko','Morti','Sem']],
-    ['Sem,Оксанка,Wolfie', 'Pantazi_ko,wiedii,SixSeven', 'team1', ['Оксанка','Pantazi_ko','Wolfie']],
-    ['Pantazi_ko,wiedii,SixSeven', 'Sem,Оксанка,Wolfie', 'team1', ['Pantazi_ko','Оксанка','SixSeven']],
-    ['Pantazi_ko,Оксанка,SixSeven', 'Sem,wiedii,Wolfie', 'team1', ['wiedii','Pantazi_ko','Оксанка']],
-  ].map(([team1, team2, winner, mvp]) => ({team1, team2, winner, mvp:mvp[0], mvp2:mvp[1], mvp3:mvp[2]}));
-  const points = {Pantazi_ko:1023, Sem:1004, wiedii:583, SixSeven:227, Justy:840, Morti:811, Wolfie:811, 'Оксанка':819};
-  games.forEach((game) => gasHelpers.scoreRegularGame_(game, points));
-  assert.deepEqual(points, {
-    Pantazi_ko: 1069,
-    Sem: 965,
-    wiedii: 616,
-    SixSeven: 286,
-    Justy: 837,
-    Morti: 872,
-    Wolfie: 797,
-    'Оксанка': 848,
+test('winner correction changes only the edited game outcome bonus', () => {
+  const original = {
+    team1: 'Sem,Pantazi_ko,wiedii,SixSeven',
+    team2: 'Justy,Morti,Wolfie,Оксанка',
+    winner: 'team1',
+    mvp: 'Morti',
+    mvp2: 'Оксанка',
+    mvp3: 'Wolfie'
+  };
+  const before = {Pantazi_ko:1023, Sem:1004, wiedii:583, SixSeven:227, Justy:840, Morti:811, Wolfie:811, 'Оксанка':819};
+  const originalPoints = {...before};
+  const correctedPoints = {...before};
+  gasHelpers.scoreRegularGame_(original, originalPoints);
+  gasHelpers.scoreRegularGame_({...original, winner:'team2'}, correctedPoints);
+  const delta = Object.fromEntries(Object.keys(before).map((nick) => [nick, correctedPoints[nick] - originalPoints[nick]]));
+  assert.deepEqual(delta, {
+    Pantazi_ko: -20,
+    Sem: -20,
+    wiedii: -20,
+    SixSeven: -20,
+    Justy: 20,
+    Morti: 20,
+    Wolfie: 20,
+    'Оксанка': 20,
   });
+  assert.doesNotMatch(gasSource, /futureGames/);
 });
 
 test('GAS editing is keyed, locked, versioned and audited', () => {
@@ -45,6 +50,13 @@ test('GAS editing is keyed, locked, versioned and audited', () => {
   assert.match(gasSource, /original\.revision !== expectedRevision/);
   assert.match(gasSource, /game_corrections/);
   assert.match(gasSource, /createTextFinder\(requestId\)\.matchEntireCell\(true\)/);
+});
+
+test('GAS keeps the live read endpoint required by the rating site', () => {
+  assert.match(gasSource, /action === 'getSheetRaw'/);
+  assert.match(gasSource, /handleGetSheetRaw_/);
+  assert.match(gasSource, /PUBLIC_READABLE_SHEETS_/);
+  assert.match(gasSource, /PUBLIC_SHEET_READ_LIMIT_/);
 });
 
 test('Balance3 exposes a mobile saved-game editor and refreshes hidden ratings', () => {

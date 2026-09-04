@@ -1,5 +1,13 @@
 import { MAX_PLAYERS, TEAM_IDS } from './config.js';
-import { loadLeagueGames, loadLeaguePlayers, createRequestId, saveRegularGame } from './api.js';
+import {
+  createRequestId,
+  editRegularGame,
+  listRegularGames,
+  loadLeagueGames,
+  loadLeaguePlayers,
+  saveRegularGame,
+  syncSkillRatingsFromGames,
+} from './api.js';
 import { balancePlayers, emptyManualTeams } from './balance.js';
 import {
   activeTeamIds,
@@ -28,6 +36,153 @@ let pendingDraft = readDraft();
 let pendingWrite = readPendingWrite();
 let saveInFlight = false;
 let draftDecisionPending = Boolean(pendingDraft?.selectedKeys?.length);
+let historyGames = [];
+let editingGame = null;
+let editingSeries = [];
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function historyWinnerLabel(game) {
+  if (game.winner === 'team1') return 'Команда 1';
+  if (game.winner === 'team2') return 'Команда 2';
+  return 'Нічия';
+}
+
+function setHistoryStatus(message, tone = 'neutral') {
+  const node = $('historyStatus');
+  node.textContent = message;
+  node.dataset.tone = tone;
+}
+
+function renderHistoryList() {
+  const list = $('historyList');
+  list.replaceChildren();
+  if (!historyGames.length) {
+    const empty = document.createElement('p');
+    empty.className = 'b3-empty';
+    empty.textContent = 'За цю дату збережених ігор немає.';
+    list.append(empty);
+    return;
+  }
+  historyGames.forEach((game, index) => {
+    const item = document.createElement('article');
+    item.className = 'b3-history-game';
+    const time = document.createElement('span');
+    time.className = 'b3-history-game__time';
+    time.textContent = String(game.timestamp || '').split(' ')[1] || `Гра ${index + 1}`;
+    const teams = document.createElement('div');
+    teams.className = 'b3-history-game__teams';
+    const title = document.createElement('strong');
+    title.textContent = `${index + 1}. ${game.team1 || 'Команда 1'} — ${game.team2 || 'Команда 2'}`;
+    const result = document.createElement('span');
+    result.className = 'b3-history-game__winner';
+    result.textContent = `${historyWinnerLabel(game)} · серія ${game.series || '—'}`;
+    teams.append(title, result);
+    const button = document.createElement('button');
+    button.className = 'b3-button';
+    button.type = 'button';
+    button.dataset.editGameId = game.gameId;
+    button.textContent = 'Редагувати';
+    item.append(time, teams, button);
+    list.append(item);
+  });
+}
+
+function renderHistoryEditor() {
+  if (!editingGame) return;
+  $('historyEditor').classList.remove('is-hidden');
+  $('historyList').classList.add('is-hidden');
+  $('historyEditorTitle').textContent = `Гра ${historyGames.indexOf(editingGame) + 1} · ${String(editingGame.timestamp || '').split(' ')[1] || ''}`;
+  $('historyEditorTeams').textContent = `${editingGame.team1} — ${editingGame.team2}`;
+  $('historyRounds').innerHTML = editingSeries.map((choice, index) => `
+    <div class="b3-round" data-history-index="${index}" data-choice="${choice}">
+      <span class="b3-round__number">${index + 1}</span>
+      <button type="button" data-history-round="team1">Команда 1</button>
+      <button type="button" data-history-round="draw">Нічия</button>
+      <button type="button" data-history-round="team2">Команда 2</button>
+    </div>
+  `).join('');
+  $('historyNote').value = '';
+  $('historyAdminKey').value = sessionStorage.getItem('balance3:admin-edit-key') || '';
+}
+
+function closeHistoryEditor() {
+  editingGame = null;
+  editingSeries = [];
+  $('historyEditor').classList.add('is-hidden');
+  $('historyList').classList.remove('is-hidden');
+}
+
+async function loadHistory() {
+  setHistoryStatus('Завантажуємо ігри...', 'warning');
+  $('historyLoadButton').disabled = true;
+  try {
+    historyGames = await listRegularGames({
+      league: getState().league,
+      date: $('historyDate').value || localDateKey(),
+    });
+    closeHistoryEditor();
+    renderHistoryList();
+    setHistoryStatus(`Знайдено ігор: ${historyGames.length}`, 'success');
+  } catch (error) {
+    historyGames = [];
+    renderHistoryList();
+    setHistoryStatus(error?.message || 'Не вдалося завантажити історію', 'error');
+  } finally {
+    $('historyLoadButton').disabled = false;
+  }
+}
+
+async function openHistory() {
+  $('historyDate').value = $('historyDate').value || localDateKey();
+  $('historyDialog').showModal();
+  await loadHistory();
+}
+
+async function saveHistoryCorrection() {
+  if (!editingGame) return;
+  const adminKey = $('historyAdminKey').value.trim();
+  if (!adminKey) {
+    setHistoryStatus('Введіть код адміністратора', 'error');
+    $('historyAdminKey').focus();
+    return;
+  }
+  if (!editingSeries.length || editingSeries.some((choice) => !choice)) {
+    setHistoryStatus('Позначте результат кожного бою', 'error');
+    return;
+  }
+  const button = $('historySaveButton');
+  button.disabled = true;
+  button.textContent = 'Перераховуємо...';
+  setHistoryStatus('Зберігаємо корекцію та перераховуємо поінти...', 'warning');
+  try {
+    sessionStorage.setItem('balance3:admin-edit-key', adminKey);
+    const series = editingSeries.map((choice) => choice === 'team1' ? '1' : choice === 'team2' ? '2' : '0').join('');
+    const result = await editRegularGame({
+      adminKey,
+      gameId: editingGame.gameId,
+      expectedRevision: editingGame.revision,
+      series,
+      note: $('historyNote').value,
+    });
+    const allSeasonGames = await listRegularGames({ league: getState().league, since: '2026-09-01' });
+    const refreshedPlayers = await syncSkillRatingsFromGames(getState().league, allSeasonGames);
+    updateState((state) => ({ ...state, players: refreshedPlayers, playersLoaded: true }));
+    await loadHistory();
+    const changed = Object.keys(result.pointDeltas || {}).length;
+    setHistoryStatus(`Виправлення збережено. Перераховано гравців: ${changed}. Прихований рейтинг оновлено.`, 'success');
+  } catch (error) {
+    setHistoryStatus(error?.message || 'Не вдалося зберегти виправлення', 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Зберегти виправлення';
+  }
+}
 
 function notice(status, message, { requestId } = {}) {
   updateState((state) => ({
@@ -313,6 +468,33 @@ function cancelPendingSave() {
 }
 
 function bindEvents() {
+  $('historyButton').addEventListener('click', openHistory);
+  $('historyCloseButton').addEventListener('click', () => $('historyDialog').close());
+  $('historyLoadButton').addEventListener('click', loadHistory);
+  $('historyCancelEditButton').addEventListener('click', closeHistoryEditor);
+  $('historyList').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-edit-game-id]');
+    if (!button) return;
+    editingGame = historyGames.find((game) => game.gameId === button.dataset.editGameId) || null;
+    editingSeries = (String(editingGame?.series || '').match(/[012]/g) || []).map((token) => token === '1' ? 'team1' : token === '2' ? 'team2' : 'draw');
+    if (!editingSeries.length) {
+      setHistoryStatus('У цієї гри немає серії боїв для безпечного редагування', 'error');
+      editingGame = null;
+      return;
+    }
+    renderHistoryEditor();
+  });
+  $('historyRounds').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-history-round]');
+    const row = event.target.closest('[data-history-index]');
+    if (!button || !row) return;
+    editingSeries[Number(row.dataset.historyIndex)] = button.dataset.historyRound;
+    row.dataset.choice = button.dataset.historyRound;
+  });
+  $('historySaveButton').addEventListener('click', saveHistoryCorrection);
+  $('historyDialog').addEventListener('click', (event) => {
+    if (event.target === $('historyDialog')) $('historyDialog').close();
+  });
   $('loadPlayersButton').addEventListener('click', () => loadPlayers({ force: true }));
   $('retryButton').addEventListener('click', checkPendingWrite);
   $('forceRetryButton').addEventListener('click', forceRetrySave);

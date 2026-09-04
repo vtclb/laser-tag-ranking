@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101418">
   <title>Балансер 3 | Varta</title>
-  <link rel="stylesheet" href="./styles/balance3.css?v=20260902-shadow-rating">
+  <link rel="stylesheet" href="./styles/balance3.css?v=20260904-game-edit">
 </head>
 <body>
   <main class="b3-shell" id="balance3App">
@@ -14,7 +14,10 @@
         <p class="b3-kicker">Панель адміністратора</p>
         <h1>Балансер 3</h1>
       </div>
-      <a class="b3-home" href="./index.html#main">Головна</a>
+      <div class="b3-header-actions">
+        <button class="b3-button b3-button--quiet" id="historyButton" type="button">Історія ігор</button>
+        <a class="b3-home" href="./index.html#main">Головна</a>
+      </div>
     </header>
 
     <div class="b3-status" id="statusBox" data-tone="neutral" role="status" aria-live="polite">
@@ -148,6 +151,38 @@
     </section>
   </main>
 
-  <script type="module" src="./scripts/balance3/app.js?v=20260902-skill-registry"></script>
+  <dialog class="b3-history-dialog" id="historyDialog" aria-labelledby="historyTitle">
+    <div class="b3-history-shell">
+      <header class="b3-history-head">
+        <div>
+          <p class="b3-kicker">Безпечне редагування</p>
+          <h2 id="historyTitle">Збережені ігри</h2>
+        </div>
+        <button class="b3-icon-button" id="historyCloseButton" type="button" aria-label="Закрити">×</button>
+      </header>
+      <div class="b3-history-controls">
+        <label><span>Дата</span><input id="historyDate" type="date"></label>
+        <button class="b3-button b3-button--primary" id="historyLoadButton" type="button">Показати</button>
+      </div>
+      <p class="b3-history-status" id="historyStatus" role="status" aria-live="polite"></p>
+      <div class="b3-history-list" id="historyList"></div>
+      <section class="b3-history-editor is-hidden" id="historyEditor">
+        <div class="b3-section-head">
+          <div>
+            <h3 id="historyEditorTitle">Редагування гри</h3>
+            <p id="historyEditorTeams"></p>
+          </div>
+          <button class="b3-button b3-button--quiet" id="historyCancelEditButton" type="button">Назад</button>
+        </div>
+        <p class="b3-note">Позначте фактичний результат кожного бою. Загальний переможець буде визначений автоматично.</p>
+        <div class="b3-rounds" id="historyRounds"></div>
+        <label><span>Причина зміни</span><input id="historyNote" type="text" maxlength="300" placeholder="Наприклад: адміністратор переплутав команди"></label>
+        <label><span>Код адміністратора</span><input id="historyAdminKey" type="password" autocomplete="current-password"></label>
+        <button class="b3-button b3-button--primary b3-button--wide" id="historySaveButton" type="button">Зберегти виправлення</button>
+      </section>
+    </div>
+  </dialog>
+
+  <script type="module" src="./scripts/balance3/app.js?v=20260904-game-edit"></script>
 </body>
 </html>

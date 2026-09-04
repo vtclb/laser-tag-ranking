@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 
-const DEBUG_PORT = 9333;
-const APP_URL = 'http://127.0.0.1:4193/v2/balance3.html';
+const DEBUG_PORT = Number(process.env.BALANCE3_QA_DEBUG_PORT || 9333);
+const APP_URL = 'http://127.0.0.1:4190/v2/balance3.html';
 const OUT_DIR = new URL('../artifacts/balance3-qa/', import.meta.url);
 const LIVE_READONLY = process.argv.includes('--live-readonly');
 
@@ -97,7 +97,25 @@ if (!LIVE_READONLY) await command('Page.addScriptToEvaluateOnNewDocument', {
       }
       const csv = ${JSON.stringify(csv)};
       const gamesCsv = ${JSON.stringify(gamesCsv)};
-      const qa = window.__balance3Qa = { saveMode: 'success', saveCalls: 0, savedRows: [] };
+      const qa = window.__balance3Qa = {
+        saveMode: 'success',
+        saveCalls: 0,
+        editCalls: 0,
+        savedRows: [],
+        historyGames: [{
+          gameId: 'regular:2:1788500000000',
+          timestamp: '04.09.2026 10:16:20',
+          league: 'sundaygames',
+          team1: 'Player 01, Player 02, Player 03',
+          team2: 'Player 04, Player 05, Player 06',
+          winner: 'team1',
+          mvp: 'Player 01',
+          mvp2: 'Player 04',
+          mvp3: 'Player 02',
+          series: '111',
+          revision: 1
+        }]
+      };
       const csvCell = (value) => '"' + String(value || '').replaceAll('"', '""') + '"';
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input, init = {}) => {
@@ -117,6 +135,25 @@ if (!LIVE_READONLY) await command('Page.addScriptToEvaluateOnNewDocument', {
           }
           if (jsonPayload?.action === 'syncSkillRatings') {
             return new Response(JSON.stringify({ status: 'OK', updated: jsonPayload.ratings?.length || 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          }
+          if (jsonPayload?.action === 'listRegularGames') {
+            return new Response(JSON.stringify({ status: 'OK', games: qa.historyGames }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          }
+          if (jsonPayload?.action === 'editRegularGame') {
+            qa.editCalls += 1;
+            if (jsonPayload.adminKey !== 'QA-EDIT') {
+              return new Response(JSON.stringify({ status: 'ERR', message: 'Невірний код адміністратора' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            const game = qa.historyGames.find((item) => item.gameId === jsonPayload.gameId);
+            if (!game || game.revision !== jsonPayload.expectedRevision) {
+              return new Response(JSON.stringify({ status: 'ERR', message: 'Запис гри змінився' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            const team1 = [...jsonPayload.series].filter((value) => value === '1').length;
+            const team2 = [...jsonPayload.series].filter((value) => value === '2').length;
+            game.series = jsonPayload.series;
+            game.winner = team1 > team2 ? 'team1' : team2 > team1 ? 'team2' : 'tie';
+            game.revision += 1;
+            return new Response(JSON.stringify({ status: 'OK', game, pointDeltas: { 'Player 01': -20, 'Player 04': 20 } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
           }
           qa.saveCalls += 1;
           const payload = Object.fromEntries(new URLSearchParams(String(init.body || '')));
@@ -221,11 +258,21 @@ const visualCheck = await evaluate(`({
 })`);
 if (visualCheck.rounds !== 10 || visualCheck.chosen !== 10 || visualCheck.overflow > 1) throw new Error(`Result visual check failed: ${JSON.stringify(visualCheck)}`);
 await screenshot('result-10-mobile.png');
-await evaluate(`window.scrollTo(0, document.documentElement.scrollHeight)`);
+await evaluate(`(() => {
+  document.documentElement.style.scrollBehavior = 'auto';
+  document.querySelector('.b3-mvp-grid').scrollIntoView({ block: 'end' });
+})()`);
 const stickyCheck = await evaluate(`(() => {
   const mvp = document.querySelector('.b3-mvp-grid').getBoundingClientRect();
   const saveBar = document.querySelector('.b3-save-bar').getBoundingClientRect();
-  return { mvpBottom: Math.round(mvp.bottom), saveTop: Math.round(saveBar.top) };
+  return {
+    mvpBottom: Math.round(mvp.bottom),
+    saveTop: Math.round(saveBar.top),
+    scrollY: Math.round(window.scrollY),
+    scrollHeight: document.documentElement.scrollHeight,
+    viewport: window.innerHeight,
+    resultPadding: getComputedStyle(document.querySelector('[data-stage="result"]')).paddingBottom
+  };
 })()`);
 if (stickyCheck.mvpBottom > stickyCheck.saveTop + 1) throw new Error(`Sticky save bar overlaps MVP controls: ${JSON.stringify(stickyCheck)}`);
 
@@ -301,6 +348,40 @@ await waitFor(`document.querySelectorAll('#unassignedList [data-move-player]').l
 const manualCheck = await evaluate(`Array.from(document.querySelectorAll('.b3-team__players')).map((node) => node.querySelectorAll('.b3-team-player').length)`);
 if (manualCheck.length !== 3 || manualCheck.some((size) => size !== 4)) throw new Error(`Manual assignment failed: ${JSON.stringify(manualCheck)}`);
 
+await evaluate(`document.querySelector('#historyButton').click()`);
+await waitFor(`document.querySelectorAll('.b3-history-game').length === 1`);
+const historyListCheck = await evaluate(`({
+  open: document.querySelector('#historyDialog').open,
+  games: document.querySelectorAll('.b3-history-game').length,
+  overflow: document.querySelector('#historyDialog').scrollWidth - document.querySelector('#historyDialog').clientWidth
+})`);
+if (!historyListCheck.open || historyListCheck.games !== 1 || historyListCheck.overflow > 1) throw new Error(`History list mobile check failed: ${JSON.stringify(historyListCheck)}`);
+await screenshot('history-list-mobile.png');
+await evaluate(`document.querySelector('[data-edit-game-id]').click()`);
+await waitFor(`!document.querySelector('#historyEditor').classList.contains('is-hidden')`);
+await evaluate(`(() => {
+  document.querySelector('[data-history-index="0"] [data-history-round="team2"]').click();
+  document.querySelector('#historyAdminKey').value = 'QA-EDIT';
+  document.querySelector('#historyNote').value = 'QA correction';
+})()`);
+const historyEditorCheck = await evaluate(`({
+  rounds: document.querySelectorAll('#historyRounds .b3-round').length,
+  selected: document.querySelector('[data-history-index="0"]').dataset.choice,
+  overflow: document.querySelector('#historyDialog').scrollWidth - document.querySelector('#historyDialog').clientWidth
+})`);
+if (historyEditorCheck.rounds !== 3 || historyEditorCheck.selected !== 'team2' || historyEditorCheck.overflow > 1) throw new Error(`History editor mobile check failed: ${JSON.stringify(historyEditorCheck)}`);
+await screenshot('history-editor-mobile.png');
+await evaluate(`document.querySelector('#historySaveButton').click()`);
+await waitFor(`document.querySelector('#historyStatus').textContent.includes('Прихований рейтинг оновлено')`, 30000);
+const historySaveCheck = await evaluate(`({
+  editCalls: window.__balance3Qa.editCalls,
+  revision: window.__balance3Qa.historyGames[0].revision,
+  series: window.__balance3Qa.historyGames[0].series,
+  keyRemembered: sessionStorage.getItem('balance3:admin-edit-key') === 'QA-EDIT'
+})`);
+if (historySaveCheck.editCalls !== 1 || historySaveCheck.revision !== 2 || historySaveCheck.series !== '211' || !historySaveCheck.keyRemembered) throw new Error(`History save check failed: ${JSON.stringify(historySaveCheck)}`);
+await evaluate(`document.querySelector('#historyDialog').close()`);
+
 await command('Emulation.setDeviceMetricsOverride', {
   width: 1280,
   height: 800,
@@ -358,9 +439,12 @@ console.log(JSON.stringify({
   duplicateRecoveryCheck,
   noBlindRetryCheck,
   manualCheck,
+  historyListCheck,
+  historyEditorCheck,
+  historySaveCheck,
   desktopCheck,
   restoreSurvivalCheck,
-  screenshots: ['artifacts/balance3-qa/settings-hidden-rating-mobile.png', 'artifacts/balance3-qa/teams-12-mobile.png', 'artifacts/balance3-qa/result-10-mobile.png', 'artifacts/balance3-qa/teams-2-desktop.png'],
+  screenshots: ['artifacts/balance3-qa/settings-hidden-rating-mobile.png', 'artifacts/balance3-qa/teams-12-mobile.png', 'artifacts/balance3-qa/result-10-mobile.png', 'artifacts/balance3-qa/history-list-mobile.png', 'artifacts/balance3-qa/history-editor-mobile.png', 'artifacts/balance3-qa/teams-2-desktop.png'],
 }, null, 2));
 
 await command('Page.close');

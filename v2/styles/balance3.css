@@ -29,6 +29,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .b3-header h1 { margin: 0; font-size: 40px; line-height: 1; letter-spacing: 0; }
 .b3-kicker { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
 .b3-home { color: #e9f3ff; text-decoration: none; border-bottom: 1px solid #6e8290; padding: 8px 0; }
+.b3-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 
 .b3-status, .b3-restore { border: 1px solid var(--line); background: var(--surface); padding: 12px; margin-bottom: 12px; }
 .b3-status { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; flex-wrap: wrap; }
@@ -48,10 +49,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .b3-steps button[aria-current="step"] span { background: var(--blue-dark); border-color: var(--blue); }
 
 .b3-stage { display: grid; gap: 18px; }
+.b3-stage[data-stage="result"] { padding-bottom: 92px; }
 .b3-toolbar, .b3-filter-row, .b3-settings-grid, .b3-match-selectors, .b3-mvp-grid { display: grid; gap: 12px; }
 .b3-toolbar { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 label > span, fieldset legend, .b3-round-count > span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
-select, input[type="search"] { width: 100%; min-height: 46px; border: 1px solid #46535d; border-radius: 4px; background: #11161a; color: #fff; padding: 9px 11px; }
+select, input[type="search"], input[type="date"], input[type="text"], input[type="password"] { width: 100%; min-height: 46px; border: 1px solid #46535d; border-radius: 4px; background: #11161a; color: #fff; padding: 9px 11px; }
 
 .b3-button { min-height: 44px; border: 1px solid #52616c; border-radius: 4px; background: #20282e; color: #f5f8fa; padding: 9px 14px; font-weight: 700; }
 .b3-button:hover { background: #29343c; }
@@ -124,13 +126,43 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .b3-match-summary .is-leading { background: rgba(49, 201, 117, .16); color: #8df0b7; }
 .b3-match-summary .is-trailing { background: rgba(240, 100, 100, .14); color: #ffaaaa; }
 .b3-match-summary .is-draw { background: #e9ecef; color: #111; }
-.b3-mvp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.b3-mvp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); scroll-margin-bottom: 92px; }
 .b3-save-bar { position: sticky; bottom: 0; z-index: 15; padding: 10px 0 max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #0b0e11; }
 .b3-last-save { border: 1px solid var(--green); background: rgba(49,201,117,.1); padding: 12px; }
+
+.b3-history-dialog { width: min(760px, calc(100% - 24px)); max-height: min(880px, calc(100dvh - 24px)); margin: auto; padding: 0; border: 1px solid #52616c; border-radius: 6px; background: #0f1418; color: #fff; }
+.b3-history-dialog::backdrop { background: rgba(0, 0, 0, .76); }
+.b3-history-shell { display: grid; align-content: start; gap: 16px; padding: 16px; max-height: calc(100dvh - 26px); overflow: auto; }
+.b3-history-head { position: sticky; top: -16px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -16px -16px 0; padding: 16px; border-bottom: 1px solid var(--line); background: #0f1418; }
+.b3-history-head h2, .b3-history-editor h3 { margin: 0; font-size: 21px; }
+.b3-icon-button { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; border: 1px solid #52616c; border-radius: 4px; background: #20282e; color: #fff; font-size: 28px; line-height: 1; }
+.b3-history-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.b3-history-status { min-height: 22px; margin: 0; color: var(--muted); }
+.b3-history-status[data-tone="success"] { color: #8df0b7; }
+.b3-history-status[data-tone="error"] { color: #ffaaaa; }
+.b3-history-status[data-tone="warning"] { color: #ffd47a; }
+.b3-history-list { display: grid; gap: 8px; }
+.b3-history-game { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px; border: 1px solid var(--line); background: var(--surface); }
+.b3-history-game__time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.b3-history-game__teams { min-width: 0; }
+.b3-history-game__teams strong, .b3-history-game__teams span { display: block; overflow-wrap: anywhere; }
+.b3-history-game__teams span { margin-top: 3px; color: var(--muted); font-size: 13px; }
+.b3-history-game__winner { color: #8df0b7; }
+.b3-history-editor { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+.b3-history-editor .b3-round { grid-template-columns: 34px repeat(3, minmax(0, 1fr)); }
+.b3-history-editor .b3-round button { min-height: 46px; border: 1px solid #4c5962; border-radius: 4px; background: #1a2025; color: #dbe3e7; padding: 6px; overflow-wrap: anywhere; }
+.b3-history-editor .b3-round[data-choice="team1"] button[data-history-round="team1"],
+.b3-history-editor .b3-round[data-choice="team2"] button[data-history-round="team2"] { background: #176b3d; border-color: #54db8e; color: #fff; }
+.b3-history-editor .b3-round[data-choice="team1"] button[data-history-round="team2"],
+.b3-history-editor .b3-round[data-choice="team2"] button[data-history-round="team1"] { background: #6e2929; border-color: #ed7878; color: #fff; }
+.b3-history-editor .b3-round[data-choice="draw"] button[data-history-round="draw"] { background: #f1f3f4; border-color: #fff; color: #111; }
 
 @media (max-width: 680px) {
   .b3-shell { padding-inline: 12px; }
   .b3-header h1 { font-size: 32px; }
+  .b3-header { align-items: flex-start; }
+  .b3-header-actions { display: grid; justify-items: end; gap: 4px; }
+  .b3-header-actions .b3-button { min-height: 40px; padding-inline: 10px; }
   .b3-steps { margin-inline: -12px; padding-inline: 8px; }
   .b3-toolbar, .b3-filter-row, .b3-settings-grid, .b3-mvp-grid { grid-template-columns: 1fr; }
   .b3-player-list { grid-template-columns: 1fr; }
@@ -141,6 +173,11 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .b3-match-summary { grid-template-columns: 1fr; }
   .b3-match-summary > div { border-right: 0; border-bottom: 1px solid var(--line); }
   .b3-match-summary > div:last-child { border-bottom: 0; }
+  .b3-history-dialog { width: 100%; max-width: none; max-height: 100dvh; height: 100dvh; border: 0; border-radius: 0; }
+  .b3-history-shell { min-height: 100dvh; max-height: 100dvh; padding: 12px; }
+  .b3-history-head { top: -12px; margin: -12px -12px 0; padding: 12px; }
+  .b3-history-game { grid-template-columns: 58px minmax(0, 1fr); }
+  .b3-history-game .b3-button { grid-column: 1 / -1; width: 100%; }
 }
 
 @media (max-width: 390px) {

@@ -125,6 +125,8 @@ function doPost(e) {
         // 7) Прихований рейтинг Balance3. Не впливає на офіційні Points.
         if (action === 'getSkillRatings') return handleGetSkillRatings_(payload);
         if (action === 'syncSkillRatings') return handleSyncSkillRatings_(payload);
+        if (action === 'listRegularGames') return handleListRegularGames_(payload);
+        if (action === 'editRegularGame') return handleEditRegularGame_(payload);
 
         // Unknown
         return JsonErr(new Error('Unknown action'));
@@ -355,6 +357,16 @@ function handleGetProfile_(payload) {
 
 /* ===================== REGULAR GAME (form-urlencoded) ===================== */
 function handleRegularGame_(params) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    return handleRegularGameLocked_(params);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleRegularGameLocked_(params) {
   const payload = params || {};
   const ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
   const now = new Date();
@@ -363,6 +375,7 @@ function handleRegularGame_(params) {
   // 1) Game log
   const gamesSheet = ss.getSheetByName('games');
   if (!gamesSheet) throw new Error('games not found');
+  ensureRegularGameColumns_(gamesSheet);
   const hdrGames = gamesSheet.getRange(1, 1, 1, gamesSheet.getLastColumn()).getValues()[0]
     .map(h => h.toString().trim().toLowerCase());
   ['mvp2', 'mvp3'].forEach(col => {
@@ -371,6 +384,13 @@ function handleRegularGame_(params) {
       hdrGames.push(col);
     }
   });
+  const requestId = String(payload.requestId || '').trim();
+  const requestIdCol = hdrGames.indexOf('requestid') + 1;
+  if (requestId && requestIdCol > 0 && gamesSheet.getLastRow() > 1) {
+    const duplicate = gamesSheet.getRange(2, requestIdCol, gamesSheet.getLastRow() - 1, 1)
+      .createTextFinder(requestId).matchEntireCell(true).findNext();
+    if (duplicate) return JsonOK({status:'OK', duplicate:true, requestId});
+  }
   const rowGames = hdrGames.map(h => {
     switch (h) {
       case 'timestamp': return now;
@@ -385,6 +405,9 @@ function handleRegularGame_(params) {
       case 'mvp3':      return payload.mvp3 || '';
       case 'series':    return payload.series || '';
       case 'penalties': return payload.penalties || '';
+      case 'requestid': return requestId;
+      case 'revision':  return 1;
+      case 'updatedat': return now;
       default:          return '';
     }
   });
@@ -474,6 +497,271 @@ function handleRegularGame_(params) {
   });
 
   return JsonOK({status:'OK', players: updatedPlayers});
+}
+
+const REGULAR_GAME_EXTRA_HEADERS_ = ['RequestId', 'Revision', 'UpdatedAt', 'CorrectionNote'];
+const REGULAR_EDIT_KEY_PROP_ = 'BALANCE3_ADMIN_EDIT_KEY';
+
+function ensureRegularGameColumns_(sheet) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(value => normalizeHeader_(value));
+  REGULAR_GAME_EXTRA_HEADERS_.forEach(header => {
+    if (!headers.includes(normalizeHeader_(header))) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+      headers.push(normalizeHeader_(header));
+    }
+  });
+}
+
+function requireRegularEditKey_(payload) {
+  const configured = String(PropertiesService.getScriptProperties().getProperty(REGULAR_EDIT_KEY_PROP_) || '').trim();
+  if (!configured) {
+    const error = new Error('Редагування ще не активовано адміністратором');
+    error.code = 'EDIT_KEY_NOT_CONFIGURED';
+    throw error;
+  }
+  if (String(payload && payload.adminKey || '').trim() !== configured) {
+    const error = new Error('Невірний код адміністратора');
+    error.code = 'INVALID_ADMIN_KEY';
+    throw error;
+  }
+}
+
+function regularGameId_(rowNumber, timestamp) {
+  const millis = timestamp instanceof Date ? timestamp.getTime() : new Date(timestamp).getTime();
+  return `regular:${rowNumber}:${Number.isFinite(millis) ? millis : 0}`;
+}
+
+function regularGameFromRow_(headers, row, rowNumber) {
+  const value = name => row[getIdx_(headers.map, name)];
+  const timestamp = value('timestamp');
+  return {
+    gameId: regularGameId_(rowNumber, timestamp),
+    rowNumber,
+    timestamp,
+    league: normalizeLeague_(value('league')),
+    team1: String(value('team1') || ''),
+    team2: String(value('team2') || ''),
+    winner: String(value('winner') || ''),
+    mvp: String(value('mvp') || ''),
+    mvp2: String(value('mvp2') || ''),
+    mvp3: String(value('mvp3') || ''),
+    series: String(value('series') || ''),
+    penalties: String(value('penalties') || ''),
+    revision: Math.max(1, Number(value('revision')) || 1),
+    updatedAt: value('updatedat') || ''
+  };
+}
+
+function handleListRegularGames_(payload) {
+  const league = normalizeLeague_(payload && payload.league);
+  if (!['kids', 'sundaygames'].includes(league)) throw new Error('Invalid league');
+  const date = String(payload && payload.date || '').trim();
+  const since = String(payload && payload.since || '').trim();
+  if (!date && !/^\d{4}-\d{2}-\d{2}$/.test(since)) throw new Error('date or since required');
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('games');
+  if (!sheet) throw new Error('games not found');
+  ensureRegularGameColumns_(sheet);
+  const headers = buildHeaderIndex_(sheet);
+  const rows = sheet.getLastRow() > 1
+    ? sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues()
+    : [];
+  const timezone = ss.getSpreadsheetTimeZone() || Session.getScriptTimeZone();
+  const games = rows.map((row, index) => regularGameFromRow_(headers, row, index + 2))
+    .filter(game => game.league === league)
+    .filter(game => {
+      const key = game.timestamp instanceof Date
+        ? Utilities.formatDate(game.timestamp, timezone, 'yyyy-MM-dd')
+        : String(game.timestamp || '').slice(0, 10);
+      return date ? key === date : key >= since;
+    })
+    .slice(-500)
+    .map(game => ({
+      ...game,
+      timestamp: game.timestamp instanceof Date
+        ? Utilities.formatDate(game.timestamp, timezone, 'dd.MM.yyyy HH:mm:ss')
+        : String(game.timestamp || '')
+    }));
+  return JsonOK({status:'OK', games});
+}
+
+function splitRegularTeam_(value) {
+  return String(value || '').replace(/\r?\n/g, ',').split(/[;,]/)
+    .map(nick => nick.trim()).filter(Boolean);
+}
+
+function regularSeriesTokens_(value) {
+  return (String(value || '').match(/[012]/g) || []).slice(0, 10);
+}
+
+function regularWinnerFromSeries_(value) {
+  const tokens = regularSeriesTokens_(value);
+  if (tokens.length < 1) throw new Error('Серія не містить результатів боїв');
+  const team1 = tokens.filter(token => token === '1').length;
+  const team2 = tokens.filter(token => token === '2').length;
+  return team1 > team2 ? 'team1' : team2 > team1 ? 'team2' : 'tie';
+}
+
+function regularPenaltyMap_(value) {
+  const result = {};
+  String(value || '').split(',').forEach(item => {
+    const parts = item.split(':');
+    const nick = String(parts[0] || '').trim();
+    if (nick) result[nick] = parseInt(parts[1], 10) || 0;
+  });
+  return result;
+}
+
+function scoreRegularGame_(game, points) {
+  const teams = {team1: splitRegularTeam_(game.team1), team2: splitRegularTeam_(game.team2)};
+  const players = Array.from(new Set(teams.team1.concat(teams.team2)));
+  const penalties = regularPenaltyMap_(game.penalties);
+  const mvp = [game.mvp, game.mvp2, game.mvp3].map(value => String(value || '').trim());
+  players.forEach(nick => {
+    const current = Number(points[nick]);
+    if (!Number.isFinite(current)) throw new Error(`Немає базових поінтів для ${nick}`);
+    const partScore = ({F:0, E:-4, D:-6, C:-8, B:-10, A:-12, S:-14})[rankLetterForPoints(current)] || 0;
+    const winScore = game.winner !== 'tie' && teams[game.winner] && teams[game.winner].includes(nick) ? 20 : 0;
+    const mvpBonus = nick === mvp[0] ? 12 : nick === mvp[1] ? 7 : nick === mvp[2] ? 3 : 0;
+    points[nick] = current + partScore + winScore + mvpBonus + (penalties[nick] || 0);
+  });
+}
+
+function regularLogBaselines_(ss, games) {
+  const sheet = ss.getSheetByName('logs');
+  if (!sheet || sheet.getLastRow() < 2) throw new Error('logs not found');
+  const headers = buildHeaderIndex_(sheet);
+  const timestampIndex = getIdx_(headers.map, 'timestamp');
+  const leagueIndex = getIdx_(headers.map, 'league');
+  const nickIndex = getIdx_(headers.map, 'nickname');
+  const deltaIndex = getIdx_(headers.map, 'delta');
+  const pointsIndex = getIdx_(headers.map, 'newpoints');
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+  const wantedTimes = new Set(games.map(game => game.timestamp instanceof Date ? game.timestamp.getTime() : NaN));
+  const byKey = new Map();
+  rows.forEach(row => {
+    const timestamp = row[timestampIndex];
+    const millis = timestamp instanceof Date ? timestamp.getTime() : NaN;
+    if (!wantedTimes.has(millis)) return;
+    const league = normalizeLeague_(row[leagueIndex]);
+    const nick = String(row[nickIndex] || '').trim();
+    if (!nick) return;
+    byKey.set(`${millis}::${league}::${nick}`, (Number(row[pointsIndex]) || 0) - (Number(row[deltaIndex]) || 0));
+  });
+  return byKey;
+}
+
+function ensureRegularCorrectionSheet_(ss) {
+  let sheet = ss.getSheetByName('game_corrections');
+  if (!sheet) sheet = ss.insertSheet('game_corrections');
+  const headers = ['Timestamp','GameId','League','OldSeries','NewSeries','OldWinner','NewWinner','PointDeltas','Note','Revision'];
+  if (sheet.getLastRow() === 0) sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  return sheet;
+}
+
+function handleEditRegularGame_(payload) {
+  requireRegularEditKey_(payload);
+  const gameId = String(payload && payload.gameId || '').trim();
+  const series = regularSeriesTokens_(payload && payload.series).join('');
+  const winner = regularWinnerFromSeries_(series);
+  const expectedRevision = Math.max(1, Number(payload && payload.expectedRevision) || 1);
+  const note = String(payload && payload.note || '').trim().slice(0, 300);
+  if (!gameId) throw new Error('gameId required');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const gamesSheet = ss.getSheetByName('games');
+    if (!gamesSheet) throw new Error('games not found');
+    ensureRegularGameColumns_(gamesSheet);
+    const headers = buildHeaderIndex_(gamesSheet);
+    const match = gameId.match(/^regular:(\d+):(\d+)$/);
+    const rowNumber = match ? Number(match[1]) : 0;
+    if (rowNumber < 2 || rowNumber > gamesSheet.getLastRow()) throw new Error('Гру не знайдено');
+    const row = gamesSheet.getRange(rowNumber, 1, 1, gamesSheet.getLastColumn()).getValues()[0];
+    const original = regularGameFromRow_(headers, row, rowNumber);
+    if (original.gameId !== gameId) throw new Error('Запис гри змінився. Оновіть список і повторіть.');
+    if (original.revision !== expectedRevision) throw new Error('Цю гру вже редагували. Оновіть список.');
+    if (original.series === series && original.winner === winner) return JsonOK({status:'OK', unchanged:true, game:original});
+
+    const allRows = gamesSheet.getRange(rowNumber, 1, gamesSheet.getLastRow() - rowNumber + 1, gamesSheet.getLastColumn()).getValues();
+    const futureGames = allRows.map((values, index) => regularGameFromRow_(headers, values, rowNumber + index))
+      .filter(game => game.league === original.league);
+    const baselines = regularLogBaselines_(ss, futureGames);
+    const originalPoints = {};
+    const correctedPoints = {};
+    futureGames.forEach((game, index) => {
+      const players = Array.from(new Set(splitRegularTeam_(game.team1).concat(splitRegularTeam_(game.team2))));
+      players.forEach(nick => {
+        if (Number.isFinite(originalPoints[nick])) return;
+        const millis = game.timestamp instanceof Date ? game.timestamp.getTime() : NaN;
+        const baseline = baselines.get(`${millis}::${game.league}::${nick}`);
+        if (!Number.isFinite(baseline)) throw new Error(`Не вдалося відновити поінти до гри для ${nick}`);
+        originalPoints[nick] = baseline;
+        correctedPoints[nick] = baseline;
+      });
+      scoreRegularGame_(game, originalPoints);
+      scoreRegularGame_(index === 0 ? {...game, series, winner} : game, correctedPoints);
+    });
+
+    const pointDeltas = {};
+    Object.keys(correctedPoints).forEach(nick => {
+      const delta = correctedPoints[nick] - originalPoints[nick];
+      if (delta) pointDeltas[nick] = delta;
+    });
+
+    const rankSheet = ss.getSheetByName(original.league === 'kids' ? 'kids' : 'sundaygames');
+    if (!rankSheet) throw new Error('Ranking sheet not found');
+    const rankHeaders = buildHeaderIndex_(rankSheet);
+    const nickColumn = getIdx_(rankHeaders.map, 'nickname') + 1;
+    const pointsColumn = getIdx_(rankHeaders.map, 'points') + 1;
+    const rankUpdates = Object.keys(pointDeltas).map(nick => {
+      const cell = rankSheet.getRange(2, nickColumn, Math.max(rankSheet.getLastRow() - 1, 1), 1)
+        .createTextFinder(nick).matchEntireCell(true).findNext();
+      if (!cell) throw new Error(`Гравця ${nick} не знайдено`);
+      const pointsCell = rankSheet.getRange(cell.getRow(), pointsColumn);
+      const nextPoints = (Number(pointsCell.getValue()) || 0) + pointDeltas[nick];
+      return {nick, pointsCell, nextPoints};
+    });
+    const correctionTimestamp = new Date();
+    const correctionRows = rankUpdates.map(update => [
+      correctionTimestamp,
+      original.league,
+      update.nick,
+      pointDeltas[update.nick],
+      update.nextPoints
+    ]);
+
+    // Resolve every target before the first mutation so a missing player cannot leave a partial correction.
+    rankUpdates.forEach(update => update.pointsCell.setValue(update.nextPoints));
+
+    gamesSheet.getRange(rowNumber, getIdx_(headers.map, 'winner') + 1).setValue(winner);
+    gamesSheet.getRange(rowNumber, getIdx_(headers.map, 'series') + 1).setValue(series);
+    gamesSheet.getRange(rowNumber, getIdx_(headers.map, 'revision') + 1).setValue(original.revision + 1);
+    gamesSheet.getRange(rowNumber, getIdx_(headers.map, 'updatedat') + 1).setValue(new Date());
+    gamesSheet.getRange(rowNumber, getIdx_(headers.map, 'correctionnote') + 1).setValue(note);
+
+    if (correctionRows.length) {
+      const logsSheet = ss.getSheetByName('logs');
+      logsSheet.getRange(logsSheet.getLastRow() + 1, 1, correctionRows.length, correctionRows[0].length).setValues(correctionRows);
+    }
+    ensureRegularCorrectionSheet_(ss).appendRow([
+      new Date(), gameId, original.league, original.series, series, original.winner, winner,
+      JSON.stringify(pointDeltas), note, original.revision + 1
+    ]);
+    SpreadsheetApp.flush();
+    return JsonOK({
+      status:'OK',
+      game:{...original, series, winner, revision:original.revision + 1},
+      pointDeltas,
+      skillSyncRequired:true
+    });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ===================== BALANCE3 SHADOW SKILL REGISTRY ===================== */

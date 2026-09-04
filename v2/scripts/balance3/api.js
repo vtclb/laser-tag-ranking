@@ -119,6 +119,27 @@ async function postJson(payload, timeoutMs = 15000) {
   return data;
 }
 
+export async function listRegularGames({ league, date = '', since = '' } = {}) {
+  const data = await postJson({
+    action: 'listRegularGames',
+    league: normalizeLeague(league),
+    date,
+    since,
+  }, 20000);
+  return Array.isArray(data.games) ? data.games : [];
+}
+
+export async function editRegularGame({ adminKey, gameId, expectedRevision, series, note = '' } = {}) {
+  return postJson({
+    action: 'editRegularGame',
+    adminKey,
+    gameId,
+    expectedRevision,
+    series,
+    note,
+  }, 30000);
+}
+
 export async function loadSkillRegistry(league) {
   const data = await postJson({ action: 'getSkillRatings', league: normalizeLeague(league) });
   return Array.isArray(data.ratings) ? data.ratings : [];
@@ -144,6 +165,29 @@ export async function syncSkillRegistry(league, players, registry = {}) {
   });
   if (!ratings.length) return { status: 'OK', updated: 0 };
   return postJson({ action: 'syncSkillRatings', league: normalizedLeague, ratings });
+}
+
+export async function syncSkillRatingsFromGames(league, games = []) {
+  const normalizedLeague = normalizeLeague(league);
+  const players = await loadLeaguePlayers(normalizedLeague, { force: true });
+  const baselineMatches = await loadSkillBaselineMatches(normalizedLeague).catch(() => []);
+  const normalizedGames = (Array.isArray(games) ? games : []).map((game) => ({
+    ...normalizeSkillMatch(game),
+    timestamp: game.timestamp ?? game.date ?? '',
+  }));
+  const shadow = baselineMatches.length
+    ? buildSeasonSkillShadow(normalizedGames, baselineMatches)
+    : calculateSkillRatings(normalizedGames);
+  const refreshed = players.map((player) => normalizePlayer({
+    ...player,
+    ...(shadow.ratings[player.nick] || {}),
+  }, normalizedLeague));
+  await syncSkillRegistry(normalizedLeague, refreshed, shadow.registry || {
+    sourceMatches: shadow.metrics.matches,
+    version: SKILL_RATING_VERSION,
+  });
+  savePlayerCache(normalizedLeague, refreshed);
+  return refreshed;
 }
 
 function normalizedNick(value) {

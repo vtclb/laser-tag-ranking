@@ -5,6 +5,7 @@ import test from 'node:test';
 const gasSource = await fs.readFile(new URL('../gas/doPost.gs', import.meta.url), 'utf8');
 const appSource = await fs.readFile(new URL('../v2/scripts/balance3/app.js', import.meta.url), 'utf8');
 const htmlSource = await fs.readFile(new URL('../v2/balance3.html', import.meta.url), 'utf8');
+const dataHubSource = await fs.readFile(new URL('../v2/core/dataHub.js', import.meta.url), 'utf8');
 
 const gasHelpers = new Function(`${gasSource}\nreturn { regularWinnerFromSeries_, scoreRegularGame_ };`)();
 
@@ -57,6 +58,14 @@ test('GAS keeps the live read endpoint required by the rating site', () => {
   assert.match(gasSource, /handleGetSheetRaw_/);
   assert.match(gasSource, /PUBLIC_READABLE_SHEETS_/);
   assert.match(gasSource, /PUBLIC_SHEET_READ_LIMIT_/);
+});
+
+test('game-day details recompute edited games instead of showing stale log deltas', () => {
+  assert.match(dataHubSource, /revision: find\(\['revision'\]\)/);
+  assert.match(dataHubSource, /revision: Math\.max\(1, Number\(row\[i\.revision\]\) \|\| 1\)/);
+  assert.match(dataHubSource, /const localChanges = m\.revision > 1 \? \[\] : dayLogs\.filter/);
+  assert.match(dataHubSource, /const staleWinnerLogs =/);
+  assert.match(dataHubSource, /if \(staleWinnerLogs\) return fallbackChanges/);
 });
 
 test('Balance3 exposes a mobile saved-game editor and refreshes hidden ratings', () => {

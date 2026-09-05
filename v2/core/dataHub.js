@@ -10,7 +10,7 @@ import { buildAchievementProfile, buildAchievementStandings } from './achievemen
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260905-live-results1';
+const SHEET_CACHE_VERSION = 'sheets-20260905-live-results3';
 const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260831-summer2026';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
@@ -1109,6 +1109,7 @@ function parseMatches(sheet) {
     mvp2: find(['mvp2', 'top2']),
     mvp3: find(['mvp3', 'top3']),
     rounds: find(['rounds', 'series']),
+    revision: find(['revision']),
     gameRef: find(['gameid', 'game', 'matchid', 'match', 'sessionid', 'session']),
     link: find(['pdf', 'log', 'link', 'url'])
   };
@@ -1131,6 +1132,7 @@ function parseMatches(sheet) {
       gameRef: String(row[i.gameRef] || '').trim(),
       link: String(row[i.link] || '').trim(),
       rawSeries,
+      revision: Math.max(1, Number(row[i.revision]) || 1),
       roundsCount,
       rounds: roundsCount
     };
@@ -3105,15 +3107,23 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
         delta += mvpByNick.get(key) || 0;
         delta += hasBefore ? rankPenaltyForPoints(before) : 0;
         const newPoints = hasBefore ? before + delta : null;
-        changes.push({ nick, delta, newPoints, source: 'computed' });
+        changes.push({ nick, teamKey, delta, newPoints, source: 'computed' });
       });
     });
     return changes;
   };
-  const mergeMatchChanges = (exactChanges = [], fallbackChanges = []) => {
+  const mergeMatchChanges = (exactChanges = [], fallbackChanges = [], winner = '') => {
     const exactByNick = new Map((Array.isArray(exactChanges) ? exactChanges : [])
       .filter((entry) => normalizeHeader(entry.nick))
       .map((entry) => [normalizeHeader(entry.nick), entry]));
+    const staleWinnerLogs = exactByNick.size === fallbackChanges.length && fallbackChanges.length > 0
+      && fallbackChanges.every((entry) => {
+        const exactDelta = Number(exactByNick.get(normalizeHeader(entry.nick))?.delta);
+        if (!Number.isFinite(exactDelta)) return false;
+        const expectedDifference = entry.teamKey === winner ? GAME_WIN_POINTS : -GAME_WIN_POINTS;
+        return Number(entry.delta) - exactDelta === expectedDifference;
+      });
+    if (staleWinnerLogs) return fallbackChanges;
     return (Array.isArray(fallbackChanges) ? fallbackChanges : []).map((entry) => {
       const key = normalizeHeader(entry.nick);
       const exact = exactByNick.get(key);
@@ -3182,7 +3192,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
     const winner = normalizeWinnerToken(m.winner);
     const participantKeys = new Set(Object.values(teams).flat().map(normalizeHeader));
     const tsMs = Date.parse(m.timestamp || '');
-    const localChanges = dayLogs.filter((entry) => {
+    const localChanges = m.revision > 1 ? [] : dayLogs.filter((entry) => {
       const nickKey = normalizeHeader(entry.nick);
       if (!participantKeys.has(nickKey)) return false;
       if (!Number.isFinite(tsMs) || !Number.isFinite(entry.tsMs)) return true;
@@ -3195,7 +3205,7 @@ export async function getGameDay(dateOrOptions = {}, leagueArg = 'kids') {
       source: 'logs'
     }));
     const fallbackChanges = buildFallbackMatchChanges(teams, winner, m);
-    const pointsChanges = mergeMatchChanges(exactChanges, fallbackChanges);
+    const pointsChanges = mergeMatchChanges(exactChanges, fallbackChanges, winner);
     applyRunningPoints(pointsChanges);
     const changeByNick = new Map(pointsChanges.map((entry) => [normalizeHeader(entry.nick), entry]));
 

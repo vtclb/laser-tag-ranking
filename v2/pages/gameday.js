@@ -1,4 +1,4 @@
-﻿import { getGameDay } from '../core/dataHub.js?v=20260905-live-results1';
+﻿import { getGameDay } from '../core/dataHub.js?v=20260905-live-results3';
 import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';

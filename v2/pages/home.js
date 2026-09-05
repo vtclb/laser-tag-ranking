@@ -1,4 +1,4 @@
-import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260905-live-results4';
+import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260905-avatars1';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { leagueLabelUA } from '../core/naming.js';
 import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate, statusLabel } from './tournaments.js';
@@ -10,7 +10,7 @@ const STATS_LINKS = {
   sundaygames: '#league-stats?league=sundaygames',
   kids: '#league-stats?league=kids'
 };
-const FALLBACK_AVATAR = './assets/default-avatar.svg';
+const FALLBACK_AVATAR = '/v2/assets/default-avatar.svg';
 
 function esc(v) {
   return String(v ?? '')

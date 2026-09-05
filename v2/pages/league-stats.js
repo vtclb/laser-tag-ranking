@@ -1,4 +1,4 @@
-﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js?v=20260905-live-results4';
+﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js?v=20260905-avatars1';
 import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
@@ -7,7 +7,7 @@ import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 import { filterPublicPlayers, findExactHiddenPlayer, isHiddenPublicNick, rerankPublicPlayers } from '../core/playerVisibility.js?v=20260831-private-player1';
 
 const RANKS = ['S', 'A', 'B', 'C', 'D', 'E', 'F'];
-const FALLBACK_AVATAR = './assets/default-avatar.svg';
+const FALLBACK_AVATAR = '/v2/assets/default-avatar.svg';
 
 function esc(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'); }
 function renderDataQualityPanel(dataQuality) {

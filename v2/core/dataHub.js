@@ -10,7 +10,7 @@ import { buildAchievementProfile, buildAchievementStandings } from './achievemen
 const cache = new Map();
 const inFlight = new Map();
 const STORAGE_PREFIX = 'lt_cache_v2::';
-const SHEET_CACHE_VERSION = 'sheets-20260905-live-results4';
+const SHEET_CACHE_VERSION = 'sheets-20260905-avatars1';
 const STATIC_SEASON_CACHE_VERSION = 'static-seasons-20260831-summer2026';
 const STATIC_SEASON_CACHE = new Map();
 let homeGamesParseCache = { ts: 0, key: '', rows: [] };
@@ -2154,17 +2154,30 @@ export async function getAvatarsMap() {
   const key = 'avatars';
   const cached = readCache(key, TTL.avatars);
   if (cached) return cached;
+  const map = new Map();
   try {
     const payload = await gasCall('listAvatars', {}, 12_000, TTL.avatars);
     const items = Array.isArray(payload?.items) ? payload.items : Array.isArray(payload?.rows) ? payload.rows : [];
-    const map = new Map();
     items.forEach((item) => {
       const nick = String(item.nick || item.Nick || '').trim();
       const url = String(item.url || item.URL || '').trim();
       if (nick && url) map.set(normalizeHeader(nick), url);
     });
-    return writeCache(key, map);
-  } catch { return new Map(); }
+  } catch {}
+  if (!map.size) {
+    try {
+      const sheet = await readSheet('avatars', { limitRows: 2000, limitCols: 10 });
+      const header = (sheet.header || []).map(normalizeHeader);
+      const nickIndex = header.findIndex((value) => ['nickname', 'nick'].includes(value));
+      const urlIndex = header.findIndex((value) => ['avatarurl', 'avatar', 'url'].includes(value));
+      (sheet.rows || []).forEach((row) => {
+        const nick = String(row?.[nickIndex] || '').trim();
+        const url = String(row?.[urlIndex] || '').trim();
+        if (nick && url) map.set(normalizeHeader(nick), url);
+      });
+    } catch {}
+  }
+  return writeCache(key, map);
 }
 
 export async function getCurrentSeason() {

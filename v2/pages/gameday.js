@@ -1,10 +1,10 @@
-﻿import { getGameDay } from '../core/dataHub.js?v=20260905-live-results4';
+﻿import { getGameDay } from '../core/dataHub.js?v=20260905-avatars1';
 import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';
 import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 
-const DEFAULT_AVATAR_URL = './assets/default-avatar.svg';
+const DEFAULT_AVATAR_URL = '/v2/assets/default-avatar.svg';
 
 function esc(v) {
   return String(v ?? '')

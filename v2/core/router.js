@@ -269,7 +269,7 @@ async function renderRoute() {
 
     if (route === 'main') {
       if (!await mountTemplate('./pages/index.html', renderId)) return;
-      const { initHomePage } = await import('../pages/home.js?v=20260905-live-results3');
+      const { initHomePage } = await import('../pages/home.js?v=20260905-live-results4');
       await runPageInit(route, initHomePage, {}, renderId);
       return;
     }
@@ -289,15 +289,15 @@ async function renderRoute() {
     }
 
     if (route === 'league-stats') {
-      if (!await mountTemplate('./pages/league.html?v=20260905-live-results3', renderId)) return;
-      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260905-live-results3');
+      if (!await mountTemplate('./pages/league.html?v=20260905-live-results4', renderId)) return;
+      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260905-live-results4');
       await runPageInit(route, initLeagueStatsPage, { league: queryParams.league }, renderId);
       return;
     }
 
     if (route === 'gameday') {
       if (!await mountTemplate('./pages/gameday.html', renderId)) return;
-      const { initGameDayPage } = await import('../pages/gameday.js?v=20260905-live-results3');
+      const { initGameDayPage } = await import('../pages/gameday.js?v=20260905-live-results4');
       await runPageInit(route, initGameDayPage, { league: queryParams.league, date: queryParams.date }, renderId);
       return;
     }

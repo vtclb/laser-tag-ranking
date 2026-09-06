@@ -1,5 +1,6 @@
 import { MAX_PLAYERS, TEAM_IDS } from './config.js';
 import {
+  adminCreatePlayer,
   createRequestId,
   editRegularGame,
   listRegularGames,
@@ -14,6 +15,8 @@ import {
   buildRegularPayload,
   createInitialState,
   normalizePlayer,
+  normalizeNewPlayerInput,
+  findPlayerByNick,
   regularGameFingerprint,
   selectedPlayers,
   teamPlayers,
@@ -39,6 +42,68 @@ let draftDecisionPending = Boolean(pendingDraft?.selectedKeys?.length);
 let historyGames = [];
 let editingGame = null;
 let editingSeries = [];
+
+function setNewPlayerStatus(message, tone = 'neutral') {
+  const node = $('newPlayerStatus');
+  node.textContent = message;
+  node.dataset.tone = tone;
+}
+
+function openNewPlayerDialog() {
+  $('newPlayerLeague').value = getState().league;
+  $('newPlayerNick').value = '';
+  $('newPlayerAge').value = '';
+  $('newPlayerAdminKey').value = sessionStorage.getItem('balance3:admin-edit-key') || '';
+  setNewPlayerStatus('');
+  $('newPlayerDialog').showModal();
+  $('newPlayerNick').focus();
+}
+
+async function createNewPlayer(event) {
+  event.preventDefault();
+  const input = normalizeNewPlayerInput({ nick: $('newPlayerNick').value, age: $('newPlayerAge').value });
+  if (!input.ok) {
+    setNewPlayerStatus(input.message, 'error');
+    return;
+  }
+  const adminKey = $('newPlayerAdminKey').value.trim();
+  if (!adminKey) {
+    setNewPlayerStatus('Введіть код адміністратора', 'error');
+    $('newPlayerAdminKey').focus();
+    return;
+  }
+  const league = $('newPlayerLeague').value;
+  const button = $('newPlayerSaveButton');
+  button.disabled = true;
+  button.textContent = 'Створюємо...';
+  setNewPlayerStatus('Перевіряємо та додаємо гравця...', 'warning');
+  try {
+    const result = await adminCreatePlayer({ adminKey, league, nick: input.nick, age: input.age });
+    if (result.status === 'DUPLICATE') {
+      setNewPlayerStatus('Такий нік уже є в цій лізі. Перевірте написання.', 'error');
+      return;
+    }
+    sessionStorage.setItem('balance3:admin-edit-key', adminKey);
+    if (getState().league !== league) {
+      const next = createInitialState();
+      next.league = league;
+      replaceState(next);
+    }
+    const refreshedPlayers = await loadPlayers({ force: true, selectNick: input.nick });
+    if (!findPlayerByNick(refreshedPlayers, input.nick)) {
+      notice('warning', `${input.nick} створено, але список не оновився. Натисніть «Завантажити гравців».`, { requestId: '' });
+      $('newPlayerDialog').close();
+      return;
+    }
+    notice('success', `${input.nick} створено і додано в лобі. Стартові поінти: 100.`, { requestId: '' });
+    $('newPlayerDialog').close();
+  } catch (error) {
+    setNewPlayerStatus(error?.message || 'Не вдалося створити гравця', 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Створити й додати в лобі';
+  }
+}
 
 function localDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -217,7 +282,7 @@ function ensureActiveTeams(state) {
   return { ...state, activeTeamA, activeTeamB };
 }
 
-async function loadPlayers({ force = false } = {}) {
+async function loadPlayers({ force = false, selectNick = '' } = {}) {
   pendingDraft = null;
   draftDecisionPending = false;
   hideRestoreBanner();
@@ -225,19 +290,26 @@ async function loadPlayers({ force = false } = {}) {
   try {
     const league = getState().league;
     const players = await loadLeaguePlayers(league, { force });
-    updateState((state) => ({
-      ...resetTeamsAndMatch(state),
-      players,
-      playersLoaded: true,
-      selectedKeys: state.selectedKeys.filter((key) => players.some((player) => player.key === key)),
-      save: {
-        status: 'success',
-        message: `Завантажено гравців: ${players.length}. Внутрішня оцінка сили готова.`,
-        requestId: '',
-      },
-    }));
+    updateState((state) => {
+      const selectedKeys = state.selectedKeys.filter((key) => players.some((player) => player.key === key));
+      const createdPlayer = selectNick ? findPlayerByNick(players, selectNick) : null;
+      if (createdPlayer && !selectedKeys.includes(createdPlayer.key)) selectedKeys.push(createdPlayer.key);
+      return {
+        ...resetTeamsAndMatch(state),
+        players,
+        playersLoaded: true,
+        selectedKeys,
+        save: {
+          status: 'success',
+          message: `Завантажено гравців: ${players.length}. Внутрішня оцінка сили готова.`,
+          requestId: '',
+        },
+      };
+    });
+    return players;
   } catch (error) {
     notice('error', error?.message || 'Не вдалося завантажити гравців', { requestId: '' });
+    return [];
   }
 }
 
@@ -468,6 +540,12 @@ function cancelPendingSave() {
 }
 
 function bindEvents() {
+  $('newPlayerButton').addEventListener('click', openNewPlayerDialog);
+  $('newPlayerCloseButton').addEventListener('click', () => $('newPlayerDialog').close());
+  $('newPlayerForm').addEventListener('submit', createNewPlayer);
+  $('newPlayerDialog').addEventListener('click', (event) => {
+    if (event.target === $('newPlayerDialog')) $('newPlayerDialog').close();
+  });
   $('historyButton').addEventListener('click', openHistory);
   $('historyCloseButton').addEventListener('click', () => $('historyDialog').close());
   $('historyLoadButton').addEventListener('click', loadHistory);

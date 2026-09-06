@@ -221,11 +221,21 @@ function handleRegister_(payload) {
 
 // адмінське створення гравця з балансера
 function handleAdminCreatePlayer_(payload) {
+  requireRegularEditKey_(payload);
   const league = normalizeLeague_(payload.league);
   if (!league || (league !== 'kids' && league !== 'sundaygames')) throw new Error('Invalid league');
-  const nick = (payload.nick || '').trim();
+  const nick = String(payload.nick || '').trim().replace(/\s+/g, ' ');
   if (!nick) throw new Error('Empty nick');
+  if (nick.length > 32) throw new Error('Нік має містити не більше 32 символів');
+  if (/[\u0000-\u001f\u007f]/.test(nick)) throw new Error('Нік містить недопустимі символи');
+  const ageText = String(payload.age == null ? '' : payload.age).trim();
+  if (ageText && (!/^\d{1,2}$/.test(ageText) || Number(ageText) < 5 || Number(ageText) > 99)) {
+    throw new Error('Вік має бути від 5 до 99 років');
+  }
 
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = ss.getSheetByName(league);
   if (!sheet) throw new Error('Sheet not found');
@@ -240,9 +250,13 @@ function handleAdminCreatePlayer_(payload) {
   const nickCol = hdr2.indexOf('Nickname') + 1;
   if (nickCol < 1) throw new Error('Nickname column missing');
 
-  const existing = sheet.getRange(2, nickCol, Math.max(sheet.getLastRow() - 1, 0), 1)
-    .createTextFinder(nick).matchEntireCell(true).findNext();
-  if (existing) return JsonOK({status:'DUPLICATE'});
+  const existingNicks = sheet.getLastRow() > 1
+    ? sheet.getRange(2, nickCol, sheet.getLastRow() - 1, 1).getDisplayValues().flat()
+    : [];
+  const normalizedNick = nick.toLowerCase();
+  if (existingNicks.some(value => String(value || '').trim().replace(/\s+/g, ' ').toLowerCase() === normalizedNick)) {
+    return JsonOK({status:'DUPLICATE'});
+  }
 
   const points = Number(payload.points) || 100;
   const row = [
@@ -252,7 +266,7 @@ function handleAdminCreatePlayer_(payload) {
     payload.gender || '',
     payload.contact || '',
     payload.experience || '',
-    payload.age || ''
+    ageText ? Number(ageText) : ''
   ];
 
   const hasAb = hdr2.indexOf('abonement_type') > -1 && hdr2.indexOf('abonement_start') > -1 && hdr2.indexOf('abonement_usage') > -1;
@@ -264,6 +278,9 @@ function handleAdminCreatePlayer_(payload) {
   sheet.appendRow(row);
 
   return JsonOK({status:'OK', player:{league, nick, points}});
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // видати / оновити access_key

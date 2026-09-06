@@ -98,6 +98,8 @@ if (!LIVE_READONLY) await command('Page.addScriptToEvaluateOnNewDocument', {
       const csv = ${JSON.stringify(csv)};
       const gamesCsv = ${JSON.stringify(gamesCsv)};
       const qa = window.__balance3Qa = {
+        playerCsv: csv,
+        playerCreates: 0,
         saveMode: 'success',
         saveCalls: 0,
         editCalls: 0,
@@ -121,7 +123,7 @@ if (!LIVE_READONLY) await command('Page.addScriptToEvaluateOnNewDocument', {
       window.fetch = async (input, init = {}) => {
         const url = String(input?.url || input || '');
         if (url.includes('laser-proxy.vartaclub.workers.dev/fetchLeagueCsv')) {
-          return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv' } });
+          return new Response(qa.playerCsv, { status: 200, headers: { 'Content-Type': 'text/csv' } });
         }
         if (url.includes('docs.google.com/spreadsheets') && url.includes('gid=249347260')) {
           return new Response([gamesCsv, ...qa.savedRows].join('\\n'), { status: 200, headers: { 'Content-Type': 'text/csv' } });
@@ -132,6 +134,14 @@ if (!LIVE_READONLY) await command('Page.addScriptToEvaluateOnNewDocument', {
             : null;
           if (jsonPayload?.action === 'getSkillRatings') {
             return new Response(JSON.stringify({ status: 'OK', ratings: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          }
+          if (jsonPayload?.action === 'adminCreatePlayer') {
+            if (jsonPayload.adminKey !== 'QA-EDIT') {
+              return new Response(JSON.stringify({ status: 'ERR', message: 'Невірний код адміністратора' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            qa.playerCreates += 1;
+            qa.playerCsv += '\\n' + jsonPayload.nick + ',100';
+            return new Response(JSON.stringify({ status: 'OK', player: { league: jsonPayload.league, nick: jsonPayload.nick, points: 100 } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
           }
           if (jsonPayload?.action === 'syncSkillRatings') {
             return new Response(JSON.stringify({ status: 'OK', updated: jsonPayload.ratings?.length || 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -382,6 +392,29 @@ const historySaveCheck = await evaluate(`({
 if (historySaveCheck.editCalls !== 1 || historySaveCheck.revision !== 2 || historySaveCheck.series !== '211' || !historySaveCheck.keyRemembered) throw new Error(`History save check failed: ${JSON.stringify(historySaveCheck)}`);
 await evaluate(`document.querySelector('#historyDialog').close()`);
 
+await evaluate(`document.querySelector('#newPlayerButton').click()`);
+await waitFor(`document.querySelector('#newPlayerDialog').open`);
+await screenshot('new-player-dialog-mobile.png');
+await evaluate(`(() => {
+  document.querySelector('#newPlayerNick').value = 'New QA Player';
+  document.querySelector('#newPlayerAge').value = '16';
+  document.querySelector('#newPlayerAdminKey').value = 'QA-EDIT';
+  document.querySelector('#newPlayerForm').requestSubmit();
+})()`);
+await waitFor(`!document.querySelector('#newPlayerDialog').open && document.querySelector('#statusText').textContent.includes('New QA Player')`, 30000);
+const playerAdminCheck = await evaluate(`({
+  creates: window.__balance3Qa.playerCreates,
+  players: document.querySelectorAll('[data-player-key]').length,
+  selected: document.querySelector('#selectionCount').textContent,
+  newPlayerSelected: document.querySelector('[data-player-key="sundaygames::New QA Player"]')?.getAttribute('aria-pressed'),
+  keyRemembered: sessionStorage.getItem('balance3:admin-edit-key') === 'QA-EDIT',
+  overflow: document.documentElement.scrollWidth - window.innerWidth
+})`);
+if (playerAdminCheck.creates !== 1 || playerAdminCheck.players !== 51 || !playerAdminCheck.selected.includes('13 / 50') || playerAdminCheck.newPlayerSelected !== 'true' || !playerAdminCheck.keyRemembered || playerAdminCheck.overflow > 1) {
+  throw new Error(`Player admin mobile check failed: ${JSON.stringify(playerAdminCheck)}`);
+}
+await screenshot('new-player-mobile.png');
+
 await command('Emulation.setDeviceMetricsOverride', {
   width: 1280,
   height: 800,
@@ -442,9 +475,10 @@ console.log(JSON.stringify({
   historyListCheck,
   historyEditorCheck,
   historySaveCheck,
+  playerAdminCheck,
   desktopCheck,
   restoreSurvivalCheck,
-  screenshots: ['artifacts/balance3-qa/settings-hidden-rating-mobile.png', 'artifacts/balance3-qa/teams-12-mobile.png', 'artifacts/balance3-qa/result-10-mobile.png', 'artifacts/balance3-qa/history-list-mobile.png', 'artifacts/balance3-qa/history-editor-mobile.png', 'artifacts/balance3-qa/teams-2-desktop.png'],
+  screenshots: ['artifacts/balance3-qa/settings-hidden-rating-mobile.png', 'artifacts/balance3-qa/teams-12-mobile.png', 'artifacts/balance3-qa/result-10-mobile.png', 'artifacts/balance3-qa/history-list-mobile.png', 'artifacts/balance3-qa/history-editor-mobile.png', 'artifacts/balance3-qa/new-player-dialog-mobile.png', 'artifacts/balance3-qa/new-player-mobile.png', 'artifacts/balance3-qa/teams-2-desktop.png'],
 }, null, 2));
 
 await command('Page.close');

@@ -53,7 +53,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .b3-toolbar, .b3-filter-row, .b3-settings-grid, .b3-match-selectors, .b3-mvp-grid { display: grid; gap: 12px; }
 .b3-toolbar { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 label > span, fieldset legend, .b3-round-count > span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
-select, input[type="search"], input[type="date"], input[type="text"], input[type="password"] { width: 100%; min-height: 46px; border: 1px solid #46535d; border-radius: 4px; background: #11161a; color: #fff; padding: 9px 11px; }
+select, input[type="search"], input[type="date"], input[type="text"], input[type="password"], input[type="number"] { width: 100%; min-height: 46px; border: 1px solid #46535d; border-radius: 4px; background: #11161a; color: #fff; padding: 9px 11px; }
 
 .b3-button { min-height: 44px; border: 1px solid #52616c; border-radius: 4px; background: #20282e; color: #f5f8fa; padding: 9px 14px; font-weight: 700; }
 .b3-button:hover { background: #29343c; }
@@ -63,6 +63,7 @@ select, input[type="search"], input[type="date"], input[type="text"], input[type
 .b3-button--wide { width: 100%; }
 .b3-button:disabled { cursor: not-allowed; opacity: .48; }
 .b3-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.b3-toolbar-actions { display: flex; gap: 8px; align-items: center; }
 
 .b3-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
 .b3-section-head h2, .b3-settings h2 { margin: 0; font-size: 21px; letter-spacing: 0; }
@@ -149,6 +150,8 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .b3-history-game__teams span { margin-top: 3px; color: var(--muted); font-size: 13px; }
 .b3-history-game__winner { color: #8df0b7; }
 .b3-history-editor { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+.b3-new-player-form { gap: 14px; }
+.b3-new-player-form .b3-note { margin: 0; }
 .b3-history-editor .b3-round { grid-template-columns: 34px repeat(3, minmax(0, 1fr)); }
 .b3-history-editor .b3-round button { min-height: 46px; border: 1px solid #4c5962; border-radius: 4px; background: #1a2025; color: #dbe3e7; padding: 6px; overflow-wrap: anywhere; }
 .b3-history-editor .b3-round[data-choice="team1"] button[data-history-round="team1"],
@@ -165,6 +168,8 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .b3-header-actions .b3-button { min-height: 40px; padding-inline: 10px; }
   .b3-steps { margin-inline: -12px; padding-inline: 8px; }
   .b3-toolbar, .b3-filter-row, .b3-settings-grid, .b3-mvp-grid { grid-template-columns: 1fr; }
+  .b3-toolbar-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .b3-toolbar-actions .b3-button { min-width: 0; padding-inline: 8px; }
   .b3-player-list { grid-template-columns: 1fr; }
   .b3-team-grid { grid-template-columns: 1fr; }
   .b3-round-count__options { grid-template-columns: repeat(4, minmax(44px, 1fr)); }
@@ -185,6 +190,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .b3-steps button span { display: none; }
   .b3-match-selectors { grid-template-columns: 1fr; }
   .b3-versus { padding: 0; text-align: center; }
+  .b3-toolbar-actions { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

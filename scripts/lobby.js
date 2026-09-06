@@ -282,13 +282,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const createBtn = document.getElementById('btn-create');
   const newNick = document.getElementById('new-nick');
   const newAge  = document.getElementById('new-age');
+  const newAdminKey = document.getElementById('new-admin-key');
   if (createBtn && newNick && newAge) {
     createBtn.addEventListener('click', async () => {
       const nick = newNick.value.trim();
       if (!nick) return;
       const age = parseInt(newAge.value, 10) || 0;
+      const adminKey = newAdminKey?.value.trim() || sessionStorage.getItem('balance3:admin-edit-key') || '';
+      if (!adminKey) {
+        const msg = 'Введіть код адміністратора';
+        if (typeof showToast === 'function') showToast(msg); else alert(msg);
+        newAdminKey?.focus();
+        return;
+      }
       try {
-        const status = await adminCreatePlayer({ league: state.league, nick, age });
+        const status = await adminCreatePlayer({ adminKey, league: state.league, nick, age });
         if (status === 'DUPLICATE') {
           if (typeof showToast === 'function') {
             showToast('Такий нік вже існує');
@@ -298,6 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         if (status === 'OK') {
+          sessionStorage.setItem('balance3:admin-edit-key', adminKey);
           const newPlayer = { nick, pts: 0, rank: 'D', abonement: 'none' };
           players.push(newPlayer);
           filtered.push(newPlayer);

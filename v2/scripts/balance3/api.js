@@ -119,6 +119,27 @@ async function postJson(payload, timeoutMs = 15000) {
   return data;
 }
 
+export async function adminCreatePlayer({ adminKey, league, nick, age = '' } = {}) {
+  const response = await fetchWithTimeout(PROXY_ORIGIN, {
+    method: 'POST',
+    credentials: 'omit',
+    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+    body: JSON.stringify({
+      action: 'adminCreatePlayer',
+      adminKey,
+      league: normalizeLeague(league),
+      nick,
+      age,
+    }),
+  }, 20000);
+  const data = await response.json().catch(() => null);
+  const status = String(data?.status || '').toUpperCase();
+  if (!response.ok || !['OK', 'DUPLICATE'].includes(status)) {
+    throw new Error(data?.message || `Створення гравця повернуло HTTP ${response.status}`);
+  }
+  return { ...data, status };
+}
+
 export async function listRegularGames({ league, date = '', since = '' } = {}) {
   const data = await postJson({
     action: 'listRegularGames',

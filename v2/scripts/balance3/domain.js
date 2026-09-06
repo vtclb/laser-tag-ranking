@@ -58,6 +58,23 @@ export function normalizePlayer(player = {}, league = 'sundaygames') {
   };
 }
 
+export function normalizeNewPlayerInput({ nick, age } = {}) {
+  const normalizedNick = String(nick || '').trim().replace(/\s+/g, ' ');
+  const ageText = String(age ?? '').trim();
+  if (!normalizedNick) return { ok: false, message: 'Введіть нік гравця' };
+  if (normalizedNick.length > 32) return { ok: false, message: 'Нік має містити не більше 32 символів' };
+  if (/[\u0000-\u001f\u007f]/.test(normalizedNick)) return { ok: false, message: 'Нік містить недопустимі символи' };
+  if (ageText && (!/^\d{1,2}$/.test(ageText) || Number(ageText) < 5 || Number(ageText) > 99)) {
+    return { ok: false, message: 'Вік має бути від 5 до 99 років' };
+  }
+  return { ok: true, nick: normalizedNick, age: ageText ? Number(ageText) : '' };
+}
+
+export function findPlayerByNick(players = [], nick = '') {
+  const target = String(nick || '').trim().toLocaleLowerCase('uk');
+  return (Array.isArray(players) ? players : []).find((player) => String(player?.nick || '').trim().toLocaleLowerCase('uk') === target) || null;
+}
+
 export function createEmptyTeams() {
   return Object.fromEntries(TEAM_IDS.map((teamId) => [teamId, []]));
 }

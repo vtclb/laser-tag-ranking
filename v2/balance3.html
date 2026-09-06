@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101418">
   <title>Балансер 3 | Varta</title>
-  <link rel="stylesheet" href="./styles/balance3.css?v=20260904-game-edit">
+  <link rel="stylesheet" href="./styles/balance3.css?v=20260906-player-admin">
 </head>
 <body>
   <main class="b3-shell" id="balance3App">
@@ -53,7 +53,10 @@
             <option value="kids">Дитяча</option>
           </select>
         </label>
-        <button class="b3-button b3-button--primary" id="loadPlayersButton" type="button">Завантажити гравців</button>
+        <div class="b3-toolbar-actions">
+          <button class="b3-button" id="newPlayerButton" type="button">Новий гравець</button>
+          <button class="b3-button b3-button--primary" id="loadPlayersButton" type="button">Завантажити гравців</button>
+        </div>
       </div>
 
       <div class="b3-section-head">
@@ -183,6 +186,40 @@
     </div>
   </dialog>
 
-  <script type="module" src="./scripts/balance3/app.js?v=20260904-game-edit"></script>
+  <dialog class="b3-history-dialog b3-player-dialog" id="newPlayerDialog" aria-labelledby="newPlayerTitle">
+    <form class="b3-history-shell b3-new-player-form" id="newPlayerForm">
+      <header class="b3-history-head">
+        <div>
+          <p class="b3-kicker">Склад ліги</p>
+          <h2 id="newPlayerTitle">Новий гравець</h2>
+        </div>
+        <button class="b3-icon-button" id="newPlayerCloseButton" type="button" aria-label="Закрити">×</button>
+      </header>
+      <p class="b3-note">Гравець отримає стартові 100 поінтів і одразу з'явиться в лобі.</p>
+      <label>
+        <span>Ліга</span>
+        <select id="newPlayerLeague">
+          <option value="sundaygames">Доросла</option>
+          <option value="kids">Дитяча</option>
+        </select>
+      </label>
+      <label>
+        <span>Нік гравця</span>
+        <input id="newPlayerNick" type="text" maxlength="32" autocomplete="off" autocapitalize="none" placeholder="Введіть точний нік" required>
+      </label>
+      <label>
+        <span>Вік (необов'язково)</span>
+        <input id="newPlayerAge" type="number" min="5" max="99" inputmode="numeric" placeholder="Наприклад: 16">
+      </label>
+      <label>
+        <span>Код адміністратора</span>
+        <input id="newPlayerAdminKey" type="password" autocomplete="current-password" required>
+      </label>
+      <p class="b3-history-status" id="newPlayerStatus" role="status" aria-live="polite"></p>
+      <button class="b3-button b3-button--primary b3-button--wide" id="newPlayerSaveButton" type="submit">Створити й додати в лобі</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="./scripts/balance3/app.js?v=20260906-player-admin"></script>
 </body>
 </html>

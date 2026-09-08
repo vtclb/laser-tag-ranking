@@ -1,11 +1,11 @@
 // Changelog (Codex): safe rounds parsing, home snapshot top5/stats normalization, and battles/rounds consistency for Home/GameDay summaries.
-import seasonsConfig from './seasons.config.js?v=20260908-archive-recovery1';
+import seasonsConfig from './seasons.config.js?v=20260908-log-dates1';
 import { jsonp } from './utils.js';
 import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueKey } from './naming.js';
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
 import { makeDataStatus } from './dataStatus.js';
 import { debugLog, debugWarn } from './debug.js';
-import { buildAchievementProfile, buildAchievementStandings } from './achievementEngine.js?v=20260908-archive-recovery1';
+import { buildAchievementProfile, buildAchievementStandings } from './achievementEngine.js?v=20260908-log-dates1';
 
 const cache = new Map();
 const inFlight = new Map();
@@ -966,6 +966,30 @@ function parseScoreboardRows(sheet, league) {
   })).filter((row) => row.nick && (!row.rowLeague || row.rowLeague === target)).map(({ rowLeague, ...rest }) => rest);
 }
 
+export function parseLogTimestamp(value = '') {
+  const text = String(value || '').trim();
+  const local = text.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:[ ,T]+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (!local) return /^\d{2}\.\d{2}\./.test(text) ? NaN : Date.parse(text);
+  const [, dd, mm, yyyy, hh = '00', min = '00', ss = '00'] = local;
+  const wallTime = Date.UTC(+yyyy, +mm - 1, +dd, +hh, +min, +ss);
+  const date = new Date(wallTime);
+  if (date.getUTCFullYear() !== +yyyy || date.getUTCMonth() !== +mm - 1 || date.getUTCDate() !== +dd || +hh > 23 || +min > 59 || +ss > 59) return NaN;
+  // Sheet timestamps without an offset are Kyiv wall time, not the viewer's timezone.
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Kyiv', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+  });
+  let instant = wallTime;
+  for (let i = 0; i < 3; i += 1) {
+    const parts = Object.fromEntries(formatter.formatToParts(instant).map(part => [part.type, part.value]));
+    const displayed = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+    const correction = wallTime - displayed;
+    if (!correction) return instant;
+    instant += correction;
+  }
+  return NaN;
+}
+
 function parseDateOnly(value = '') {
   const src = String(value || '').trim();
   if (!src) return '';
@@ -1361,7 +1385,7 @@ function countScheduledDays(dateStart = '', dateEnd = '', todayYMD = getKyivToda
   return { total, completed, upcoming: Math.max(0, total - completed) };
 }
 
-function parseLogs(sheet) {
+export function parseLogs(sheet) {
   const header = (sheet.header || []).map(normalizeHeader);
   const find = (names) => header.findIndex((h) => names.includes(h));
   const i = {
@@ -1428,7 +1452,7 @@ function parseLogs(sheet) {
     const delta = toNumber(row[i.delta], null);
     const newPoints = toNumber(row[i.newPoints], null);
     const date = parseDateOnly(timestamp);
-    const tsMs = Date.parse(timestamp);
+    const tsMs = parseLogTimestamp(timestamp);
     return { timestamp, tsMs: Number.isFinite(tsMs) ? tsMs : null, date, league, nick, delta, newPoints };
   }).filter((entry) => entry.nick && (entry.delta !== null || entry.newPoints !== null));
 }
@@ -1581,7 +1605,7 @@ function normalizeLogs(rows = [], header = []) {
     const nickname = String(row?.[idxNick] || '').trim();
     const delta = toNumber(row?.[idxDelta], null);
     const newPoints = toNumber(row?.[idxNewPoints], null);
-    const tsMs = Date.parse(timestamp);
+    const tsMs = parseLogTimestamp(timestamp);
     return {
       timestamp,
       tsMs: Number.isFinite(tsMs) ? tsMs : null,
@@ -1726,7 +1750,7 @@ function buildAwards(players = [], recentGames = [], progress = {}) {
 
 export async function getCurrentLeagueLiveStats(leagueId = 'kids') {
   const league = normalizeLeague(leagueId) || 'kids';
-  const cacheKey = `league-live-current:${league}`;
+  const cacheKey = `league-live-current:v2:${league}`;
   let cachedEntry = readCacheEntry(cacheKey, TTL.leagueSnapshot);
   if (!cachedEntry) {
     const stored = readStorageCache(cacheKey, TTL.leagueSnapshot);

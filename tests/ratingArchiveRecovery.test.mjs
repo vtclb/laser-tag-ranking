@@ -2,7 +2,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildAchievementProfile } from '../v2/core/achievementEngine.js';
-import { buildSeasonBaselineByNick, getSeasonMaster } from '../v2/core/dataHub.js';
+import { buildSeasonBaselineByNick, getSeasonMaster, parseLogs, parseLogTimestamp } from '../v2/core/dataHub.js';
+
+test('sheet dates use day-month order and Kyiv timezone in summer and winter', () => {
+  assert.equal(new Date(parseLogTimestamp('05.09.2026 01:30:36')).toISOString(), '2026-09-04T22:30:36.000Z');
+  assert.equal(new Date(parseLogTimestamp('15.01.2026 12:00:00')).toISOString(), '2026-01-15T10:00:00.000Z');
+  assert.equal(parseLogTimestamp('2026-09-04T16:17:03.070Z'), Date.parse('2026-09-04T16:17:03.070Z'));
+  assert.ok(Number.isNaN(parseLogTimestamp('31.02.2026 12:00:00')));
+});
+
+test('later manual corrections never replace the season starting points', () => {
+  const rows = [
+    ['05.09.2026 01:30:36', 'sundaygames', 'Wolfie', 8, 805],
+    ['05.09.2026 01:30:36', 'sundaygames', 'wiedii', -2, 614],
+    ['2026-09-04T16:17:03.070Z', 'sundaygames', 'Wolfie', -10, 790],
+    ['2026-09-04T16:32:34.057Z', 'sundaygames', 'wiedii', -8, 592],
+  ];
+  const logs = parseLogs({ header: ['Timestamp', 'League', 'Nickname', 'Delta', 'NewPoints'], rows });
+  const baseline = buildSeasonBaselineByNick(logs, 'sundaygames', '2026-09-01', '2026-11-30');
+  assert.equal(baseline.get('wolfie'), 800);
+  assert.equal(baseline.get('wiedii'), 600);
+  assert.equal(792 - baseline.get('wolfie'), -8);
+  assert.equal(614 - baseline.get('wiedii'), 14);
+});
 
 test('2025 archives load from local snapshots without the retired API', async () => {
   const original = globalThis.fetch;

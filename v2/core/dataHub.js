@@ -131,7 +131,11 @@ async function fetchSeasonMasterApi(params = {}, timeoutMs = 12_000) {
       signal: controller.signal
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
+    const payload = await response.json();
+    if (String(payload?.status || '').toUpperCase() === 'ERR') {
+      throw new Error(payload.message || 'Season API error');
+    }
+    return payload;
   } catch (error) {
     if ((error?.name || '').includes('Abort')) throw new Error('Season API недоступний / timeout');
     throw error;
@@ -1460,7 +1464,7 @@ function deriveLogDeltas(entries = []) {
   });
 }
 
-function buildSeasonBaselineByNick(entries = [], league = '', seasonStart = '', seasonEnd = '') {
+export function buildSeasonBaselineByNick(entries = [], league = '', seasonStart = '', seasonEnd = '') {
   const baseline = new Map();
   deriveLogDeltas(entries)
     .filter((entry) => entry.league === league && inDateRange(entry.date, seasonStart, seasonEnd))
@@ -1468,8 +1472,8 @@ function buildSeasonBaselineByNick(entries = [], league = '', seasonStart = '', 
     .forEach((entry) => {
       const key = normalizeHeader(entry.nick);
       if (!key || baseline.has(key)) return;
-      const newPoints = Number(entry.newPoints);
-      const delta = Number(entry.delta);
+      const newPoints = toNumber(entry.newPoints, null);
+      const delta = toNumber(entry.delta, null);
       if (Number.isFinite(newPoints) && Number.isFinite(delta)) {
         baseline.set(key, newPoints - delta);
       }
@@ -2496,7 +2500,7 @@ export async function getSeasonMaster(seasonId) {
   if (!season) throw new Error('seasonId is required');
   if (seasonCache[season]) return seasonCache[season];
 
-  const storageKey = `season-master:${season}`;
+  const storageKey = `season-master:v2:${season}`;
   const stored = readStorageCache(storageKey, TTL.seasonMaster);
   if (stored) {
     seasonCache[season] = stored;
@@ -2863,11 +2867,11 @@ export async function getAchievementLeaderboard({ familyId = '', league = 'kids'
         Rank_final: player.rankLetter,
         league: selectedLeague
       };
-      addSeasonEntry(buildSeasonEntry(liveRow, {
+      addSeasonEntry({ ...buildSeasonEntry(liveRow, {
         seasonId: currentSeasonId,
         seasonTitle: currentSeasonTitle,
         profileLeagueContext: selectedLeague
-      }), { replace: true });
+      }), isCurrent: true }, { replace: true });
     });
   }
 

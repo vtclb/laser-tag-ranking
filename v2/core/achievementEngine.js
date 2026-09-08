@@ -25,6 +25,7 @@ function number(value, fallback = 0) {
 
 function firstNumber(source = {}, keys = [], fallback = 0) {
   for (const key of keys) {
+    if (source?.[key] === null || source?.[key] === undefined || String(source[key]).trim() === '') continue;
     const value = Number(source?.[key]);
     if (Number.isFinite(value)) return value;
   }
@@ -91,8 +92,8 @@ function normalizeStats(allTime = {}, seasons = [], context = {}) {
     mvpTotal,
     winRate: Math.max(0, winRate),
     seasonsPlayed: Math.max(firstNumber(allTime, ['seasonsPlayed']), safeSeasons.length),
-    podiums: safeSeasons.filter((season) => seasonPlace(season) <= 3).length,
-    titles: safeSeasons.filter((season) => seasonPlace(season) === 1).length,
+    podiums: safeSeasons.filter((season) => !season.isCurrent && seasonPlace(season) >= 1 && seasonPlace(season) <= 3).length,
+    titles: safeSeasons.filter((season) => !season.isCurrent && seasonPlace(season) === 1).length,
     bestDelta: Math.max(0, ...safeSeasons.map(seasonDelta).filter(Number.isFinite)),
     bestRank: String(allTime.bestRank || allTime.highestRank || 'F').trim().toUpperCase(),
     longestStreak: Number.isFinite(longestStreakRaw) ? Math.max(0, longestStreakRaw) : null

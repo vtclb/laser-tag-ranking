@@ -16,7 +16,7 @@ test('gameday shares the live league sheet cache key and caches its assembled vi
 
 test('season masters survive route reloads in short-lived session cache', () => {
   assert.match(dataHubSource, /seasonMaster: 300_000/);
-  assert.match(dataHubSource, /const storageKey = `season-master:\$\{season\}`/);
+  assert.match(dataHubSource, /const storageKey = `season-master:v2:\$\{season\}`/);
   assert.match(dataHubSource, /withInFlight\(`load:\$\{storageKey\}`/);
   assert.match(dataHubSource, /const sources = isDerivedSession \? \[window\.sessionStorage\]/);
 });

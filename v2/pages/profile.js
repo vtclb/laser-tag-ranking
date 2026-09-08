@@ -1151,6 +1151,7 @@ function buildCurrentSeasonRow(livePlayer, currentSeason, league) {
 
   return {
     seasonId: currentSeason.id,
+    isCurrent: true,
     seasonTitle: currentSeason.uiLabel || currentSeason.label || currentSeason.id,
     league,
     leagueLabel: leagueLabelUA(league),

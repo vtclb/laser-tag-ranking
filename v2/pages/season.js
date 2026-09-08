@@ -1,4 +1,4 @@
-import { listSeasonMasters, getSeasonMaster, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260831-season-close1';
+import { listSeasonMasters, getSeasonMaster, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260908-archive-recovery1';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 import { renderPageError } from '../core/pageState.js?v=20260715-load1';
 import { filterPublicPlayers } from '../core/playerVisibility.js?v=20260831-private-player1';

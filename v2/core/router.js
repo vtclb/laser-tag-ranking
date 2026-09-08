@@ -269,28 +269,28 @@ async function renderRoute() {
 
     if (route === 'main') {
       if (!await mountTemplate('./pages/index.html', renderId)) return;
-      const { initHomePage } = await import('../pages/home.js?v=20260905-avatars1');
+      const { initHomePage } = await import('../pages/home.js?v=20260908-archive-recovery1');
       await runPageInit(route, initHomePage, {}, renderId);
       return;
     }
 
     if (route === 'seasons') {
       if (!await mountTemplate('./pages/seasons.html', renderId)) return;
-      const { initSeasonsPage } = await import('../pages/seasons.js?v=20260831-season-close2');
+      const { initSeasonsPage } = await import('../pages/seasons.js?v=20260908-archive-recovery1');
       await runPageInit(route, initSeasonsPage, {}, renderId);
       return;
     }
 
     if (route === 'season') {
       if (!await mountTemplate('./pages/season.html', renderId)) return;
-      const { initSeasonPage } = await import('../pages/season.js?v=20260831-season-close2');
+      const { initSeasonPage } = await import('../pages/season.js?v=20260908-archive-recovery1');
       await runPageInit(route, initSeasonPage, { season: queryParams.season, league: queryParams.league }, renderId);
       return;
     }
 
     if (route === 'league-stats') {
-      if (!await mountTemplate('./pages/league.html?v=20260905-avatars1', renderId)) return;
-      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260905-avatars1');
+      if (!await mountTemplate('./pages/league.html?v=20260908-archive-recovery1', renderId)) return;
+      const { initLeagueStatsPage } = await import('../pages/league-stats.js?v=20260908-archive-recovery1');
       await runPageInit(route, initLeagueStatsPage, { league: queryParams.league }, renderId);
       return;
     }
@@ -304,7 +304,7 @@ async function renderRoute() {
 
     if (route === 'player') {
       if (!await mountTemplate('./pages/profile.html', renderId)) return;
-      const { initProfilePage } = await import('../pages/profile.js?v=20260831-season-close2');
+      const { initProfilePage } = await import('../pages/profile.js?v=20260908-archive-recovery1');
       await runPageInit(route, initProfilePage, { league: queryParams.league, nick: queryParams.nick }, renderId);
       return;
     }

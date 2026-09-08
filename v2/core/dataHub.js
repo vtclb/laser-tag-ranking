@@ -1,11 +1,11 @@
 // Changelog (Codex): safe rounds parsing, home snapshot top5/stats normalization, and battles/rounds consistency for Home/GameDay summaries.
-import seasonsConfig from './seasons.config.js?v=20260831-season-close1';
+import seasonsConfig from './seasons.config.js?v=20260908-archive-recovery1';
 import { jsonp } from './utils.js';
 import { leagueLabelUA, normalizeLeague as normalizeLeagueName, normalizeLeagueKey } from './naming.js';
 import { rankFromPoints as rankFromPointsByRules } from './rankRules.js';
 import { makeDataStatus } from './dataStatus.js';
 import { debugLog, debugWarn } from './debug.js';
-import { buildAchievementProfile, buildAchievementStandings } from './achievementEngine.js?v=20260816-award-flames2';
+import { buildAchievementProfile, buildAchievementStandings } from './achievementEngine.js?v=20260908-archive-recovery1';
 
 const cache = new Map();
 const inFlight = new Map();

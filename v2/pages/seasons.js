@@ -1,4 +1,4 @@
-import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js?v=20260831-season-close1';
+import { listSeasonMasters, getSeasonMaster, safeErrorMessage } from '../core/dataHub.js?v=20260908-archive-recovery1';
 import { debugWarn } from '../core/debug.js';
 import { leagueLabelUA, normalizeLeague } from '../core/naming.js';
 import { rankFromPoints } from '../core/rankRules.js';

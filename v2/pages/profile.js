@@ -7,8 +7,8 @@ import {
   getPlayerSeasonLogs,
   getSeasonsList,
   safeErrorMessage
-} from '../core/dataHub.js?v=20260831-season-close1';
-import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260816-award-flames2';
+} from '../core/dataHub.js?v=20260908-archive-recovery1';
+import { buildAchievementProfile, getAchievementFamily } from '../core/achievementEngine.js?v=20260908-archive-recovery1';
 import { normalizeLeague, normalizeLeagueKey, leagueLabelUA } from '../core/naming.js';
 import { getNextRankProgress } from '../core/rankRules.js';
 import { decodeParam, getRouteState, normalizePlayerKey } from '../core/utils.js';

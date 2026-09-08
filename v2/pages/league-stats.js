@@ -1,4 +1,4 @@
-﻿import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js?v=20260905-avatars1';
+import { getCurrentLeagueLiveStats, getCurrentSeason } from '../core/dataHub.js?v=20260908-archive-recovery1';
 import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';

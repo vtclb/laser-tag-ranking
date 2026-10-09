@@ -1,4 +1,4 @@
-import { ensureGlobalStyles } from '../pages/global-styles.js?v=20261009-mvp-mobile2';
+import { ensureGlobalStyles } from '../pages/global-styles.js?v=20261009-mvp-compact3';
 import { debugInfo, debugLog } from './debug.js';
 import { normalizeLeague } from './naming.js';
 
@@ -297,7 +297,7 @@ async function renderRoute() {
 
     if (route === 'gameday') {
       if (!await mountTemplate('./pages/gameday.html', renderId)) return;
-      const { initGameDayPage } = await import('../pages/gameday.js?v=20261009-mvp-mobile2');
+      const { initGameDayPage } = await import('../pages/gameday.js?v=20261009-mvp-compact3');
       await runPageInit(route, initGameDayPage, { league: queryParams.league, date: queryParams.date }, renderId);
       return;
     }

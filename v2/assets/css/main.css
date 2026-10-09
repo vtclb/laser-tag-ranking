@@ -12131,25 +12131,43 @@ body.theme-game .gameday-v2 .gameday-player-row__delta {
 }
 
 body.theme-game .gameday-v2 .gameday-player-row__awards {
-  grid-column: 2 / -1;
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   min-width: 0;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(205, 221, 242, .16);
+}
+
+body.theme-game .gameday-v2 .gameday-player-row__awards-title {
+  grid-column: 1 / -1;
+  font-size: .75rem;
+  font-weight: 600;
+  color: #cdddf2;
 }
 
 body.theme-game .gameday-v2 .gameday-player-row__award {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  text-align: center;
+  min-width: 0;
   gap: 4px;
-  font-size: .72rem;
+  padding: 3px 0;
+  font-size: .8125rem;
   letter-spacing: 0;
   color: #cdddf2;
   font-variant-numeric: tabular-nums;
 }
 
-body.theme-game .gameday-v2 .gameday-player-row__award.is-earned b { color: #f8d766; }
+body.theme-game .gameday-v2 .gameday-player-row__award + .gameday-player-row__award {
+  border-left: 1px solid rgba(205, 221, 242, .16);
+}
+body.theme-game .gameday-v2 .gameday-player-row__award-count b { font-size: 1.125rem; }
+body.theme-game .gameday-v2 .gameday-player-row__award.is-earned { color: #eef5ff; }
+body.theme-game .gameday-v2 .gameday-player-row__award--1.is-earned .gameday-player-row__award-label { color: #f8d766; }
+body.theme-game .gameday-v2 .gameday-player-row__award--2.is-earned .gameday-player-row__award-label { color: #dae4f2; }
+body.theme-game .gameday-v2 .gameday-player-row__award--3.is-earned .gameday-player-row__award-label { color: #e8ae88; }
 body.theme-game .gameday-v2 .gameday-player-row__award.is-empty { color: #8995a6; }
 
 body.theme-game .gameday-v2 .gameday-player-row__mvp {

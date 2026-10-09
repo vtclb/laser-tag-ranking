@@ -186,10 +186,12 @@ export function buildPlayersTable(players = [], league = 'sundaygames') {
             </span>
             <span class="gameday-player-row__delta ${tone}">${esc(fmtDelta(delta))}</span>
             <span class="gameday-player-row__awards" aria-label="MVP за день">
+              <span class="gameday-player-row__awards-title">MVP за день</span>
               ${[1, 2, 3].map((place) => {
                 const value = Number(p[`mvp${place}`]);
                 const count = Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
-                return `<span class="gameday-player-row__award ${count ? 'is-earned' : 'is-empty'}"><span>MVP ${place}</span><b>${count}</b></span>`;
+                const unit = count % 10 === 1 && count % 100 !== 11 ? 'раз' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'рази' : 'разів';
+                return `<span class="gameday-player-row__award gameday-player-row__award--${place} ${count ? 'is-earned' : 'is-empty'}"><span class="gameday-player-row__award-label">${place} місце</span><span class="gameday-player-row__award-count"><b>${count}</b> ${unit}</span></span>`;
               }).join('')}
             </span>
           </a>`;

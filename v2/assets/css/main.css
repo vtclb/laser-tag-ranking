@@ -12130,6 +12130,28 @@ body.theme-game .gameday-v2 .gameday-player-row__delta {
   line-height: 1 !important;
 }
 
+body.theme-game .gameday-v2 .gameday-player-row__awards {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+body.theme-game .gameday-v2 .gameday-player-row__award {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: .72rem;
+  letter-spacing: 0;
+  color: #cdddf2;
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-game .gameday-v2 .gameday-player-row__award.is-earned b { color: #f8d766; }
+body.theme-game .gameday-v2 .gameday-player-row__award.is-empty { color: #8995a6; }
+
 body.theme-game .gameday-v2 .gameday-player-row__mvp {
   font-weight: 900 !important;
   letter-spacing: .02em !important;

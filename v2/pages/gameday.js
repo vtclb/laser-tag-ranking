@@ -166,7 +166,7 @@ function getPlayerGameDelta(nick = '', pointsChanges = []) {
   return Number(item?.delta) || 0;
 }
 
-function buildPlayersTable(players = [], league = 'sundaygames') {
+export function buildPlayersTable(players = [], league = 'sundaygames') {
   if (!players.length) {
     return '<p class="px-card__text">Для цього дня гравців ще немає.</p>';
   }
@@ -185,6 +185,13 @@ function buildPlayersTable(players = [], league = 'sundaygames') {
               <span><b class="gameday-rank-letter ${rankClass(p.rankAfter || p.rankLetter)}">${esc(fmtRank(p.rankAfter || p.rankLetter))}</b> · ${esc(String(p.pointsAfter ?? 0))} очок · ${esc(`${p.matches ?? 0} іг / ${p.wins ?? 0} пер`)}</span>
             </span>
             <span class="gameday-player-row__delta ${tone}">${esc(fmtDelta(delta))}</span>
+            <span class="gameday-player-row__awards" aria-label="MVP за день">
+              ${[1, 2, 3].map((place) => {
+                const value = Number(p[`mvp${place}`]);
+                const count = Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
+                return `<span class="gameday-player-row__award ${count ? 'is-earned' : 'is-empty'}"><span>MVP ${place}</span><b>${count}</b></span>`;
+              }).join('')}
+            </span>
           </a>`;
       }).join('')}
     </div>`;

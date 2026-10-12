@@ -1,4 +1,4 @@
-﻿import { getGameDay } from '../core/dataHub.js?v=20260905-avatars1';
+import { getGameDay } from '../core/dataHub.js?v=20261012-mvp-weights1';
 import { DEBUG, debugLog, debugWarn } from '../core/debug.js';
 import { normalizeLeague, leagueLabelUA } from '../core/naming.js';
 import { getRouteState } from '../core/utils.js';

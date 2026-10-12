@@ -297,7 +297,7 @@ async function renderRoute() {
 
     if (route === 'gameday') {
       if (!await mountTemplate('./pages/gameday.html', renderId)) return;
-      const { initGameDayPage } = await import('../pages/gameday.js?v=20261009-mvp-compact3');
+      const { initGameDayPage } = await import('../pages/gameday.js?v=20261012-mvp-weights1');
       await runPageInit(route, initGameDayPage, { league: queryParams.league, date: queryParams.date }, renderId);
       return;
     }

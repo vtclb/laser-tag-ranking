@@ -2432,7 +2432,7 @@ export async function getHomeFast() {
   });
 }
 
-function getGameDaySummaryFromMatches(matches = [], nicknameByKey = new Map()) {
+export function getGameDaySummaryFromMatches(matches = [], nicknameByKey = new Map()) {
   const mvpRows = new Map();
   const registerMvp = (nick, scoreValue = 0, mvp1Value = 0) => {
     const key = normalizeHeader(nick);
@@ -2444,9 +2444,9 @@ function getGameDaySummaryFromMatches(matches = [], nicknameByKey = new Map()) {
   };
 
   (Array.isArray(matches) ? matches : []).forEach((match) => {
-    registerMvp(match?.mvp1, 3, 1);
-    registerMvp(match?.mvp2, 2, 0);
-    registerMvp(match?.mvp3, 1, 0);
+    registerMvp(match?.mvp1, 12, 1);
+    registerMvp(match?.mvp2, 7, 0);
+    registerMvp(match?.mvp3, 3, 0);
   });
 
   const leader = [...mvpRows.values()].sort((a, b) => b.score - a.score || b.mvp1 - a.mvp1 || a.key.localeCompare(b.key, 'uk'))[0] || null;

@@ -561,6 +561,12 @@ async function safeInitHomePage(root) {
       <section class="section" id="leagueSections"></section>
       <section class="section home-dashboard-level home-dashboard-level--tertiary" id="homeSeasonPulseMount"></section>
       <section class="home-dashboard-level home-dashboard-level--secondary" aria-label="Додаткові блоки">
+        <section class="px-card" aria-labelledby="home-halloween-title">
+          <p class="px-card__text">СЦЕНАРНА ПОДІЯ ВАРТИ</p>
+          <h2 id="home-halloween-title" class="px-card__title">HALLOWEEN 2026</h2>
+          <p class="px-card__text">Колекції, випробування й окремі результати. Без впливу на очки ліг.</p>
+          <a class="btn" href="#halloween">Результати Halloween</a>
+        </section>
         <div id="homeGameDayMount"></div>
         <div id="homeTournamentsMount"></div>
       </section>

@@ -6,7 +6,7 @@ const templateCache = new Map();
 const TEMPLATE_TIMEOUT_MS = 10_000;
 const V2_BASE_URL = new URL('../', import.meta.url);
 let routeRenderSequence = 0;
-const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments']);
+const knownRoutes = new Set(['main', 'seasons', 'season', 'league-stats', 'player', 'gameday', 'rules', 'tournaments', 'halloween']);
 const routeTitles = {
   main: 'Головна',
   seasons: 'Архів сезонів',
@@ -15,7 +15,8 @@ const routeTitles = {
   player: 'Профіль гравця',
   gameday: 'Ігровий день',
   rules: 'Правила',
-  tournaments: 'Турніри'
+  tournaments: 'Турніри',
+  halloween: 'Halloween 2026'
 };
 
 function updateRouteContext(route, queryParams = {}) {
@@ -269,7 +270,7 @@ async function renderRoute() {
 
     if (route === 'main') {
       if (!await mountTemplate('./pages/index.html', renderId)) return;
-      const { initHomePage } = await import('../pages/home.js?v=20260908-log-dates1');
+      const { initHomePage } = await import('../pages/home.js?v=20261030-halloween1');
       await runPageInit(route, initHomePage, {}, renderId);
       return;
     }
@@ -313,6 +314,13 @@ async function renderRoute() {
       if (!await mountTemplate('./pages/rules.html', renderId)) return;
       const { initRulesPage } = await import('../pages/rules.js?v=20260714-archive2');
       await runPageInit(route, initRulesPage, {}, renderId);
+      return;
+    }
+
+    if (route === 'halloween') {
+      if (!await mountTemplate('./pages/halloween.html', renderId)) return;
+      const { initHalloweenPage } = await import('../pages/halloween.js?v=20261030-event1');
+      await runPageInit(route, initHalloweenPage, {}, renderId);
       return;
     }
 

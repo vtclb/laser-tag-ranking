@@ -1,6 +1,7 @@
 import { loadSeasonsConfig } from '../core/dataHub.js?v=20260831-season-close1';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { jsonp } from '../core/utils.js';
+import { tournamentPresentation, tournamentStatus, sortTournaments, featuredTournaments, tournamentGroupLabels } from '../core/tournamentTimeline.js';
 
 const TOURNAMENT_SHEETS_CACHE_MS = 60_000;
 let tournamentSheetsCache = null;
@@ -18,19 +19,6 @@ function toText(value, fallback = '—') {
 
 function normalizeHeaderKey(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
-}
-
-function normalizeStatusValue(value = '') {
-  return String(value || '').trim().toLowerCase();
-}
-
-function isActiveStatus(value = '') {
-  const normalized = normalizeStatusValue(value);
-  return normalized === 'active' || normalized === 'активний';
-}
-
-function isEmptyStatus(value = '') {
-  return String(value || '').trim() === '';
 }
 
 function parseTeamPlayers(value) {
@@ -290,10 +278,7 @@ export async function loadTournamentsList() {
       playersCount: Array.isArray(bucket.players) ? bucket.players.length : 0
     };
   });
-  const active = withSummary.filter((item) => isActiveStatus(item.displayStatus));
-  if (active.length) return active;
-  if (withSummary.length === 1 && isEmptyStatus(withSummary[0]?.status)) return withSummary;
-  return withSummary.length ? [withSummary[0]] : [];
+  return featuredTournaments(withSummary);
 }
 
 function createElement(tag, className, text) {
@@ -355,8 +340,8 @@ function sanitizeErrorMessage() {
 
 function statusClass(status = '') {
   const normalized = String(status || '').toLowerCase();
-  if (normalized.includes('active') || normalized.includes('актив')) return 'is-active';
-  if (normalized.includes('finished')) return 'is-finished';
+  if (tournamentStatus(normalized) === 'active') return 'is-active';
+  if (tournamentStatus(normalized) === 'finished') return 'is-finished';
   return 'is-neutral';
 }
 
@@ -369,8 +354,8 @@ function getTournamentCompletion(teams = [], games = []) {
 
 export function statusLabel(status = '') {
   const normalized = String(status || '').toLowerCase();
-  if (normalized.includes('active') || normalized.includes('актив')) return 'Активний';
-  if (normalized.includes('finished')) return 'Завершений';
+  if (tournamentStatus(normalized) === 'active') return 'Активний';
+  if (tournamentStatus(normalized) === 'finished') return 'Завершений';
   if (!String(status || '').trim()) return 'Планується';
   return toText(status);
 }
@@ -604,9 +589,7 @@ function formatDelta(value = 0) {
 function pickAutoOpenTournament(tournaments = [], selectedId = '') {
   const selected = String(selectedId || '').trim();
   if (selected && tournaments.some((item) => String(item.tournamentId) === selected)) return selected;
-  const firstActive = tournaments.find((item) => isActiveStatus(item.status));
-  if (firstActive) return firstActive.tournamentId;
-  return tournaments[0]?.tournamentId || '';
+  return sortTournaments(tournaments)[0]?.tournamentId || '';
 }
 
 function getTournamentMatchFocus(games = [], teamMap) {
@@ -658,7 +641,7 @@ export async function initTournamentsPage(params = {}) {
 
   try {
     const tournamentData = await loadTournamentSheets();
-    const tournaments = tournamentData.tournaments;
+    const tournaments = sortTournaments(tournamentData.tournaments);
 
     listWrap.replaceChildren(listHeading);
     if (!tournaments.length) {
@@ -671,7 +654,15 @@ export async function initTournamentsPage(params = {}) {
     const selectedId = String(params.selected || params.id || '').trim();
     const grid = createElement('div', 'tournaments-page-active__list');
 
+    let lastGroup = '';
     tournaments.forEach((tournament) => {
+      const presentation = tournamentPresentation(tournament);
+      if (presentation.group !== lastGroup) {
+        const heading = createElement('h2', 'tournament-section-head__title', tournamentGroupLabels[presentation.group]);
+        heading.style.gridColumn = '1 / -1';
+        grid.append(heading);
+        lastGroup = presentation.group;
+      }
       const card = createElement('article', 'tournament-card tournament-switcher__item');
       const tournamentId = String(tournament?.tournamentId || '').trim();
 
@@ -684,7 +675,7 @@ export async function initTournamentsPage(params = {}) {
       const games = Array.isArray(tournamentDataById.games) ? tournamentDataById.games : [];
       const players = Array.isArray(tournamentDataById.players) ? tournamentDataById.players : [];
       const completion = getTournamentCompletion(teams, games);
-      const displayStatus = completion.complete ? 'FINISHED' : tournament?.status;
+      const displayStatus = tournamentPresentation({ ...tournament, displayStatus: completion.complete ? 'FINISHED' : tournament?.status }).label;
       meta.append(createSimpleLine(`${getTournamentFormatLabel(tournament, teams, players)} · ${statusLabel(displayStatus)} · ${formatTournamentDate(tournament?.dateStart)}`));
       meta.append(createSimpleLine(`${teams.length} команд · ${games.length} матчів · ${players.length} гравців`));
       card.append(meta);
@@ -770,9 +761,7 @@ function renderTournamentDashboard(node, data) {
   const sortedTeams = [...teams].sort((a, b) => toNumber(b.points) - toNumber(a.points) || toNumber(b.wins) - toNumber(a.wins));
   const leader = sortedTeams[0] || null;
   const completion = getTournamentCompletion(teams, games);
-  const statusText = completion.complete
-    ? 'Завершений'
-    : statusLabel(tournament?.status || 'ACTIVE');
+  const statusText = tournamentPresentation({ ...tournament, displayStatus: completion.complete ? 'FINISHED' : tournament?.status }).label;
 
   clear(node);
 

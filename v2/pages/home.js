@@ -1,7 +1,8 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260908-log-dates1';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { leagueLabelUA } from '../core/naming.js';
-import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate, statusLabel } from './tournaments.js';
+import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate } from './tournaments.js?v=20261116-timeline1';
+import { tournamentPresentation, tournamentGroupLabels } from '../core/tournamentTimeline.js';
 import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
 import { filterPublicPlayers, isHiddenPublicNick } from '../core/playerVisibility.js?v=20260831-private-player1';
 
@@ -323,7 +324,7 @@ function renderLeagueSection({ league, players }) {
 
 function formatHomeTournamentMeta(item = {}) {
   const format = escapeHtml(getTournamentFormatLabel(item) || 'Турнір');
-  const status = escapeHtml(statusLabel(item?.displayStatus || item?.status));
+  const status = escapeHtml(tournamentPresentation(item).label);
   const date = escapeHtml(formatTournamentDate(item?.dateStart));
   return `${format} · ${status} · ${date}`;
 }
@@ -331,7 +332,7 @@ function formatHomeTournamentMeta(item = {}) {
 function renderHomeTournamentsCard(items = [], status = 'empty') {
   const hasItems = Array.isArray(items) && items.length > 0;
   const visibleItems = hasItems ? items.slice(0, 2) : [];
-  const hasActiveItems = visibleItems.some((item) => String(item?.displayStatus || item?.status || '').toLowerCase().includes('active'));
+  const heading = hasItems ? tournamentGroupLabels[tournamentPresentation(visibleItems[0]).group] : 'Турніри';
   const list = visibleItems.map((item) => (
     `<a class="home-tournaments-teaser__row" href="${item?.tournamentId ? `#tournaments?selected=${encodeURIComponent(item.tournamentId)}` : '#tournaments'}">
       <div class="home-tournaments-teaser__left">
@@ -351,16 +352,16 @@ function renderHomeTournamentsCard(items = [], status = 'empty') {
     <div class="home-tournaments-teaser__header">
       <div class="home-tournaments-teaser__titleBlock">
         <p class="home-tournaments-teaser__kicker">ТУРНІРНИЙ РЕЖИМ</p>
-        <h2>${hasActiveItems ? 'Активні турніри' : 'Останні турніри'}</h2>
+        <h2>${heading}</h2>
       </div>
     </div>
     <div class="home-tournaments-teaser__content">
       ${hasItems ? list : `<div class="home-tournaments-teaser__empty">
-        <strong>Поки немає активних турнірів</strong>
+        <strong>Поточних або майбутніх турнірів поки немає</strong>
         <p>Коли турнір стартує, тут з’явиться швидкий доступ до таблиці та матчів.</p>
       </div>`}
     </div>
-    <a href="#tournaments" class="home-tournaments-teaser__cta">Відкрити турнір</a>
+    <a href="#tournaments" class="home-tournaments-teaser__cta">Усі турніри</a>
   </section>`;
 }
 

@@ -1,4 +1,4 @@
-﻿/* V2 scope-only geometry guard: avoid global reset leakage */
+/* V2 scope-only geometry guard: avoid global reset leakage */
 body.theme-game #app :is(.topnav, .page, .container, .hero, .px-card, .section, .btn, input, select, textarea) {
   border-radius: 0;
 }
@@ -15417,7 +15417,7 @@ body.theme-game .gameday-v2 .gameday-delta-list {
 }
 
 .tournaments-page-v2 .tournament-picker[open] .tournament-picker__button::after {
-  content: "в€’";
+  content: "\2212";
 }
 
 .tournaments-page-v2 .tournament-card {
@@ -16560,7 +16560,8 @@ body.theme-game .tournaments-page-v2 .tournament-match-detail-block {
 }
 
 .tournaments-page-v2 .tournament-picker .tournament-open-btn {
-  min-height: 24px;
+  min-height: 44px;
+  min-width: max-content;
   padding: 0 7px;
   border: 0;
   background: rgba(49,208,255,.10);
@@ -16572,6 +16573,11 @@ body.theme-game .tournaments-page-v2 .tournament-match-detail-block {
 .tournaments-page-v2 .tournament-picker .tournament-open-btn:hover {
   background: rgba(124,255,114,.10);
   color: #dffff0;
+}
+
+.tournaments-page-v2 .tournament-picker .tournament-open-btn:focus-visible {
+  outline: 2px solid #8fefff !important;
+  outline-offset: 2px;
 }
 
 .tournaments-page-v2 .tournament-overview {
@@ -16695,7 +16701,7 @@ body.theme-game .tournaments-page-v2 .tournament-match-detail-block {
 
 @media (max-width: 520px) {
   .tournaments-page-v2 .tournament-picker .tournament-card {
-    grid-template-columns: minmax(0, 1fr) 62px;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .tournaments-page-v2 .tournament-overview-bars .tournament-insight-grid {

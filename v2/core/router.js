@@ -1,4 +1,4 @@
-import { ensureGlobalStyles } from '../pages/global-styles.js?v=20261116-timeline1';
+import { ensureGlobalStyles } from '../pages/global-styles.js?v=20261116-a11y1';
 import { debugInfo, debugLog } from './debug.js';
 import { normalizeLeague } from './naming.js';
 
@@ -269,7 +269,7 @@ async function renderRoute() {
 
     if (route === 'main') {
       if (!await mountTemplate('./pages/index.html', renderId)) return;
-      const { initHomePage } = await import('../pages/home.js?v=20261116-timeline1');
+      const { initHomePage } = await import('../pages/home.js?v=20261116-a11y1');
       await runPageInit(route, initHomePage, {}, renderId);
       return;
     }
@@ -318,7 +318,7 @@ async function renderRoute() {
 
     if (route === 'tournaments') {
       if (!await mountTemplate('./pages/tournaments.html', renderId)) return;
-      const { initTournamentsPage } = await import('../pages/tournaments.js?v=20261116-timeline1');
+      const { initTournamentsPage } = await import('../pages/tournaments.js?v=20261116-a11y1');
       await runPageInit(route, initTournamentsPage, {
         selected: queryParams.selected || queryParams.id || ''
       }, renderId);

@@ -1,7 +1,7 @@
 import { getCurrentLeagueLiveStats, rankFromPoints, safeErrorMessage } from '../core/dataHub.js?v=20260908-log-dates1';
 import { debugLog, debugWarn } from '../core/debug.js';
 import { leagueLabelUA } from '../core/naming.js';
-import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate } from './tournaments.js?v=20261116-timeline1';
+import { loadTournamentsList, getTournamentFormatLabel, formatTournamentDate } from './tournaments.js?v=20261116-a11y1';
 import { tournamentPresentation, tournamentGroupLabels } from '../core/tournamentTimeline.js';
 import { makeDataStatus, resolveDataStatusTone } from '../core/dataStatus.js';
 import { filterPublicPlayers, isHiddenPublicNick } from '../core/playerVisibility.js?v=20260831-private-player1';

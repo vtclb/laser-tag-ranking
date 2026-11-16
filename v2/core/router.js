@@ -1,4 +1,4 @@
-import { ensureGlobalStyles } from '../pages/global-styles.js?v=20261116-a11y1';
+import { ensureGlobalStyles } from '../pages/global-styles.js?v=20261116-booking1';
 import { debugInfo, debugLog } from './debug.js';
 import { normalizeLeague } from './naming.js';
 

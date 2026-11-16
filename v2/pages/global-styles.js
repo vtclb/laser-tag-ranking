@@ -2,7 +2,25 @@ import { normalizeLeague } from '../core/naming.js';
 import { debugWarn } from '../core/debug.js';
 
 const V2_BASE_URL = new URL('../', import.meta.url);
-const V2_ASSET_VERSION = '20261116-a11y1';
+const V2_ASSET_VERSION = '20261116-booking1';
+
+function ensureClubLinks() {
+  if (document.getElementById('v2-club-links')) return;
+  const nav = document.createElement('nav');
+  nav.id = 'v2-club-links';
+  nav.className = 'v2-club-links';
+  nav.setAttribute('aria-label', 'Сайт клубу та запис');
+  const site = document.createElement('a');
+  site.href = 'https://lasertagif.com.ua/';
+  site.textContent = 'Сайт клубу';
+  const booking = document.createElement('a');
+  booking.href = 'https://lasertagif.com.ua/contacts?event=league#contact-inquiry-uk';
+  booking.className = 'v2-club-links__booking';
+  booking.textContent = 'Записатися на гру';
+  nav.append(site, booking);
+  const app = document.getElementById('app');
+  if (app) app.prepend(nav);
+}
 
 function ensureLink({ id, rel = 'stylesheet', href, crossOrigin }) {
   let link = document.getElementById(id);
@@ -281,6 +299,7 @@ export function ensureGlobalStyles() {
   ensureStyleOrder();
   ensureFonts();
   ensureBottomNav();
+  ensureClubLinks();
   ensureSkipLink();
   ensureNavSheet();
   try {

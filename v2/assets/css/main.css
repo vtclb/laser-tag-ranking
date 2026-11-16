@@ -21213,6 +21213,36 @@ body.theme-game .profile-page .profile-avatar-frame[class*="profile-avatar-frame
 }
 
 /* Accessible standings keep real cells and a dedicated keyboard disclosure. */
+.v2-club-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(1440px, calc(100% - 32px));
+  min-height: 52px;
+  margin-inline: auto;
+  border-bottom: 1px solid rgba(145, 173, 235, .24);
+  font-family: Inter, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+.v2-club-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #dff7ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.v2-club-links .v2-club-links__booking {
+  padding-inline: 12px;
+  color: #d7ffcf;
+  font-weight: 700;
+}
+.v2-club-links a:focus-visible {
+  outline: 2px solid #8fefff !important;
+  outline-offset: 2px;
+}
 .tournaments-page-v2 .tournament-standings-table__head,
 .tournaments-page-v2 .tournament-standings-main {
   grid-template-columns: 34px minmax(0, 1.45fr) 30px 30px 30px 54px 56px 58px 44px;
